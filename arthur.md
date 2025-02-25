@@ -65,8 +65,12 @@ wsl -d Ubuntu
 
 sudo docker-compose exec app bash -c "cd /var/www/symfony && echo 'module.exports = { plugins: [ require(\"tailwindcss\"), require(\"autoprefixer\"), ], }' > postcss.config.js"
 
-sudo docker-compose exec app bash -c "cd /var/www/symfony && echo 'module.exports = { plugins: [ require(\"tailwindcss\"), require(\"autoprefixer\"), ], }' > postcss.config.js"
+En cas de problème :
 
 sudo docker-compose exec app bash -c "cd /var/www/symfony && rm -rf public/build/*"
 
 sudo docker-compose exec app bash -c "cd /var/www/symfony && npm run build"
+
+sudo docker-compose exec app bash -c "cd /var/www/symfony && npm install ajv@^8.17.1 --save-exact"
+
+sudo docker-compose exec app bash -c "cd /var/www/symfony && npm install"
