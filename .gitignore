@@ -1,7 +1,7 @@
 ###> symfony ###
-.env.local
-.env.local.php
-.env.*.local
+/symfony/.env.local
+/symfony/.env.local.php
+/symfony/.env.*.local
 /config/secrets/prod/prod.decrypt.private.php
 /public/bundles/
 /var/
@@ -11,6 +11,8 @@
 ###> docker ###
 /docker/data/
 .docker/
+.env
+.env.local
 docker-compose.override.yml
 ###< docker ###
 
