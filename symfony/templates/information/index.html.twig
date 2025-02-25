@@ -3,7 +3,7 @@
 {% block title %}Gestion des Produits{% endblock %}
 
 {% block body %}
-    <div class="container">
+    <div class="container" {{ stimulus_controller('product') }}>
         <div class="row mb-4">
             <div class="col-12">
                 <h1 class="mb-4">Gestion des Produits</h1>
@@ -29,7 +29,7 @@
                         Aucun produit n'est disponible pour le moment.
                     </div>
                 {% else %}
-                    <div class="row">
+                    <div class="row" {{ stimulus_target('product', 'list') }}>
                         {% for product in products %}
                             <div class="col-md-6 mb-4">
                                 <div class="card">
@@ -54,10 +54,14 @@
                             </div>
 
                             {# Modal de modification #}
-                            <div class="modal fade" id="editModal{{ product.id }}" tabindex="-1">
+                            <div class="modal fade" id="editModal{{ product.id }}" tabindex="-1" 
+                                 {{ stimulus_target('product', 'modal') }}
+                                 data-action="hidden.bs.modal->product#resetForm">
                                 <div class="modal-dialog">
                                     <div class="modal-content">
-                                        <form action="{{ path('app_product_edit', {'id': product.id}) }}" method="post">
+                                        <form action="{{ path('app_product_edit', {'id': product.id}) }}" method="post"
+                                              {{ stimulus_target('product', 'form') }}
+                                              data-action="submit->product#submitForm">
                                             <div class="modal-header">
                                                 <h5 class="modal-title">Modifier le produit</h5>
                                                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -90,10 +94,13 @@
                             </div>
 
                             {# Modal de suppression #}
-                            <div class="modal fade" id="deleteModal{{ product.id }}" tabindex="-1">
+                            <div class="modal fade" id="deleteModal{{ product.id }}" tabindex="-1"
+                                 {{ stimulus_target('product', 'modal') }}>
                                 <div class="modal-dialog">
                                     <div class="modal-content">
-                                        <form action="{{ path('app_product_delete', {'id': product.id}) }}" method="post">
+                                        <form action="{{ path('app_product_delete', {'id': product.id}) }}" method="post"
+                                              {{ stimulus_target('product', 'form') }}
+                                              data-action="submit->product#submitForm">
                                             <div class="modal-header">
                                                 <h5 class="modal-title">Confirmer la suppression</h5>
                                                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -117,10 +124,14 @@
     </div>
 
     {# Modal d'ajout de produit #}
-    <div class="modal fade" id="addProductModal" tabindex="-1">
+    <div class="modal fade" id="addProductModal" tabindex="-1"
+         {{ stimulus_target('product', 'modal') }}
+         data-action="hidden.bs.modal->product#resetForm">
         <div class="modal-dialog">
             <div class="modal-content">
-                <form action="{{ path('app_product_new') }}" method="post">
+                <form action="{{ path('app_product_new') }}" method="post"
+                      {{ stimulus_target('product', 'form') }}
+                      data-action="submit->product#submitForm">
                     <div class="modal-header">
                         <h5 class="modal-title">Ajouter un produit</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
