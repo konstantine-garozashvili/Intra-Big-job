@@ -1,20 +1,24 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Hello HomeController!{% endblock %}
+{% block title %}Accueil{% endblock %}
 
 {% block body %}
-<style>
-    .example-wrapper { margin: 1em auto; max-width: 800px; width: 95%; font: 18px/1.5 sans-serif; }
-    .example-wrapper code { background: #F5F5F5; padding: 2px 6px; }
-</style>
-
-<div class="example-wrapper">
-    <h1>Hello {{ controller_name }}! ✅</h1>
-
-    This friendly message is coming from:
-    <ul>
-        <li>Your controller at <code>/var/www/symfony/src/Controller/HomeController.php</code></li>
-        <li>Your template at <code>/var/www/symfony/templates/home/index.html.twig</code></li>
-    </ul>
-</div>
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">Bienvenue sur notre site</h1>
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Page d'accueil</h5>
+                    <p class="card-text">
+                        Ceci est un exemple de contenu pour la page d'accueil. Vous pouvez personnaliser ce contenu selon vos besoins.
+                    </p>
+                    <p class="card-text">
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+                        Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+                    </p>
+                    <a href="{{ path('app_information') }}" class="btn btn-primary">En savoir plus</a>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}

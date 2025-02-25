@@ -1,0 +1,38 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Information{% endblock %}
+
+{% block body %}
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">Informations</h1>
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">À propos de nous</h5>
+                    <p class="card-text">
+                        Cette page contient des informations importantes sur notre entreprise/projet.
+                    </p>
+                    <p class="card-text">
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+                        Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+                    </p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Contactez-nous</h5>
+                    <p class="card-text">
+                        Vous pouvez nous contacter pour plus d'informations :
+                    </p>
+                    <ul class="list-unstyled">
+                        <li>📧 Email : contact@example.com</li>
+                        <li>📞 Téléphone : +33 1 23 45 67 89</li>
+                        <li>📍 Adresse : 123 rue Example, 75000 Paris</li>
+                    </ul>
+                    <a href="{{ path('app_home') }}" class="btn btn-primary">Retour à l'accueil</a>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %} 
