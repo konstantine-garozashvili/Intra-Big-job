@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   # PHP Service
   app:
@@ -7,8 +9,15 @@ services:
     container_name: Bigproject_app
     restart: unless-stopped
     working_dir: /var/www/symfony
+    expose:
+      - "9000"
     volumes:
       - ./symfony:/var/www/symfony
+      - ./docker/php/php.ini:/usr/local/etc/php/conf.d/app.ini:ro
+      - ./docker/php/php-fpm.conf:/usr/local/etc/php-fpm.d/www.conf:ro
+    depends_on:
+      db:
+        condition: service_healthy
     networks:
       - symfony_network
 
@@ -22,6 +31,8 @@ services:
     volumes:
       - ./symfony:/var/www/symfony
       - ./docker/nginx/conf.d:/etc/nginx/conf.d
+    depends_on:
+      - app
     networks:
       - symfony_network
 
@@ -31,15 +42,20 @@ services:
     container_name: Bigproject_db
     restart: unless-stopped
     environment:
-      MYSQL_DATABASE: Bigproject
-      MYSQL_ROOT_PASSWORD: your_root_password
-      MYSQL_PASSWORD: your_password
-      MYSQL_USER: symfony_user
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-Bigproject}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-your_root_password}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-your_password}
+      MYSQL_USER: ${MYSQL_USER:-symfony_user}
     volumes:
       - dbdata:/var/lib/mysql
     ports:
-      - "3307:3306"
+      - "3306:3306"
     command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u$$MYSQL_USER", "-p$$MYSQL_PASSWORD"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     networks:
       - symfony_network
 
@@ -49,13 +65,14 @@ services:
     container_name: Bigproject_phpmyadmin
     environment:
       PMA_HOST: db
-      MYSQL_ROOT_PASSWORD: your_root_password
-      PMA_USER: symfony_user
-      PMA_PASSWORD: your_password
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-your_root_password}
+      PMA_USER: ${MYSQL_USER:-symfony_user}
+      PMA_PASSWORD: ${MYSQL_PASSWORD:-your_password}
     ports:
       - "8081:80"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
       - symfony_network
 
@@ -64,4 +81,5 @@ networks:
     driver: bridge
 
 volumes:
-  dbdata: 
+  dbdata:
+    name: bigproject_mysql_data 

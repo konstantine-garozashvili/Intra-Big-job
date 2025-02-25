@@ -1,76 +1,155 @@
-# Bigproject - Symfony 6.4 Project
+# Intra Big Project - Symfony 6.4
 
-## Project Setup Instructions
+A modern web application built with Symfony 6.4, using Docker for development environment.
 
 ## Prerequisites
-- Docker and Docker Compose installed
-- Ports 8080, 8081, and 3306 available on your system
 
-## Setup Steps
+Before you begin, ensure you have the following installed on your system:
+- [Docker](https://www.docker.com/products/docker-desktop/)
+- [Git](https://git-scm.com/downloads)
+- A text editor or IDE (VS Code, PHPStorm, etc.)
 
-1. Clone the repository
+## Port Requirements
+
+Make sure these ports are available on your system:
+- `8080` - Main application
+- `8081` - PHPMyAdmin
+- `3306` - MySQL
+
+## Setup Instructions
+
+### 1. Clone the Repository
+
 ```bash
 git clone [repository-url]
 cd [repository-name]
 ```
 
-2. Copy the environment file
+### 2. Environment Setup
+
 ```bash
+# Copy the environment file
 cp .env.local.example .env.local
+
+# Edit .env.local with your database credentials if needed
+# Default values are:
+# MYSQL_DATABASE=Bigproject
+# MYSQL_USER=symfony_user
+# MYSQL_PASSWORD=your_password
+# MYSQL_ROOT_PASSWORD=your_root_password
 ```
 
-3. Create required directories and verify Nginx configuration
+### 3. Start Docker Services
+
 ```bash
-# Create nginx config directory if it doesn't exist
-mkdir -p docker/nginx/conf.d
-
-# Verify that only app.conf exists in the nginx/conf.d directory
-# Remove any other .conf files if they exist
-rm -f docker/nginx/conf.d/default.conf
-```
-
-4. Start Docker containers
-```bash
-# Stop any running containers and remove old volumes
-docker-compose down -v
-
-# Build and start fresh containers
+# First time setup or to rebuild:
 docker-compose up -d --build
+
+# For subsequent starts:
+docker-compose up -d
 ```
 
-5. Install dependencies (first time only)
-```bash
-docker-compose exec app composer install
-```
+### 4. Verify Installation
 
-## Accessing Services
+The following services should be available:
 - Main application: http://localhost:8080
 - PHPMyAdmin: http://localhost:8081
   - Username: symfony_user
-  - Password: your_password
+  - Password: your_password (or what you set in .env.local)
+
+### 5. Common Commands
+
+```bash
+# Stop all containers
+docker-compose down
+
+# View logs
+docker-compose logs
+
+# View specific service logs
+docker-compose logs app    # PHP-FPM logs
+docker-compose logs nginx  # Nginx logs
+docker-compose logs db     # MySQL logs
+
+# Rebuild containers (if you modify Dockerfile or docker-compose.yml)
+docker-compose down -v
+docker-compose up -d --build
+
+# Access PHP container (for running Symfony commands)
+docker-compose exec app bash
+```
+
+### 6. Directory Structure
+
+```
+.
+├── docker/
+│   ├── nginx/
+│   │   └── conf.d/
+│   │       └── app.conf    # Nginx configuration
+│   └── php/
+│       ├── php.ini         # PHP configuration
+│       └── php-fpm.conf    # PHP-FPM configuration
+├── symfony/                # Symfony application code
+├── docker-compose.yml      # Docker services configuration
+└── Dockerfile             # PHP container configuration
+```
 
 ## Troubleshooting
 
-If you encounter a 502 error:
-1. Make sure all ports are available
-2. Check if the containers are running: `docker-compose ps`
-3. View logs: `docker-compose logs nginx app`
-4. Ensure only app.conf exists in docker/nginx/conf.d/
-5. Try rebuilding with fresh containers:
+### 502 Bad Gateway
+1. Check if all containers are running:
    ```bash
-   docker-compose down -v
-   docker-compose up -d --build
+   docker-compose ps
    ```
-6. Check Nginx logs:
+2. Verify logs for errors:
    ```bash
-   docker-compose exec nginx cat /var/log/nginx/error.log
+   docker-compose logs nginx app
+   ```
+3. Make sure no other services are using required ports (8080, 8081, 3306)
+
+### Database Connection Issues
+1. Verify MySQL is running:
+   ```bash
+   docker-compose ps db
+   ```
+2. Check database logs:
+   ```bash
+   docker-compose logs db
+   ```
+3. Verify your .env.local database credentials match docker-compose.yml
+
+### Permission Issues
+If you encounter permission issues:
+1. The containers run with UID/GID 1000 by default
+2. Ensure your host user has proper permissions on the project directory
+3. If needed, adjust USER_ID and GROUP_ID in the Dockerfile
+
+## Development Workflow
+
+1. Code changes in the `symfony/` directory are immediately reflected in the running application
+2. Clear Symfony cache after major changes:
+   ```bash
+   docker-compose exec app php bin/console cache:clear
+   ```
+3. Install new dependencies:
+   ```bash
+   docker-compose exec app composer require [package-name]
    ```
 
-### Tech Stack
+## Contributing
+
+1. Create a new branch for your feature
+2. Make your changes
+3. Test thoroughly
+4. Submit a pull request
+
+## Tech Stack
+
 - PHP 8.2
-- MySQL 8.2
 - Symfony 6.4
-- Nginx
-- phpMyAdmin
+- MySQL 8.2
+- Nginx 1.24
+- Docker & Docker Compose
 
 

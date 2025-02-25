@@ -9,11 +9,7 @@
 /symfony/vendor/
 ###< symfony ###
 
-###> docker ###
-/docker/data/
-.docker/
-docker-compose.override.yml
-###< docker ###
+
 
 ###> IDE ###
 .idea/
