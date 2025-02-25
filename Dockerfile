@@ -18,6 +18,11 @@ RUN apt-get update && apt-get install -y \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
+# Install Node.js and npm
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
+    && npm install -g npm@latest
+
 # Install PHP extensions
 RUN docker-php-ext-configure intl \
     && docker-php-ext-install -j$(nproc) \
@@ -41,8 +46,10 @@ WORKDIR /var/www/symfony
 RUN groupadd --gid ${GROUP_ID} dev \
     && useradd --uid ${USER_ID} --gid dev --shell /bin/bash --create-home dev \
     && mkdir -p /home/dev/.composer \
+    && mkdir -p /home/dev/.npm \
     && chown -R dev:dev /home/dev \
-    && chown -R dev:dev /var/www
+    && chown -R dev:dev /var/www \
+    && chmod 755 /home/dev
 
 # Switch to dev user
 USER dev

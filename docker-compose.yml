@@ -6,9 +6,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        USER_ID: ${USER_ID:-1000}
+        GROUP_ID: ${GROUP_ID:-1000}
     container_name: Bigproject_app
     restart: unless-stopped
     working_dir: /var/www/symfony
+    user: "${USER_ID:-1000}:${GROUP_ID:-1000}"
     expose:
       - "9000"
     volumes:
