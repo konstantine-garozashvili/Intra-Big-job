@@ -1,14 +1,18 @@
 ###> symfony ###
-
-
-/vendor/
+.env
+.env.local
+.env.local.php
+.env.*.local
+/config/secrets/prod/prod.decrypt.private.php
+/symfony/public/bundles/
+/symfony/var/
+/symfony/vendor/
 ###< symfony ###
 
 ###> docker ###
 /docker/data/
 .docker/
-
-
+docker-compose.override.yml
 ###< docker ###
 
 ###> IDE ###
