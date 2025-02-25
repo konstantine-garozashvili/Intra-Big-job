@@ -67,7 +67,7 @@ RUN if [ -f composer.json ]; then \
 USER root
 
 # Set proper permissions
-RUN chown -R www-data:www-data var
+RUN mkdir -p var && chown -R www-data:www-data var
 
 # Switch back to dev user
 USER dev

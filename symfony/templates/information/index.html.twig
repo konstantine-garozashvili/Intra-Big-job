@@ -1,38 +1,159 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Information{% endblock %}
+{% block title %}Gestion des Produits{% endblock %}
 
 {% block body %}
-    <div class="row">
-        <div class="col-12">
-            <h1 class="mb-4">Informations</h1>
-            <div class="card mb-4">
-                <div class="card-body">
-                    <h5 class="card-title">À propos de nous</h5>
-                    <p class="card-text">
-                        Cette page contient des informations importantes sur notre entreprise/projet.
-                    </p>
-                    <p class="card-text">
-                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-                        Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-                    </p>
-                </div>
-            </div>
+    <div class="container">
+        <div class="row mb-4">
+            <div class="col-12">
+                <h1 class="mb-4">Gestion des Produits</h1>
 
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Contactez-nous</h5>
-                    <p class="card-text">
-                        Vous pouvez nous contacter pour plus d'informations :
-                    </p>
-                    <ul class="list-unstyled">
-                        <li>📧 Email : contact@example.com</li>
-                        <li>📞 Téléphone : +33 1 23 45 67 89</li>
-                        <li>📍 Adresse : 123 rue Example, 75000 Paris</li>
-                    </ul>
-                    <a href="{{ path('app_home') }}" class="btn btn-primary">Retour à l'accueil</a>
-                </div>
+                {# Messages Flash #}
+                {% for label, messages in app.flashes %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ label }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endfor %}
+
+                {# Bouton pour ouvrir le modal d'ajout #}
+                <button type="button" class="btn btn-primary mb-4" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                    <i class="fas fa-plus"></i> Ajouter un produit
+                </button>
+
+                {# Liste des produits #}
+                {% if products is empty %}
+                    <div class="alert alert-info">
+                        Aucun produit n'est disponible pour le moment.
+                    </div>
+                {% else %}
+                    <div class="row">
+                        {% for product in products %}
+                            <div class="col-md-6 mb-4">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h5 class="card-title">{{ product.name }}</h5>
+                                        <p class="card-text">{{ product.description }}</p>
+                                        <ul class="list-unstyled">
+                                            <li><strong>Prix :</strong> {{ product.price }} €</li>
+                                            <li><strong>Disponible :</strong> {{ product.isAvailable ? 'Oui' : 'Non' }}</li>
+                                            <li><strong>Créé le :</strong> {{ product.createdAt|date('d/m/Y H:i') }}</li>
+                                        </ul>
+                                        <div class="btn-group">
+                                            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editModal{{ product.id }}">
+                                                Modifier
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ product.id }}">
+                                                Supprimer
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {# Modal de modification #}
+                            <div class="modal fade" id="editModal{{ product.id }}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <form action="{{ path('app_product_edit', {'id': product.id}) }}" method="post">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Modifier le produit</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <div class="mb-3">
+                                                    <label for="name{{ product.id }}" class="form-label">Nom</label>
+                                                    <input type="text" class="form-control" id="name{{ product.id }}" name="name" value="{{ product.name }}" required>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="description{{ product.id }}" class="form-label">Description</label>
+                                                    <textarea class="form-control" id="description{{ product.id }}" name="description" rows="3">{{ product.description }}</textarea>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="price{{ product.id }}" class="form-label">Prix</label>
+                                                    <input type="number" class="form-control" id="price{{ product.id }}" name="price" value="{{ product.price }}" step="0.01" required>
+                                                </div>
+                                                <div class="mb-3 form-check">
+                                                    <input type="checkbox" class="form-check-input" id="isAvailable{{ product.id }}" name="isAvailable" {% if product.isAvailable %}checked{% endif %}>
+                                                    <label class="form-check-label" for="isAvailable{{ product.id }}">Disponible</label>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                                <button type="submit" class="btn btn-primary">Enregistrer</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {# Modal de suppression #}
+                            <div class="modal fade" id="deleteModal{{ product.id }}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <form action="{{ path('app_product_delete', {'id': product.id}) }}" method="post">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Confirmer la suppression</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                Êtes-vous sûr de vouloir supprimer le produit "{{ product.name }}" ?
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                                <button type="submit" class="btn btn-danger">Supprimer</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
             </div>
         </div>
     </div>
+
+    {# Modal d'ajout de produit #}
+    <div class="modal fade" id="addProductModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form action="{{ path('app_product_new') }}" method="post">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Ajouter un produit</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Nom</label>
+                            <input type="text" class="form-control" id="name" name="name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="price" class="form-label">Prix</label>
+                            <input type="number" class="form-control" id="price" name="price" step="0.01" required>
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="isAvailable" name="isAvailable" checked>
+                            <label class="form-check-label" for="isAvailable">Disponible</label>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-primary">Ajouter</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 {% endblock %} 
