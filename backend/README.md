@@ -132,10 +132,10 @@ php bin/console lexik:jwt:generate-keypair
 
 ```bash
 # Exécuter tous les tests
-php bin/phpunit
+docker exec -it infra-backend-1 php bin/phpunit
 
 # Exécuter un test spécifique
-php bin/phpunit tests/Controller/NomDuControllerTest.php
+docker exec -it infra-backend-1 php bin/phpunit tests/Controller/NomDuControllerTest.php
 ```
 
 ## 🐞 Résolution des problèmes
@@ -143,24 +143,24 @@ php bin/phpunit tests/Controller/NomDuControllerTest.php
 ### Erreur "Class not found"
 
 ```bash
-composer dump-autoload
+docker exec -it infra-backend-1 composer dump-autoload
 ```
 
 ### Erreur de cache
 
 ```bash
-php bin/console cache:clear
+docker exec -it infra-backend-1 php bin/console cache:clear
 ```
 
 ### Erreurs de base de données
 
 ```bash
 # Vérifier le schéma
-php bin/console doctrine:schema:validate
+docker exec -it infra-backend-1 php bin/console doctrine:schema:validate
 
 # Recréer la base de données (⚠️ perte de données)
-php bin/console doctrine:schema:drop --force
-php bin/console doctrine:migrations:migrate --no-interaction
+docker exec -it infra-backend-1 php bin/console doctrine:schema:drop --force
+docker exec -it infra-backend-1 php bin/console doctrine:migrations:migrate --no-interaction
 ```
 
 ### Erreurs CORS
@@ -168,7 +168,7 @@ php bin/console doctrine:migrations:migrate --no-interaction
 Si vous avez des erreurs CORS lors des appels depuis le frontend :
 
 ```bash
-composer require nelmio/cors-bundle
+docker exec -it infra-backend-1 composer require nelmio/cors-bundle
 ```
 
 Puis configurez le bundle dans `config/packages/nelmio_cors.yaml` pour autoriser les requêtes depuis `http://localhost:5173`.

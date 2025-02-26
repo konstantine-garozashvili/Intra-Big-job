@@ -35,21 +35,19 @@ Ce projet dispose d'une documentation complète pour aider les nouveaux dévelop
 
 ### 📋 Guides généraux
 
-- [Vue d'ensemble de l'architecture](docs/architecture.md) - Comprendre comment le projet est structuré
-- [Guide de contribution](docs/contributing.md) - Comment contribuer au projet
-- [Standards de code](docs/code-standards.md) - Conventions de code à respecter
+- [Guide Docker](docs/docker-guide.md) - Tout ce que vous devez savoir sur l'environnement Docker
+- [Guide de dépannage](docs/troubleshooting.md) - Solutions aux problèmes fréquents
 
 ### 🔧 Guides techniques
 
-- [Guide Docker](docs/docker-guide.md) - Tout ce que vous devez savoir sur l'environnement Docker
 - [Guide Frontend (React)](docs/frontend-guide.md) - Guide pour travailler avec React et Tailwind
 - [Guide Backend (Symfony)](docs/backend-guide.md) - Guide pour travailler avec Symfony
 - [Guide Base de données](docs/database-guide.md) - Comment travailler avec la base de données
 
-### 🛠️ Workflow de développement
+### 🛠️ Documentation spécifique par composant
 
-- [Guide Git](docs/git-workflow.md) - Workflow Git et bonnes pratiques
-- [Déploiement](docs/deployment.md) - Comment déployer l'application
+- [README Frontend](frontend/README.md) - Documentation spécifique au frontend
+- [README Backend](backend/README.md) - Documentation spécifique au backend
 
 ## 📝 Commandes fréquentes
 

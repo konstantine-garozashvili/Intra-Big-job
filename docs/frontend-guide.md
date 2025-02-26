@@ -60,15 +60,6 @@ Pour exécuter des commandes dans le conteneur frontend:
 docker exec -it infra-frontend-1 sh
 ```
 
-### Installer des dépendances
-
-```bash
-docker exec -it infra-frontend-1 npm install <package-name>
-
-# Exemple:
-docker exec -it infra-frontend-1 npm install axios
-```
-
 ## 🧩 Utilisation des composants
 
 ### Composants Shadcn UI
