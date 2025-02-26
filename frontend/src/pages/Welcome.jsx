@@ -114,7 +114,7 @@ const Welcome = () => {
                     <li>Serveur Web : Nginx (version Alpine)</li>
                     <li>Conteneurisation : Docker et Docker Compose</li>
                     <li>Base de Données : MySQL 8.0 (Plugin d'authentification : mysql_native_password)</li>
-                    <li>Démarrage des conteneurs : <code className="bg-gray-100 px-1 rounded">docker-compose infra/docker-compose.yml up -d --build</code></li>
+                    <li>Démarrage des conteneurs : <code className="bg-gray-100 px-1 rounded">cd infra && docker-compose build && docker-compose up -d</code></li>
                   </ul>
                 </AccordionContent>
               </AccordionItem>

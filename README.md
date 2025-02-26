@@ -7,6 +7,7 @@ Ce document explique comment configurer l'environnement de développement et tra
 - Docker et Docker Compose installés sur votre machine
 - Git
 - Un éditeur de code (VSCode recommandé)
+- Couper laragon si il tourne en fond
 
 ## Configuration initiale
 
@@ -20,11 +21,8 @@ cd Intra-BigProject
 ### Étape 2 : Lancer les conteneurs Docker
 
 ```bash
-# Naviguer vers le dossier du projet
-cd /chemin/vers/Intra-BigProject
-
-# Démarrer les conteneurs Docker
-docker-compose -f infra/docker-compose.yml up -d
+# Démarrer les conteneurs Docker en étant dans le dossier "Intra-BigProject"
+docker-compose -f infra/docker-compose.yml up --build -d
 ```
 
 Cette commande va:
@@ -194,4 +192,32 @@ docker exec -it infra-frontend-1 npm install
 # Attention: cela supprimera toutes les données!
 docker exec -it infra-backend-1 php bin/console doctrine:schema:drop --force
 docker exec -it infra-backend-1 php bin/console doctrine:migrations:migrate --no-interaction
-``` 
+```
+
+## Utilisation de Shadcn UI
+
+Ce projet utilise Shadcn UI pour les composants d'interface. Pour ajouter de nouveaux composants:
+
+1. Connectez-vous au conteneur frontend:
+   ```bash
+   docker exec -it infra-frontend-1 sh
+   ```
+
+2. Installez le composant souhaité:
+   ```bash
+   npx shadcn@latest add [nom-du-composant] 
+   
+   use --legacy-peer-deps
+   # exemple : npx shadcn@latest add button --legacy-peer-deps
+   ```
+
+3. Importez et utilisez le composant dans vos fichiers React:
+   ```jsx
+   import { Button } from "@/components/ui/button";
+   
+   function MonComposant() {
+     return <Button>Cliquez-moi</Button>;
+   }
+   ```
+
+Pour la liste complète des composants disponibles, consultez [la documentation de Shadcn UI](https://ui.shadcn.com/docs/components/accordion). 
