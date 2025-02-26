@@ -1,4 +1,4 @@
-# Projet Intra-Big-Job
+# Projet Intra-BigProject
 
 Ce document explique comment configurer l'environnement de développement et travailler avec la base de données du projet.
 
@@ -14,14 +14,14 @@ Ce document explique comment configurer l'environnement de développement et tra
 
 ```bash
 git clone <URL_DU_DÉPÔT>
-cd Intra-Big-job
+cd Intra-BigProject
 ```
 
 ### Étape 2 : Lancer les conteneurs Docker
 
 ```bash
 # Naviguer vers le dossier du projet
-cd /chemin/vers/Intra-Big-job
+cd /chemin/vers/Intra-BigProject
 
 # Démarrer les conteneurs Docker
 docker-compose -f infra/docker-compose.yml up -d
