@@ -60,7 +60,6 @@ COPY --chown=dev:dev ./symfony/composer.json ./symfony/composer.lock ./
 # Install dependencies with optimizations
 RUN composer install \
     --prefer-dist \
-    --no-dev \
     --no-scripts \
     --no-progress \
     --no-interaction \
@@ -72,7 +71,7 @@ COPY --chown=dev:dev ./symfony .
 
 # Run scripts and generate optimized autoload files
 RUN composer dump-autoload --optimize --classmap-authoritative \
-    && composer run-script post-install-cmd --no-dev
+    && composer run-script post-install-cmd
 
 # Switch back to root for permissions
 USER root
