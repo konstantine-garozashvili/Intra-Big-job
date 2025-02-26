@@ -44,7 +44,7 @@ const Welcome = () => {
               "Nous vous souhaitons bonne chance à tous dans vos développements "
             </p>
             <p className="mt-2 text-sm text-gray-500">
-              L'équipe du projet vous encourage dans cette aventure technique eeeeee 
+              L'équipe du projet vous encourage dans cette aventure technique 
             </p>
           </div>
         </div>
