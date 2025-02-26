@@ -6,7 +6,7 @@
 /config/secrets/prod/prod.decrypt.private.php
 /symfony/public/bundles/
 /symfony/var/
-/symfony/vendor/
+
 ###< symfony ###
 
 
