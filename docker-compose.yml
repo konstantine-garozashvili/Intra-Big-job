@@ -6,15 +6,24 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        USER_ID: 1000
+        GROUP_ID: 1000
     container_name: Bigproject_app
     restart: unless-stopped
     working_dir: /var/www/symfony
     expose:
       - "9000"
     volumes:
-      - ./symfony:/var/www/symfony
+      - ./symfony:/var/www/symfony:cached
       - ./docker/php/php.ini:/usr/local/etc/php/conf.d/app.ini:ro
       - ./docker/php/php-fpm.conf:/usr/local/etc/php-fpm.d/www.conf:ro
+      - ~/.composer/cache:/home/dev/.composer/cache:delegated
+      - vendor:/var/www/symfony/vendor:delegated
+      - var:/var/www/symfony/var:delegated
+    environment:
+      - APP_ENV=dev
+      - COMPOSER_ALLOW_SUPERUSER=1
     depends_on:
       db:
         condition: service_healthy
@@ -29,8 +38,10 @@ services:
     ports:
       - "8080:80"
     volumes:
-      - ./symfony:/var/www/symfony
-      - ./docker/nginx/conf.d:/etc/nginx/conf.d
+      - ./symfony:/var/www/symfony:cached
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
+      - vendor:/var/www/symfony/vendor:ro,delegated
+      - var:/var/www/symfony/var:delegated
     depends_on:
       - app
     networks:
@@ -82,4 +93,8 @@ networks:
 
 volumes:
   dbdata:
-    name: bigproject_mysql_data 
+    name: bigproject_mysql_data
+  vendor:
+    name: bigproject_vendor
+  var:
+    name: bigproject_var 

@@ -44,30 +44,67 @@ RUN groupadd --gid ${GROUP_ID} dev \
     && chown -R dev:dev /home/dev \
     && chown -R dev:dev /var/www
 
+# Create necessary directories with proper permissions
+RUN mkdir -p /var/www/symfony/var/cache \
+    /var/www/symfony/var/log \
+    /var/www/symfony/vendor \
+    && chown -R dev:dev /var/www/symfony \
+    && chmod -R 777 /var/www/symfony/var
+
 # Switch to dev user
 USER dev
 
 # Copy composer files first to leverage Docker cache
-COPY --chown=dev:dev ./symfony/composer.* ./
+COPY --chown=dev:dev ./symfony/composer.json ./symfony/composer.lock ./
 
-# Install dependencies
-RUN if [ -f composer.json ]; then \
-        composer install --prefer-dist --no-dev --no-scripts --no-progress --no-interaction; \
-    fi
+# Install dependencies with optimizations
+RUN composer install \
+    --prefer-dist \
+    --no-dev \
+    --no-scripts \
+    --no-progress \
+    --no-interaction \
+    --optimize-autoloader \
+    --classmap-authoritative
 
 # Copy existing application directory
 COPY --chown=dev:dev ./symfony .
 
-# Generate optimized autoload files
-RUN if [ -f composer.json ]; then \
-        composer dump-autoload --optimize; \
-    fi
+# Run scripts and generate optimized autoload files
+RUN composer dump-autoload --optimize --classmap-authoritative \
+    && composer run-script post-install-cmd --no-dev
 
 # Switch back to root for permissions
 USER root
 
-# Set proper permissions
-RUN chown -R www-data:www-data var
+# Set proper permissions for var directory
+RUN chown -R www-data:www-data var \
+    && chmod -R 777 var \
+    && chmod -R g+s var
+
+# Configure opcache for better performance
+RUN { \
+    echo 'opcache.memory_consumption=256'; \
+    echo 'opcache.interned_strings_buffer=16'; \
+    echo 'opcache.max_accelerated_files=20000'; \
+    echo 'opcache.revalidate_freq=0'; \
+    echo 'opcache.fast_shutdown=1'; \
+    echo 'opcache.enable_cli=1'; \
+    echo 'opcache.enable=1'; \
+    echo 'opcache.validate_timestamps=0'; \
+    echo 'opcache.max_wasted_percentage=10'; \
+    } > /usr/local/etc/php/conf.d/opcache-recommended.ini
+
+# Configure PHP-FPM for better performance
+RUN { \
+    echo '[www]'; \
+    echo 'pm = dynamic'; \
+    echo 'pm.max_children = 10'; \
+    echo 'pm.start_servers = 3'; \
+    echo 'pm.min_spare_servers = 2'; \
+    echo 'pm.max_spare_servers = 5'; \
+    echo 'pm.max_requests = 500'; \
+    } > /usr/local/etc/php-fpm.d/zz-docker.conf
 
 # Switch back to dev user
 USER dev

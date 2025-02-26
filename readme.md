@@ -16,7 +16,7 @@ Make sure these ports are available on your system:
 - `8081` - PHPMyAdmin
 - `3306` - MySQL
 
-## Setup Instructions
+## Step-by-Step Setup Guide
 
 ### 1. Clone the Repository
 
@@ -49,20 +49,51 @@ docker-compose up -d --build
 docker-compose up -d
 ```
 
-### 4. Verify Installation
-
-The following services should be available:
-- Main application: http://localhost:8080
-- PHPMyAdmin: http://localhost:8081
-  - Username: symfony_user
-  - Password: your_password (or what you set in .env.local)
-
-### 5. Common Commands
+### 4. Install Dependencies and Setup Database
 
 ```bash
-# Stop all containers
-docker-compose down
+# Install PHP dependencies
+docker-compose exec app composer install
 
+# Create database schema
+docker-compose exec app php bin/console doctrine:schema:create
+
+# Clear cache
+docker-compose exec app php bin/console cache:clear
+```
+
+### 5. Working with Bundles
+
+```bash
+# Install a new bundle
+docker-compose exec app composer require bundle-name
+
+# Install a development bundle
+docker-compose exec app composer require --dev bundle-name
+
+# Update all packages
+docker-compose exec app composer update
+
+# Clear cache after bundle installation
+docker-compose exec app php bin/console cache:clear
+```
+
+### 6. Database Operations
+
+```bash
+# Create a new migration
+docker-compose exec app php bin/console make:migration
+
+# Run migrations
+docker-compose exec app php bin/console doctrine:migrations:migrate
+
+# Create a new entity
+docker-compose exec app php bin/console make:entity
+```
+
+### 7. Common Docker Commands
+
+```bash
 # View logs
 docker-compose logs
 
@@ -71,15 +102,18 @@ docker-compose logs app    # PHP-FPM logs
 docker-compose logs nginx  # Nginx logs
 docker-compose logs db     # MySQL logs
 
-# Rebuild containers (if you modify Dockerfile or docker-compose.yml)
+# Restart services
+docker-compose restart
+
+# Stop all services
+docker-compose down
+
+# Rebuild containers
 docker-compose down -v
 docker-compose up -d --build
-
-# Access PHP container (for running Symfony commands)
-docker-compose exec app bash
 ```
 
-### 6. Directory Structure
+## Directory Structure
 
 ```
 .
@@ -97,52 +131,33 @@ docker-compose exec app bash
 
 ## Troubleshooting
 
+### Performance Issues
+1. Make sure the vendor volume is properly mounted
+2. Verify OPcache is working
+3. Check PHP-FPM process manager status
+
 ### 502 Bad Gateway
-1. Check if all containers are running:
-   ```bash
-   docker-compose ps
-   ```
-2. Verify logs for errors:
-   ```bash
-   docker-compose logs nginx app
-   ```
-3. Make sure no other services are using required ports (8080, 8081, 3306)
+1. Check if all containers are running: `docker-compose ps`
+2. Verify logs: `docker-compose logs nginx app`
+3. Make sure no other services are using required ports
 
 ### Database Connection Issues
-1. Verify MySQL is running:
-   ```bash
-   docker-compose ps db
-   ```
-2. Check database logs:
-   ```bash
-   docker-compose logs db
-   ```
-3. Verify your .env.local database credentials match docker-compose.yml
+1. Verify MySQL is running: `docker-compose ps db`
+2. Check database logs: `docker-compose logs db`
+3. Verify your .env.local database credentials
 
 ### Permission Issues
-If you encounter permission issues:
 1. The containers run with UID/GID 1000 by default
-2. Ensure your host user has proper permissions on the project directory
-3. If needed, adjust USER_ID and GROUP_ID in the Dockerfile
+2. Ensure your host user has proper permissions
+3. If needed, adjust USER_ID and GROUP_ID in docker-compose.yml
 
-## Development Workflow
+## Development Best Practices
 
-1. Code changes in the `symfony/` directory are immediately reflected in the running application
-2. Clear Symfony cache after major changes:
-   ```bash
-   docker-compose exec app php bin/console cache:clear
-   ```
-3. Install new dependencies:
-   ```bash
-   docker-compose exec app composer require [package-name]
-   ```
-
-## Contributing
-
-1. Create a new branch for your feature
-2. Make your changes
-3. Test thoroughly
-4. Submit a pull request
+1. Always work in feature branches
+2. Run tests before committing: `docker-compose exec app php bin/phpunit`
+3. Keep dependencies updated
+4. Clear cache after major changes
+5. Use proper Git commit messages
 
 ## Tech Stack
 
