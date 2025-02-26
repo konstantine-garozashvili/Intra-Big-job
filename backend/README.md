@@ -80,10 +80,10 @@ php bin/console list
 php bin/console cache:clear
 
 # Créer un contrôleur
-php bin/console make:controller TaskController
+php bin/console make:controller NomDuController
 
 # Créer une entité
-php bin/console make:entity Task
+php bin/console make:entity NomDeLaTable
 
 # Créer une migration
 php bin/console make:migration
@@ -101,7 +101,7 @@ Le projet utilise Doctrine ORM pour la gestion de la base de données. Voici le 
 
 1. **Créer ou modifier une entité**
    ```bash
-   php bin/console make:entity Task
+   php bin/console make:entity NomDeLaTable
    ```
 
 2. **Générer une migration**
@@ -135,7 +135,7 @@ php bin/console lexik:jwt:generate-keypair
 php bin/phpunit
 
 # Exécuter un test spécifique
-php bin/phpunit tests/Controller/TaskControllerTest.php
+php bin/phpunit tests/Controller/NomDuControllerTest.php
 ```
 
 ## 🐞 Résolution des problèmes

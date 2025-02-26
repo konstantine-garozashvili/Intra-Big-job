@@ -19,6 +19,10 @@ The BigProject project follows a modern client-server architecture with:
 - **React Router DOM**: 6.29.0
 - **Axios**: 1.8.1 (HTTP client)
 
+### UI Components and Icons
+- **shadcn/ui**: 1.0.0 (Component library)
+- **Lucide React**: 1.0.0 (Icon library)
+
 ### Build Tools and Development Environment
 - **Vite**: 6.2.0 (Build tool and development server)
 - **@vitejs/plugin-react**: 4.3.4

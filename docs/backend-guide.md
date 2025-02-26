@@ -33,7 +33,7 @@ backend/
 ├── templates/          # Templates Twig (si utilisés)
 ├── tests/              # Tests automatisés
 ├── var/                # Fichiers temporaires (cache, logs)
-├── vendor/             # Dépendances installées par Composer
+├── vendor/             # Dépendances installées par Composer 
 ├── .env                # Variables d'environnement
 └── composer.json       # Dépendances PHP
 ```
