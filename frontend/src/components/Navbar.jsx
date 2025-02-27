@@ -7,34 +7,24 @@ const Navbar = () => {
                 <div className="flex items-center justify-between h-16">
                     <div className="flex-shrink-0">
                         <Link to="/" className="text-2xl font-black tracking-tight text-white">
-                            School<span className="text-[#528eb2]">Co'</span>
+                            Big<span className="text-[#528eb2]">Project</span>
                         </Link>
                     </div>
 
                     <div className="hidden md:block">
                         <div className="flex items-center ml-10 space-x-1">
-                            <Link to="#" className="px-3 py-2 rounded-md text-gray-200 hover:text-white hover:bg-[#02284f]/80 transition-colors">
+                            <Link to="/" className="px-3 py-2 rounded-md text-gray-200 hover:text-white hover:bg-[#02284f]/80 transition-colors">
                                 Accueil
                             </Link>
-                            <Link to="#" className="px-3 py-2 rounded-md text-gray-200 hover:text-white hover:bg-[#02284f]/80 transition-colors">
-                                À propos
-                            </Link>
-                            <Link to="#" className="px-3 py-2 rounded-md text-gray-200 hover:text-white hover:bg-[#02284f]/80 transition-colors">
-                                Contact
-                            </Link>
+                            <a href="https://github.com/konstantine-garozashvili/Intra-Big-job" 
+                               target="_blank" 
+                               rel="noopener noreferrer" 
+                               className="px-3 py-2 rounded-md text-gray-200 hover:text-white hover:bg-[#02284f]/80 transition-colors">
+                                GitHub
+                            </a>
                         </div>
                     </div>
 
-                    <div className="hidden md:block">
-                        <div className="flex items-center ml-4">
-                            <Link to="#" className="px-4 py-2 text-gray-200 transition-colors rounded-md hover:text-white">
-                                Connexion
-                            </Link>
-                            <Link to="#" className="ml-2 px-4 py-2 bg-[#528eb2] rounded-md text-white font-medium hover:bg-[#528eb2]/90 transition-all transform hover:scale-105">
-                                Inscription
-                            </Link>
-                        </div>
-                    </div>
 
                     <div className="md:hidden">
                         <button className="text-gray-200 hover:text-white focus:outline-none">

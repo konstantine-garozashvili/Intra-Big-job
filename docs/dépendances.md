@@ -1,10 +1,10 @@
-# SchoolCo Project Specifications
+# BigProject Project Specifications
 
-This document provides a comprehensive overview of all technologies, frameworks, libraries, and tools used in the SchoolCo project, along with their specific versions.
+This document provides a comprehensive overview of all technologies, frameworks, libraries, and tools used in the BigProject project, along with their specific versions.
 
 ## Project Architecture
 
-The SchoolCo project follows a modern client-server architecture with:
+The BigProject project follows a modern client-server architecture with:
 - Frontend: React-based single-page application
 - Backend: Symfony-based RESTful API
 - Database: MySQL
@@ -18,6 +18,10 @@ The SchoolCo project follows a modern client-server architecture with:
 - **React DOM**: 19.0.0
 - **React Router DOM**: 6.29.0
 - **Axios**: 1.8.1 (HTTP client)
+
+### UI Components and Icons
+- **shadcn/ui**: 1.0.0 (Component library)
+- **Lucide React**: 1.0.0 (Icon library)
 
 ### Build Tools and Development Environment
 - **Vite**: 6.2.0 (Build tool and development server)
@@ -99,7 +103,7 @@ The SchoolCo project follows a modern client-server architecture with:
 ### Database
 - **MySQL**: 8.0
   - Authentication Plugin: mysql_native_password
-  - Database Name: schoolco
+  - Database Name: BigProject
   - Character Set: utf8mb4
 
 ## Development Tools

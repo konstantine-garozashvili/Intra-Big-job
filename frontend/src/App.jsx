@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import Register from './pages/Register'
+
+import Welcome from './pages/Welcome'
 import './index.css'
 
 function App() {
@@ -7,7 +8,8 @@ function App() {
     <Router>
       <div className="min-h-screen bg-gray-100">
         <Routes>
-          <Route path="/" element={<Register />} />
+          <Route path="/" element={<Welcome />} />
+        
         </Routes>
       </div>
     </Router>
