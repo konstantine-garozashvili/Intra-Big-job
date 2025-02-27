@@ -4,14 +4,12 @@
 
 ### Préparation initiale
 
-Avant de commencer, assurez-vous d'avoir un environnement propre :
+Avant de commencer, assurez-vous d'avoir un environnement propre (Attention cette action supprimera les volumes de vos anciens projets) :
 
 ```bash
 # Nettoyer le cache Docker et les volumes
 docker system prune -a --volumes
 
-# Reconstruire les images Docker
-docker-compose -f infra/docker-compose.yml build --no-cache
 ```
 
 ### Prérequis
@@ -32,7 +30,11 @@ cd Intra-BigProject
 2. **Lancer les conteneurs Docker**
 
 ```bash
-docker-compose -f infra/docker-compose.yml up --build -d
+# Reconstruire les images Docker
+docker-compose -f infra/docker-compose.yml build --no-cache
+
+# Démarrer les conteneurs
+docker-compose -f infra/docker-compose.yml up -d
 ```
 
 3. **Vérifier que tout fonctionne**
