@@ -160,6 +160,18 @@ const Welcome = () => {
                   </ul>
                 </AccordionContent>
               </AccordionItem>
+
+              <AccordionItem value="address-autocomplete">
+                <AccordionTrigger className="text-[#02284f] font-medium">API d'Autocomplete d'Adresses</AccordionTrigger>
+                <AccordionContent>
+                  <p className="mb-2">Pour l'autocomplétion des adresses françaises, utilisez l'API gouvernementale :</p>
+                  <ul className="pl-6 list-disc space-y-1">
+                    <li>URL de l'API : <a href="https://api-adresse.data.gouv.fr" className="text-[#528eb2] hover:underline" target="_blank" rel="noopener noreferrer">https://api-adresse.data.gouv.fr</a></li>
+                    <li>Documentation : <a href="https://adresse.data.gouv.fr/api-doc/adresse" className="text-[#528eb2] hover:underline" target="_blank" rel="noopener noreferrer">https://adresse.data.gouv.fr/api-doc/adresse</a></li>
+                    <li>Cette API gratuite fournit des fonctionnalités de recherche et d'autocomplétion pour les adresses françaises</li>
+                  </ul>
+                </AccordionContent>
+              </AccordionItem>
             </Accordion>
           </div>
           

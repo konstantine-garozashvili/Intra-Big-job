@@ -122,3 +122,12 @@ Si vous rencontrez des difficultés ou avez des questions :
 1. Consultez d'abord la documentation dans le dossier `docs/`
 2. Demandez de l'aide à vos collègues
 3. Signalez les bugs en créant une issue sur GitHub
+
+## Address Autocomplete
+
+For address autocomplete functionality, use the API provided by the French government:
+
+- API URL: https://api-adresse.data.gouv.fr
+- Documentation: https://adresse.data.gouv.fr/api-doc/adresse
+
+This free API provides address lookup and autocomplete features for French addresses.
