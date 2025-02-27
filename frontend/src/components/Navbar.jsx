@@ -16,7 +16,7 @@ const Navbar = () => {
                             <Link to="/" className="px-3 py-2 rounded-md text-gray-200 hover:text-white hover:bg-[#02284f]/80 transition-colors">
                                 Accueil
                             </Link>
-                            <a href="https://github.com/your-repo/Intra-BigProject" 
+                            <a href="https://github.com/konstantine-garozashvili/Intra-Big-job" 
                                target="_blank" 
                                rel="noopener noreferrer" 
                                className="px-3 py-2 rounded-md text-gray-200 hover:text-white hover:bg-[#02284f]/80 transition-colors">

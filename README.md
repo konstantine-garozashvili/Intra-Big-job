@@ -36,7 +36,8 @@ Ce projet dispose d'une documentation complète pour aider les nouveaux dévelop
 ### 📋 Guides généraux
 
 - [Guide Docker](docs/docker-guide.md) - Tout ce que vous devez savoir sur l'environnement Docker
-- [Guide de dépannage](docs/troubleshooting.md) - Solutions aux problèmes fréquents
+- [En cas d'erreurs](docs/en-cas-d'erreurs.md) - Solutions aux problèmes fréquents
+- [Dépendances](docs/dépendances.md) - Liste des dépendances utilisées dans le projet
 
 ### 🔧 Guides techniques
 
@@ -98,7 +99,7 @@ npx shadcn@latest add [nom-du-composant]
 
 ## 🆘 Résolution des problèmes courants
 
-Consultez notre [guide de dépannage](docs/troubleshooting.md) pour les solutions aux problèmes fréquemment rencontrés.
+Consultez notre [guide de dépannage](docs/en-cas-d'erreurs.md) pour les solutions aux problèmes fréquemment rencontrés.
 
 ## 👥 Support
 
