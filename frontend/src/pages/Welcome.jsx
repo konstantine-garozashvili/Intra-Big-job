@@ -1,192 +1,308 @@
-import Navbar from '../components/Navbar';
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '../components/ui/accordion';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '../lib/AuthContext';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { toast, Toaster } from 'sonner';
 
 const Welcome = () => {
+  const { isAuthenticated, login, register } = useAuth();
+  const navigate = useNavigate();
+  const [showRegister, setShowRegister] = useState(false);
+  const [loginData, setLoginData] = useState({
+    email: '',
+    password: ''
+  });
+  const [registerData, setRegisterData] = useState({
+    email: '',
+    username: '',
+    password: '',
+    confirmPassword: ''
+  });
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [registerLoading, setRegisterLoading] = useState(false);
+
+  const handleLoginChange = (e) => {
+    setLoginData({ ...loginData, [e.target.name]: e.target.value });
+  };
+
+  const handleRegisterChange = (e) => {
+    setRegisterData({ ...registerData, [e.target.name]: e.target.value });
+  };
+
+  const handleLoginSubmit = async (e) => {
+    e.preventDefault();
+    setLoginLoading(true);
+    
+    try {
+      await login(loginData.email, loginData.password);
+      toast.success('Connexion réussie!');
+      navigate('/dashboard');
+    } catch (error) {
+      toast.error(error.message || 'Identifiants incorrects');
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handleRegisterSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (registerData.password !== registerData.confirmPassword) {
+      toast.error('Les mots de passe ne correspondent pas');
+      return;
+    }
+    
+    setRegisterLoading(true);
+    try {
+      await register(registerData.email, registerData.username, registerData.password);
+      toast.success('Inscription réussie! Vous êtes maintenant connecté.');
+      navigate('/dashboard');
+    } catch (error) {
+      toast.error(error.message || 'Erreur lors de l\'inscription');
+    } finally {
+      setRegisterLoading(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#02284f] via-[#02284f]/90 to-[#02284f]/80">
-      <Navbar />
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-64px)] px-4">
-        <div className="max-w-4xl p-8 bg-white rounded-xl shadow-2xl">
-          <h1 className="mb-6 text-4xl font-extrabold text-center text-[#02284f]">
-            Bienvenue sur <span className="text-[#528eb2]">Big Project</span>
-          </h1>
-          
-          <div className="p-4 mb-6 bg-green-100 border border-green-200 rounded-lg">
-            <p className="text-lg text-green-700 text-center">
-              Tout est configuré et prêt à l'emploi !
-            </p>
-          </div>
-          
-          <div className="mb-8 text-lg text-gray-700">
-            <p className="mb-4">
-              Ce projet est prêt pour le développement. Voici quelques informations importantes :
-            </p>
+    <div className="min-h-screen bg-white overflow-hidden">
+      {/* Header */}
+      <header className="fixed w-full bg-white/80 backdrop-blur-md z-50 border-b border-gray-100">
+        <div className="container mx-auto px-6 py-4 flex justify-between items-center">
+          <h1 className="text-2xl font-semibold text-gray-900">BigProject</h1>
+          {isAuthenticated() ? (
+            <Link to="/dashboard">
+              <Button className="rounded-full px-6 bg-black text-white hover:bg-black/90">
+                Mon espace
+              </Button>
+            </Link>
+          ) : (
+            <Button 
+              onClick={() => setShowRegister(!showRegister)} 
+              className="rounded-full px-6 bg-black text-white hover:bg-black/90"
+            >
+              {showRegister ? 'Se connecter' : 'S\'inscrire'}
+            </Button>
+          )}
+        </div>
+      </header>
+
+      {/* Hero Section */}
+      <section className="pt-32 pb-20">
+        <div className="container mx-auto px-6">
+          <div className="flex flex-col lg:flex-row items-center">
+            <div className="w-full lg:w-1/2 mb-12 lg:mb-0">
+              <motion.h2 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+                className="text-5xl md:text-6xl font-bold text-gray-900 leading-tight mb-6"
+              >
+                Apprenez. <br />
+                Collaborez. <br />
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
+                  Réussissez.
+                </span>
+              </motion.h2>
+              
+              <motion.p 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                className="text-xl text-gray-600 mb-8 max-w-lg"
+              >
+                Une plateforme éducative innovante pour gérer vos projets et suivre votre progression en temps réel.
+              </motion.p>
+              
+              {!isAuthenticated() && !showRegister && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.4 }}
+                >
+                  <Button 
+                    onClick={() => setShowRegister(true)} 
+                    className="rounded-full px-8 py-6 bg-blue-600 text-white hover:bg-blue-700 text-lg"
+                  >
+                    Commencer maintenant
+                  </Button>
+                </motion.div>
+              )}
+            </div>
             
-            <ul className="pl-6 list-disc space-y-2">
-              <li>La base de données MySQL est configurée et accessible via PHPMyAdmin sur <a href="http://localhost:8080" className="text-[#528eb2] hover:underline" target="_blank" rel="noopener noreferrer">localhost:8080</a></li>
-              <li>Le backend API est disponible sur <a href="http://localhost:8000" className="text-[#528eb2] hover:underline" target="_blank" rel="noopener noreferrer">localhost:8000</a></li>
-              <li>Le frontend que vous regardez actuellement est sur <a href="http://localhost:5173" className="text-[#528eb2] hover:underline" target="_blank" rel="noopener noreferrer">localhost:5173</a></li>
-            </ul>
-          </div>
-          
-          <div className="p-6 bg-gray-100 rounded-lg mb-6">
-            <h2 className="mb-4 text-2xl font-bold text-[#02284f]">À propos du projet</h2>
-            <p className="mb-4 text-gray-700">
-              Le projet BigProject est une plateforme éducative permettant aux utilisateurs de gérer et suivre des tâches associées à des utilisateurs. 
-              Le système utilise React et Tailwind CSS pour le frontend, et Symfony avec Doctrine ORM pour le backend.
-            </p>
-            <p className="mb-2 text-gray-700">
-              Pour plus de détails sur l'installation, la configuration et le travail avec ce projet, veuillez consulter le fichier <strong>README.md</strong> à la racine du projet.
-            </p>
-            
-            <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-              <h3 className="mb-3 text-lg font-semibold text-[#02284f]">Documentation complète</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                <a href="https://github.com/konstantine-garozashvili/Intra-Big-job/blob/master/docs/docker-guide.md" target="_blank" className="flex items-center p-2 text-[#528eb2] hover:bg-gray-100 rounded transition-colors">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  Guide Docker
-                </a>
-                <a href="https://github.com/konstantine-garozashvili/Intra-Big-job/blob/master/docs/frontend-guide.md" target="_blank" className="flex items-center p-2 text-[#528eb2] hover:bg-gray-100 rounded transition-colors">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  Guide Frontend
-                </a>
-                <a href="https://github.com/konstantine-garozashvili/Intra-Big-job/blob/master/docs/backend-guide.md" target="_blank" className="flex items-center p-2 text-[#528eb2] hover:bg-gray-100 rounded transition-colors">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  Guide Backend
-                </a>
-                <a href="https://github.com/konstantine-garozashvili/Intra-Big-job/blob/master/docs/database-guide.md" target="_blank" className="flex items-center p-2 text-[#528eb2] hover:bg-gray-100 rounded transition-colors">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  Guide Base de données
-                </a>
-                <a href="https://github.com/konstantine-garozashvili/Intra-Big-job/blob/master/docs/en-cas-d'erreurs.md" target="_blank" className="flex items-center p-2 text-[#528eb2] hover:bg-gray-100 rounded transition-colors">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  En cas d'erreurs
-                </a>
-                <a href="https://github.com/konstantine-garozashvili/Intra-Big-job/blob/master/docs/d%C3%A9pendances.md" target="_blank" className="flex items-center p-2 text-[#528eb2] hover:bg-gray-100 rounded transition-colors">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  Dépendances
-                </a>
-              </div>
+            {/* Form Section */}
+            <div className="w-full lg:w-1/2">
+              <AnimatePresence mode="wait">
+                {!isAuthenticated() && (
+                  <motion.div 
+                    key={showRegister ? 'register' : 'login'}
+                    initial={{ opacity: 0, x: showRegister ? 100 : -100 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: showRegister ? -100 : 100 }}
+                    transition={{ duration: 0.5 }}
+                    className="bg-white rounded-2xl shadow-xl p-8 max-w-md mx-auto"
+                  >
+                    <h3 className="text-2xl font-bold text-gray-900 mb-6">
+                      {showRegister ? 'Créer un compte' : 'Se connecter'}
+                    </h3>
+                    
+                    <form onSubmit={showRegister ? handleRegisterSubmit : handleLoginSubmit} className="space-y-4">
+                      <div>
+                        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                          Email
+                        </label>
+                        <Input
+                          id="email"
+                          name="email"
+                          type="email"
+                          value={showRegister ? registerData.email : loginData.email}
+                          onChange={showRegister ? handleRegisterChange : handleLoginChange}
+                          required
+                          className="rounded-lg border-gray-300"
+                          placeholder="votreemail@exemple.com"
+                        />
+                      </div>
+                      
+                      {showRegister && (
+                        <div>
+                          <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
+                            Nom d'utilisateur
+                          </label>
+                          <Input
+                            id="username"
+                            name="username"
+                            type="text"
+                            value={registerData.username}
+                            onChange={handleRegisterChange}
+                            required
+                            className="rounded-lg border-gray-300"
+                            placeholder="johndoe"
+                          />
+                        </div>
+                      )}
+                      
+                      <div>
+                        <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                          Mot de passe
+                        </label>
+                        <Input
+                          id="password"
+                          name="password"
+                          type="password"
+                          value={showRegister ? registerData.password : loginData.password}
+                          onChange={showRegister ? handleRegisterChange : handleLoginChange}
+                          required
+                          className="rounded-lg border-gray-300"
+                          placeholder="••••••••"
+                        />
+                      </div>
+                      
+                      {showRegister && (
+                        <div>
+                          <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                            Confirmer le mot de passe
+                          </label>
+                          <Input
+                            id="confirmPassword"
+                            name="confirmPassword"
+                            type="password"
+                            value={registerData.confirmPassword}
+                            onChange={handleRegisterChange}
+                            required
+                            className="rounded-lg border-gray-300"
+                            placeholder="••••••••"
+                          />
+                        </div>
+                      )}
+                      
+                      <Button
+                        type="submit"
+                        disabled={showRegister ? registerLoading : loginLoading}
+                        className="w-full rounded-lg bg-blue-600 hover:bg-blue-700 text-white py-2.5"
+                      >
+                        {showRegister ? (registerLoading ? 'Chargement...' : 'S\'inscrire') : (loginLoading ? 'Chargement...' : 'Se connecter')}
+                      </Button>
+                    </form>
+                    
+                    <div className="mt-6 text-center">
+                      <button
+                        onClick={() => setShowRegister(!showRegister)}
+                        className="text-sm text-blue-600 hover:text-blue-800"
+                      >
+                        {showRegister ? 'Déjà un compte? Se connecter' : 'Pas de compte? S\'inscrire'}
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
-          
-          <div className="p-6 bg-gray-50 rounded-lg mb-6">
-            <h2 className="mb-4 text-2xl font-bold text-[#02284f]">Spécifications Techniques</h2>
-            <Accordion type="single" collapsible className="w-full">
-              <AccordionItem value="architecture">
-                <AccordionTrigger className="text-[#02284f] font-medium">Architecture du Projet</AccordionTrigger>
-                <AccordionContent>
-                  <p className="mb-2">Le projet BigProject suit une architecture client-serveur moderne avec :</p>
-                  <ul className="pl-6 list-disc space-y-1">
-                    <li>Frontend : Application monopage basée sur React</li>
-                    <li>Backend : API RESTful basée sur Symfony</li>
-                    <li>Base de données : MySQL</li>
-                    <li>Infrastructure : Conteneurisation Docker</li>
-                  </ul>
-                </AccordionContent>
-              </AccordionItem>
-              
-              <AccordionItem value="frontend">
-                <AccordionTrigger className="text-[#02284f] font-medium">Technologies Frontend</AccordionTrigger>
-                <AccordionContent>
-                  <p className="font-medium mb-2">Frameworks et Bibliothèques Principales :</p>
-                  <ul className="pl-6 list-disc space-y-1 mb-3">
-                    <li>Node.js : 18.x (image Docker basée sur Alpine)</li>
-                    <li>React : 19.0.0</li>
-                    <li>React DOM : 19.0.0</li>
-                    <li>React Router DOM : 6.29.0</li>
-                    <li>Axios : 1.8.1 (client HTTP)</li>
-                  </ul>
-                  <p className="font-medium mb-2">CSS et Style :</p>
-                  <ul className="pl-6 list-disc space-y-1">
-                    <li>Tailwind CSS : 3.4.17</li>
-                    <li>PostCSS : 8.5.3</li>
-                    <li>Autoprefixer : 10.4.20</li>
-                  </ul>
-                </AccordionContent>
-              </AccordionItem>
-              
-              <AccordionItem value="backend">
-                <AccordionTrigger className="text-[#02284f] font-medium">Technologies Backend</AccordionTrigger>
-                <AccordionContent>
-                  <p className="font-medium mb-2">Framework Principal :</p>
-                  <ul className="pl-6 list-disc space-y-1 mb-3">
-                    <li>PHP : 8.2 (version FPM dans Docker)</li>
-                    <li>Symfony : 7.2.* (Tous les composants Symfony utilisent cette version)</li>
-                    <li>Composer : Dernière version (gestionnaire de paquets)</li>
-                  </ul>
-                  <p className="font-medium mb-2">Base de Données et ORM :</p>
-                  <ul className="pl-6 list-disc space-y-1">
-                    <li>MySQL : 8.0.32</li>
-                    <li>Doctrine ORM : 3.3.*</li>
-                    <li>Doctrine DBAL : 3.*</li>
-                  </ul>
-                </AccordionContent>
-              </AccordionItem>
-              
-              <AccordionItem value="database">
-                <AccordionTrigger className="text-[#02284f] font-medium">Gestion de la Base de Données</AccordionTrigger>
-                <AccordionContent>
-                  <p className="mb-2">Pour travailler avec la base de données MySQL :</p>
-                  <ul className="pl-6 list-disc space-y-1">
-                    <li>Accès via PHPMyAdmin : <a href="http://localhost:8080" className="text-[#528eb2] hover:underline">http://localhost:8080</a> (utilisateur : root, mot de passe : root)</li>
-                    <li>Les entités sont définies dans <code className="bg-gray-100 px-1 rounded">backend/src/Entity/</code></li>
-                    <li>Les migrations sont stockées dans <code className="bg-gray-100 px-1 rounded">backend/migrations/</code></li>
-                    <li>En ligne de commande : <code className="bg-gray-100 px-1 rounded">docker exec -it infra-database-1 mysql -uroot -proot bigproject</code></li>
-                  </ul>
-                </AccordionContent>
-              </AccordionItem>
-              
-              <AccordionItem value="infrastructure">
-                <AccordionTrigger className="text-[#02284f] font-medium">Infrastructure</AccordionTrigger>
-                <AccordionContent>
-                  <ul className="pl-6 list-disc space-y-1">
-                    <li>Serveur Web : Nginx (version Alpine)</li>
-                    <li>Conteneurisation : Docker et Docker Compose</li>
-                    <li>Base de Données : MySQL 8.0 (Plugin d'authentification : mysql_native_password)</li>
-                    <li>Démarrage des conteneurs : <code className="bg-gray-100 px-1 rounded">cd infra && docker-compose build && docker-compose up -d</code></li>
-                  </ul>
-                </AccordionContent>
-              </AccordionItem>
+        </div>
+      </section>
 
-              <AccordionItem value="address-autocomplete">
-                <AccordionTrigger className="text-[#02284f] font-medium">API d'Autocomplete d'Adresses</AccordionTrigger>
-                <AccordionContent>
-                  <p className="mb-2">Pour l'autocomplétion des adresses françaises, utilisez l'API gouvernementale :</p>
-                  <ul className="pl-6 list-disc space-y-1">
-                    <li>URL de l'API : <a href="https://api-adresse.data.gouv.fr" className="text-[#528eb2] hover:underline" target="_blank" rel="noopener noreferrer">https://api-adresse.data.gouv.fr</a></li>
-                    <li>Documentation : <a href="https://adresse.data.gouv.fr/api-doc/adresse" className="text-[#528eb2] hover:underline" target="_blank" rel="noopener noreferrer">https://adresse.data.gouv.fr/api-doc/adresse</a></li>
-                    <li>Cette API gratuite fournit des fonctionnalités de recherche et d'autocomplétion pour les adresses françaises</li>
-                  </ul>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </div>
+      {/* Features Section */}
+      <section className="py-20 bg-gray-50">
+        <div className="container mx-auto px-6">
+          <h2 className="text-4xl font-bold text-center text-gray-900 mb-16">Fonctionnalités principales</h2>
           
-          <div className="mt-8 text-center">
-            <p className="text-xl font-medium text-[#02284f] italic">
-              "Nous vous souhaitons bonne chance à tous dans vos développements "
-            </p>
-            <p className="mt-2 text-sm text-gray-500">
-              L'équipe du projet vous encourage dans cette aventure technique 
-            </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+            {[
+              {
+                title: 'Apprentissage interactif',
+                description: 'Des outils pédagogiques modernes pour un apprentissage efficace et engageant.',
+                icon: '📚'
+              },
+              {
+                title: 'Collaboration en temps réel',
+                description: 'Travaillez ensemble sur des projets avec des outils de communication intégrés.',
+                icon: '👥'
+              },
+              {
+                title: 'Suivi de progression',
+                description: 'Visualisez votre évolution et identifiez vos points forts et axes d\'amélioration.',
+                icon: '📈'
+              }
+            ].map((feature, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+                viewport={{ once: true }}
+                className="bg-white rounded-2xl p-8 shadow-sm hover:shadow-md transition-shadow"
+              >
+                <div className="text-4xl mb-4">{feature.icon}</div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-3">{feature.title}</h3>
+                <p className="text-gray-600">{feature.description}</p>
+              </motion.div>
+            ))}
           </div>
         </div>
-      </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="py-12 bg-gray-900 text-white">
+        <div className="container mx-auto px-6">
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <div className="mb-6 md:mb-0">
+              <h2 className="text-2xl font-bold">BigProject</h2>
+              <p className="text-gray-400 mt-2"> 2024 Tous droits réservés</p>
+            </div>
+            
+            <div className="flex space-x-6">
+              <a href="#" className="text-gray-400 hover:text-white transition-colors">À propos</a>
+              <a href="#" className="text-gray-400 hover:text-white transition-colors">Contact</a>
+              <a href="#" className="text-gray-400 hover:text-white transition-colors">Confidentialité</a>
+            </div>
+          </div>
+        </div>
+      </footer>
+      
+      <Toaster />
     </div>
   );
 };
 
-export default Welcome; 
+export default Welcome;
