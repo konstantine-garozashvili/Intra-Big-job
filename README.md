@@ -2,6 +2,18 @@
 
 ## 🚀 Guide de démarrage rapide
 
+### Préparation initiale
+
+Avant de commencer, assurez-vous d'avoir un environnement propre :
+
+```bash
+# Nettoyer le cache Docker et les volumes
+docker system prune -a --volumes
+
+# Reconstruire les images Docker
+docker-compose -f infra/docker-compose.yml build --no-cache
+```
+
 ### Prérequis
 
 - Docker et Docker Compose installés sur votre machine
