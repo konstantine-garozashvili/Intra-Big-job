@@ -5,12 +5,12 @@ import { useAuth } from '../lib/AuthContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { toast, Toaster } from 'sonner';
+import { useEffect } from 'react';
 
 const Welcome = () => {
   const { isAuthenticated, login, register } = useAuth();
   const navigate = useNavigate();
   const [showRegister, setShowRegister] = useState(false);
-  const [showFullRegister, setShowFullRegister] = useState(false);
   const [loginData, setLoginData] = useState({
     email: '',
     password: ''
@@ -33,6 +33,7 @@ const Welcome = () => {
   const [loginLoading, setLoginLoading] = useState(false);
   const [registerLoading, setRegisterLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [registrationStep, setRegistrationStep] = useState(1);
 
   const handleLoginChange = (e) => {
     setLoginData({ ...loginData, [e.target.name]: e.target.value });
@@ -48,6 +49,49 @@ const Welcome = () => {
         [e.target.name]: null
       });
     }
+  };
+
+  const validateBasicRegisterData = () => {
+    const newErrors = {};
+    
+    // Basic validation for first step
+    if (!registerData.email) {
+      newErrors.email = 'L\'email est requis';
+    } else if (!/\S+@\S+\.\S+/.test(registerData.email)) {
+      newErrors.email = 'Format d\'email invalide';
+    }
+    
+    if (!registerData.username) {
+      newErrors.username = 'Le nom d\'utilisateur est requis';
+    }
+    
+    if (!registerData.password) {
+      newErrors.password = 'Le mot de passe est requis';
+    } else if (registerData.password.length < 6) {
+      newErrors.password = 'Le mot de passe doit contenir au moins 6 caractères';
+    }
+    
+    if (registerData.password !== registerData.confirmPassword) {
+      newErrors.confirmPassword = 'Les mots de passe ne correspondent pas';
+    }
+    
+    return newErrors;
+  };
+
+  const handleNextStep = (e) => {
+    e.preventDefault();
+    
+    // Validate first step
+    const validationErrors = validateBasicRegisterData();
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      toast.error('Veuillez corriger les erreurs dans le formulaire');
+      return;
+    }
+    
+    // Clear errors and move to next step
+    setErrors({});
+    setRegistrationStep(2);
   };
 
   const validateRegisterData = () => {
@@ -166,6 +210,18 @@ const Welcome = () => {
     }
   };
 
+  const handleToggleRegister = () => {
+    setShowRegister(!showRegister);
+    setErrors({});
+    setRegistrationStep(1); // Reset to step 1 when toggling
+  };
+
+  useEffect(() => {
+    if (!showRegister) {
+      setRegistrationStep(1);
+    }
+  }, [showRegister]);
+
   return (
     <div className="min-h-screen bg-white overflow-hidden">
       <Toaster position="top-center" />
@@ -183,7 +239,7 @@ const Welcome = () => {
             </Button>
           ) : (
             <Button 
-              onClick={() => setShowRegister(!showRegister)} 
+              onClick={handleToggleRegister} 
               className="rounded-full px-6 bg-black text-white hover:bg-black/90"
             >
               {showRegister ? 'Se connecter' : 'S\'inscrire'}
@@ -242,247 +298,267 @@ const Welcome = () => {
                   </h3>
                   
                   <div className="mb-6">
-                    <form onSubmit={showRegister ? handleRegisterSubmit : handleLoginSubmit} className="space-y-4">
-                      <div>
-                        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                          Email
-                        </label>
-                        <Input
-                          id="email"
-                          name="email"
-                          type="email"
-                          value={showRegister ? registerData.email : loginData.email}
-                          onChange={showRegister ? handleRegisterChange : handleLoginChange}
-                          required
-                          className={`rounded-lg border-gray-300 ${errors.email ? 'border-red-500' : ''}`}
-                          placeholder="votreemail@exemple.com"
-                        />
-                        {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
-                      </div>
-                      
-                      {showRegister && (
-                        <div>
-                          <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
-                            Nom d'utilisateur
-                          </label>
-                          <Input
-                            id="username"
-                            name="username"
-                            type="text"
-                            value={registerData.username}
-                            onChange={handleRegisterChange}
-                            required
-                            className={`rounded-lg border-gray-300 ${errors.username ? 'border-red-500' : ''}`}
-                            placeholder="johndoe"
-                          />
-                          {errors.username && <p className="text-red-500 text-xs mt-1">{errors.username}</p>}
-                        </div>
-                      )}
-                      
-                      <div>
-                        <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                          Mot de passe
-                        </label>
-                        <Input
-                          id="password"
-                          name="password"
-                          type="password"
-                          value={showRegister ? registerData.password : loginData.password}
-                          onChange={showRegister ? handleRegisterChange : handleLoginChange}
-                          required
-                          className={`rounded-lg border-gray-300 ${errors.password ? 'border-red-500' : ''}`}
-                          placeholder="••••••••"
-                        />
-                        {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
-                      </div>
-                      
-                      {showRegister && (
-                        <div>
-                          <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                            Confirmer le mot de passe
-                          </label>
-                          <Input
-                            id="confirmPassword"
-                            name="confirmPassword"
-                            type="password"
-                            value={registerData.confirmPassword}
-                            onChange={handleRegisterChange}
-                            required
-                            className={`rounded-lg border-gray-300 ${errors.confirmPassword ? 'border-red-500' : ''}`}
-                            placeholder="••••••••"
-                          />
-                          {errors.confirmPassword && <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>}
-                        </div>
-                      )}
-                      
-                      {/* Additional registration fields */}
-                      {showRegister && (
-                        <>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                              <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
-                                Prénom
-                              </label>
-                              <Input
-                                id="firstName"
-                                name="firstName"
-                                type="text"
-                                value={registerData.firstName}
-                                onChange={handleRegisterChange}
-                                className={`rounded-lg border-gray-300 ${errors.firstName ? 'border-red-500' : ''}`}
-                                placeholder="Jean"
-                              />
-                              {errors.firstName && <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>}
-                            </div>
-                            <div>
-                              <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
-                                Nom
-                              </label>
-                              <Input
-                                id="lastName"
-                                name="lastName"
-                                type="text"
-                                value={registerData.lastName}
-                                onChange={handleRegisterChange}
-                                className={`rounded-lg border-gray-300 ${errors.lastName ? 'border-red-500' : ''}`}
-                                placeholder="Dupont"
-                              />
-                              {errors.lastName && <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>}
-                            </div>
-                          </div>
-
+                    <form onSubmit={showRegister ? (registrationStep === 1 ? handleNextStep : handleRegisterSubmit) : handleLoginSubmit} className="space-y-4">
+                      {/* Form container with overflow hidden to contain the sliding animation */}
+                      <div className="relative overflow-hidden">
+                        {/* Step 1 form fields */}
+                        <div className={`space-y-4 transition-all duration-300 ${registrationStep === 1 ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0 absolute top-0 left-0 w-full'}`}>
                           <div>
-                            <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
-                              Adresse
+                            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                              Email
                             </label>
                             <Input
-                              id="address"
-                              name="address"
-                              type="text"
-                              value={registerData.address}
-                              onChange={handleRegisterChange}
-                              className={`rounded-lg border-gray-300 ${errors.address ? 'border-red-500' : ''}`}
-                              placeholder="123 rue de Paris"
+                              id="email"
+                              name="email"
+                              type="email"
+                              value={showRegister ? registerData.email : loginData.email}
+                              onChange={showRegister ? handleRegisterChange : handleLoginChange}
+                              required
+                              className={`rounded-lg border-gray-300 ${errors.email ? 'border-red-500' : ''}`}
+                              placeholder="votreemail@exemple.com"
                             />
-                            {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address}</p>}
+                            {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
                           </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          
+                          {showRegister && (
                             <div>
-                              <label htmlFor="postalCode" className="block text-sm font-medium text-gray-700 mb-1">
-                                Code postal
+                              <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
+                                Nom d'utilisateur
                               </label>
                               <Input
-                                id="postalCode"
-                                name="postalCode"
+                                id="username"
+                                name="username"
                                 type="text"
-                                value={registerData.postalCode}
+                                value={registerData.username}
                                 onChange={handleRegisterChange}
-                                className={`rounded-lg border-gray-300 ${errors.postalCode ? 'border-red-500' : ''}`}
-                                placeholder="75001"
+                                required
+                                className={`rounded-lg border-gray-300 ${errors.username ? 'border-red-500' : ''}`}
+                                placeholder="johndoe"
                               />
-                              {errors.postalCode && <p className="text-red-500 text-xs mt-1">{errors.postalCode}</p>}
+                              {errors.username && <p className="text-red-500 text-xs mt-1">{errors.username}</p>}
                             </div>
-                            <div>
-                              <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
-                                Ville
-                              </label>
-                              <Input
-                                id="city"
-                                name="city"
-                                type="text"
-                                value={registerData.city}
-                                onChange={handleRegisterChange}
-                                className={`rounded-lg border-gray-300 ${errors.city ? 'border-red-500' : ''}`}
-                                placeholder="Paris"
-                              />
-                              {errors.city && <p className="text-red-500 text-xs mt-1">{errors.city}</p>}
-                            </div>
-                          </div>
-
+                          )}
+                          
                           <div>
-                            <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-                              Téléphone
+                            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                              Mot de passe
                             </label>
                             <Input
-                              id="phone"
-                              name="phone"
-                              type="tel"
-                              value={registerData.phone}
-                              onChange={handleRegisterChange}
-                              className={`rounded-lg border-gray-300 ${errors.phone ? 'border-red-500' : ''}`}
-                              placeholder="06 12 34 56 78"
+                              id="password"
+                              name="password"
+                              type="password"
+                              value={showRegister ? registerData.password : loginData.password}
+                              onChange={showRegister ? handleRegisterChange : handleLoginChange}
+                              required
+                              className={`rounded-lg border-gray-300 ${errors.password ? 'border-red-500' : ''}`}
+                              placeholder="••••••••"
                             />
-                            {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
+                            {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
                           </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          
+                          {showRegister && (
                             <div>
-                              <label htmlFor="birthDate" className="block text-sm font-medium text-gray-700 mb-1">
-                                Date de naissance
+                              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                                Confirmer le mot de passe
                               </label>
                               <Input
-                                id="birthDate"
-                                name="birthDate"
-                                type="date"
-                                value={registerData.birthDate}
+                                id="confirmPassword"
+                                name="confirmPassword"
+                                type="password"
+                                value={registerData.confirmPassword}
                                 onChange={handleRegisterChange}
-                                className={`rounded-lg border-gray-300 ${errors.birthDate ? 'border-red-500' : ''}`}
+                                required
+                                className={`rounded-lg border-gray-300 ${errors.confirmPassword ? 'border-red-500' : ''}`}
+                                placeholder="••••••••"
                               />
-                              {errors.birthDate && <p className="text-red-500 text-xs mt-1">{errors.birthDate}</p>}
+                              {errors.confirmPassword && <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>}
                             </div>
+                          )}
+                        </div>
+                        
+                        {/* Step 2 form fields - slide in from the right */}
+                        {showRegister && (
+                          <div className={`space-y-4 transition-all duration-300 ${registrationStep === 2 ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0 absolute top-0 left-0 w-full'}`}>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
+                                  Prénom
+                                </label>
+                                <Input
+                                  id="firstName"
+                                  name="firstName"
+                                  type="text"
+                                  value={registerData.firstName}
+                                  onChange={handleRegisterChange}
+                                  className={`rounded-lg border-gray-300 ${errors.firstName ? 'border-red-500' : ''}`}
+                                  placeholder="Jean"
+                                />
+                                {errors.firstName && <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>}
+                              </div>
+                              <div>
+                                <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
+                                  Nom
+                                </label>
+                                <Input
+                                  id="lastName"
+                                  name="lastName"
+                                  type="text"
+                                  value={registerData.lastName}
+                                  onChange={handleRegisterChange}
+                                  className={`rounded-lg border-gray-300 ${errors.lastName ? 'border-red-500' : ''}`}
+                                  placeholder="Dupont"
+                                />
+                                {errors.lastName && <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>}
+                              </div>
+                            </div>
+
                             <div>
-                              <label htmlFor="nationality" className="block text-sm font-medium text-gray-700 mb-1">
-                                Nationalité
+                              <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
+                                Adresse
                               </label>
                               <Input
-                                id="nationality"
-                                name="nationality"
+                                id="address"
+                                name="address"
                                 type="text"
-                                value={registerData.nationality}
+                                value={registerData.address}
                                 onChange={handleRegisterChange}
-                                className={`rounded-lg border-gray-300 ${errors.nationality ? 'border-red-500' : ''}`}
-                                placeholder="Française"
+                                className={`rounded-lg border-gray-300 ${errors.address ? 'border-red-500' : ''}`}
+                                placeholder="123 rue de Paris"
                               />
-                              {errors.nationality && <p className="text-red-500 text-xs mt-1">{errors.nationality}</p>}
+                              {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address}</p>}
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <label htmlFor="postalCode" className="block text-sm font-medium text-gray-700 mb-1">
+                                  Code postal
+                                </label>
+                                <Input
+                                  id="postalCode"
+                                  name="postalCode"
+                                  type="text"
+                                  value={registerData.postalCode}
+                                  onChange={handleRegisterChange}
+                                  className={`rounded-lg border-gray-300 ${errors.postalCode ? 'border-red-500' : ''}`}
+                                  placeholder="75001"
+                                />
+                                {errors.postalCode && <p className="text-red-500 text-xs mt-1">{errors.postalCode}</p>}
+                              </div>
+                              <div>
+                                <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
+                                  Ville
+                                </label>
+                                <Input
+                                  id="city"
+                                  name="city"
+                                  type="text"
+                                  value={registerData.city}
+                                  onChange={handleRegisterChange}
+                                  className={`rounded-lg border-gray-300 ${errors.city ? 'border-red-500' : ''}`}
+                                  placeholder="Paris"
+                                />
+                                {errors.city && <p className="text-red-500 text-xs mt-1">{errors.city}</p>}
+                              </div>
+                            </div>
+
+                            <div>
+                              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                                Téléphone
+                              </label>
+                              <Input
+                                id="phone"
+                                name="phone"
+                                type="tel"
+                                value={registerData.phone}
+                                onChange={handleRegisterChange}
+                                className={`rounded-lg border-gray-300 ${errors.phone ? 'border-red-500' : ''}`}
+                                placeholder="06 12 34 56 78"
+                              />
+                              {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <label htmlFor="birthDate" className="block text-sm font-medium text-gray-700 mb-1">
+                                  Date de naissance
+                                </label>
+                                <Input
+                                  id="birthDate"
+                                  name="birthDate"
+                                  type="date"
+                                  value={registerData.birthDate}
+                                  onChange={handleRegisterChange}
+                                  className={`rounded-lg border-gray-300 ${errors.birthDate ? 'border-red-500' : ''}`}
+                                />
+                                {errors.birthDate && <p className="text-red-500 text-xs mt-1">{errors.birthDate}</p>}
+                              </div>
+                              <div>
+                                <label htmlFor="nationality" className="block text-sm font-medium text-gray-700 mb-1">
+                                  Nationalité
+                                </label>
+                                <Input
+                                  id="nationality"
+                                  name="nationality"
+                                  type="text"
+                                  value={registerData.nationality}
+                                  onChange={handleRegisterChange}
+                                  className={`rounded-lg border-gray-300 ${errors.nationality ? 'border-red-500' : ''}`}
+                                  placeholder="Française"
+                                />
+                                {errors.nationality && <p className="text-red-500 text-xs mt-1">{errors.nationality}</p>}
+                              </div>
+                            </div>
+
+                            <div>
+                              <label htmlFor="educationLevel" className="block text-sm font-medium text-gray-700 mb-1">
+                                Niveau d'études
+                              </label>
+                              <select
+                                id="educationLevel"
+                                name="educationLevel"
+                                value={registerData.educationLevel}
+                                onChange={handleRegisterChange}
+                                className={`w-full rounded-lg border-gray-300 ${errors.educationLevel ? 'border-red-500' : ''} h-9 px-3`}
+                              >
+                                <option value="">Sélectionnez un niveau</option>
+                                <option value="Bac">Bac</option>
+                                <option value="Bac+2">Bac+2</option>
+                                <option value="Bac+3">Bac+3</option>
+                                <option value="Bac+5">Bac+5</option>
+                                <option value="Bac+8">Bac+8</option>
+                              </select>
+                              {errors.educationLevel && <p className="text-red-500 text-xs mt-1">{errors.educationLevel}</p>}
                             </div>
                           </div>
-
-                          <div>
-                            <label htmlFor="educationLevel" className="block text-sm font-medium text-gray-700 mb-1">
-                              Niveau d'études
-                            </label>
-                            <select
-                              id="educationLevel"
-                              name="educationLevel"
-                              value={registerData.educationLevel}
-                              onChange={handleRegisterChange}
-                              className={`w-full rounded-lg border-gray-300 ${errors.educationLevel ? 'border-red-500' : ''} h-9 px-3`}
-                            >
-                              <option value="">Sélectionnez un niveau</option>
-                              <option value="Bac">Bac</option>
-                              <option value="Bac+2">Bac+2</option>
-                              <option value="Bac+3">Bac+3</option>
-                              <option value="Bac+5">Bac+5</option>
-                              <option value="Bac+8">Bac+8</option>
-                            </select>
-                            {errors.educationLevel && <p className="text-red-500 text-xs mt-1">{errors.educationLevel}</p>}
-                          </div>
-                        </>
-                      )}
+                        )}
+                      </div>
                       
                       <Button
                         type="submit"
                         disabled={showRegister ? registerLoading : loginLoading}
-                        className="w-full rounded-lg bg-blue-600 hover:bg-blue-700 text-white py-2.5"
+                        className="w-full rounded-lg bg-blue-600 hover:bg-blue-700 text-white py-2.5 mt-4"
                       >
-                        {showRegister ? (registerLoading ? 'Chargement...' : 'S\'inscrire') : (loginLoading ? 'Chargement...' : 'Se connecter')}
+                        {showRegister 
+                          ? (registrationStep === 1 
+                              ? 'Suivant' 
+                              : (registerLoading ? 'Chargement...' : 'S\'inscrire'))
+                          : (loginLoading ? 'Chargement...' : 'Se connecter')}
                       </Button>
+
+                      {showRegister && registrationStep === 2 && (
+                        <Button
+                          type="button"
+                          onClick={() => setRegistrationStep(1)}
+                          className="w-full rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-800 py-2.5 mt-2"
+                        >
+                          Retour
+                        </Button>
+                      )}
                     </form>
                     
                     <div className="mt-6 text-center">
                       <button
-                        onClick={() => setShowRegister(!showRegister)}
+                        onClick={handleToggleRegister}
                         className="text-sm text-blue-600 hover:text-blue-800"
                       >
                         {showRegister ? 'Déjà un compte? Se connecter' : 'Pas de compte? S\'inscrire'}
