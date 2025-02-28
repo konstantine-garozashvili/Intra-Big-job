@@ -17,9 +17,45 @@ class User implements PasswordAuthenticatedUserInterface
     #[Groups(['user:read'])]
     private ?int $id = null;
 
-    #[ORM\Column(length: 180, unique: true)]
+    #[ORM\Column(length: 255)]
+    #[Groups(['user:read'])]
+    private ?string $firstName = null;
+
+    #[ORM\Column(length: 255)]
+    #[Groups(['user:read'])]
+    private ?string $lastName = null;
+
+    #[ORM\Column(type: 'date')]
+    #[Groups(['user:read'])]
+    private ?\DateTimeInterface $birthDate = null;
+
+    #[ORM\Column(length: 255)]
+    #[Groups(['user:read'])]
+    private ?string $address = null;
+
+    #[ORM\Column(length: 10)]
+    #[Groups(['user:read'])]
+    private ?string $postalCode = null;
+
+    #[ORM\Column(length: 255)]
+    #[Groups(['user:read'])]
+    private ?string $city = null;
+
+    #[ORM\Column(length: 255)]
     #[Groups(['user:read'])]
     private ?string $email = null;
+
+    #[ORM\Column(length: 20)]
+    #[Groups(['user:read'])]
+    private ?string $phone = null;
+
+    #[ORM\Column(length: 255)]
+    #[Groups(['user:read'])]
+    private ?string $nationality = null;
+
+    #[ORM\Column(length: 255)]
+    #[Groups(['user:read'])]
+    private ?string $educationLevel = null;
 
     #[ORM\Column(length: 255)]
     #[Groups(['user:read'])]
@@ -42,6 +78,78 @@ class User implements PasswordAuthenticatedUserInterface
         return $this->id;
     }
 
+    public function getFirstName(): ?string
+    {
+        return $this->firstName;
+    }
+
+    public function setFirstName(string $firstName): static
+    {
+        $this->firstName = $firstName;
+
+        return $this;
+    }
+
+    public function getLastName(): ?string
+    {
+        return $this->lastName;
+    }
+
+    public function setLastName(string $lastName): static
+    {
+        $this->lastName = $lastName;
+
+        return $this;
+    }
+
+    public function getBirthDate(): ?\DateTimeInterface
+    {
+        return $this->birthDate;
+    }
+
+    public function setBirthDate(\DateTimeInterface $birthDate): static
+    {
+        $this->birthDate = $birthDate;
+
+        return $this;
+    }
+
+    public function getAddress(): ?string
+    {
+        return $this->address;
+    }
+
+    public function setAddress(string $address): static
+    {
+        $this->address = $address;
+
+        return $this;
+    }
+
+    public function getPostalCode(): ?string
+    {
+        return $this->postalCode;
+    }
+
+    public function setPostalCode(string $postalCode): static
+    {
+        $this->postalCode = $postalCode;
+
+        return $this;
+    }
+
+    public function getCity(): ?string
+    {
+        return $this->city;
+    }
+
+    public function setCity(string $city): static
+    {
+        $this->city = $city;
+
+        return $this;
+    }
+
     public function getEmail(): ?string
     {
         return $this->email;
@@ -50,6 +158,42 @@ class User implements PasswordAuthenticatedUserInterface
     public function setEmail(string $email): static
     {
         $this->email = $email;
+
+        return $this;
+    }
+
+    public function getPhone(): ?string
+    {
+        return $this->phone;
+    }
+
+    public function setPhone(string $phone): static
+    {
+        $this->phone = $phone;
+
+        return $this;
+    }
+
+    public function getNationality(): ?string
+    {
+        return $this->nationality;
+    }
+
+    public function setNationality(string $nationality): static
+    {
+        $this->nationality = $nationality;
+
+        return $this;
+    }
+
+    public function getEducationLevel(): ?string
+    {
+        return $this->educationLevel;
+    }
+
+    public function setEducationLevel(string $educationLevel): static
+    {
+        $this->educationLevel = $educationLevel;
 
         return $this;
     }
@@ -94,12 +238,14 @@ class User implements PasswordAuthenticatedUserInterface
     {
         return ['ROLE_USER'];
     }
+
     public function eraseCredentials(): void
     {
         // Not needed
     }
+
     public function getUserIdentifier(): string
-{
-    return $this->email;
-}
+    {
+        return $this->email;
+    }
 }
