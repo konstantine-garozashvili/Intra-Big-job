@@ -40,6 +40,44 @@ class UserController extends AbstractController
             $hashedPassword = $passwordHasher->hashPassword($user, $data['password']);
             $user->setPassword($hashedPassword);
 
+            // Ajouter les champs supplémentaires s'ils sont présents
+            if (isset($data['firstName']) && $data['firstName']) {
+                $user->setFirstName($data['firstName']);
+            }
+            
+            if (isset($data['lastName']) && $data['lastName']) {
+                $user->setLastName($data['lastName']);
+            }
+            
+            if (isset($data['address']) && $data['address']) {
+                $user->setAddress($data['address']);
+            }
+            
+            if (isset($data['postalCode']) && $data['postalCode']) {
+                $user->setPostalCode($data['postalCode']);
+            }
+            
+            if (isset($data['city']) && $data['city']) {
+                $user->setCity($data['city']);
+            }
+            
+            if (isset($data['phone']) && $data['phone']) {
+                $user->setPhone($data['phone']);
+            }
+            
+            if (isset($data['birthDate']) && $data['birthDate']) {
+                $birthDate = new \DateTime($data['birthDate']);
+                $user->setBirthDate($birthDate);
+            }
+            
+            if (isset($data['nationality']) && $data['nationality']) {
+                $user->setNationality($data['nationality']);
+            }
+            
+            if (isset($data['educationLevel']) && $data['educationLevel']) {
+                $user->setEducationLevel($data['educationLevel']);
+            }
+
             // Sauvegarder l'utilisateur
             $entityManager->persist($user);
             $entityManager->flush();

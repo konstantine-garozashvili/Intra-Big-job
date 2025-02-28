@@ -30,11 +30,37 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // Register a new user
-  const register = async (email, username, password) => {
+  const register = async (
+    email, 
+    username, 
+    password, 
+    firstName = null, 
+    lastName = null, 
+    address = null, 
+    postalCode = null, 
+    city = null, 
+    phone = null, 
+    birthDate = null, 
+    nationality = null, 
+    educationLevel = null
+  ) => {
     setError(null);
     setLoading(true);
     try {
-      const data = await registerUser(email, username, password);
+      const data = await registerUser(
+        email, 
+        username, 
+        password, 
+        firstName, 
+        lastName, 
+        address, 
+        postalCode, 
+        city, 
+        phone, 
+        birthDate, 
+        nationality, 
+        educationLevel
+      );
       setUser(data.user);
       toast.success('Inscription réussie ! Vous pouvez maintenant vous connecter.');
       return data;

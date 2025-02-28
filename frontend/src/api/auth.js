@@ -3,12 +3,34 @@ import axios from 'axios';
 const API_URL = 'http://localhost:8000/api';
 
 // Register a new user
-export const registerUser = async (email, username, password) => {
+export const registerUser = async (
+  email, 
+  username, 
+  password, 
+  firstName = null, 
+  lastName = null, 
+  address = null, 
+  postalCode = null, 
+  city = null, 
+  phone = null, 
+  birthDate = null, 
+  nationality = null, 
+  educationLevel = null
+) => {
   try {
     const response = await axios.post(`${API_URL}/register`, {
       email,
       username,
-      password
+      password,
+      firstName,
+      lastName,
+      address,
+      postalCode,
+      city,
+      phone,
+      birthDate,
+      nationality,
+      educationLevel
     });
     
     if (response.data.success) {
