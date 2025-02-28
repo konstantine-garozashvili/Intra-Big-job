@@ -262,7 +262,8 @@ const Welcome = () => {
         className="py-20 px-6 relative bg-cover bg-center" 
         style={{ 
           backgroundImage: `url(${backgroundImage})`,
-          height: "700px" 
+          height: "700px",
+          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)"
         }}
       >
         <div className="container mx-auto relative z-10">
