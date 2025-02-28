@@ -252,7 +252,7 @@ const Welcome = () => {
       <section className="pt-32 pb-20 px-6">
         <div className="container mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-            <div className="sticky top-32 lg:max-w-xl">
+            <div className="sticky top-24 lg:max-w-xl">
               <motion.h2 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -291,16 +291,16 @@ const Welcome = () => {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: showRegister ? -20 : 20 }}
                   transition={{ duration: 0.3 }}
-                  className="bg-white rounded-xl shadow-xl p-8 max-w-md mx-auto min-h-[400px]"
+                  className="bg-white rounded-xl shadow-xl p-8 max-w-md mx-auto transition-all duration-300"
                 >
-                  <h3 className="text-2xl font-semibold text-gray-900 mb-6">
+                  <h3 className="text-2xl font-semibold text-gray-900 mb-4">
                     {showRegister ? 'Créer un compte' : 'Se connecter'}
                   </h3>
                   
-                  <div className="mb-6">
+                  <div>
                     <form onSubmit={showRegister ? (registrationStep === 1 ? handleNextStep : handleRegisterSubmit) : handleLoginSubmit} className="space-y-4">
                       {/* Form container with overflow hidden to contain the sliding animation */}
-                      <div className="relative overflow-hidden">
+                      <div className="relative overflow-hidden transition-all duration-300">
                         {/* Step 1 form fields */}
                         <div className={`space-y-4 transition-all duration-300 ${registrationStep === 1 ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0 absolute top-0 left-0 w-full'}`}>
                           <div>
@@ -555,8 +555,7 @@ const Welcome = () => {
                         </Button>
                       )}
                     </form>
-                    
-                    <div className="mt-6 text-center">
+                    <div className="mt-4 text-center">
                       <button
                         onClick={handleToggleRegister}
                         className="text-sm text-blue-600 hover:text-blue-800"
