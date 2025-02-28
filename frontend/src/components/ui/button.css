@@ -1,0 +1,11 @@
+/* src/components/ui/Button.css */
+.button {
+    background-color: #062F4F;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    width: 100%; /* Grand bouton horizontal */
+    font-size: 1.2em;
+}
