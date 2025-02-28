@@ -59,28 +59,53 @@ export default {
   			sm: 'calc(var(--radius) - 4px)'
   		},
   		keyframes: {
-  			'accordion-down': {
-  				from: {
-  					height: '0'
-  				},
-  				to: {
-  					height: 'var(--radix-accordion-content-height)'
-  				}
+  			"accordion-down": {
+  				from: { height: 0 },
+  				to: { height: "var(--radix-accordion-content-height)" },
   			},
-  			'accordion-up': {
-  				from: {
-  					height: 'var(--radix-accordion-content-height)'
-  				},
-  				to: {
-  					height: '0'
-  				}
-  			}
+  			"accordion-up": {
+  				from: { height: "var(--radix-accordion-content-height)" },
+  				to: { height: 0 },
+  			},
+  			"slideIn": {
+  				from: { 
+            opacity: 0,
+            transform: "translateY(20px)"
+          },
+  				to: { 
+            opacity: 1,
+            transform: "translateY(0)"
+          },
+  			},
+  			"slideInRight": {
+  				from: { 
+            opacity: 0,
+            transform: "translateX(100%)"
+          },
+  				to: { 
+            opacity: 1,
+            transform: "translateX(0)"
+          },
+  			},
+  			"slideOutLeft": {
+  				from: { 
+            opacity: 1,
+            transform: "translateX(0)"
+          },
+  				to: { 
+            opacity: 0,
+            transform: "translateX(-100%)"
+          },
+  			},
   		},
   		animation: {
-  			'accordion-down': 'accordion-down 0.2s ease-out',
-  			'accordion-up': 'accordion-up 0.2s ease-out'
-  		}
-  	}
+  			"accordion-down": "accordion-down 0.2s ease-out",
+  			"accordion-up": "accordion-up 0.2s ease-out",
+  			"slideIn": "slideIn 0.3s ease-out",
+  			"slideInRight": "slideInRight 0.3s ease-out",
+  			"slideOutLeft": "slideOutLeft 0.3s ease-out",
+  		},
+  	},
   },
   plugins: [require("tailwindcss-animate")],
 };
