@@ -257,9 +257,32 @@ const Welcome = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
-                className="text-4xl md:text-5xl font-bold text-gray-900 mb-6"
+                className="text-4xl md:text-6xl font-bold text-gray-900 mb-8 flex flex-col items-start leading-tight"
               >
-                Bienvenue sur notre plateforme innovante
+                <motion.span 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.5, delay: 0.1 }}
+                  className="my-1"
+                >
+                  Apprenez
+                </motion.span>
+                <motion.span 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.5, delay: 0.3 }}
+                  className="my-1 ml-12"
+                >
+                  Collaborez
+                </motion.span>
+                <motion.span 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.5, delay: 0.5 }}
+                  className="my-1 ml-24 text-blue-600"
+                >
+                  Réussez
+                </motion.span>
               </motion.h2>
               <motion.p 
                 initial={{ opacity: 0, y: 20 }}
@@ -274,12 +297,14 @@ const Welcome = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.2 }}
               >
-                <Button 
-                  onClick={() => setShowRegister(true)}
-                  className="rounded-full px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white text-lg"
-                >
-                  Commencer maintenant
-                </Button>
+                {!showRegister && (
+                  <Button 
+                    onClick={() => setShowRegister(true)}
+                    className="rounded-full px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white text-lg"
+                  >
+                    Commencer maintenant
+                  </Button>
+                )}
               </motion.div>
             </div>
             
