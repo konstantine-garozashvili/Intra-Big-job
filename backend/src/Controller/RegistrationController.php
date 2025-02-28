@@ -48,7 +48,7 @@ class RegistrationController extends AbstractController
             $user = new User();
             
             // Validation des champs requis
-            $requiredFields = ['firstName', 'lastName', 'email'];
+            $requiredFields = ['firstName', 'lastName', 'email', 'password'];
             $missingFields = [];
             
             foreach ($requiredFields as $field) {
@@ -78,9 +78,8 @@ class RegistrationController extends AbstractController
             // Générer un username basé sur l'email
             $user->setUsername($data['email']);
             
-            // Générer un mot de passe temporaire et le hacher
-            $tempPassword = 'temp_' . uniqid();
-            $hashedPassword = $passwordHasher->hashPassword($user, $tempPassword);
+            // Hacher le mot de passe fourni par l'utilisateur
+            $hashedPassword = $passwordHasher->hashPassword($user, $data['password']);
             $user->setPassword($hashedPassword);
 
             $entityManager->persist($user);
@@ -90,8 +89,7 @@ class RegistrationController extends AbstractController
 
             return $this->json([
                 'message' => 'Utilisateur enregistré avec succès',
-                'id' => $user->getId(),
-                'temp_password' => $tempPassword // À supprimer en production, uniquement pour les tests
+                'id' => $user->getId()
             ], Response::HTTP_CREATED);
         } catch (\Exception $e) {
             $logger->error('Erreur lors de l\'enregistrement:', [
@@ -106,4 +104,4 @@ class RegistrationController extends AbstractController
             ], Response::HTTP_BAD_REQUEST);
         }
     }
-} 
+}
