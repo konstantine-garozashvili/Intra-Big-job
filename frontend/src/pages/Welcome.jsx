@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
-import backgroundImage from '../assets/pictures/first-background.png';
+import backgroundImage from '../assets/pictures/second-background.png';
 import { useAuth } from '../lib/AuthContext';
 import { Input } from '../components/ui/input';
 import { toast, Toaster } from 'sonner';
