@@ -40,6 +40,11 @@
     margin-top: 10px;
 }
 
+.button:disabled {
+    background-color: rgba(44, 44, 44, 0.3) !important;
+    cursor: not-allowed;
+}
+
 .forgot-password-container {
     text-align: left;
     margin-top: 10px;
@@ -48,4 +53,14 @@
 .forgot-password {
     color: #062F4F;
     text-decoration: none;
+}
+
+.error-message {
+    color: #d32f2f;
+    background-color: rgba(211, 47, 47, 0.1);
+    border-radius: 4px;
+    padding: 8px;
+    margin-bottom: 10px;
+    font-size: 14px;
+    text-align: left;
 }
