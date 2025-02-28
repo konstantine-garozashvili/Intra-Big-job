@@ -1,19 +1,24 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Welcome from './pages/Welcome';
+import LoginPage from './pages/LoginPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import RegisterPage from './pages/RegisterPage';
 
-import Welcome from './pages/Welcome'
-import './index.css'
+// Importez d'autres composants si nécessaire
 
 function App() {
   return (
     <Router>
-      <div className="min-h-screen bg-gray-100">
-        <Routes>
-          <Route path="/" element={<Welcome />} />
-        
-        </Routes>
-      </div>
+      <Routes>
+      <Route path="/" element={<Welcome />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        {/* Ajoutez d'autres routes si nécessaire */}
+      </Routes>
     </Router>
-  )
+  );
 }
 
-export default App
+export default App;
