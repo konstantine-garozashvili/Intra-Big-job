@@ -1,0 +1,15 @@
+.login-page {
+    min-height: 100vh;
+    background-image: url('../assets/background.png');
+    background-size: cover;
+    background-position: center;
+  }
+  
+  .login-content {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding-top: 60px; /* Pour laisser de l'espace pour la Navbar */
+  }
+  
