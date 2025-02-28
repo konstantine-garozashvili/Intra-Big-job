@@ -227,7 +227,7 @@ const Welcome = () => {
       <Toaster position="top-center" />
       
       {/* Header */}
-      <header className="fixed w-full bg-white/80 backdrop-blur-md z-50 border-b border-gray-100">
+      <header className="sticky w-full bg-white/80 backdrop-blur-md z-50 border-b border-gray-100">
         <div className="container mx-auto px-6 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-semibold text-gray-900">BigProject</h1>
           {isAuthenticated() ? (
@@ -251,8 +251,8 @@ const Welcome = () => {
       {/* Hero Section */}
       <section className="pt-32 pb-20 px-6">
         <div className="container mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+            <div className="sticky top-32 lg:max-w-xl">
               <motion.h2 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -291,7 +291,7 @@ const Welcome = () => {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: showRegister ? -20 : 20 }}
                   transition={{ duration: 0.3 }}
-                  className="bg-white rounded-xl shadow-xl p-8 max-w-md mx-auto"
+                  className="bg-white rounded-xl shadow-xl p-8 max-w-md mx-auto min-h-[400px]"
                 >
                   <h3 className="text-2xl font-semibold text-gray-900 mb-6">
                     {showRegister ? 'Créer un compte' : 'Se connecter'}
