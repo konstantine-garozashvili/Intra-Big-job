@@ -15,6 +15,7 @@ function RegisterForm() {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
+    password: '',
     birthDate: '',
     address: '',
     postalCode: '',
@@ -59,6 +60,11 @@ function RegisterForm() {
         errors.lastName = 'Le nom est requis';
       }
       
+      if (!formData.password.trim()) {
+        isValid = false;
+        errors.password = 'Le MDP est requis';
+      }
+
       if (!formData.birthDate) {
         isValid = false;
         errors.birthDate = 'La date de naissance est requise';
@@ -206,6 +212,19 @@ function RegisterForm() {
                 placeholder="Votre nom"
                 error={fieldErrors.lastName}
               />
+
+<InputField 
+                label="Password" 
+                type="text" 
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                required 
+                placeholder="Votre password"
+                error={fieldErrors.password}
+              />
+
+
               <InputField 
                 label="Date de Naissance" 
                 type="date" 
