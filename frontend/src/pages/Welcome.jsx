@@ -297,7 +297,7 @@ const Welcome = () => {
                   transition={{ duration: 0.5, delay: 0.5 }}
                   className="my-1 ml-24 text-blue-600"
                 >
-                  Réussez
+                  Réussissez
                 </motion.span>
               </motion.h2>
               <motion.p 
