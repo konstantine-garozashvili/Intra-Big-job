@@ -49,11 +49,7 @@ L'application sera accessible à l'adresse : [http://localhost:5173](http://loca
 Si vous souhaitez développer en dehors de Docker :
 
 ```bash
-# Installer les dépendances
-npm install --legacy-peer-deps
-
-# Démarrer le serveur de développement
-npm run dev
+docker-compose -f infra/docker-compose.yml restart frontend
 ```
 
 ## 🧩 Composants Shadcn UI
@@ -66,8 +62,6 @@ Ce projet utilise la bibliothèque [Shadcn UI](https://ui.shadcn.com/) pour les 
 # Si vous utilisez Docker
 docker exec -it infra-frontend-1 npx shadcn-ui@latest add button --legacy-peer-deps
 
-# Sans Docker
-npx shadcn-ui@latest add button --legacy-peer-deps
 ```
 
 ### Liste des composants disponibles

@@ -301,4 +301,45 @@ Si vous avez des conflits de migration:
    ```bash
    docker exec -it infra-backend-1 php bin/console doctrine:migrations:generate
    docker exec -it infra-backend-1 php bin/console doctrine:migrations:migrate
-   ``` 
+   ```
+
+
+### Entités principales
+
+- **User** : Utilisateurs de l'application
+- **City** : Villes françaises
+- **PostalCode** : Codes postaux avec relation vers les villes (plusieurs codes postaux peuvent être associés à une ville)
+- **Address** : Adresses complètes liées à un utilisateur, une ville et un code postal
+
+### Points importants de la nouvelle structure
+
+1. Une ville peut avoir plusieurs codes postaux (cas de Paris, Lyon, Marseille avec arrondissements)
+2. Une adresse appartient à une ville ET à un code postal spécifique
+3. Le champ `district` dans PostalCode peut contenir les arrondissements pour les grandes villes
+
+## Gestion des fixtures
+
+Les fixtures sont organisées avec des dépendances entre elles :
+- CityFixtures : Crée les villes principales
+- PostalCodeFixtures : Ajoute les codes postaux (dépend de CityFixtures)
+- NationalityFixtures : Ajoute les nationalités disponibles
+- RoleFixtures : Définit les rôles utilisateurs (ADMIN, USER, MANAGER)
+- ThemeFixtures : Définit les thèmes d'interface (light, dark, system)
+
+Pour charger toutes les fixtures :
+
+```bash
+docker-compose -f infra/docker-compose.yml exec backend php bin/console doctrine:fixtures:load
+```
+
+Pour charger seulement certaines fixtures (par groupe) :
+
+```bash
+docker-compose -f infra/docker-compose.yml exec backend php bin/console doctrine:fixtures:load --group=city
+```
+
+## Utilisation avec l'API Adresse du gouvernement
+
+La structure a été conçue pour être compatible avec l'API Adresse (Base Adresse Nationale) :
+- Les réponses de l'API peuvent être facilement mappées vers nos entités
+- Le champ `district` est optionnel car tous les lieux n'ont pas d'arrondissement 
