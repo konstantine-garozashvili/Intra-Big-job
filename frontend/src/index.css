@@ -21,8 +21,8 @@
     --secondary-foreground: 210 40% 98%;
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 200 39% 10%; /* #528eb2 avec une transparence de 10% */
-    /* --accent-foreground: 211 95% 16%; Utiliser la couleur secondaire comme texte d'accent */
+    --accent: 200 39% 95%; /* Couleur d'accent très claire pour le hover */
+    --accent-foreground: 222.2 84% 4.9%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;

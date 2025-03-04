@@ -13,6 +13,21 @@ export function AuthForm() {
   const [errors, setErrors] = React.useState({})
   const navigate = useNavigate()
 
+  const quickLogin = (role) => {
+    const credentials = {
+      admin: { email: 'admin@bigproject.com', password: 'Password123@' },
+      teacher: { email: 'teacher@bigproject.com', password: 'Password123@' },
+      student: { email: 'student@bigproject.com', password: 'Password123@' },
+      hr: { email: 'hr@bigproject.com', password: 'Password123@' },
+      guest: { email: 'guest@bigproject.com', password: 'Password123@' }
+    }
+
+    if (credentials[role]) {
+      setEmail(credentials[role].email)
+      setPassword(credentials[role].password)
+    }
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     
@@ -125,6 +140,58 @@ export function AuthForm() {
         <p className="text-sm text-gray-600">
           Accédez à votre espace <span className="font-bold text-[#02284f]">Big<span className="text-[#528eb2]">Project</span></span>
         </p>
+      </div>
+
+      {/* Quick Login Buttons */}
+      <div className="mb-6">
+        <p className="text-sm text-gray-600 mb-2 text-center">Connexion rapide (Dev only)</p>
+        <div className="grid grid-cols-2 gap-2 mb-4">
+          <button
+            type="button"
+            onClick={() => quickLogin('admin')}
+            className="px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+          >
+            Admin
+          </button>
+          <button
+            type="button"
+            onClick={() => quickLogin('teacher')}
+            className="px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700"
+          >
+            Teacher
+          </button>
+          <button
+            type="button"
+            onClick={() => quickLogin('student')}
+            className="px-3 py-2 text-sm font-medium text-white bg-yellow-600 rounded-md hover:bg-yellow-700"
+          >
+            Student
+          </button>
+          <button
+            type="button"
+            onClick={() => quickLogin('hr')}
+            className="px-3 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700"
+          >
+            HR
+          </button>
+          <button
+            type="button"
+            onClick={() => quickLogin('guest')}
+            className="px-3 py-2 text-sm font-medium text-white bg-gray-600 rounded-md hover:bg-gray-700 col-span-2"
+          >
+            Guest
+          </button>
+        </div>
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-300"></div>
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-2 text-gray-500 bg-white">
+              Ou connectez-vous manuellement
+            </span>
+          </div>
+        </div>
       </div>
 
       {errors.auth && (
