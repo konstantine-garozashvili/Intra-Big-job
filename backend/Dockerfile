@@ -22,6 +22,13 @@ RUN composer install --no-interaction --optimize-autoloader --no-scripts
 
 RUN mkdir -p var && chmod -R 777 var/
 
+# Create JWT directory and set permissions
+RUN mkdir -p config/jwt && chmod -R 777 config/jwt
+
+# Fix line endings and generate JWT keys
+RUN sed -i 's/\r$//' bin/console && \
+    php bin/console lexik:jwt:generate-keypair --overwrite --no-interaction
+
 EXPOSE 9000
 
 CMD ["php-fpm"]

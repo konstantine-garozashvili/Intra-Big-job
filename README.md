@@ -12,10 +12,8 @@ docker system prune -a --volumes
 
 ```
 
-### Prérequis
+### Important
 
-- Docker et Docker Compose installés sur votre machine
-- Git
 - **Important**: Arrêter Laragon ou tout autre serveur local qui pourrait utiliser les ports 3306, 8000, 8080 ou 5173
 
 ### Installation en 3 étapes
@@ -35,6 +33,11 @@ docker-compose -f infra/docker-compose.yml build --no-cache
 
 # Démarrer les conteneurs
 docker-compose -f infra/docker-compose.yml up -d
+
+docker exec -it infra-backend-1 php bin/console lexik:jwt:generate-keypair
+
+docker exec -it infra-backend-1 php bin/console doctrine:fixtures:load --group=UserFixtures --append
+
 ```
 
 3. **Vérifier que tout fonctionne**

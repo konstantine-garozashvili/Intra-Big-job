@@ -4,6 +4,10 @@
 # Put parameters here that don't need to change on each machine where the app is deployed
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
+    # Paramètres pour les refresh tokens (remplace ceux du bundle supprimé)
+    refresh_token.ttl: 2592000  # 30 jours en secondes
+    refresh_token.ttl_update: true  # Mise à jour du TTL à chaque rafraîchissement
+    refresh_token.token_parameter_name: 'refresh_token'  # Le nom du paramètre dans la requête
 
 services:
     # default configuration for services in *this* file
@@ -23,6 +27,32 @@ services:
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
 
-    App\EventListener\OptionsRequestListener:
+    # Configuration du service RefreshTokenService
+    App\Service\RefreshTokenService:
+        arguments:
+            $params: '@parameter_bag'
+
+    # Configuration du contrôleur RefreshTokenController
+    App\Controller\RefreshTokenController:
+        arguments:
+            $params: '@parameter_bag'
+
+    # Configuration de l'écouteur d'événement AuthenticationSuccessListener
+    App\EventListener\AuthenticationSuccessListener:
         tags:
-            - { name: kernel.event_subscriber }
+            - { name: kernel.event_listener, event: lexik_jwt_authentication.on_authentication_success, method: onAuthenticationSuccess, priority: 10 }
+        arguments:
+            $tokenParameterName: '%refresh_token.token_parameter_name%'
+
+    App\EventListener\JWTAuthenticationListener:
+        tags:
+            - { name: kernel.event_listener, event: lexik_jwt_authentication.on_authentication_success, method: onAuthenticationSuccess }
+
+    # Notre écouteur d'exception API pour retourner des erreurs en JSON
+    App\EventListener\ApiExceptionListener:
+        tags:
+            - { name: kernel.event_listener, event: kernel.exception, method: onKernelException, priority: 100 }
+
+    # Notre gestionnaire d'erreur d'authentification personnalisé
+    lexik_jwt_authentication.handler.authentication_failure:
+        class: App\Security\AuthenticationFailureHandler

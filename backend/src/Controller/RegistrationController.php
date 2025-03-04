@@ -2,106 +2,64 @@
 
 namespace App\Controller;
 
-use App\Entity\User;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Service\RegistrationService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
-use Psr\Log\LoggerInterface;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 
+#[Route('/api')]
 class RegistrationController extends AbstractController
 {
-    #[Route('/api/register', name: 'api_register', methods: ['POST'])]
-    public function register(
-        Request $request, 
-        EntityManagerInterface $entityManager, 
-        LoggerInterface $logger,
-        UserPasswordHasherInterface $passwordHasher
-    ): Response
+    private RegistrationService $registrationService;
+
+    public function __construct(RegistrationService $registrationService)
     {
-        // Log les données brutes reçues
-        $rawContent = $request->getContent();
-        $logger->info('Données brutes reçues:', ['content' => $rawContent]);
+        $this->registrationService = $registrationService;
+    }
 
-        $data = json_decode($rawContent, true);
-        
-        // Vérification des données reçues
-        if (!$data) {
-            $logger->error('Données JSON invalides:', [
-                'raw_content' => $rawContent,
-                'json_last_error' => json_last_error_msg()
-            ]);
-            
-            return $this->json([
-                'error' => 'Données JSON invalides',
-                'details' => json_last_error_msg(),
-                'received' => $rawContent
-            ], Response::HTTP_BAD_REQUEST);
-        }
-
-        // Log les données décodées
-        $logger->info('Données décodées:', ['data' => $data]);
-
+    /**
+     * Endpoint pour l'inscription d'un nouvel utilisateur
+     */
+    #[Route('/register', name: 'api_register', methods: ['POST'])]
+    public function register(Request $request): JsonResponse
+    {
         try {
-            $user = new User();
+            $data = json_decode($request->getContent(), true);
             
-            // Validation des champs requis
-            $requiredFields = ['firstName', 'lastName', 'email', 'password'];
-            $missingFields = [];
-            
-            foreach ($requiredFields as $field) {
-                if (empty($data[$field])) {
-                    $missingFields[] = $field;
-                }
-            }
-            
-            if (!empty($missingFields)) {
+            // Vérifier les données requises
+            if (!isset($data['email']) || !isset($data['password']) || !isset($data['firstName']) || !isset($data['lastName'])) {
                 return $this->json([
-                    'error' => 'Champs requis manquants',
-                    'missing_fields' => $missingFields
-                ], Response::HTTP_BAD_REQUEST);
+                    'success' => false,
+                    'message' => 'Certains champs obligatoires sont manquants'
+                ], 400);
             }
-
-            $user->setFirstName($data['firstName']);
-            $user->setLastName($data['lastName']);
-            $user->setBirthDate(new \DateTime($data['birthDate'] ?? 'now'));
-            $user->setAddress($data['address'] ?? '');
-            $user->setPostalCode($data['postalCode'] ?? '');
-            $user->setCity($data['city'] ?? '');
-            $user->setEmail($data['email']);
-            $user->setPhone($data['phone'] ?? '');
-            $user->setNationality($data['nationality'] ?? '');
-            $user->setEducationLevel($data['educationLevel'] ?? '');
             
-            // Générer un username basé sur l'email
-            $user->setUsername($data['email']);
+            // Enregistrer l'utilisateur
+            $user = $this->registrationService->registerUser($data);
             
-            // Hacher le mot de passe fourni par l'utilisateur
-            $hashedPassword = $passwordHasher->hashPassword($user, $data['password']);
-            $user->setPassword($hashedPassword);
-
-            $entityManager->persist($user);
-            $entityManager->flush();
-
-            $logger->info('Utilisateur créé avec succès:', ['id' => $user->getId()]);
-
             return $this->json([
-                'message' => 'Utilisateur enregistré avec succès',
-                'id' => $user->getId()
-            ], Response::HTTP_CREATED);
-        } catch (\Exception $e) {
-            $logger->error('Erreur lors de l\'enregistrement:', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'data' => $data
+                'success' => true,
+                'message' => 'Inscription réussie. Un email de confirmation a été envoyé à votre adresse email.',
+                'userId' => $user->getId()
             ]);
-
+        } catch (UniqueConstraintViolationException $e) {
             return $this->json([
-                'error' => 'Erreur lors de l\'enregistrement',
-                'details' => $e->getMessage()
-            ], Response::HTTP_BAD_REQUEST);
+                'success' => false,
+                'message' => 'Cette adresse email est déjà utilisée.'
+            ], 409);
+        } catch (\InvalidArgumentException $e) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Données invalides',
+                'errors' => json_decode($e->getMessage(), true)
+            ], 400);
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Une erreur est survenue lors de l\'inscription: ' . $e->getMessage()
+            ], 500);
         }
     }
-}
+} 

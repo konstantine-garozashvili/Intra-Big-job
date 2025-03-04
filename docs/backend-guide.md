@@ -9,7 +9,7 @@ Le backend du projet BigProject est une API RESTful construite avec:
 - **PHP 8.2** comme langage de programmation
 - **Symfony 7.2** comme framework principal
 - **Doctrine ORM** pour la gestion de la base de données
-- **API Platform** (éventuellement) pour simplifier la création d'API REST
+- **API Platform** pour la création d'API REST
 - **JWT** pour l'authentification
 
 ## 🏗️ Structure du projet backend
@@ -23,20 +23,56 @@ backend/
 │   └── services.yaml   # Configuration des services
 ├── migrations/         # Migrations de base de données
 ├── public/             # Point d'entrée public (index.php)
-├── src/                # Code source de l'application
-│   ├── Controller/     # Contrôleurs
+├── src/
+│   ├── Domain/         # Logique métier par domaine
+│   │   ├── Admin/      # Fonctionnalités Admin
+│   │   ├── HR/         # Fonctionnalités RH
+│   │   ├── Student/    # Fonctionnalités Étudiant
+│   │   ├── SuperAdmin/ # Fonctionnalités Super Admin
+│   │   ├── Teacher/    # Fonctionnalités Professeur
+│   │   └── User/       # Fonctionnalités Utilisateur
+│   ├── Controller/     # Contrôleurs publics partagés
 │   ├── Entity/         # Entités Doctrine (modèles)
 │   ├── Repository/     # Repositories Doctrine
-│   ├── Service/        # Services métier
-│   ├── EventSubscriber/# Event subscribers
-│   └── ...
+│   ├── Service/        # Services publics partagés
+│   └── EventSubscriber/# Event subscribers
 ├── templates/          # Templates Twig (si utilisés)
 ├── tests/              # Tests automatisés
-├── var/                # Fichiers temporaires (cache, logs)
-├── vendor/             # Dépendances installées par Composer 
-├── .env                # Variables d'environnement
-└── composer.json       # Dépendances PHP
+├── var/               # Fichiers temporaires (cache, logs)
+├── vendor/            # Dépendances installées par Composer
+├── .env               # Variables d'environnement
+└── composer.json      # Dépendances PHP
 ```
+
+## 🔄 Organisation des Domaines
+
+### Structure par Domaine
+
+Chaque domaine métier (`Admin`, `HR`, `Student`, etc.) suit une structure similaire :
+
+```
+Domain/
+└── [DomainName]/
+    ├── Controller/    # Contrôleurs spécifiques au domaine
+    ├── Entity/        # Entités spécifiques au domaine
+    ├── Repository/    # Repositories spécifiques au domaine
+    ├── Service/       # Services métier du domaine
+    └── DTO/           # Objets de transfert de données
+```
+
+### Composants Publics
+
+Les composants publics sont organisés en deux catégories :
+
+1. **Services Publics (`/src/Service/`)** :
+   - Services partagés entre domaines
+   - Utilitaires communs
+   - Services d'infrastructure
+
+2. **Contrôleurs Publics (`/src/Controller/`)** :
+   - Points d'entrée API partagés
+   - Gestion de l'authentification
+   - Routes communes
 
 ## 🚀 Démarrage rapide
 
@@ -48,7 +84,7 @@ L'API backend est accessible à l'adresse:
 Si vous avez besoin de redémarrer le serveur:
 
 ```bash
-docker-compose -f infra/docker-compose.yml restart backend nginx
+docker compose -f infra/docker-compose.yml restart backend
 ```
 
 ### Se connecter au conteneur
@@ -589,10 +625,11 @@ Probablement un problème d'autoloading. Essayez:
 docker exec -it infra-backend-1 composer dump-autoload
 ```
 
-### Erreur de cache
+### Vider le cache :
 
 ```bash
-docker exec -it infra-backend-1 php bin/console cache:clear
+docker exec -it infra-backend-1 bash 
+php bin/console cache:clear
 ```
 
 ### Erreur d'annotation/attribut

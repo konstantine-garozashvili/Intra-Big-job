@@ -8,13 +8,26 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      '@components': path.resolve(__dirname, './src/components'),
+      '@ui': path.resolve(__dirname, './src/components/ui'),
+      '@features': path.resolve(__dirname, './src/features'),
+      '@services': path.resolve(__dirname, './src/lib/services'),
+      '@utils': path.resolve(__dirname, './src/lib/utils'),
+      '@hooks': path.resolve(__dirname, './src/lib/hooks'),
+      '@pages': path.resolve(__dirname, './src/pages'),
+      '@assets': path.resolve(__dirname, './src/assets'),
     },
   },
   server: {
-    host: true,
+    host: '0.0.0.0',
     port: 5173,
-  },
-  build: {
-    sourcemap: false
+    watch: {
+      usePolling: true,
+      interval: 1000
+    },
+    hmr: {
+      clientPort: 5173,
+      overlay: true
+    }
   }
 })
