@@ -336,6 +336,8 @@ Pour charger seulement certaines fixtures (par groupe) :
 
 ```bash
 docker-compose -f infra/docker-compose.yml exec backend php bin/console doctrine:fixtures:load --group=city
+
+docker exec -it infra-backend-1 php bin/console doctrine:fixtures:load --no-interaction
 ```
 
 ## Utilisation avec l'API Adresse du gouvernement

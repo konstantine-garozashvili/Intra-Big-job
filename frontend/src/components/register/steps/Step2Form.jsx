@@ -5,6 +5,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { CountrySelector } from "@/components/ui/country-selector";
 import { useRegisterContext } from "../RegisterContext";
 import 'react-calendar/dist/Calendar.css';
+import '../../../styles/custom-calendar.css'; // Import du CSS personnalisé pour le calendrier
 
 // Chargement dynamique du calendrier pour améliorer les performances
 const Calendar = lazy(() => import('react-calendar'));
@@ -12,7 +13,7 @@ const Calendar = lazy(() => import('react-calendar'));
 // Composant de chargement pour le calendrier - Mémorisé
 const CalendarFallback = memo(() => (
   <div className="flex items-center justify-center p-8">
-    <div className="w-8 h-8 border-t-2 border-b-2 border-gray-900 rounded-full animate-spin"></div>
+    <div className="w-8 h-8 border-t-2 border-b-2 border-[#0066ff] rounded-full animate-spin"></div>
   </div>
 ));
 
@@ -98,7 +99,7 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
         </label>
         <div className="relative">
           <div 
-            className={`w-full px-4 py-3 rounded-md border flex items-center cursor-pointer ${shouldShowError('birthDate') ? 'border-red-500' : 'border-gray-300'}`}
+            className={`w-full px-4 py-3 rounded-md border flex items-center cursor-pointer transition-colors hover:border-[#0066ff] ${shouldShowError('birthDate') ? 'border-red-500' : 'border-gray-300'}`}
             onClick={() => setCalendarOpen(true)}
           >
             {formattedBirthDate ? (
@@ -112,8 +113,13 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
           </div>
           
           <Dialog open={calendarOpen} onOpenChange={setCalendarOpen}>
-            <DialogContent className="p-0 sm:max-w-[425px]">
-              <div className="calendar-container">
+            <DialogContent className="p-0 sm:max-w-[425px] bg-white rounded-lg shadow-xl border-none overflow-hidden">
+              <div className="p-4 pb-0">
+                <h2 className="text-xl font-semibold text-center text-gray-900">
+                  Sélectionnez votre date de naissance
+                </h2>
+              </div>
+              <div className="calendar-container w-full p-4">
                 <Suspense fallback={<CalendarFallback />}>
                   <Calendar 
                     onChange={handleDateChange} 
@@ -121,18 +127,39 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
                     locale="fr"
                     maxDate={new Date()}
                     minDetail="decade" 
+                    defaultView="century"
                     minDate={new Date(1940, 0, 1)}
-                    className="mx-auto"
-                    formatShortWeekday={(locale, date) => ['D', 'L', 'M', 'M', 'J', 'V', 'S'][date.getDay()]}
-                    navigationLabel={({ date, locale, view }) => 
-                      date.toLocaleString('fr', { month: 'long', year: 'numeric' })
+                    className="modern-calendar w-full"
+                    formatShortWeekday={(locale, date) => ['L', 'M', 'M', 'J', 'V', 'S', 'D'][date.getDay()]}
+                    navigationLabel={({ date }) => 
+                      date.toLocaleString('fr', { month: 'long', year: 'numeric' }).toLowerCase()
                     }
-                    next2Label={null}
-                    prev2Label={null}
-                    nextLabel={<span className="text-lg">›</span>}
-                    prevLabel={<span className="text-lg">‹</span>}
+                    next2Label={<span className="text-lg text-[#0066ff]">»</span>}
+                    prev2Label={<span className="text-lg text-[#0066ff]">«</span>}
+                    nextLabel={<span className="text-lg text-[#0066ff]">›</span>}
+                    prevLabel={<span className="text-lg text-[#0066ff]">‹</span>}
+                    showNeighboringMonth={false}
+                    tileClassName={({ date, view }) => {
+                      // Vérifie si la date est dans le futur
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      
+                      if (view === 'month' && date > today) {
+                        return 'calendar-future-date';
+                      }
+                      
+                      return null;
+                    }}
                   />
                 </Suspense>
+              </div>
+              <div className="p-4 flex justify-end">
+                <button 
+                  className="calendar-confirm-button"
+                  onClick={() => setCalendarOpen(false)}
+                >
+                  Confirmer
+                </button>
               </div>
             </DialogContent>
           </Dialog>
@@ -163,14 +190,14 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
         <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
           Numéro de téléphone
         </label>
-        <div className={`flex w-full rounded-md border ${shouldShowError('phone') ? 'border-red-500' : 'border-gray-300'}`}>
+        <div className={`flex w-full rounded-md border ${shouldShowError('phone') ? 'border-red-500' : 'border-gray-300'} transition-colors hover:border-[#0066ff]`}>
           <div className="flex items-center justify-center px-3 bg-gray-50 border-r rounded-l-md">
             <span className="text-gray-700 font-medium">+33</span>
           </div>
           <input
             id="phone"
             type="tel"
-            className="flex-1 px-4 py-3 focus:outline-none rounded-r-md"
+            className="flex-1 px-4 py-3 focus:outline-none focus:ring-1 focus:ring-[#0066ff] rounded-r-md"
             value={phone}
             onChange={handlePhoneChange}
             placeholder="6 12 34 56 78"
@@ -186,7 +213,7 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
         <Button 
           type="button"
           variant="outline"
-          className="flex-1 h-12 bg-white text-[#02284f] border-[#02284f] hover:bg-gray-50"
+          className="flex-1 h-12 bg-white text-[#02284f] border-[#02284f] hover:bg-gray-50 transition-colors"
           onClick={goToPrevStep}
         >
           <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -197,7 +224,7 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
         
         <Button 
           type="button"
-          className="flex-1 h-12 bg-[#528eb2] hover:bg-[#528eb2]/90 text-white"
+          className="flex-1 h-12 bg-[#528eb2] hover:bg-[#528eb2]/90 text-white transition-colors"
           onClick={handleNextStep}
         >
           Continuer

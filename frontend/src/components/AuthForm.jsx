@@ -16,6 +16,7 @@ export function AuthForm() {
   const quickLogin = (role) => {
     const credentials = {
       admin: { email: 'admin@bigproject.com', password: 'Password123@' },
+      superadmin: { email: 'superadmin@bigproject.com', password: 'Password123@' },
       teacher: { email: 'teacher@bigproject.com', password: 'Password123@' },
       student: { email: 'student@bigproject.com', password: 'Password123@' },
       hr: { email: 'hr@bigproject.com', password: 'Password123@' },
@@ -62,6 +63,9 @@ export function AuthForm() {
       toast.success("Connexion réussie", {
         description: "Vous êtes maintenant connecté."
       })
+
+      // Déclencher un événement personnalisé pour informer la navbar de la connexion
+      window.dispatchEvent(new Event('login-success'));
       
       // Vérifier s'il y a une page de redirection stockée
       const returnTo = sessionStorage.getItem('returnTo')
@@ -145,13 +149,20 @@ export function AuthForm() {
       {/* Quick Login Buttons */}
       <div className="mb-6">
         <p className="text-sm text-gray-600 mb-2 text-center">Connexion rapide (Dev only)</p>
-        <div className="grid grid-cols-2 gap-2 mb-4">
+        <div className="grid grid-cols-3 gap-2 mb-4">
           <button
             type="button"
             onClick={() => quickLogin('admin')}
             className="px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
           >
             Admin
+          </button>
+          <button
+            type="button"
+            onClick={() => quickLogin('superadmin')}
+            className="px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
+          >
+            Superadmin
           </button>
           <button
             type="button"
@@ -177,7 +188,7 @@ export function AuthForm() {
           <button
             type="button"
             onClick={() => quickLogin('guest')}
-            className="px-3 py-2 text-sm font-medium text-white bg-gray-600 rounded-md hover:bg-gray-700 col-span-2"
+            className="px-3 py-2 text-sm font-medium text-white bg-gray-600 rounded-md hover:bg-gray-700"
           >
             Guest
           </button>

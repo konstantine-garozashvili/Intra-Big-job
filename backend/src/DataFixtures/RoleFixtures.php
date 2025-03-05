@@ -9,22 +9,23 @@ use Doctrine\Persistence\ObjectManager;
 class RoleFixtures extends Fixture
 {
     public const ROLE_ADMIN = 'role-admin';
-    public const ROLE_MODERATOR = 'role-moderator';
+    public const ROLE_SUPERADMIN = 'role-superadmin';
     public const ROLE_HR = 'role-hr';
     public const ROLE_TEACHER = 'role-teacher';
     public const ROLE_STUDENT = 'role-student';
     public const ROLE_GUEST = 'role-guest';
+    public const ROLE_RECRUITER = 'role-recruiter';
 
     public function load(ObjectManager $manager): void
     {
         $roles = [
             self::ROLE_ADMIN => [
                 'name' => 'ADMIN',
-                'description' => 'Administrateur du système avec tous les droits'
+                'description' => 'Administrateur du système avec des droits étendus'
             ],
-            self::ROLE_MODERATOR => [
-                'name' => 'MODERATOR',
-                'description' => 'Modérateur avec droits de gestion du contenu'
+            self::ROLE_SUPERADMIN => [
+                'name' => 'SUPERADMIN',
+                'description' => 'Super Administrateur avec tous les droits système'
             ],
             self::ROLE_HR => [
                 'name' => 'HR',
@@ -41,6 +42,10 @@ class RoleFixtures extends Fixture
             self::ROLE_GUEST => [
                 'name' => 'GUEST',
                 'description' => 'Invité - Accès limité en lecture seule'
+            ],
+            self::ROLE_RECRUITER => [
+                'name' => 'RECRUITER',
+                'description' => 'Recruteur - Gestion des candidatures et des offres d\'emploi'
             ],
         ];
 

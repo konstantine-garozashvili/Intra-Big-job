@@ -1,5 +1,5 @@
 import React, { memo, useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { authService } from '../lib/services/authService';
 import profilService from '../lib/services/profilService';
 import { Button } from './ui/button';
@@ -55,40 +55,63 @@ const Navbar = memo(() => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [userData, setUserData] = useState(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // Vérifier l'état d'authentification au chargement
-  useEffect(() => {
-    const checkAuthStatus = async () => {
-      try {
-        const status = authService.isLoggedIn();
-        setIsAuthenticated(status);
-        
-        // Si l'utilisateur est connecté, charger ses données
-        if (status) {
-          try {
-            const profilData = await profilService.getAllProfilData();
-            // Vérifions la structure des données et adaptons l'accès en fonction
-            if (profilData && profilData.user) {
-              setUserData(profilData.user);
-            } else if (profilData && profilData.data && profilData.data.user) {
-              // Alternative si la structure est différente
-              setUserData(profilData.data.user);
-            } else {
-              // Fallback: essayons de récupérer directement les données utilisateur
-              const userData = await profilService.getUserData();
-              setUserData(userData);
-            }
-          } catch (profileError) {
-            console.error('Erreur lors de la récupération des données du profil:', profileError);
+  // Vérifier l'état d'authentification
+  const checkAuthStatus = async () => {
+    try {
+      const status = authService.isLoggedIn();
+      setIsAuthenticated(status);
+      
+      // Si l'utilisateur est connecté, charger ses données
+      if (status) {
+        try {
+          const profilData = await profilService.getAllProfilData();
+          // Vérifions la structure des données et adaptons l'accès en fonction
+          if (profilData && profilData.user) {
+            setUserData(profilData.user);
+          } else if (profilData && profilData.data && profilData.data.user) {
+            // Alternative si la structure est différente
+            setUserData(profilData.data.user);
+          } else {
+            // Fallback: essayons de récupérer directement les données utilisateur
+            const userData = await profilService.getUserData();
+            setUserData(userData);
           }
+        } catch (profileError) {
+          console.error('Erreur lors de la récupération des données du profil:', profileError);
         }
-      } catch (error) {
-        console.error('Erreur lors de la vérification du statut d\'authentification:', error);
-        setIsAuthenticated(false);
+      } else {
+        setUserData(null);
       }
-    };
-    
+    } catch (error) {
+      console.error('Erreur lors de la vérification du statut d\'authentification:', error);
+      setIsAuthenticated(false);
+      setUserData(null);
+    }
+  };
+
+  // Vérifier l'état d'authentification au chargement et lors des changements de route
+  useEffect(() => {
     checkAuthStatus();
+  }, [location.pathname]);
+
+  // Ajouter un écouteur d'événement pour les changements d'authentification
+  useEffect(() => {
+    // Fonction pour gérer l'événement de connexion
+    const handleAuthChange = () => {
+      checkAuthStatus();
+    };
+
+    // Ajouter des écouteurs d'événements personnalisés
+    window.addEventListener('login-success', handleAuthChange);
+    window.addEventListener('logout-success', handleAuthChange);
+    
+    // Nettoyage lors du démontage du composant
+    return () => {
+      window.removeEventListener('login-success', handleAuthChange);
+      window.removeEventListener('logout-success', handleAuthChange);
+    };
   }, []);
 
   // Fonction de déconnexion
@@ -97,6 +120,9 @@ const Navbar = memo(() => {
       setIsLoggingOut(true);
       
       await authService.logout();
+      
+      // Déclencher un événement personnalisé pour informer la navbar de la déconnexion
+      window.dispatchEvent(new Event('logout-success'));
       
       setLogoutDialogOpen(false);
       setIsAuthenticated(false);

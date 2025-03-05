@@ -45,21 +45,21 @@ class UserFixtures extends Fixture implements DependentFixtureInterface
                 'phoneNumber' => '0623456789',
             ],
             
-            // Modérateurs
+            // Super Administrateurs
             [
-                'firstName' => 'Moderator',
+                'firstName' => 'Superadmin',
                 'lastName' => 'User',
-                'email' => 'moderator@bigproject.com',
-                'roleName' => RoleFixtures::ROLE_MODERATOR,
-                'birthDate' => '1992-03-20',
+                'email' => 'superadmin@bigproject.com',
+                'roleName' => RoleFixtures::ROLE_SUPERADMIN,
+                'birthDate' => '1985-03-20',
                 'phoneNumber' => '0723456789',
             ],
             [
-                'firstName' => 'Lucas',
-                'lastName' => 'Bernard',
-                'email' => 'lucas.bernard@bigproject.com',
-                'roleName' => RoleFixtures::ROLE_MODERATOR,
-                'birthDate' => '1991-07-12',
+                'firstName' => 'Pierre',
+                'lastName' => 'Dupont',
+                'email' => 'pierre.dupont@bigproject.com',
+                'roleName' => RoleFixtures::ROLE_SUPERADMIN,
+                'birthDate' => '1983-07-12',
                 'phoneNumber' => '0623456780',
             ],
             
