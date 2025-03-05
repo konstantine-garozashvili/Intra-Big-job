@@ -34,8 +34,6 @@ docker-compose -f infra/docker-compose.yml build --no-cache
 # Démarrer les conteneurs
 docker-compose -f infra/docker-compose.yml up -d
 
-docker exec -it infra-backend-1 php bin/console lexik:jwt:generate-keypair
-
 docker exec -it infra-backend-1 php bin/console doctrine:fixtures:load --group=UserFixtures --append
 
 ```
