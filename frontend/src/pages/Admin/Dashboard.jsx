@@ -13,7 +13,6 @@ const AdminDashboard = () => {
     const fetchUserData = async () => {
       try {
         const userData = await authService.getCurrentUser();
-        const finalUserData = userData?.user || userData;
         setUser(finalUserData);
       } catch (err) {
         setError('Impossible de charger les informations utilisateur');
@@ -27,8 +26,8 @@ const AdminDashboard = () => {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-8">
-        <div className="bg-white rounded-lg shadow-lg p-6">
+      <div className="container p-8 mx-auto">
+        <div className="p-6 bg-white rounded-lg shadow-lg">
           <p className="text-gray-600">Chargement en cours...</p>
         </div>
       </div>
@@ -37,8 +36,8 @@ const AdminDashboard = () => {
 
   if (error) {
     return (
-      <div className="container mx-auto p-8">
-        <div className="bg-white rounded-lg shadow-lg p-6">
+      <div className="container p-8 mx-auto">
+        <div className="p-6 bg-white rounded-lg shadow-lg">
           <p className="text-red-500">{error}</p>
         </div>
       </div>
@@ -46,10 +45,10 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="container mx-auto p-8">
-      <div className="bg-white rounded-lg shadow-lg p-6">
-        <h1 className="text-3xl font-bold text-gray-800 mb-8">
-          Bienvenue {user?.firstName} {user?.lastName} - Admin
+    <div className="container p-8 mx-auto">
+      <div className="p-6 bg-white rounded-lg shadow-lg">
+        <h1 className="mb-8 text-3xl font-bold text-gray-800">
+          Bienvenue {user?.firstName} {user?.lastName}
         </h1>
       </div>
     </div>
