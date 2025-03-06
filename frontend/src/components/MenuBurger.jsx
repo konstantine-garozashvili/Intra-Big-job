@@ -80,7 +80,7 @@ const MenuBurger = memo(()  => {
               </div>
 
               {/* Menu Items */}
-              <div className="flex-1 overflow-y-hidden">
+              <div className="flex-1 overflow-y-auto">
                 <ul className="py-2">
                   {/* Tableau de bord - always visible */}
                   <li className="flex items-center px-4 py-2 hover:bg-blue-800">
@@ -90,7 +90,7 @@ const MenuBurger = memo(()  => {
                   {/* Elèves - show if ROLE_SUPERADMIN or ROLE_ADMIN or ... */}
                   {(userRole === 'ROLE_SUPERADMIN' ||
                     userRole === 'ROLE_ADMIN' ||
-                    userRole === 'ROLE_RH' ||
+                    userRole === 'ROLE_HR' ||
                     userRole === 'ROLE_TEACHER') && (
                     <li className="flex items-center px-4 py-2 hover:bg-blue-800">
                       Élèves
@@ -98,12 +98,9 @@ const MenuBurger = memo(()  => {
                   )}
 
                   {/* IF teacher or student */}
-                  {(userRole === 'ROLE_STUDENT' ||
-                    userRole === 'ROLE_TEACHER') && (
                     <li className="flex items-center px-4 py-2 hover:bg-blue-800">
                       Planning
                     </li>
-                  )}
 
                   {/* IF teacher or student */}
                   {(userRole === 'ROLE_STUDENT' ||
@@ -124,7 +121,7 @@ const MenuBurger = memo(()  => {
                   {/* Enseignants */}
                   {(userRole === 'ROLE_SUPERADMIN' ||
                     userRole === 'ROLE_ADMIN' ||
-                    userRole === 'ROLE_RH') && (
+                    userRole === 'ROLE_HR') && (
                     <li className="flex items-center px-4 py-2 hover:bg-blue-800">
                       Enseignants
                     </li>
@@ -133,17 +130,17 @@ const MenuBurger = memo(()  => {
                   {/* Invités */}
                   {(userRole === 'ROLE_SUPERADMIN' ||
                     userRole === 'ROLE_ADMIN' ||
-                    userRole === 'ROLE_RH') && (
+                    userRole === 'ROLE_HR') && (
                     <li className="flex items-center px-4 py-2 hover:bg-blue-800">
                       Invités
                     </li>
                   )}
 
-                  {/* RH */}
+                  {/* HR */}
                   {(userRole === 'ROLE_SUPERADMIN' ||
                     userRole === 'ROLE_ADMIN') && (
                     <li className="flex items-center px-4 py-2 hover:bg-blue-800">
-                      RH
+                      HR
                     </li>
                   )}
 
@@ -163,11 +160,10 @@ const MenuBurger = memo(()  => {
 
 
                   {/* Sites de formation - always visible (example) */}
-                  {userRole === 'ROLE_GUEST' && (
                     <li className="flex items-center px-4 py-2 hover:bg-blue-800">
-                      FAQ
+                        FAQ
                     </li>
-                  )}
+                  
 
                   {/* Messagerie - always visible (example) */}
                   <li className="flex items-center px-4 py-2 hover:bg-blue-800">
