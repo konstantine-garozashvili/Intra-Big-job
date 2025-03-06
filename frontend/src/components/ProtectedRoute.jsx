@@ -2,6 +2,7 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { authService } from '@/lib/services/authService';
 import { useEffect, useState, useRef } from 'react';
 import { toast } from 'sonner';
+import { getDashboardPathByRole, getPrimaryRole } from '@/lib/utils/roleUtils';
 
 /**
  * Composant pour protéger les routes nécessitant une authentification

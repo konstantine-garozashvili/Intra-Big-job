@@ -3,6 +3,7 @@ import { Loader2 } from "lucide-react"
 import { Link, useNavigate } from "react-router-dom"
 import { authService } from "@/lib/services/authService"
 import { toast } from "sonner"
+import { getDashboardPathByRole, getPrimaryRole } from "@/lib/utils/roleUtils"
 
 export function AuthForm() {
   const [email, setEmail] = React.useState("")
@@ -67,15 +68,22 @@ export function AuthForm() {
       // Déclencher un événement personnalisé pour informer la navbar de la connexion
       window.dispatchEvent(new Event('login-success'));
       
+      // Récupérer l'utilisateur pour obtenir ses rôles
+      const userData = await authService.getCurrentUser();
+      
+      // Déterminer le rôle principal et le chemin du dashboard
+      const primaryRole = getPrimaryRole(userData.roles);
+      const dashboardPath = getDashboardPathByRole(primaryRole);
+      
       // Vérifier s'il y a une page de redirection stockée
       const returnTo = sessionStorage.getItem('returnTo')
       
-      // Rediriger vers la page stockée ou le profil
+      // Rediriger vers la page stockée ou le dashboard spécifique au rôle
       if (returnTo) {
         sessionStorage.removeItem('returnTo') // Nettoyer après utilisation
         navigate(returnTo)
       } else {
-        navigate('/profil')
+        navigate(dashboardPath)
       }
     } catch (error) {
       console.error('=== ERREUR DE CONNEXION ===')

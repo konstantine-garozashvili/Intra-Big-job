@@ -10,6 +10,14 @@ const VerificationError = lazy(() => import('./pages/VerificationError'))
 // Lazy loading pour le Profil et Dashboard
 const Profil = lazy(() => import('./pages/Profil'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
+// Dashboards spécifiques par rôle
+const AdminDashboard = lazy(() => import('./pages/Admin/Dashboard'))
+const StudentDashboard = lazy(() => import('./pages/Student/Dashboard'))
+const TeacherDashboard = lazy(() => import('./pages/Teacher/Dashboard'))
+const HRDashboard = lazy(() => import('./pages/HR/Dashboard'))
+const SuperAdminDashboard = lazy(() => import('./pages/SuperAdmin/Dashboard'))
+const GuestDashboard = lazy(() => import('./pages/Guest/Dashboard'))
+const RecruiterDashboard = lazy(() => import('./pages/Recruiter/Dashboard'))
 // Import du composant HomePage
 const HomePage = lazy(() => import('./components/HomePage'))
 import { Toaster } from './components/ui/sonner'
@@ -28,6 +36,13 @@ const preloadPages = () => {
   const preloadProfil = () => import('./pages/Profil'); // Préchargement du Profil
   const preloadDashboard = () => import('./pages/Dashboard'); // Préchargement du Dashboard
   const preloadHomePage = () => import('./components/HomePage'); // Préchargement de HomePage
+  const preloadAdminDashboard = () => import('./pages/Admin/Dashboard');
+  const preloadStudentDashboard = () => import('./pages/Student/Dashboard');
+  const preloadTeacherDashboard = () => import('./pages/Teacher/Dashboard');
+  const preloadHRDashboard = () => import('./pages/HR/Dashboard');
+  const preloadSuperAdminDashboard = () => import('./pages/SuperAdmin/Dashboard');
+  const preloadGuestDashboard = () => import('./pages/Guest/Dashboard');
+  const preloadRecruiterDashboard = () => import('./pages/Recruiter/Dashboard');
   
   // Déclencher le préchargement
   preloadLogin();
@@ -38,6 +53,13 @@ const preloadPages = () => {
   preloadProfil();
   preloadDashboard();
   preloadHomePage();
+  preloadAdminDashboard();
+  preloadStudentDashboard();
+  preloadTeacherDashboard();
+  preloadHRDashboard();
+  preloadSuperAdminDashboard();
+  preloadGuestDashboard();
+  preloadRecruiterDashboard();
 };
 
 // Composant pour observer les liens et précharger les pages correspondantes
@@ -83,6 +105,14 @@ const App = () => {
                 <Route element={<ProtectedRoute />}>
                   <Route path="/profil" element={<Profil />} />
                   <Route path="/dashboard" element={<Dashboard />} />
+                  {/* Dashboards spécifiques par rôle */}
+                  <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                  <Route path="/student/dashboard" element={<StudentDashboard />} />
+                  <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
+                  <Route path="/hr/dashboard" element={<HRDashboard />} />
+                  <Route path="/super-admin/dashboard" element={<SuperAdminDashboard />} />
+                  <Route path="/guest/dashboard" element={<GuestDashboard />} />
+                  <Route path="/recruiter/dashboard" element={<RecruiterDashboard />} />
                 </Route>
                 
                 {/* Redirection des routes inconnues vers la page d'accueil */}

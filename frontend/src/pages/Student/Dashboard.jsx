@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { authService } from '../lib/services/authService';
+import { authService } from '../../lib/services/authService';
 
 /**
- * Composant Tableau de bord affiché comme page d'accueil pour les utilisateurs connectés
- * avec un message de bienvenue personnalisé selon le rôle
+ * Tableau de bord spécifique pour les étudiants
  */
-const Dashboard = () => {
+const StudentDashboard = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -14,9 +13,10 @@ const Dashboard = () => {
     const fetchUserData = async () => {
       try {
         const userData = await authService.getCurrentUser();
-        const finalUserData = userData?.user || userData;
-        setUser(finalUserData);
+        console.log('Données utilisateur reçues:', userData); // Pour déboguer
+        setUser(userData);
       } catch (err) {
+        console.error('Erreur lors de la récupération des données utilisateur:', err);
         setError('Impossible de charger les informations utilisateur');
       } finally {
         setLoading(false);
@@ -50,11 +50,11 @@ const Dashboard = () => {
     <div className="container mx-auto p-8">
       <div className="bg-white rounded-lg shadow-lg p-6">
         <h1 className="text-3xl font-bold text-gray-800 mb-8">
-          Bienvenue {user?.firstName} {user?.lastName} - {user?.roles?.[0]?.replace('ROLE_', '')}
+          Bienvenue {user?.firstname} - Étudiant
         </h1>
       </div>
     </div>
   );
 };
 
-export default Dashboard;
+export default StudentDashboard; 
