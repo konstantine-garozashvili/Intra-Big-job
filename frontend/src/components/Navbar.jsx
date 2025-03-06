@@ -165,11 +165,13 @@ const Navbar = memo(() => {
         
         <div className="container px-4 mx-auto">
           <div className="flex items-center justify-between h-16">
-            <div className="flex-shrink-0">
+            <div className="flex items-center">
             <MenuBurger />
+            <div className="flex-shrink-0">
               <Link to={isAuthenticated ? "/dashboard" : "/login"} className="text-2xl font-black tracking-tight text-white">
                 Big<span className="text-[#528eb2]">Project</span>
               </Link>
+            </div>
             </div>
 
             <div className="hidden md:block">

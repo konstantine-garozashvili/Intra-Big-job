@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, {memo, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
 import { authService } from '../lib/services/authService';
 
-const MenuBurger = () => {
+const MenuBurger = memo(()  => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userData, setUserData] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -80,7 +80,7 @@ const MenuBurger = () => {
               </div>
 
               {/* Menu Items */}
-              <div className="flex-1 overflow-y-auto">
+              <div className="flex-1 overflow-y-hidden">
                 <ul className="py-2">
                   {/* Tableau de bord - always visible */}
                   <li className="flex items-center px-4 py-2 hover:bg-blue-800">
@@ -198,7 +198,7 @@ const MenuBurger = () => {
       </AnimatePresence>
     </div>
   );
-};
+});
 
 export { MenuBurger };
 
