@@ -13,7 +13,8 @@ const AdminDashboard = () => {
     const fetchUserData = async () => {
       try {
         const userData = await authService.getCurrentUser();
-        setUser(finalUserData);
+        console.log('Données utilisateur reçues:', userData); // Pour déboguer
+        setUser(userData);
       } catch (err) {
         setError('Impossible de charger les informations utilisateur');
       } finally {
