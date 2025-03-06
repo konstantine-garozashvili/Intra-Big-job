@@ -80,7 +80,7 @@ const MenuBurger = memo(()  => {
               </div>
 
               {/* Menu Items */}
-              <div className="flex-1 overflow-y-auto">
+              <div className="scrollable-div">
                 <ul className="py-2">
                   {/* Tableau de bord - always visible */}
                   <li className="flex items-center px-4 py-2 hover:bg-blue-800">
@@ -179,10 +179,7 @@ const MenuBurger = memo(()  => {
 
               {/* Footer / Extra Buttons */}
               <div className="p-4 border-t border-blue-700">
-                {/* Example "Add" Button */}
-                <button className="flex items-center w-full text-left hover:bg-blue-800 px-4 py-2">
-                  Ajouter
-                </button>
+               
                 {/* Example "Logout" Button */}
                 <button className="flex items-center w-full text-left hover:bg-blue-800 px-4 py-2 mt-2">
                   Déconnexion
