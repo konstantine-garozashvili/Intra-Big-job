@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { authService } from '../lib/services/authService';
+import { authService } from '../../lib/services/authService';
 
 /**
- * Composant Tableau de bord affiché comme page d'accueil pour les utilisateurs connectés
- * avec un message de bienvenue personnalisé selon le rôle
+ * Tableau de bord spécifique pour les administrateurs
  */
-const Dashboard = () => {
+const AdminDashboard = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -14,7 +13,6 @@ const Dashboard = () => {
     const fetchUserData = async () => {
       try {
         const userData = await authService.getCurrentUser();
-        const finalUserData = userData?.user || userData;
         setUser(finalUserData);
       } catch (err) {
         setError('Impossible de charger les informations utilisateur');
@@ -28,8 +26,8 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-8">
-        <div className="bg-white rounded-lg shadow-lg p-6">
+      <div className="container p-8 mx-auto">
+        <div className="p-6 bg-white rounded-lg shadow-lg">
           <p className="text-gray-600">Chargement en cours...</p>
         </div>
       </div>
@@ -38,8 +36,8 @@ const Dashboard = () => {
 
   if (error) {
     return (
-      <div className="container mx-auto p-8">
-        <div className="bg-white rounded-lg shadow-lg p-6">
+      <div className="container p-8 mx-auto">
+        <div className="p-6 bg-white rounded-lg shadow-lg">
           <p className="text-red-500">{error}</p>
         </div>
       </div>
@@ -47,14 +45,14 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="container mx-auto p-8">
-      <div className="bg-white rounded-lg shadow-lg p-6">
-        <h1 className="text-3xl font-bold text-gray-800 mb-8">
-          Bienvenue {user?.firstName} {user?.lastName} - {user?.roles?.[0]?.replace('ROLE_', '')}
+    <div className="container p-8 mx-auto">
+      <div className="p-6 bg-white rounded-lg shadow-lg">
+        <h1 className="mb-8 text-3xl font-bold text-gray-800">
+          Bienvenue {user?.firstName} {user?.lastName}
         </h1>
       </div>
     </div>
   );
 };
 
-export default Dashboard;
+export default AdminDashboard; 
