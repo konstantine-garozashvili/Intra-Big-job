@@ -282,6 +282,9 @@ export function AuthForm() {
           </div>
 
           <div className="text-sm">
+            <Link to="/reset-password" className="font-medium text-[#528eb2] hover:text-[#02284f]">
+              Mot de passe oublié?
+            </Link>
           </div>
         </div>
 
