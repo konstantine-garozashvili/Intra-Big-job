@@ -20,40 +20,25 @@ const ResetPassword = () => {
         const verifyToken = async () => {
             setIsLoading(true);
             
-            // Mode développement: simulation de validation du token
-            // TODO: Décommenter le code ci-dessous et supprimer cette simulation
-            // quand le backend sera fonctionnel
-            
-            // Simulation d'une attente réseau
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            // Simuler une validation réussie
-            if (token && token.length > 10) {
-                setIsValid(true);
-                toast.success('Vous pouvez maintenant définir votre nouveau mot de passe');
-            } else {
-                setIsValid(false);
-                toast.error('Ce lien de réinitialisation est invalide ou a expiré');
-            }
-            
-            setIsLoading(false);
-            
-            /* Code réel commenté temporairement
             try {
+                console.log('Vérification du token:', token);
                 const response = await apiService.get(`/api/reset-password/verify/${token}`);
-                if (!response.data.success) {
-                    setIsValid(false);
-                    toast.error(response.data.message || 'Lien de réinitialisation invalide');
-                } else {
+                console.log('Réponse de vérification:', response);
+                
+                if (response.success) {
                     setIsValid(true);
+                    toast.success('Vous pouvez maintenant définir votre nouveau mot de passe');
+                } else {
+                    setIsValid(false);
+                    toast.error(response.message || 'Lien de réinitialisation invalide');
                 }
             } catch (error) {
+                console.error('Erreur de vérification:', error);
                 setIsValid(false);
                 toast.error('Ce lien de réinitialisation est invalide ou a expiré.');
             } finally {
                 setIsLoading(false);
             }
-            */
         };
 
         if (token) {
@@ -77,38 +62,25 @@ const ResetPassword = () => {
         
         setIsSubmitting(true);
         
-        // Mode développement: simulation de réinitialisation réussie
-        // TODO: Décommenter le code ci-dessous et supprimer cette simulation
-        // quand le backend sera fonctionnel
-        
         try {
-            // Simulation d'une attente réseau
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            console.log('Envoi de la réinitialisation pour le token:', token);
             
-            // Simuler une réponse réussie
-            toast.success('Votre mot de passe a été réinitialisé avec succès');
-            
-            // Redirection vers la page de connexion après un court délai
-            setTimeout(() => {
-                navigate('/login');
-            }, 2000);
-            
-            /* Code réel commenté temporairement
             const response = await apiService.post(`/api/reset-password/reset/${token}`, { 
-                password,
-                confirmPassword 
+                password
             });
             
-            if (response.data.success) {
+            console.log('Réponse de réinitialisation:', response);
+            
+            if (response.success) {
                 toast.success('Votre mot de passe a été réinitialisé avec succès');
                 setTimeout(() => {
                     navigate('/login');
                 }, 2000);
             } else {
-                toast.error(response.data.message || 'Une erreur est survenue');
+                toast.error(response.message || 'Une erreur est survenue');
             }
-            */
         } catch (error) {
+            console.error('Erreur de réinitialisation:', error);
             const errorMessage = error.response?.data?.message || 
                                 'Impossible de réinitialiser votre mot de passe. Veuillez réessayer plus tard.';
             toast.error(errorMessage);
