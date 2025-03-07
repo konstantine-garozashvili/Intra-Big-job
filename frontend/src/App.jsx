@@ -12,6 +12,9 @@ const Profil = lazy(() => import('./pages/Profil'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 // Import du composant HomePage
 const HomePage = lazy(() => import('./components/HomePage'))
+// Import des pages de signature
+const StudentAttendance = lazy(() => import('./pages/Student/Attendance'))
+const TeacherSignatureMonitoring = lazy(() => import('./pages/Teacher/SignatureMonitoring'))
 import { Toaster } from './components/ui/sonner'
 import './index.css'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -28,6 +31,8 @@ const preloadPages = () => {
   const preloadProfil = () => import('./pages/Profil'); // Préchargement du Profil
   const preloadDashboard = () => import('./pages/Dashboard'); // Préchargement du Dashboard
   const preloadHomePage = () => import('./components/HomePage'); // Préchargement de HomePage
+  const preloadStudentAttendance = () => import('./pages/Student/Attendance'); // Préchargement de la page d'assiduité
+  const preloadTeacherSignatureMonitoring = () => import('./pages/Teacher/SignatureMonitoring'); // Préchargement du suivi des signatures
   
   // Déclencher le préchargement
   preloadLogin();
@@ -38,6 +43,8 @@ const preloadPages = () => {
   preloadProfil();
   preloadDashboard();
   preloadHomePage();
+  preloadStudentAttendance();
+  preloadTeacherSignatureMonitoring();
 };
 
 // Composant pour observer les liens et précharger les pages correspondantes
@@ -83,6 +90,9 @@ const App = () => {
                 <Route element={<ProtectedRoute />}>
                   <Route path="/profil" element={<Profil />} />
                   <Route path="/dashboard" element={<Dashboard />} />
+                  {/* Routes pour la signature électronique */}
+                  <Route path="/attendance" element={<StudentAttendance />} />
+                  <Route path="/signature-monitoring" element={<TeacherSignatureMonitoring />} />
                 </Route>
                 
                 {/* Redirection des routes inconnues vers la page d'accueil */}

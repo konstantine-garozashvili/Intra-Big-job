@@ -28,6 +28,13 @@ export default defineConfig({
     hmr: {
       clientPort: 5173,
       overlay: true
+    },
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        secure: false
+      }
     }
   }
 })
