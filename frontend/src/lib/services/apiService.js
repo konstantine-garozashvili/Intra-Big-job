@@ -16,6 +16,9 @@ axios.interceptors.request.use(request => {
                    request.url.includes('/token/revoke');
   }
   
+  // Ajouter les credentials et les headers CORS
+  request.withCredentials = true;
+  
   return request;
 }, error => {
   console.error('Erreur lors de la préparation de la requête:', error);
@@ -73,21 +76,25 @@ axios.interceptors.response.use(response => {
   return Promise.reject(error);
 });
 
+// Configuration de base pour axios
+axios.defaults.withCredentials = true;
+
 /**
  * Normalise une URL d'API en gérant les doublons de "/api"
  * @param {string} path - Le chemin de l'API
  * @returns {string} - L'URL complète normalisée
  */
 export const normalizeApiUrl = (path) => {
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+  // Pour utiliser le proxy Vite, on garde simplement le chemin /api
+  // Au lieu d'utiliser l'URL complète avec le port
   
-  // Supprimer le "/api" à la fin de baseUrl si path commence par "/api"
+  // Si le chemin commence déjà par /api, on le renvoie tel quel
   if (path.startsWith('/api')) {
-    return `${baseUrl.replace(/\/api$/, '')}${path}`;
-  } 
+    return path;
+  }
   
-  // Ajouter un "/" si nécessaire
-  return `${baseUrl}${baseUrl.endsWith('/') || path.startsWith('/') ? '' : '/'}${path}`;
+  // Sinon, on ajoute le préfixe /api
+  return `/api${path.startsWith('/') ? '' : '/'}${path}`;
 };
 
 /**
@@ -103,13 +110,28 @@ const apiService = {
   async get(path, options = {}) {
     try {
       const url = normalizeApiUrl(path);
-      const authOptions = this.withAuth(options);
+      const authOptions = this.withAuth({
+        ...options,
+        withCredentials: true,
+      });
       const response = await axios.get(url, authOptions);
       return response.data;
     } catch (error) {
       console.error(`Erreur API GET ${path}:`, error);
       console.error(`[apiService] Détails de l'erreur:`, error.response || error.message);
-      throw error;
+      
+      // Gestion spécifique des erreurs CORS
+      if (error.message && error.message.includes('Network Error')) {
+        console.error('Erreur réseau possible - Problème CORS');
+        return { success: false, message: 'Erreur de communication avec le serveur' };
+      }
+      
+      // Retourner une réponse formatée en cas d'erreur pour éviter les crashes
+      if (error.response && error.response.data) {
+        return { success: false, message: error.response.data.message || 'Une erreur est survenue' };
+      }
+      
+      return { success: false, message: 'Une erreur est survenue' };
     }
   },
   
@@ -124,13 +146,33 @@ const apiService = {
     try {
       console.log(`[apiService] POST ${path}:`, { data: { ...data, password: data.password ? '***' : undefined } });
       const url = normalizeApiUrl(path);
-      const response = await axios.post(url, data, options);
+      const completeOptions = {
+        ...options,
+        withCredentials: true,
+        headers: {
+          ...options.headers,
+          'Content-Type': 'application/json',
+        }
+      };
+      const response = await axios.post(url, data, completeOptions);
       console.log(`[apiService] POST ${path} Réponse:`, response.status);
       return response.data;
     } catch (error) {
       console.error(`Erreur API POST ${path}:`, error);
       console.error(`[apiService] Détails de l'erreur:`, error.response?.data || error.message);
-      throw error;
+      
+      // Gestion spécifique des erreurs CORS
+      if (error.message && error.message.includes('Network Error')) {
+        console.error('Erreur réseau possible - Problème CORS');
+        return { success: false, message: 'Erreur de communication avec le serveur' };
+      }
+      
+      // Retourner une réponse formatée en cas d'erreur pour éviter les crashes
+      if (error.response && error.response.data) {
+        return { success: false, message: error.response.data.message || 'Une erreur est survenue' };
+      }
+      
+      return { success: false, message: 'Une erreur est survenue' };
     }
   },
   
