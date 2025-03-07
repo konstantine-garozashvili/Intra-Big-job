@@ -23,36 +23,29 @@ const ResetPasswordRequest = () => {
         setIsSubmitting(true);
         
         try {
-            // Mode développement: simulation de réponse réussie
-            // TODO: Décommenter le code ci-dessous et supprimer cette simulation
-            // quand le backend sera fonctionnel
-            
-            // Simulation d'une attente réseau
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            // Simuler une réponse réussie
-            toast.success('Si votre email est enregistré dans notre système, vous recevrez un lien de réinitialisation');
-            
-            // Rediriger vers la page de confirmation
-            navigate('/reset-password/confirmation', { 
-                state: { email } 
-            });
-            
-            /* Code réel commenté temporairement
+            // Utiliser le chemin correct avec le préfixe /api
+            console.log('Envoi de la demande de réinitialisation pour:', email);
             const response = await apiService.post('/api/reset-password/request', { email });
             
-            if (response.data.success) {
+            console.log('Réponse reçue:', response);
+            
+            // Si la réponse contient success=true
+            if (response.success) {
+                // Message de succès
+                toast.success(response.message || 'Si votre email est enregistré dans notre système, vous recevrez un lien de réinitialisation');
+                
                 // Rediriger vers la page de confirmation
                 navigate('/reset-password/confirmation', { 
                     state: { email } 
                 });
             } else {
-                toast.error(response.data.message || 'Une erreur est survenue');
+                // En cas d'erreur côté serveur mais avec une réponse 200
+                toast.error(response.message || 'Une erreur est survenue');
             }
-            */
         } catch (error) {
+            console.error('Erreur complète:', error);
             const errorMessage = error.response?.data?.message || 
-                                'Impossible de traiter votre demande. Veuillez réessayer plus tard.';
+                               'Impossible de traiter votre demande. Veuillez réessayer plus tard.';
             toast.error(errorMessage);
         } finally {
             setIsSubmitting(false);
