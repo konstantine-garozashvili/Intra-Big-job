@@ -1,14 +1,14 @@
-import React, {memo, useState, useEffect } from 'react';
+import React, { memo, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useLocation } from 'react-router-dom';
 import { authService } from '../lib/services/authService';
+import { Link } from 'react-router-dom';
 
-const MenuBurger = memo(()  => {
+const MenuBurger = memo(() => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userData, setUserData] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const location = useLocation();
   const [userRole, setUserRole] = useState(null);
+  const [openSubMenus, setOpenSubMenus] = useState({});
 
   useEffect(() => {
     const checkAuthentication = async () => {
@@ -17,39 +17,78 @@ const MenuBurger = memo(()  => {
         setUserData(user);
         setIsAuthenticated(true);
 
-        if (user && user.roles && user.roles.length > 0) {
+        if (user?.roles?.length > 0) {
           setUserRole(user.roles[0]);
-          console.log("User role (direct):", user.roles[0]);
         }
-        console.log("User data:", user);
       } catch (error) {
         setUserData(null);
         setIsAuthenticated(false);
-        console.log("Error fetching user data", error);
       }
     };
 
     checkAuthentication();
   }, []);
 
-  useEffect(() => {
-    if (userRole) {
-      console.log("Updated user role:", userRole);
-    }
-  }, [userRole]);
+  const toggleMenu = () => setMenuOpen(!menuOpen);
 
-  const toggleMenu = () => {
-    setMenuOpen(!menuOpen);
+  const toggleSubMenu = (menu) => {
+    setOpenSubMenus((prev) => ({ ...prev, [menu]: !prev[menu] }));
   };
+
+  const menuItems = [
+    {
+      key: 'eleves',
+      label: 'Élèves',
+      roles: ['ROLE_SUPERADMIN', 'ROLE_ADMIN', 'ROLE_TEACHER'],
+      links: [
+        { name: 'Liste des élèves', to: '/eleves' },
+        { name: 'Résultats', to: '/eleves/resultats' },
+        { name: 'Dossiers', to: '/eleves/dossiers' },
+      ],
+    },
+    {
+      key: 'enseignants',
+      label: 'Enseignants',
+      roles: ['ROLE_SUPERADMIN', 'ROLE_ADMIN', 'ROLE_HR'],
+      links: [
+        { name: 'Liste des enseignants', to: '/enseignants' },
+        { name: 'Évaluations', to: '/enseignants/evaluations' },
+      ],
+    },
+    {
+      key: 'invites',
+      label: 'Invités',
+      roles: ['ROLE_SUPERADMIN', 'ROLE_ADMIN'],
+      links: [
+        { name: 'Liste des invités', to: '/invites' },
+        { name: 'Demandes d’accès', to: '/invites/demandes' },
+        { name: 'Test d’admission', to: '/invites/test' },
+      ],
+    },
+    {
+      key: 'rh',
+      label: 'RH',
+      roles: ['ROLE_SUPERADMIN', 'ROLE_ADMIN'],
+      links: [
+        { name: 'Gestion du personnel', to: '/rh' },
+        { name: 'Congés', to: '/rh/conges' },
+        { name: 'Paie', to: '/rh/paie' },
+      ],
+    },
+    {
+      key: 'admins',
+      label: 'Admins',
+      roles: ['ROLE_SUPERADMIN'],
+      links: [
+        { name: 'Gestion des utilisateurs', to: '/admin/utilisateurs' },
+        { name: 'Paramètres système', to: '/admin/parametres' },
+      ],
+    },
+  ];
 
   return (
     <div className="relative">
-      {/* Burger button (visible on smaller screens or as you prefer) */}
-      <button
-        className="menu-burger-button text-gray-200 hover:text-white focus:outline-none"
-        onClick={toggleMenu}
-      >
-        {/* Simple burger icon */}
+      <button className="menu-burger-button text-gray-200 hover:text-white focus:outline-none" onClick={toggleMenu}>
         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
         </svg>
@@ -62,125 +101,94 @@ const MenuBurger = memo(()  => {
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
             transition={{ duration: 0.3 }}
-            className="fixed top-0 left-0 w-64 h-full bg-blue-900 text-white shadow-lg z-50"
+            className="fixed top-0 left-0 w-64 h-full bg-[#00284f] text-white shadow-lg z-50"
           >
             <div className="flex flex-col h-full">
-              {/* Header / Profile Section */}
               <div className="flex items-center p-4 border-b border-blue-700">
-                {/* Placeholder for profile icon */}
                 <div className="w-12 h-12 bg-white rounded-full mr-3" />
                 <div>
                   <p className="font-semibold">{userData ? `${userData.firstName} ${userData.lastName}` : ''}</p>
                   <p className="text-sm text-blue-200">{userRole}</p>
                 </div>
-                {/* Optional close button on the right */}
                 <button className="ml-auto text-white" onClick={toggleMenu}>
                   ✕
                 </button>
               </div>
 
-              {/* Menu Items */}
               <div className="scrollable-div">
                 <ul className="py-2">
-                  {/* Tableau de bord - always visible */}
-                  <li className="flex items-center px-4 py-2 hover:bg-blue-800">
-                    Tableau de bord
+                  <li className="flex items-center px-4 py-2 hover:bg-[#528eb2]">
+                    <Link to="/dashboard">Tableau de bord</Link>
                   </li>
 
-                  {/* Elèves - show if ROLE_SUPERADMIN or ROLE_ADMIN or ... */}
-                  {(userRole === 'ROLE_SUPERADMIN' ||
-                    userRole === 'ROLE_ADMIN' ||
-                    userRole === 'ROLE_HR' ||
-                    userRole === 'ROLE_TEACHER') && (
-                    <li className="flex items-center px-4 py-2 hover:bg-blue-800">
-                      Élèves
-                    </li>
+                  {menuItems.map(({ key, label, roles, links }) =>
+                    roles.includes(userRole) ? (
+                      <React.Fragment key={key}>
+                        <li
+                          className="flex items-center justify-between px-4 py-2 hover:bg-blue-800 cursor-pointer"
+                          onClick={() => toggleSubMenu(key)}
+                        >
+                          {label} <span>{openSubMenus[key] ? '▲' : '▼'}</span>
+                        </li>
+                        <AnimatePresence>
+                          {openSubMenus[key] && (
+                            <motion.ul
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              className="pl-6 bg-[blue-800]"
+                            >
+                              {links.map((link, index) => (
+                                <li key={index} className="px-4 py-2 hover:bg-[#528eb2]">
+                                  <Link to={link.to}>{link.name}</Link>
+                                </li>
+                              ))}
+                            </motion.ul>
+                          )}
+                        </AnimatePresence>
+                      </React.Fragment>
+                    ) : null
                   )}
 
-                  {/* IF teacher or student */}
-                    <li className="flex items-center px-4 py-2 hover:bg-blue-800">
-                      Planning
-                    </li>
-
-                  {/* IF teacher or student */}
-                  {(userRole === 'ROLE_STUDENT' ||
-                    userRole === 'ROLE_TEACHER') && (
-                    <li className="flex items-center px-4 py-2 hover:bg-blue-800">
-                      Cours
-                    </li>
-                  )}
-
-                  {/* IF teacher or student */}
-                  {(userRole === 'ROLE_STUDENT' ||
-                    userRole === 'ROLE_TEACHER') && (
-                    <li className="flex items-center px-4 py-2 hover:bg-blue-800">
-                      Projet
-                    </li>
-                  )}
-
-                  {/* Enseignants */}
-                  {(userRole === 'ROLE_SUPERADMIN' ||
-                    userRole === 'ROLE_ADMIN' ||
-                    userRole === 'ROLE_HR') && (
-                    <li className="flex items-center px-4 py-2 hover:bg-blue-800">
-                      Enseignants
-                    </li>
-                  )}
-
-                  {/* Invités */}
-                  {(userRole === 'ROLE_SUPERADMIN' ||
-                    userRole === 'ROLE_ADMIN' ||
-                    userRole === 'ROLE_HR') && (
-                    <li className="flex items-center px-4 py-2 hover:bg-blue-800">
-                      Invités
-                    </li>
-                  )}
-
-                  {/* HR */}
-                  {(userRole === 'ROLE_SUPERADMIN' ||
-                    userRole === 'ROLE_ADMIN') && (
-                    <li className="flex items-center px-4 py-2 hover:bg-blue-800">
-                      HR
-                    </li>
-                  )}
-
-                  {/* Admins - only SUPERADMIN */}
-                  {userRole === 'ROLE_SUPERADMIN' && (
-                    <li className="flex items-center px-4 py-2 hover:bg-blue-800">
-                      Admins
-                    </li>
-                  )}
-
-                  {/* Sites de formation - always visible (example) */}
-                  {userRole === 'ROLE_SUPERADMIN' && (
-                    <li className="flex items-center px-4 py-2 hover:bg-blue-800">
-                      Sites de formations
-                    </li>
-                  )}
-
-
-                  {/* Sites de formation - always visible (example) */}
-                    <li className="flex items-center px-4 py-2 hover:bg-blue-800">
-                        FAQ
-                    </li>
-                  
-
-                  {/* Messagerie - always visible (example) */}
                   <li className="flex items-center px-4 py-2 hover:bg-blue-800">
-                    Messagerie
+                    <Link to="/planning">Mon Planning</Link>
                   </li>
 
-                  {/* Notifications - always visible (example) */}
+                  {(userRole === 'ROLE_STUDENT' || userRole === 'ROLE_TEACHER') && (
+                    <>
+                      <li className="flex items-center px-4 py-2 hover:bg-blue-800">
+                        <Link to="/cours">Mes Cours</Link>
+                      </li>
+                      <li className="flex items-center px-4 py-2 hover:bg-blue-800">
+                        <Link to="/projet">Mes Projets</Link>
+                      </li>
+                    </>
+                  )}
+                  {userRole === 'ROLE_SUPERADMIN' && (
+                    <li className="flex items-center px-4 py-2 hover:bg-blue-800">
+                      <Link to="/logs">Les Logs</Link>
+                    </li>
+                  )}
+
                   <li className="flex items-center px-4 py-2 hover:bg-blue-800">
-                    Notifications
+                    <Link to="/faq">FAQ</Link>
+                  </li>
+                  <li className="flex items-center px-4 py-2 hover:bg-blue-800">
+                    <Link to="/messagerie">Ma Messagerie</Link>
+                  </li>
+                  <li className="flex items-center px-4 py-2 hover:bg-blue-800">
+                    <Link to="/forum">Forum</Link>
+                  </li>
+                  <li className="flex items-center px-4 py-2 hover:bg-blue-800">
+                    <Link to="/notifications">Notifications</Link>
                   </li>
                 </ul>
               </div>
 
-              {/* Footer / Extra Buttons */}
               <div className="p-4 border-t border-blue-700">
-               
-                {/* Example "Logout" Button */}
+                <button className="flex items-center w-full text-left hover:bg-blue-800 px-4 py-2 mt-2">
+                  <Link to="/support">Support</Link>
+                </button>
                 <button className="flex items-center w-full text-left hover:bg-blue-800 px-4 py-2 mt-2">
                   Déconnexion
                 </button>
@@ -194,4 +202,3 @@ const MenuBurger = memo(()  => {
 });
 
 export { MenuBurger };
-
