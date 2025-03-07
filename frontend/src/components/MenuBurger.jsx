@@ -2,6 +2,8 @@ import React, { memo, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { authService } from '../lib/services/authService';
 import { Link } from 'react-router-dom';
+import {User, UserPlus, Shield , Users, GraduationCap,Calendar,MessageCircle,FileText,BookOpen,CalendarDays,ScrollText,HelpCircle, Bell, PiggyBank,Camera,Handshake,Headphones,School,LayoutDashboard} from 'lucide-react';
+
 
 const MenuBurger = memo(() => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -39,7 +41,8 @@ const MenuBurger = memo(() => {
     {
       key: 'eleves',
       label: 'Élèves',
-      roles: ['ROLE_SUPERADMIN', 'ROLE_ADMIN', 'ROLE_TEACHER'],
+      icon: <GraduationCap className="mr-2" />,  // Ajout de l'icône ici à côté de "Élèves"
+      roles: ['ROLE_SUPERADMIN', 'ROLE_ADMIN', 'ROLE_TEACHER','ROLE_HR','ROLE_RECRUITER'],
       links: [
         { name: 'Liste des élèves', to: '/eleves' },
         { name: 'Résultats', to: '/eleves/resultats' },
@@ -49,7 +52,8 @@ const MenuBurger = memo(() => {
     {
       key: 'enseignants',
       label: 'Enseignants',
-      roles: ['ROLE_SUPERADMIN', 'ROLE_ADMIN', 'ROLE_HR'],
+      icon: <User className="mr-2" />,
+      roles: ['ROLE_SUPERADMIN', 'ROLE_ADMIN', 'ROLE_HR','ROLE_RECRUITER'],
       links: [
         { name: 'Liste des enseignants', to: '/enseignants' },
         { name: 'Évaluations', to: '/enseignants/evaluations' },
@@ -58,6 +62,7 @@ const MenuBurger = memo(() => {
     {
       key: 'invites',
       label: 'Invités',
+      icon: <UserPlus className="mr-2" />,
       roles: ['ROLE_SUPERADMIN', 'ROLE_ADMIN'],
       links: [
         { name: 'Liste des invités', to: '/invites' },
@@ -68,6 +73,7 @@ const MenuBurger = memo(() => {
     {
       key: 'rh',
       label: 'RH',
+      icon: <Users className="mr-2" />,
       roles: ['ROLE_SUPERADMIN', 'ROLE_ADMIN'],
       links: [
         { name: 'Gestion du personnel', to: '/rh' },
@@ -78,12 +84,14 @@ const MenuBurger = memo(() => {
     {
       key: 'admins',
       label: 'Admins',
+      icon: <Shield className="mr-2" />,
       roles: ['ROLE_SUPERADMIN'],
       links: [
         { name: 'Gestion des utilisateurs', to: '/admin/utilisateurs' },
         { name: 'Paramètres système', to: '/admin/parametres' },
       ],
     },
+    
   ];
 
   return (
@@ -117,18 +125,22 @@ const MenuBurger = memo(() => {
 
               <div className="scrollable-div">
                 <ul className="py-2">
-                  <li className="flex items-center px-4 py-2 hover:bg-[#528eb2]">
-                    <Link to="/dashboard">Tableau de bord</Link>
-                  </li>
-
-                  {menuItems.map(({ key, label, roles, links }) =>
+                {(userRole === 'ROLE_STUDENT' || userRole === 'ROLE_TEACHER'|| userRole === 'ROLE_ADMIN'|| userRole === 'ROLE_SUPERADMIN') &&(
+                    <li className="flex items-center px-4 py-2 hover:bg-blue-800">
+                      <LayoutDashboard className="w-5 h-5 mr-2" />
+                      <Link to="/dashboard">Tableau de bord</Link>
+                    </li>
+                  )}
+                  {menuItems.map(({ key, icon, label, roles, links }) =>
                     roles.includes(userRole) ? (
                       <React.Fragment key={key}>
                         <li
-                          className="flex items-center justify-between px-4 py-2 hover:bg-blue-800 cursor-pointer"
+                          className="flex items-center px-4 py-2 hover:bg-blue-800 cursor-pointer"
                           onClick={() => toggleSubMenu(key)}
                         >
-                          {label} <span>{openSubMenus[key] ? '▲' : '▼'}</span>
+                          {icon}
+                          {label} <span className="ml-auto">{openSubMenus[key] ? '▼' : '►'}</span>
+
                         </li>
                         <AnimatePresence>
                           {openSubMenus[key] && (
@@ -150,43 +162,105 @@ const MenuBurger = memo(() => {
                     ) : null
                   )}
 
-                  <li className="flex items-center px-4 py-2 hover:bg-blue-800">
-                    <Link to="/planning">Mon Planning</Link>
-                  </li>
+                  {(userRole === 'ROLE_STUDENT' || userRole === 'ROLE_TEACHER'|| userRole === 'ROLE_ADMIN'|| userRole === 'ROLE_SUPERADMIN') &&(
+                    <li className="flex items-center px-4 py-2 hover:bg-blue-800">
+                      <Calendar className="w-5 h-5 mr-2" />
+                      <Link to="/plannings">Mon planning</Link>
+                    </li>
+                  )}
+                  {(userRole === 'ROLE_STUDENT' || userRole === 'ROLE_TEACHER'|| userRole === 'ROLE_ADMIN'|| userRole === 'ROLE_SUPERADMIN') &&(
+                    <li className="flex items-center px-4 py-2 hover:bg-blue-800">
+                      <MessageCircle className="w-5 h-5 mr-2" />
+                      <Link to="/messagerie">Ma Messagerie</Link>
+                    </li>
+                  )}
+                  {(userRole === 'ROLE_ADMIN'|| userRole === 'ROLE_SUPERADMIN' || userRole === 'ROLE_RECRUITER') &&(
+                    <li className="flex items-center px-4 py-2 hover:bg-blue-800">
+                      <FileText className="w-5 h-5 mr-2" />
+                      <Link to="/test_admission">Test d'admission</Link>
+                    </li>
+                  )}
 
+                  {(userRole === 'ROLE_STUDENT' || userRole === 'ROLE_TEACHER'|| userRole === 'ROLE_ADMIN'|| userRole === 'ROLE_SUPERADMIN') &&(
+                    <li className="flex items-center px-4 py-2 hover:bg-blue-800">
+                      <CalendarDays className="w-5 h-5 mr-2" />
+                      <Link to="/evenements">Evènements</Link>
+                    </li>
+                  )}
                   {(userRole === 'ROLE_STUDENT' || userRole === 'ROLE_TEACHER') && (
                     <>
                       <li className="flex items-center px-4 py-2 hover:bg-blue-800">
+                        <GraduationCap className="w-5 h-5 mr-2" />
                         <Link to="/cours">Mes Cours</Link>
                       </li>
                       <li className="flex items-center px-4 py-2 hover:bg-blue-800">
+                        <GraduationCap className="w-5 h-5 mr-2" />
                         <Link to="/projet">Mes Projets</Link>
                       </li>
                     </>
                   )}
                   {userRole === 'ROLE_SUPERADMIN' && (
                     <li className="flex items-center px-4 py-2 hover:bg-blue-800">
+                      <School className="w-5 h-5 mr-2" />
+                      <Link to="/centres_formations">Centres de formations</Link>
+                    </li>
+                  )}
+                  {userRole === 'ROLE_SUPERADMIN' && (
+                    <li className="flex items-center px-4 py-2 hover:bg-blue-800">
+                      <ScrollText className="w-5 h-5 mr-2" />
                       <Link to="/logs">Les Logs</Link>
                     </li>
                   )}
-
+                  {(userRole === 'ROLE_HR' || userRole === 'ROLE_RECRUITER') && (
+                    <li className="flex items-center px-4 py-2 hover:bg-blue-800">
+                      <GraduationCap className="w-5 h-5 mr-2" />
+                      <Link to="/candidatures">Candidatures</Link>
+                    </li>
+                  )}
+                  
                   <li className="flex items-center px-4 py-2 hover:bg-blue-800">
+                    <HelpCircle className="w-5 h-5 mr-2" />
                     <Link to="/faq">FAQ</Link>
                   </li>
+                  
                   <li className="flex items-center px-4 py-2 hover:bg-blue-800">
-                    <Link to="/messagerie">Ma Messagerie</Link>
-                  </li>
-                  <li className="flex items-center px-4 py-2 hover:bg-blue-800">
+                    <GraduationCap className="w-5 h-5 mr-2" />
                     <Link to="/forum">Forum</Link>
                   </li>
                   <li className="flex items-center px-4 py-2 hover:bg-blue-800">
-                    <Link to="/notifications">Notifications</Link>
+                  <BookOpen className="w-5 h-5 mr-2" />
+                    <Link to="/formations">Formations</Link>
                   </li>
+                  {(userRole === 'ROLE_STUDENT' || userRole === 'ROLE_TEACHER'|| userRole === 'ROLE_ADMIN'|| userRole === 'ROLE_SUPERADMIN') &&(
+                    <li className="flex items-center px-4 py-2 hover:bg-blue-800">
+                      <Bell className="w-5 h-5 mr-2" />
+                      <Link to="/notifications">Notifications</Link>
+                    </li>
+                  )}
+                  {(userRole === 'ROLE_STUDENT' || userRole === 'ROLE_TEACHER'|| userRole === 'ROLE_ADMIN'|| userRole === 'ROLE_SUPERADMIN') &&(
+                    <li className="flex items-center px-4 py-2 hover:bg-blue-800">
+                      <PiggyBank className="w-5 h-5 mr-2" />
+                      <Link to="/cagnottes">Cagnottes</Link>
+                    </li>
+                  )}
+                  {(userRole === 'ROLE_STUDENT' || userRole === 'ROLE_TEACHER'|| userRole === 'ROLE_ADMIN'|| userRole === 'ROLE_SUPERADMIN') &&(
+                    <li className="flex items-center px-4 py-2 hover:bg-blue-800">
+                      <Handshake className="w-5 h-5 mr-2" />
+                      <Link to="/sponsors">Sponsors</Link>
+                    </li>
+                  )}
+                  {(userRole === 'ROLE_STUDENT' || userRole === 'ROLE_TEACHER'|| userRole === 'ROLE_ADMIN'|| userRole === 'ROLE_SUPERADMIN' || userRole === 'ROLE_RECRUITER') &&(
+                    <li className="flex items-center px-4 py-2 hover:bg-blue-800">
+                      <Camera className="w-5 h-5 mr-2" />
+                      <Link to="/Trombinoscope">Trombinoscope</Link>
+                    </li>
+                  )}
                 </ul>
               </div>
 
               <div className="p-4 border-t border-blue-700">
                 <button className="flex items-center w-full text-left hover:bg-blue-800 px-4 py-2 mt-2">
+                  <Headphones className="w-5 h-5 mr-2" />
                   <Link to="/support">Support</Link>
                 </button>
                 <button className="flex items-center w-full text-left hover:bg-blue-800 px-4 py-2 mt-2">
