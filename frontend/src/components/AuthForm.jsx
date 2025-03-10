@@ -53,6 +53,11 @@ export function AuthForm() {
       
       const response = await authService.login(email, password)
       
+      // Vérifier si la connexion a réussi
+      if (!response || !response.token) {
+        throw new Error("La connexion a échoué. Aucun token reçu.")
+      }
+      
       // Si rememberMe est activé, stocker l'email dans localStorage
       if (rememberMe) {
         localStorage.setItem('rememberedEmail', email)
