@@ -149,17 +149,24 @@ const apiService = {
       const completeOptions = {
         ...options,
         withCredentials: true,
-        headers: {
-          ...options.headers,
-          'Content-Type': 'application/json',
-        }
       };
-      const response = await axios.post(url, data, completeOptions);
-      console.log(`[apiService] POST ${path} Réponse:`, response.status);
+      
+      const authOptions = this.withAuth(completeOptions);
+      const response = await axios.post(url, data, authOptions);
       return response.data;
     } catch (error) {
-      console.error(`Erreur API POST ${path}:`, error);
-      console.error(`[apiService] Détails de l'erreur:`, error.response?.data || error.message);
+      console.error(
+        `
+        
+        POST ${path} ${error.response?.status || 'error'}`,
+        error
+      );
+      
+      // Pour login_check, on ne doit PAS transformer l'erreur, mais la rejeter
+      // afin que le composant d'authentification puisse la traiter correctement
+      if (path.includes('login_check')) {
+        throw error;
+      }
       
       // Gestion spécifique des erreurs CORS
       if (error.message && error.message.includes('Network Error')) {
