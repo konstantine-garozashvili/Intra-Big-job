@@ -71,10 +71,10 @@ const MenuBurger = memo(() => {
       icon: <GraduationCap className="mr-2" />,
       roles: ['ROLE_SUPERADMIN', 'ROLE_ADMIN', 'ROLE_TEACHER', 'ROLE_HR', 'ROLE_RECRUITER'],
       links: [
-        { name: 'Gestion des élèves', to: '/eleves', roles: ['ROLE_ADMIN', 'ROLE_TEACHER'] },
+        { name: 'Gestion des élèves', to: '/eleves', roles: ['ROLE_ADMIN', 'ROLE_TEACHER','ROLE_SUPERADMIN'] },
         { name: 'Résultats', to: '/eleves/resultats', roles: ['ROLE_TEACHER', 'ROLE_SUPERADMIN'] },
-        { name: 'Dossiers', to: '/eleves/dossiers', roles: ['ROLE_ADMIN', 'ROLE_HR'] },
-        { name: 'Certificats et Diplômes', to: '/eleves/certificats', roles: ['ROLE_ADMIN', 'ROLE_TEACHER','ROLE_STUDENT'] },
+        { name: 'Dossiers', to: '/eleves/dossiers', roles: ['ROLE_ADMIN', 'ROLE_HR','ROLE_TEACHER','ROLE_SUPERADMIN'] },
+        { name: 'Certificats et Diplômes', to: '/eleves/certificats', roles: ['ROLE_ADMIN', 'ROLE_TEACHER','ROLE_STUDENT','ROLE_SUPERADMIN'] },
         { name: 'Historique des Absences', to: '/eleves/absences', roles: ['ROLE_ADMIN', 'ROLE_TEACHER','ROLE_HR'] },
 
       ],
@@ -86,11 +86,10 @@ const MenuBurger = memo(() => {
       icon: <User className="mr-2" />,
       roles: ['ROLE_SUPERADMIN', 'ROLE_ADMIN', 'ROLE_HR','ROLE_RECRUITER'],
       links: [
-        { name: 'Liste des enseignants', to: '/enseignants' },
-        { name: 'Évaluations', to: '/enseignants/evaluations' },
-        { name: 'Statistiques et Rapports', to: '/enseignants/statistiques' },
-        { name: 'Gestion des Projets', to: '/enseignants/projets' },
-        { name: 'Notes et Résultats', to: '/enseignants/notes' },
+        { name: 'Liste des enseignants', to: '/enseignants' , roles: ['ROLE_ADMIN', 'ROLE_HR','ROLE_TEACHER','ROLE_SUPERADMIN']},
+        { name: 'Statistiques et Rapports', to: '/enseignants/statistiques' , roles: ['ROLE_ADMIN', 'ROLE_HR','ROLE_TEACHER','ROLE_SUPERADMIN']},
+        { name: 'Gestion des Projets', to: '/enseignants/projets' , roles: ['ROLE_ADMIN','ROLE_TEACHER']},
+        { name: 'Commentaire', to: '/enseignants/commentaire', roles: ['ROLE_ADMIN', 'ROLE_HR','ROLE_TEACHER','ROLE_SUPERADMIN'] },
       ],
     },
     {
@@ -99,10 +98,10 @@ const MenuBurger = memo(() => {
       icon: <UserPlus className="mr-2" />,
       roles: ['ROLE_SUPERADMIN', 'ROLE_ADMIN'],
       links: [
-        { name: 'Liste des invités', to: '/invites' },
-        { name: 'Gestion des invités', to: '/invites/' },
-        { name: 'Test d’admission', to: '/invites/test_admission' },
-        { name: 'Statistiques des Invités', to: '/admin/invite/statistiques' },
+        { name: 'Liste des invités', to: '/invites', roles: ['ROLE_ADMIN','ROLE_SUPERADMIN'] },
+        { name: 'Gestion des invités', to: '/invites/' , roles: ['ROLE_ADMIN', 'ROLE_SUPERADMIN']},
+        { name: 'Test d’admission', to: '/invites/test_admission' , roles: ['ROLE_ADMIN', 'ROLE_HR','ROLE_SUPERADMIN']},
+        { name: 'Statistiques des Invités', to: '/admin/invite/statistiques', roles: ['ROLE_ADMIN', 'ROLE_SUPERADMIN'] },
         
       ],
     },
@@ -112,12 +111,12 @@ const MenuBurger = memo(() => {
       icon: <Users className="mr-2" />,
       roles: ['ROLE_SUPERADMIN', 'ROLE_ADMIN'],
       links: [
-        { name: 'Gestion des Formateurs', to: '/rh/formateurs' },
-        { name: 'Gestion des Candidatures', to: '/rh/candidatures' },
-        { name: 'Suivi des Absences et Congés', to: '/rh/absences' },
-        { name: 'Planning des Formateurs', to: '/rh/planning' },
-        { name: 'Archivage des Dossiers', to: '/rh/archivage' },
-    { name: 'Suivi des Recrutements', to: '/rh/recrutement' },
+        { name: 'Gestion des Formateurs', to: '/rh/formateurs' , roles: ['ROLE_ADMIN', 'ROLE_SUPERADMIN', 'ROLE_HR']},
+        { name: 'Gestion des Candidatures', to: '/rh/candidatures', roles: ['ROLE_ADMIN', 'ROLE_SUPERADMIN', 'ROLE_HR'] },
+        { name: 'Suivi des Absences et Congés', to: '/rh/absences' , roles: ['ROLE_ADMIN', 'ROLE_SUPERADMIN', 'ROLE_HR']},
+        { name: 'Planning des Formateurs', to: '/rh/planning' , roles: ['ROLE_ADMIN', 'ROLE_SUPERADMIN', 'ROLE_HR']},
+        { name: 'Archivage des Dossiers', to: '/rh/archivage', roles: ['ROLE_ADMIN', 'ROLE_SUPERADMIN', 'ROLE_HR'] },
+    { name: 'Suivi des Recrutements', to: '/rh/recrutement' , roles: ['ROLE_ADMIN', 'ROLE_SUPERADMIN', 'ROLE_HR']},
     
       ],
     },
@@ -127,14 +126,14 @@ const MenuBurger = memo(() => {
       icon: <Shield className="mr-2" />,
       roles: ['ROLE_SUPERADMIN'],
       links: [
-        { name: 'Gestion des utilisateurs', to: '/admin/utilisateurs' },
-        { name: 'Gestion des Formations', to: '/admin/formations' },
-        { name: 'Suivi des Inscriptions', to: '/admin/inscriptions' },
-        { name: 'Gestion des Paiements', to: '/admin/paiements' },
-        { name: 'Suivi des Absences', to: '/admin/absences' },
-        { name: 'Statistiques Administratives', to: '/admin/statistiques' }, 
+        { name: 'Gestion des utilisateurs', to: '/admin/utilisateurs' , roles: ['ROLE_ADMIN','ROLE_SUPERADMIN']},
+        { name: 'Gestion des Formations', to: '/admin/formations' , roles: ['ROLE_ADMIN','ROLE_SUPERADMIN']},
+        { name: 'Suivi des Inscriptions', to: '/admin/inscriptions' , roles: ['ROLE_ADMIN','ROLE_SUPERADMIN']},
+        { name: 'Gestion des Paiements', to: '/admin/paiements' , roles: ['ROLE_ADMIN','ROLE_SUPERADMIN']},
+        { name: 'Suivi des Absences', to: '/admin/absences', roles: ['ROLE_ADMIN','ROLE_SUPERADMIN'] },
+        { name: 'Statistiques Administratives', to: '/admin/statistiques' , roles: ['ROLE_ADMIN','ROLE_SUPERADMIN']}, 
         { name: 'Les logs', to: '/admin/logs' },
-        { name: 'Gestion des partenaires', to: '/admin/partenariats' },  
+        { name: 'Gestion des partenaires', to: '/admin/partenariats', roles: ['ROLE_ADMIN','ROLE_SUPERADMIN'] },  
       ],
     },
     {
@@ -145,6 +144,8 @@ const MenuBurger = memo(() => {
       links: [
         { name: 'Evènement', to: '/plannings/évènements' },
         { name: 'Agenda', to: '/plannings/agenda' },
+        { name: 'Réservation de salle', to: '/plannings/reservation-salle' },
+      { name: 'Réservation de matériel', to: '/plannings/reservation-materiel' }
         
       ],
     },
