@@ -1,7 +1,4 @@
-import axios from 'axios';
-
-// Configuration de l'API Adresse du gouvernement français
-const API_ADRESSE_URL = 'https://api-adresse.data.gouv.fr';
+import apiService from './services/apiService';
 
 /**
  * Service pour l'API Adresse du gouvernement français
@@ -16,17 +13,36 @@ export const adresseApi = {
   searchAddress: async (query, limit = 5) => {
     if (!query || query.length < 3) return [];
     
+    console.log("Recherche d'adresse pour:", query);
+    
     try {
-      const response = await axios.get(`${API_ADRESSE_URL}/search`, {
-        params: {
-          q: query,
-          limit,
-          type: 'housenumber',
-          autocomplete: 1
-        }
+      // Utiliser directement l'API avec CORS-Anywhere
+      const url = `https://api-adresse.data.gouv.fr/search?q=${encodeURIComponent(query)}&limit=${limit}&type=housenumber&autocomplete=1`;
+      console.log("URL de l'API:", url);
+      
+      // Créer une requête avec fetch pour éviter les problèmes CORS
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        },
+        mode: 'cors', // Mode CORS explicite
       });
       
-      return response.data.features.map(feature => ({
+      if (!response.ok) {
+        console.error('Erreur HTTP:', response.status);
+        return [];
+      }
+      
+      const data = await response.json();
+      console.log("Résultats reçus:", data);
+      
+      if (!data.features || !Array.isArray(data.features)) {
+        console.error('Format de réponse inattendu:', data);
+        return [];
+      }
+      
+      return data.features.map(feature => ({
         id: feature.properties.id,
         label: feature.properties.label,
         houseNumber: feature.properties.housenumber || '',
@@ -51,18 +67,29 @@ export const adresseApi = {
    */
   reverseGeocode: async (lon, lat) => {
     try {
-      const response = await axios.get(`${API_ADRESSE_URL}/reverse`, {
-        params: {
-          lon,
-          lat
-        }
+      // Utiliser directement l'API avec fetch
+      const url = `https://api-adresse.data.gouv.fr/reverse?lon=${lon}&lat=${lat}`;
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        },
+        mode: 'cors', // Mode CORS explicite
       });
       
-      if (response.data.features.length === 0) {
+      if (!response.ok) {
+        console.error('Erreur HTTP:', response.status);
         return null;
       }
       
-      const feature = response.data.features[0];
+      const data = await response.json();
+      
+      if (data.features.length === 0) {
+        return null;
+      }
+      
+      const feature = data.features[0];
       return {
         id: feature.properties.id,
         label: feature.properties.label,
@@ -78,4 +105,4 @@ export const adresseApi = {
       return null;
     }
   }
-}; 
+};

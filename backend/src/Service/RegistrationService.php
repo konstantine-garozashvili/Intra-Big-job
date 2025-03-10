@@ -81,8 +81,8 @@ class RegistrationService
         $defaultTheme = $this->getDefaultTheme();
         $user->setTheme($defaultTheme);
         
-        // Par défaut, l'email n'est pas vérifié
-        $user->setIsEmailVerified(false);
+        // Marquer l'email comme déjà vérifié (désactive la vérification par email)
+        $user->setIsEmailVerified(true);
         
         // Ajouter le rôle utilisateur par défaut
         $this->addDefaultRole($user);
@@ -108,8 +108,8 @@ class RegistrationService
         // Sauvegarder en base de données
         $this->entityManager->flush();
         
-        // Générer un token de vérification et envoyer l'email de confirmation
-        $this->verificationService->sendVerificationEmail($user);
+        // Ne plus envoyer l'email de vérification
+        // $this->verificationService->sendVerificationEmail($user);
         
         return $user;
     }

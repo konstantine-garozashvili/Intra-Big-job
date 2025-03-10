@@ -53,6 +53,11 @@ export function AuthForm() {
       
       const response = await authService.login(email, password)
       
+      // Vérifier si la connexion a réussi
+      if (!response || !response.token) {
+        throw new Error("La connexion a échoué. Aucun token reçu.")
+      }
+      
       // Si rememberMe est activé, stocker l'email dans localStorage
       if (rememberMe) {
         localStorage.setItem('rememberedEmail', email)
@@ -282,6 +287,9 @@ export function AuthForm() {
           </div>
 
           <div className="text-sm">
+            <Link to="/reset-password" className="font-medium text-[#528eb2] hover:text-[#02284f]">
+              Mot de passe oublié?
+            </Link>
           </div>
         </div>
 
