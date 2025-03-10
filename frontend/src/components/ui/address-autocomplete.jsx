@@ -58,7 +58,9 @@ export const AddressAutocomplete = React.forwardRef(({
     
     setIsLoading(true);
     try {
+      console.log("Recherche en cours pour:", searchQuery);
       const results = await adresseApi.searchAddress(searchQuery);
+      console.log("Résultats obtenus:", results);
       setSuggestions(results);
       setShowSuggestions(results.length > 0);
     } catch (error) {
