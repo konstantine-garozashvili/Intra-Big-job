@@ -71,9 +71,12 @@ const MenuBurger = memo(() => {
       icon: <GraduationCap className="mr-2" />,
       roles: ['ROLE_SUPERADMIN', 'ROLE_ADMIN', 'ROLE_TEACHER', 'ROLE_HR', 'ROLE_RECRUITER'],
       links: [
-        { name: 'Liste des élèves', to: '/eleves', roles: ['ROLE_ADMIN', 'ROLE_TEACHER'] },
+        { name: 'Gestion des élèves', to: '/eleves', roles: ['ROLE_ADMIN', 'ROLE_TEACHER'] },
         { name: 'Résultats', to: '/eleves/resultats', roles: ['ROLE_TEACHER', 'ROLE_SUPERADMIN'] },
         { name: 'Dossiers', to: '/eleves/dossiers', roles: ['ROLE_ADMIN', 'ROLE_HR'] },
+        { name: 'Certificats et Diplômes', to: '/eleves/certificats', roles: ['ROLE_ADMIN', 'ROLE_TEACHER','ROLE_STUDENT'] },
+        { name: 'Historique des Absences', to: '/eleves/absences', roles: ['ROLE_ADMIN', 'ROLE_TEACHER','ROLE_HR',l] },
+
       ],
     },
     
@@ -85,6 +88,9 @@ const MenuBurger = memo(() => {
       links: [
         { name: 'Liste des enseignants', to: '/enseignants' },
         { name: 'Évaluations', to: '/enseignants/evaluations' },
+        { name: 'Statistiques et Rapports', to: '/enseignants/statistiques' },
+        { name: 'Gestion des Projets', to: '/enseignants/projets' },
+        { name: 'Notes et Résultats', to: '/enseignants/notes' },
       ],
     },
     {
@@ -96,6 +102,8 @@ const MenuBurger = memo(() => {
         { name: 'Liste des invités', to: '/invites' },
         { name: 'Gestion des invités', to: '/invites/' },
         { name: 'Test d’admission', to: '/invites/test_admission' },
+        { name: 'Statistiques des Invités', to: '/admin/invite/statistiques' },
+        
       ],
     },
     {
@@ -104,9 +112,13 @@ const MenuBurger = memo(() => {
       icon: <Users className="mr-2" />,
       roles: ['ROLE_SUPERADMIN', 'ROLE_ADMIN'],
       links: [
-        { name: 'Gestion du personnel', to: '/rh' },
-        { name: 'Congés', to: '/rh/conges' },
-        { name: 'Paie', to: '/rh/paie' },
+        { name: 'Gestion des Formateurs', to: '/rh/formateurs' },
+        { name: 'Gestion des Candidatures', to: '/rh/candidatures' },
+        { name: 'Suivi des Absences et Congés', to: '/rh/absences' },
+        { name: 'Planning des Formateurs', to: '/rh/planning' },
+        { name: 'Archivage des Dossiers', to: '/rh/archivage' },
+    { name: 'Suivi des Recrutements', to: '/rh/recrutement' },
+    
       ],
     },
     {
@@ -116,8 +128,13 @@ const MenuBurger = memo(() => {
       roles: ['ROLE_SUPERADMIN'],
       links: [
         { name: 'Gestion des utilisateurs', to: '/admin/utilisateurs' },
-        { name: 'Paramètres système', to: '/admin/parametres' },
+        { name: 'Gestion des Formations', to: '/admin/formations' },
+        { name: 'Suivi des Inscriptions', to: '/admin/inscriptions' },
+        { name: 'Gestion des Paiements', to: '/admin/paiements' },
+        { name: 'Suivi des Absences', to: '/admin/absences' },
+        { name: 'Statistiques Administratives', to: '/admin/statistiques' }, 
         { name: 'Les logs', to: '/admin/logs' },
+        { name: 'Gestion des partenaires', to: '/admin/partenariats' },  
       ],
     },
     {
@@ -140,6 +157,7 @@ const MenuBurger = memo(() => {
         { name: 'FAQ', to: '/aide/faq' },
         { name: 'Forum', to: '/aide/forum' },
         { name: 'Supports', to: '/aide/faq' },
+        { name: 'Contact', to: '/aide/contact' },
         
       ],
     },
