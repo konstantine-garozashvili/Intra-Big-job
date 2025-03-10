@@ -153,13 +153,23 @@ const MenuBurger = memo(() => {
       key: 'aide',
       label: 'Besoin d’aide ?',
       icon: <Calendar className="mr-2" />,
-      roles: ['ROLE_SUPERADMIN', 'ROLE_ADMIN', 'ROLE_TEACHER','ROLE_HR','ROLE_RECRUITER','ROLE_STUDENT','ROLE_GUEST'],
-      links: [
+      links: [ // Pas de `roles`, donc accessible à tout le monde
         { name: 'FAQ', to: '/aide/faq' },
         { name: 'Forum', to: '/aide/forum' },
         { name: 'Supports', to: '/aide/faq' },
-        { name: 'Contact', to: '/aide/contact'},
-        
+        { name: 'Contact', to: '/aide/contact' },
+      ],
+    },
+    {
+      key: 'nous_rejoindre',
+      label: 'Nous rejoindre',
+      icon: <Users className="mr-2" />,
+      links: [
+        { name: 'Envoyer une candidature', to: '/nous-rejoindre/candidature' },
+        { name: 'Processus de recrutement', to: '/nous-rejoindre/recrutement' },
+        { name: 'Offres d\'emploi', to: '/nous-rejoindre/offres' },
+        { name: 'Devenir partenaire', to: '/nous-rejoindre/partenaire' },
+        { name: 'Devenir sponsor', to: '/nous-rejoindre/sponsor' },
       ],
     },
     
@@ -180,7 +190,7 @@ const MenuBurger = memo(() => {
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
             transition={{ duration: 0.3 }}
-            className="fixed top-0 left-0 w-70 h-full bg-[#00284f] text-white shadow-lg z-50"
+            className="fixed top-0 left-0 w-[20vw] h-full bg-[#00284f] text-white shadow-lg z-50"
           >
             <div className="flex flex-col h-full">
               <div className="flex items-center p-4 border-b border-blue-700">
@@ -209,7 +219,8 @@ const MenuBurger = memo(() => {
                     </li>
                   )}
                   {menuItems.map(({ key, icon, label, roles, links }) =>
-                  roles.includes(userRole) ? (
+                  // Vérifie si le rôle de l'utilisateur est inclus ou si les rôles sont indéfinis (permet à tout le monde d'accéder à cet élément)
+                  (!roles || roles.includes(userRole)) ? ( // Vérifie si aucun rôle n'est défini ou si le rôle de l'utilisateur est inclus
                     <React.Fragment key={key}>
                       <li
                         className="flex items-center px-4 py-2 hover:bg-blue-800 cursor-pointer"
@@ -218,6 +229,7 @@ const MenuBurger = memo(() => {
                         {icon}
                         {label} <span className="ml-auto">{openSubMenus[key] ? '▼' : '►'}</span>
                       </li>
+
                       <AnimatePresence>
                         {openSubMenus[key] && (
                           <motion.ul
@@ -227,7 +239,7 @@ const MenuBurger = memo(() => {
                             className="pl-6 bg-[blue-800]"
                           >
                             {links
-                              .filter(link => !link.roles || link.roles.includes(userRole)) // ✅ Filtrage des sous-menus selon userRole
+                              .filter(link => !link.roles || link.roles.includes(userRole)) // Filtrage des liens avec ou sans rôles
                               .map((link, index) => (
                                 <li key={index} className="px-4 py-2 hover:bg-[#528eb2]">
                                   <Link to={link.to}>{link.name}</Link>
@@ -239,6 +251,7 @@ const MenuBurger = memo(() => {
                     </React.Fragment>
                   ) : null
                 )}
+
 
 
                   {(userRole === 'ROLE_STUDENT' || userRole === 'ROLE_TEACHER'|| userRole === 'ROLE_ADMIN'|| userRole === 'ROLE_SUPERADMIN') &&(
