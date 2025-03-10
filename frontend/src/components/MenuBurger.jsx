@@ -2,7 +2,7 @@ import React, { memo, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { authService } from '../lib/services/authService';
 import { Link } from 'react-router-dom';
-import {User, UserPlus, Shield , Users, GraduationCap,Calendar,MessageCircle,FileText,BookOpen,CalendarDays,ScrollText,HelpCircle, Bell, PiggyBank,Camera,Handshake,Headphones,School,LayoutDashboard,Briefcase, Share2,Clipboard} from 'lucide-react';
+import {User, UserPlus, Shield , Users, GraduationCap,Calendar,MessageCircle,BookOpen, Bell, PiggyBank,Camera,Handshake,School,LayoutDashboard,Briefcase, Share2,Clipboard} from 'lucide-react';
 
 
 const MenuBurger = memo(() => {
@@ -16,21 +16,48 @@ const MenuBurger = memo(() => {
     const checkAuthentication = async () => {
       try {
         const user = await authService.getCurrentUser();
-        setUserData(user);
-        setIsAuthenticated(true);
-
-        if (user?.roles?.length > 0) {
-          setUserRole(user.roles[0]);
+        if (user) {
+          setUserData(user);
+          setIsAuthenticated(true);
+          setUserRole(user.roles?.[0] || null);
+        } else {
+          setUserData(null);
+          setIsAuthenticated(false);
+          setUserRole(null);
         }
       } catch (error) {
         setUserData(null);
         setIsAuthenticated(false);
+        setUserRole(null);
       }
     };
-
+  
     checkAuthentication();
+  
+    // 🔥 Gérer la déconnexion
+    const handleLogoutEvent = () => {
+      setUserData(null);
+      setIsAuthenticated(false);
+      setUserRole(null);
+      setMenuOpen(false); // Ferme le menu au cas où
+      setOpenSubMenus({}); // 🔄 Réinitialise les sous-menus
+    };
+  
+    // 🚀 Gérer la connexion
+    const handleLoginEvent = async () => {
+      await checkAuthentication(); // Recharge l'état après connexion
+    };
+  
+    window.addEventListener('logout-success', handleLogoutEvent);
+    window.addEventListener('login-success', handleLoginEvent);
+  
+    return () => {
+      window.removeEventListener('logout-success', handleLogoutEvent);
+      window.removeEventListener('login-success', handleLoginEvent);
+    };
   }, []);
-
+  
+  
   const toggleMenu = () => setMenuOpen(!menuOpen);
 
   const toggleSubMenu = (menu) => {
@@ -41,14 +68,15 @@ const MenuBurger = memo(() => {
     {
       key: 'eleves',
       label: 'Élèves',
-      icon: <GraduationCap className="mr-2" />,  // Ajout de l'icône ici à côté de "Élèves"
-      roles: ['ROLE_SUPERADMIN', 'ROLE_ADMIN', 'ROLE_TEACHER','ROLE_HR','ROLE_RECRUITER'],
+      icon: <GraduationCap className="mr-2" />,
+      roles: ['ROLE_SUPERADMIN', 'ROLE_ADMIN', 'ROLE_TEACHER', 'ROLE_HR', 'ROLE_RECRUITER'],
       links: [
-        { name: 'Liste des élèves', to: '/eleves' },
-        { name: 'Résultats', to: '/eleves/resultats' },
-        { name: 'Dossiers', to: '/eleves/dossiers' },
+        { name: 'Liste des élèves', to: '/eleves', roles: ['ROLE_ADMIN', 'ROLE_TEACHER'] },
+        { name: 'Résultats', to: '/eleves/resultats', roles: ['ROLE_TEACHER', 'ROLE_SUPERADMIN'] },
+        { name: 'Dossiers', to: '/eleves/dossiers', roles: ['ROLE_ADMIN', 'ROLE_HR'] },
       ],
     },
+    
     {
       key: 'enseignants',
       label: 'Enseignants',
@@ -162,35 +190,37 @@ const MenuBurger = memo(() => {
                     </li>
                   )}
                   {menuItems.map(({ key, icon, label, roles, links }) =>
-                    roles.includes(userRole) ? (
-                      <React.Fragment key={key}>
-                        <li
-                          className="flex items-center px-4 py-2 hover:bg-blue-800 cursor-pointer"
-                          onClick={() => toggleSubMenu(key)}
-                        >
-                          {icon}
-                          {label} <span className="ml-auto">{openSubMenus[key] ? '▼' : '►'}</span>
-
-                        </li>
-                        <AnimatePresence>
-                          {openSubMenus[key] && (
-                            <motion.ul
-                              initial={{ height: 0, opacity: 0 }}
-                              animate={{ height: 'auto', opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              className="pl-6 bg-[blue-800]"
-                            >
-                              {links.map((link, index) => (
+                  roles.includes(userRole) ? (
+                    <React.Fragment key={key}>
+                      <li
+                        className="flex items-center px-4 py-2 hover:bg-blue-800 cursor-pointer"
+                        onClick={() => toggleSubMenu(key)}
+                      >
+                        {icon}
+                        {label} <span className="ml-auto">{openSubMenus[key] ? '▼' : '►'}</span>
+                      </li>
+                      <AnimatePresence>
+                        {openSubMenus[key] && (
+                          <motion.ul
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="pl-6 bg-[blue-800]"
+                          >
+                            {links
+                              .filter(link => !link.roles || link.roles.includes(userRole)) // ✅ Filtrage des sous-menus selon userRole
+                              .map((link, index) => (
                                 <li key={index} className="px-4 py-2 hover:bg-[#528eb2]">
                                   <Link to={link.to}>{link.name}</Link>
                                 </li>
                               ))}
-                            </motion.ul>
-                          )}
-                        </AnimatePresence>
-                      </React.Fragment>
-                    ) : null
-                  )}
+                          </motion.ul>
+                        )}
+                      </AnimatePresence>
+                    </React.Fragment>
+                  ) : null
+                )}
+
 
                   {(userRole === 'ROLE_STUDENT' || userRole === 'ROLE_TEACHER'|| userRole === 'ROLE_ADMIN'|| userRole === 'ROLE_SUPERADMIN') &&(
                     <li className="flex items-center px-4 py-2 hover:bg-blue-800">
