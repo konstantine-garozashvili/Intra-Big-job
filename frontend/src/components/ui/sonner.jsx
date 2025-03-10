@@ -1,28 +1,31 @@
-import { useTheme } from "next-themes"
-import { Toaster as Sonner } from "sonner"
+import React from "react";
+import { Toaster as Sonner } from "sonner";
 
 const Toaster = ({
   ...props
 }) => {
-  const { theme = "system" } = useTheme()
-
+  // Use a simple theme detection based on CSS variables or class
+  const isDark = document.documentElement.classList.contains('dark') || 
+                window.matchMedia('(prefers-color-scheme: dark)').matches;
+  
   return (
     <Sonner
-      theme={theme}
+      theme={isDark ? "dark" : "light"}
       className="toaster group"
       toastOptions={{
         classNames: {
           toast:
-            "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",
-          description: "group-[.toast]:text-muted-foreground",
+            "group toast group-[.toaster]:bg-white dark:group-[.toaster]:bg-gray-800 group-[.toaster]:text-gray-900 dark:group-[.toaster]:text-gray-100 group-[.toaster]:border-gray-200 dark:group-[.toaster]:border-gray-700 group-[.toaster]:shadow-lg",
+          description: "group-[.toast]:text-gray-500 dark:group-[.toast]:text-gray-400",
           actionButton:
-            "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
+            "group-[.toast]:bg-primary group-[.toast]:text-white",
           cancelButton:
-            "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
+            "group-[.toast]:bg-gray-200 dark:group-[.toast]:bg-gray-700 group-[.toast]:text-gray-600 dark:group-[.toast]:text-gray-300",
         },
       }}
-      {...props} />
+      {...props}
+    />
   );
-}
+};
 
-export { Toaster }
+export { Toaster };

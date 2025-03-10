@@ -3,6 +3,7 @@ import { Loader2 } from "lucide-react"
 import { Link, useNavigate } from "react-router-dom"
 import { authService } from "@/lib/services/authService"
 import { toast } from "sonner"
+import { showAttendancePopup } from "./signature/AttendancePopup"
 
 export function AuthForm() {
   const [email, setEmail] = React.useState("")
@@ -64,8 +65,27 @@ export function AuthForm() {
         description: "Vous êtes maintenant connecté."
       })
 
-      // Déclencher un événement personnalisé pour informer la navbar de la connexion
-      window.dispatchEvent(new Event('login-success'));
+      // Store user roles in localStorage for the AttendancePopup component
+      if (response.roles) {
+        localStorage.setItem('userRoles', JSON.stringify(response.roles));
+      }
+
+      // Directly show the attendance popup if the user is a student
+      if (response.roles && response.roles.includes('ROLE_STUDENT')) {
+        // Wait a moment to ensure everything is loaded
+        setTimeout(() => {
+          // Try to use the exported function first
+          if (typeof showAttendancePopup === 'function') {
+            showAttendancePopup();
+          } else {
+            // Fallback to dispatching the event
+            window.dispatchEvent(new Event('login-success'));
+          }
+        }, 500);
+      } else {
+        // For non-students, just dispatch the login event
+        window.dispatchEvent(new Event('login-success'));
+      }
       
       // Vérifier s'il y a une page de redirection stockée
       const returnTo = sessionStorage.getItem('returnTo')

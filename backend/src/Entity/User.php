@@ -84,12 +84,16 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     #[ORM\OneToMany(mappedBy: 'user', targetEntity: Address::class, orphanRemoval: true)]
     private Collection $addresses;
 
+    #[ORM\OneToMany(mappedBy: 'user', targetEntity: Signature::class, orphanRemoval: true)]
+    private Collection $signatures;
+
     public function __construct()
     {
         $this->createdAt = new \DateTimeImmutable();
         $this->userRoles = new ArrayCollection();
         $this->diplomas = new ArrayCollection();
         $this->addresses = new ArrayCollection();
+        $this->signatures = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -349,6 +353,36 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
             // set the owning side to null (unless already changed)
             if ($address->getUser() === $this) {
                 $address->setUser(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Signature>
+     */
+    public function getSignatures(): Collection
+    {
+        return $this->signatures;
+    }
+
+    public function addSignature(Signature $signature): static
+    {
+        if (!$this->signatures->contains($signature)) {
+            $this->signatures->add($signature);
+            $signature->setUser($this);
+        }
+
+        return $this;
+    }
+
+    public function removeSignature(Signature $signature): static
+    {
+        if ($this->signatures->removeElement($signature)) {
+            // set the owning side to null (unless already changed)
+            if ($signature->getUser() === $this) {
+                $signature->setUser(null);
             }
         }
 

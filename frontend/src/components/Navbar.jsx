@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { authService } from '../lib/services/authService';
 import profilService from '../lib/services/profilService';
 import { Button } from './ui/button';
-import { UserRound, LayoutDashboard, LogOut, Settings, User, Bell } from 'lucide-react';
+import { UserRound, LayoutDashboard, LogOut, Settings, User, Bell, Clipboard, ClipboardCheck } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -174,13 +174,35 @@ const Navbar = memo(() => {
                 
                 {/* Élements affichés uniquement pour les utilisateurs connectés */}
                 {isAuthenticated && (
-                  <Link 
-                    to="/dashboard" 
-                    className="px-3 py-2 rounded-md text-gray-200 hover:text-white hover:bg-[#02284f]/80 transition-colors flex items-center"
-                  >
-                    <LayoutDashboard className="h-4 w-4 mr-2" />
-                    Tableau de bord
-                  </Link>
+                  <>
+                    <Link 
+                      to="/dashboard" 
+                      className="px-3 py-2 rounded-md text-gray-200 hover:text-white hover:bg-[#02284f]/80 transition-colors flex items-center"
+                    >
+                      <LayoutDashboard className="h-4 w-4 mr-2" />
+                      Tableau de bord
+                    </Link>
+                    
+                    {/* Lien pour l'enregistrement de présence (pour les étudiants) */}
+                    <Link 
+                      to="/attendance" 
+                      className="px-3 py-2 rounded-md text-gray-200 hover:text-white hover:bg-[#02284f]/80 transition-colors flex items-center"
+                    >
+                      <Clipboard className="h-4 w-4 mr-2" />
+                      Présence
+                    </Link>
+                    
+                    {/* Lien pour le suivi des signatures (pour les enseignants) */}
+                    {userData && userData.roles && userData.roles.includes('ROLE_TEACHER') && (
+                      <Link 
+                        to="/signature-monitoring" 
+                        className="px-3 py-2 rounded-md text-gray-200 hover:text-white hover:bg-[#02284f]/80 transition-colors flex items-center"
+                      >
+                        <ClipboardCheck className="h-4 w-4 mr-2" />
+                        Suivi des présences
+                      </Link>
+                    )}
+                  </>
                 )}
               </div>
             </div>
