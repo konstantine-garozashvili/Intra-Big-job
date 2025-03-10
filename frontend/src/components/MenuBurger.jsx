@@ -75,7 +75,7 @@ const MenuBurger = memo(() => {
         { name: 'Résultats', to: '/eleves/resultats', roles: ['ROLE_TEACHER', 'ROLE_SUPERADMIN'] },
         { name: 'Dossiers', to: '/eleves/dossiers', roles: ['ROLE_ADMIN', 'ROLE_HR'] },
         { name: 'Certificats et Diplômes', to: '/eleves/certificats', roles: ['ROLE_ADMIN', 'ROLE_TEACHER','ROLE_STUDENT'] },
-        { name: 'Historique des Absences', to: '/eleves/absences', roles: ['ROLE_ADMIN', 'ROLE_TEACHER','ROLE_HR',l] },
+        { name: 'Historique des Absences', to: '/eleves/absences', roles: ['ROLE_ADMIN', 'ROLE_TEACHER','ROLE_HR'] },
 
       ],
     },
@@ -157,7 +157,7 @@ const MenuBurger = memo(() => {
         { name: 'FAQ', to: '/aide/faq' },
         { name: 'Forum', to: '/aide/forum' },
         { name: 'Supports', to: '/aide/faq' },
-        { name: 'Contact', to: '/aide/contact' },
+        { name: 'Contact', to: '/aide/contact'},
         
       ],
     },
