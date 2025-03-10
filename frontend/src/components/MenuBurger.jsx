@@ -66,8 +66,8 @@ const MenuBurger = memo(() => {
       roles: ['ROLE_SUPERADMIN', 'ROLE_ADMIN'],
       links: [
         { name: 'Liste des invités', to: '/invites' },
-        { name: 'Demandes d’accès', to: '/invites/demandes' },
-        { name: 'Test d’admission', to: '/invites/test' },
+        { name: 'Gestion des invités', to: '/invites/' },
+        { name: 'Test d’admission', to: '/invites/test_admission' },
       ],
     },
     {
@@ -99,6 +99,7 @@ const MenuBurger = memo(() => {
       roles: ['ROLE_SUPERADMIN', 'ROLE_ADMIN', 'ROLE_TEACHER','ROLE_HR','ROLE_RECRUITER','ROLE_STUDENT'],
       links: [
         { name: 'Evènement', to: '/plannings/évènements' },
+        { name: 'Agenda', to: '/plannings/agenda' },
         
       ],
     },
@@ -120,7 +121,7 @@ const MenuBurger = memo(() => {
   return (
     <div className="relative">
       <button className="menu-burger-button text-gray-200 hover:text-white focus:outline-none" onClick={toggleMenu}>
-        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="w-10 h-auto mr-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
         </svg>
       </button>
