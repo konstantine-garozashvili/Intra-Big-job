@@ -46,6 +46,24 @@ export default defineConfig({
                         console.log('Réponse proxy:', proxyRes.statusCode, req.url);
                     });
                 }
+            },
+            '/api-adresse': {
+                target: 'https://api-adresse.data.gouv.fr',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/api-adresse/, ''),
+                secure: false,
+                configure: (proxy, _options) => {
+                    proxy.on('error', (err, _req, _res) => {
+                        console.log('Erreur du proxy:', err);
+                    });
+                    proxy.on('proxyRes', (proxyRes, req, _res) => {
+                        console.log('Réponse proxy:', proxyRes.statusCode, req.url);
+                    });
+                    proxy.on('proxyReq', (proxyReq, _req, _res) => {
+                        proxyReq.removeHeader('origin');
+                        proxyReq.removeHeader('referer');
+                    });
+                }
             }
         }
     }
