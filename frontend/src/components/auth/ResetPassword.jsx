@@ -6,6 +6,7 @@ import { Input } from '../ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../ui/card';
 import { toast } from 'sonner';
 import { Eye, EyeOff } from 'lucide-react';
+import { PasswordStrengthIndicator } from '../register/RegisterUtils';
 
 const ResetPassword = () => {
     const [password, setPassword] = useState('');
@@ -178,6 +179,7 @@ const ResetPassword = () => {
                                         )}
                                     </button>
                                 </div>
+                                <PasswordStrengthIndicator password={password} />
                                 <p className="text-xs text-gray-500 mt-1">
                                     Le mot de passe doit contenir au moins 8 caractères.
                                 </p>
