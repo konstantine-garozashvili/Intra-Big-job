@@ -5,74 +5,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../ui/card';
 import { toast } from 'sonner';
-
-// Fonction pour évaluer la force du mot de passe
-const evaluatePasswordStrength = (password) => {
-    if (!password) return 0;
-    
-    let score = 0;
-    
-    // Longueur du mot de passe
-    if (password.length >= 8) score += 1;
-    if (password.length >= 12) score += 1;
-    
-    // Présence de chiffres
-    if (/\d/.test(password)) score += 1;
-    
-    // Présence de lettres minuscules et majuscules
-    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score += 1;
-    
-    // Présence de caractères spéciaux
-    if (/[^a-zA-Z0-9]/.test(password)) score += 1;
-    
-    return Math.min(score, 4); // Score de 0 à 4
-};
-
-// Composant pour afficher la force du mot de passe
-const PasswordStrengthIndicator = ({ password }) => {
-    const strength = evaluatePasswordStrength(password);
-    
-    // Déterminer la couleur et le texte en fonction de la force
-    const getColorClass = () => {
-        switch (strength) {
-            case 0: return "bg-gray-200";
-            case 1: return "bg-red-500";
-            case 2: return "bg-orange-500";
-            case 3: return "bg-yellow-500";
-            case 4: return "bg-green-500";
-            default: return "bg-gray-200";
-        }
-    };
-    
-    const getText = () => {
-        switch (strength) {
-            case 0: return "Veuillez entrer un mot de passe";
-            case 1: return "Très faible";
-            case 2: return "Faible";
-            case 3: return "Moyen";
-            case 4: return "Fort";
-            default: return "";
-        }
-    };
-    
-    // Calculer le pourcentage de progression
-    const strengthPercentage = (strength / 4) * 100;
-    
-    return (
-        <div className="mt-1 space-y-1">
-            <div className="w-full h-1 bg-gray-200 rounded-full overflow-hidden">
-                <div 
-                    className={`h-full ${getColorClass()} transition-all duration-300`} 
-                    style={{ width: `${strengthPercentage}%` }}
-                ></div>
-            </div>
-            <div className="flex justify-between items-center">
-                <span className="text-xs text-gray-500">{getText()}</span>
-                <span className="text-xs text-gray-500">{strength > 0 ? `${strength}/4` : ""}</span>
-            </div>
-        </div>
-    );
-};
+import { Eye, EyeOff } from 'lucide-react';
 
 const ResetPassword = () => {
     const [password, setPassword] = useState('');
@@ -80,8 +13,14 @@ const ResetPassword = () => {
     const [isValid, setIsValid] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const { token } = useParams();
     const navigate = useNavigate();
+
+    // Fonctions pour basculer la visibilité des mots de passe
+    const togglePasswordVisibility = () => setShowPassword(prev => !prev);
+    const toggleConfirmPasswordVisibility = () => setShowConfirmPassword(prev => !prev);
 
     // Vérification de validité du token
     useEffect(() => {
@@ -216,18 +155,31 @@ const ResetPassword = () => {
                                 >
                                     Nouveau mot de passe
                                 </label>
-                                <Input
-                                    id="password"
-                                    type="password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    autoComplete="new-password"
-                                    required
-                                    className="w-full"
-                                />
-                                <PasswordStrengthIndicator password={password} />
+                                <div className="relative">
+                                    <Input
+                                        id="password"
+                                        type={showPassword ? "text" : "password"}
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        autoComplete="new-password"
+                                        required
+                                        className="w-full pr-10"
+                                    />
+                                    <button
+                                        type="button"
+                                        className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                                        onClick={togglePasswordVisibility}
+                                        tabIndex="-1"
+                                    >
+                                        {showPassword ? (
+                                            <EyeOff className="h-4 w-4 text-gray-400" />
+                                        ) : (
+                                            <Eye className="h-4 w-4 text-gray-400" />
+                                        )}
+                                    </button>
+                                </div>
                                 <p className="text-xs text-gray-500 mt-1">
-                                    Le mot de passe doit contenir au moins 8 caractères, une lettre minuscule, une lettre majuscule, un chiffre et un caractère spécial.
+                                    Le mot de passe doit contenir au moins 8 caractères.
                                 </p>
                             </div>
                             
@@ -238,15 +190,29 @@ const ResetPassword = () => {
                                 >
                                     Confirmer le mot de passe
                                 </label>
-                                <Input
-                                    id="confirmPassword"
-                                    type="password"
-                                    value={confirmPassword}
-                                    onChange={(e) => setConfirmPassword(e.target.value)}
-                                    autoComplete="new-password"
-                                    required
-                                    className="w-full"
-                                />
+                                <div className="relative">
+                                    <Input
+                                        id="confirmPassword"
+                                        type={showConfirmPassword ? "text" : "password"}
+                                        value={confirmPassword}
+                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                        autoComplete="new-password"
+                                        required
+                                        className="w-full pr-10"
+                                    />
+                                    <button
+                                        type="button"
+                                        className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                                        onClick={toggleConfirmPasswordVisibility}
+                                        tabIndex="-1"
+                                    >
+                                        {showConfirmPassword ? (
+                                            <EyeOff className="h-4 w-4 text-gray-400" />
+                                        ) : (
+                                            <Eye className="h-4 w-4 text-gray-400" />
+                                        )}
+                                    </button>
+                                </div>
                             </div>
                             
                             <Button
