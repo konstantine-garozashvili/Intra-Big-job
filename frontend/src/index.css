@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -50,7 +50,7 @@
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
     --accent: 200 39% 30%; /* #528eb2 avec une transparence plus élevée pour le mode sombre */
-   /*  --accent-foreground: 210 40% 98%; */
+    /*  --accent-foreground: 210 40% 98%; */
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
     --border: 217.2 32.6% 17.5%;
@@ -76,20 +76,19 @@
 
 /* Utility classes */
 .text-color-secondary {
-    color: hsl(var(--color-secondary));
+  color: hsl(var(--color-secondary));
 }
 
 .text-color-primary {
-    color: hsl(var(--color-primary));
+  color: hsl(var(--color-primary));
 }
 
 /* Style personnalisé pour les éléments du dropdown menu */
 @layer components {
   .dropdown-menu-item {
     @apply flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors;
-   
   }
-  
+
   .dropdown-menu-item.danger {
     @apply text-destructive;
     @apply hover:bg-destructive/10 hover:text-destructive/90;
@@ -103,9 +102,10 @@
   background: white;
   border: none !important;
   border-radius: 12px;
-  font-family: 'Poppins', sans-serif;
+  font-family: "Poppins", sans-serif;
   line-height: 1.125em;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1),
+    0 8px 10px -6px rgba(0, 0, 0, 0.05);
   overflow: hidden;
 }
 
@@ -141,7 +141,7 @@
 .react-calendar__navigation__label {
   font-weight: 600 !important;
   font-size: 1rem !important;
-  color: #0062FF !important;
+  color: #0062ff !important;
 }
 
 /* Calendar weekdays */
@@ -210,7 +210,7 @@
 /* Current day */
 .react-calendar__tile--now {
   background: #e5edff;
-  color: #0062FF;
+  color: #0062ff;
   font-weight: 600;
 }
 
@@ -221,7 +221,7 @@
 
 /* Selected day */
 .react-calendar__tile--active {
-  background: #0062FF;
+  background: #0062ff;
   color: white;
   font-weight: 600;
 }
@@ -237,7 +237,8 @@
   border-radius: 12px !important;
   overflow: hidden !important;
   border: none !important;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
 }
 
 .dialog-close-button {
@@ -293,7 +294,7 @@
 }
 
 .country-item svg {
-  color: #0062FF;
+  color: #0062ff;
 }
 
 /* Command dialog styles */
@@ -368,16 +369,16 @@
     width: 300px;
     font-size: 0.9rem;
   }
-  
+
   .react-calendar__tile {
     padding: 10px 4px;
     font-size: 13px;
   }
-  
+
   .react-calendar__navigation {
     height: 44px;
   }
-  
+
   .react-calendar__navigation button {
     font-size: 14px;
   }

@@ -1,0 +1,221 @@
+.fc .fc-timegrid-slot {
+  height: 3rem !important;
+  border-bottom: 1px solid rgba(229, 231, 235, 0.5) !important;
+}
+
+.fc-timeGridDay-view .fc-timegrid-slot {
+  height: 2rem !important;
+  border-bottom: 1px dotted rgba(229, 231, 235, 0.4) !important;
+}
+
+.fc .fc-timegrid-col.fc-day-today,
+.fc .fc-daygrid-day.fc-day-today {
+  background-color: rgba(219, 234, 254, 0.4) !important;
+}
+
+.fc-event {
+  border-radius: 0.5rem !important;
+  border-width: 1px !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+  padding: 0.5rem !important;
+  background-color: rgba(37, 99, 235, 0.9) !important;
+  border-color: rgba(29, 78, 216, 1) !important;
+  color: white !important;
+
+  width: calc(100% - 4px) !important;
+  left: 2px !important;
+  right: 2px !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+.fc-timeGridWeek-view .fc-event {
+  max-width: calc(100% - 4px) !important;
+  margin: 0 !important;
+  transform: none !important;
+}
+
+.fc-timeGridWeek-view .event-content-wrapper {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+}
+
+.fc-timeGridWeek-view .fc-timegrid-event-harness {
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+}
+
+.fc-timeGridWeek-view .fc-timegrid-col-frame {
+  min-width: 100% !important;
+}
+
+.fc-timegrid-event-harness-inset .fc-timegrid-event,
+.fc-timegrid-event.fc-event-mirror {
+  box-sizing: border-box !important;
+  width: calc(100% - 4px) !important;
+  margin: 0 2px !important;
+}
+
+.fc-timeGridWeek-view .fc-timegrid-col {
+  border-right: 1px solid rgba(229, 231, 235, 0.8) !important;
+}
+
+.fc-timeGridWeek-view .fc-event-title {
+  text-align: left !important;
+  width: 100% !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.fc-col-header-cell {
+  width: auto !important;
+}
+
+.fc-timeGridDay-view .fc-event {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  padding: 0.25rem 0.5rem !important;
+  min-height: 1.8rem !important;
+}
+
+.fc-timeGridDay-view .fc-event-title {
+  font-size: 0.85rem !important;
+  font-weight: 600 !important;
+  line-height: 1.2 !important;
+  margin-bottom: 0.1rem !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.fc-timeGridDay-view .event-location,
+.fc-timeGridDay-view .event-time {
+  font-size: 0.75rem !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.fc-timeGridDay-view .fc-timegrid-event-short .event-location,
+.fc-timeGridDay-view .fc-timegrid-event-short .event-time {
+  display: block !important;
+  max-width: 100% !important;
+}
+
+.fc-timeGridDay-view .fc-timegrid-event.fc-event-short-duration .event-location,
+.fc-timeGridDay-view .fc-timegrid-event.fc-event-short-duration .event-time {
+  display: none !important;
+}
+
+.fc-timeGridDay-view .fc-timegrid-axis {
+  font-size: 0.8rem !important;
+  font-weight: 500 !important;
+  color: #4b5563 !important;
+}
+
+.fc-timeGridDay-view .fc-col-header-cell {
+  background-color: #f3f4f6 !important;
+  padding: 0.75rem 0 !important;
+}
+
+.fc-timeGridDay-view .fc-col-header-cell-cushion {
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+  color: #1f2937 !important;
+}
+
+.fc-timegrid-event-short .fc-event-title {
+  font-size: 0.8rem !important;
+  font-weight: bold !important;
+}
+
+.fc-timegrid-event-short .event-location,
+.fc-timegrid-event-short .event-time {
+  font-size: 0.75rem !important;
+}
+
+.fc-timegrid-event-long .fc-event-title {
+  font-size: 1rem !important;
+  font-weight: bold !important;
+  margin-bottom: 0.25rem !important;
+}
+
+.fc-event.duration-very-short {
+  padding: 0.1rem 0.25rem !important;
+}
+.fc-event.duration-very-short .event-location,
+.fc-event.duration-very-short .event-time {
+  display: none !important;
+}
+
+.fc .fc-timegrid-axis {
+  background-color: white;
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.fc-theme-standard td,
+.fc-theme-standard th {
+  border-color: rgba(229, 231, 235, 0.7) !important;
+}
+
+.view-button {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.15s ease-in-out;
+}
+
+.view-button-active {
+  background-color: #2563eb !important;
+  color: white !important;
+}
+
+.day-view-container {
+  max-width: 600px !important; 
+  margin: 0 auto !important;
+}
+
+.fc-timeGridDay-view .fc-daygrid-body,
+.fc-timeGridDay-view .fc-timegrid-body,
+.fc-timeGridDay-view .fc-timegrid-cols {
+  width: 100% !important;
+}
+
+.fc-timeGridDay-view .fc-event {
+  max-width: calc(
+    100% - 10px
+  ) !important;
+  margin: 1px 5px !important;
+}
+
+.fc-timeGridDay-view .fc-event {
+  border-radius: 4px !important;
+  border-left: 3px solid rgba(29, 78, 216, 1) !important;
+  background-color: rgba(
+    37,
+    99,
+    235,
+    0.8
+  ) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12) !important;
+}
+
+.fc-timeGridDay-view .fc-timegrid-axis {
+  width: 60px !important; 
+}
+
+.fc-timeGridDay-view .fc-timegrid-slot-lane {
+  border-bottom: 1px solid rgba(229, 231, 235, 0.7) !important;
+}
+
+@media (max-width: 768px) {
+  .day-view-container {
+    max-width: 100% !important;
+  }
+}
