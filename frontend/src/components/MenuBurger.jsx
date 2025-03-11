@@ -61,8 +61,13 @@ const MenuBurger = memo(() => {
   const toggleMenu = () => setMenuOpen(!menuOpen);
 
   const toggleSubMenu = (menu) => {
-    setOpenSubMenus((prev) => ({ ...prev, [menu]: !prev[menu] }));
+    setOpenSubMenus((prev) => {
+      return {
+        [menu]: !prev[menu] // Ferme tous les autres et bascule uniquement celui cliqué
+      };
+    });
   };
+  
 
   const menuItems = [
     {
@@ -218,42 +223,6 @@ const MenuBurger = memo(() => {
                       <Link to="/notifications">Notifications</Link>
                     </li>
                   )}
-                  {menuItems.map(({ key, icon, label, roles, links }) =>
-                  // Vérifie si le rôle de l'utilisateur est inclus ou si les rôles sont indéfinis (permet à tout le monde d'accéder à cet élément)
-                  (!roles || roles.includes(userRole)) ? ( // Vérifie si aucun rôle n'est défini ou si le rôle de l'utilisateur est inclus
-                    <React.Fragment key={key}>
-                      <li
-                        className="flex items-center px-4 py-2 hover:bg-blue-800 cursor-pointer"
-                        onClick={() => toggleSubMenu(key)}
-                      >
-                        {icon}
-                        {label} <span className="ml-auto">{openSubMenus[key] ? '▼' : '►'}</span>
-                      </li>
-
-                      <AnimatePresence>
-                        {openSubMenus[key] && (
-                          <motion.ul
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            className="pl-6 bg-[blue-800]"
-                          >
-                            {links
-                              .filter(link => !link.roles || link.roles.includes(userRole)) // Filtrage des liens avec ou sans rôles
-                              .map((link, index) => (
-                                <li key={index} className="px-4 py-2 hover:bg-[#528eb2]">
-                                  <Link to={link.to}>{link.name}</Link>
-                                </li>
-                              ))}
-                          </motion.ul>
-                        )}
-                      </AnimatePresence>
-                    </React.Fragment>
-                  ) : null
-                )}
-
-
-
                   {(userRole === 'ROLE_STUDENT' || userRole === 'ROLE_TEACHER'|| userRole === 'ROLE_ADMIN'|| userRole === 'ROLE_SUPERADMIN') &&(
                     <li className="flex items-center px-4 py-2 hover:bg-blue-800">
                       <MessageCircle className="w-5 h-5 mr-2" />
@@ -294,6 +263,47 @@ const MenuBurger = memo(() => {
                     <Link to="/formations">Formations</Link>
                   </li>
                   
+                  
+                  {menuItems.map(({ key, icon, label, roles, links }) =>
+                  // Vérifie si le rôle de l'utilisateur est inclus ou si les rôles sont indéfinis (permet à tout le monde d'accéder à cet élément)
+                  (!roles || roles.includes(userRole)) ? ( // Vérifie si aucun rôle n'est défini ou si le rôle de l'utilisateur est inclus
+                    <React.Fragment key={key}>
+                      <li
+                        className="flex items-center px-4 py-2 hover:bg-blue-800 cursor-pointer"
+                        onClick={() => toggleSubMenu(key)}
+                      >
+                        {icon}
+                        {label} <span className="ml-auto">{openSubMenus[key] ? '▼' : '►'}</span>
+                      </li>
+
+                      <AnimatePresence>
+                        {openSubMenus[key] && (
+                          <motion.ul
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="pl-6 bg-[blue-800]"
+                          >
+                            {links
+                              .filter(link => !link.roles || link.roles.includes(userRole)) // Filtrage des liens avec ou sans rôles
+                              .map((link, index) => (
+                                <li key={index} className="px-4 py-2 hover:bg-[#528eb2]">
+                                  <Link to={link.to}>{link.name}</Link>
+                                </li>
+                              ))}
+                          </motion.ul>
+                        )}
+                      </AnimatePresence>
+                    </React.Fragment>
+                  ) : null
+                )}
+                {(userRole === 'ROLE_STUDENT') && (
+                  <li className="flex items-center px-4 py-2 hover:bg-blue-800">
+                    <Clipboard className="w-5 h-5 mr-2" />
+                    <Link to="/justification-absence">Justifier une absence</Link>
+                  </li>
+                )}
+
                   {(userRole === 'ROLE_STUDENT' || userRole === 'ROLE_TEACHER'|| userRole === 'ROLE_ADMIN'|| userRole === 'ROLE_SUPERADMIN') &&(
                     <li className="flex items-center px-4 py-2 hover:bg-blue-800">
                       <PiggyBank className="w-5 h-5 mr-2" />
@@ -312,6 +322,8 @@ const MenuBurger = memo(() => {
                       <Link to="/Trombinoscope">Trombinoscope</Link>
                     </li>
                   )}
+
+                  
                 </ul>
               </div>
 
