@@ -61,8 +61,13 @@ const MenuBurger = memo(() => {
   const toggleMenu = () => setMenuOpen(!menuOpen);
 
   const toggleSubMenu = (menu) => {
-    setOpenSubMenus((prev) => ({ ...prev, [menu]: !prev[menu] }));
+    setOpenSubMenus((prev) => {
+      return {
+        [menu]: !prev[menu] // Ferme tous les autres et bascule uniquement celui cliqué
+      };
+    });
   };
+  
 
   const menuItems = [
     {
