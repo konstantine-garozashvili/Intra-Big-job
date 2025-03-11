@@ -240,6 +240,7 @@ export const authService = {
    */
   async getCurrentUser() {
     const token = this.getToken();
+    
     if (!token) {
       throw new Error("Aucun token d'authentification trouvé");
     }
@@ -261,16 +262,10 @@ export const authService = {
           : rawUserData.role
           ? [rawUserData.role]
           : [],
-        // Ajouter d'autres propriétés importantes selon votre modèle de données
       };
 
       return normalizedUserData;
     } catch (error) {
-      console.error(
-        "Erreur lors de la récupération des données utilisateur:",
-        error
-      );
-      console.error("Détails:", error.response?.data || error.message);
       throw error;
     }
   },
