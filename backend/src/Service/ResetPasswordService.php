@@ -70,8 +70,8 @@ class ResetPasswordService
             $resetToken = $this->tokenGenerator->generateToken();
             
             // Définir la date d'expiration (1 heure)
-            $expiresAt = new \DateTimeImmutable('+' . self::TOKEN_TTL . ' seconds');
-            
+            $expiresAt = (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->modify('+' . self::TOKEN_TTL . ' seconds'); 
+
             // Stocker le token et la date d'expiration
             $user->setResetPasswordToken($resetToken);
             $user->setResetPasswordExpires($expiresAt);
@@ -179,7 +179,7 @@ class ResetPasswordService
         }
         
         // Vérifier si le token n'est pas expiré
-        $now = new \DateTimeImmutable();
+        $now = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
         $isValid = $expiresAt > $now;
         
         $this->logger->info('Vérification validité token : ' . ($isValid ? 'Valide' : 'Expiré') . ', expire le ' . $expiresAt->format('Y-m-d H:i:s'));
