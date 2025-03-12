@@ -1,0 +1,13 @@
+services:
+    # AWS SDK Service
+    Aws\Sdk:
+        arguments:
+            - region: '%env(AWS_REGION)%'
+              version: 'latest'
+              credentials:
+                  key: '%env(AWS_ACCESS_KEY_ID)%'
+                  secret: '%env(AWS_SECRET_ACCESS_KEY)%'
+
+    # S3 client as a service
+    Aws\S3\S3Client:
+        factory: ['@Aws\Sdk', 'createS3'] 

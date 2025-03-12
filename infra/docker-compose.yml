@@ -21,6 +21,8 @@ services:
     volumes:
       - ../backend:/var/www/symfony
       - backend_vendor:/var/www/symfony/vendor
+      - backend_var:/var/www/symfony/var
+      - jwt_keys:/var/www/symfony/config/jwt
     depends_on:
       - database
     networks:
@@ -76,3 +78,5 @@ volumes:
   database_data:
   frontend_node_modules:
   backend_vendor:
+  backend_var:
+  jwt_keys:

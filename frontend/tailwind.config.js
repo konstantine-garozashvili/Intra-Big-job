@@ -11,6 +11,9 @@ export default {
   		}
   	},
   	extend: {
+  		fontFamily: {
+  			poppins: ['Poppins', 'sans-serif'],
+  		},
   		colors: {
   			border: 'hsl(var(--border))',
   			input: 'hsl(var(--input))',
@@ -74,11 +77,31 @@ export default {
   				to: {
   					height: '0'
   				}
-  			}
+  			},
+        'fadeIn': {
+          from: {
+            opacity: '0'
+          },
+          to: {
+            opacity: '1'
+          }
+        },
+        'fadeInUp': {
+          from: {
+            opacity: '0',
+            transform: 'translateY(10px)'
+          },
+          to: {
+            opacity: '1',
+            transform: 'translateY(0)'
+          }
+        }
   		},
   		animation: {
   			'accordion-down': 'accordion-down 0.2s ease-out',
-  			'accordion-up': 'accordion-up 0.2s ease-out'
+  			'accordion-up': 'accordion-up 0.2s ease-out',
+        'fadeIn': 'fadeIn 0.3s ease-in-out',
+        'fadeInUp': 'fadeInUp 0.3s ease-in-out'
   		}
   	}
   },

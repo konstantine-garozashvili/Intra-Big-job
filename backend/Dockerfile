@@ -10,6 +10,10 @@ RUN apt-get update && apt-get install -y \
     intl \
     zip
 
+# Installation de l'extension APCu pour de meilleures performances
+RUN pecl install apcu && docker-php-ext-enable apcu \
+    && echo "apc.enable_cli=1" >> /usr/local/etc/php/conf.d/docker-php-ext-apcu.ini
+
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 ENV COMPOSER_ALLOW_SUPERUSER=1
@@ -21,6 +25,13 @@ COPY . .
 RUN composer install --no-interaction --optimize-autoloader --no-scripts
 
 RUN mkdir -p var && chmod -R 777 var/
+
+# Create JWT directory and set permissions
+RUN mkdir -p config/jwt && chmod -R 777 config/jwt
+
+# Fix line endings and generate JWT keys
+RUN sed -i 's/\r$//' bin/console && \
+    php bin/console lexik:jwt:generate-keypair --overwrite --no-interaction
 
 EXPOSE 9000
 
