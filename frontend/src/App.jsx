@@ -7,9 +7,8 @@ const Register = lazy(() => import('./pages/Register'))
 const RegistrationSuccess = lazy(() => import('./pages/RegistrationSuccess'))
 const VerificationSuccess = lazy(() => import('./pages/VerificationSuccess'))
 const VerificationError = lazy(() => import('./pages/VerificationError'))
-// Lazy loading pour le Profil et Dashboard
+// Lazy loading pour le Profil
 const Profil = lazy(() => import('./pages/Profil'))
-const Dashboard = lazy(() => import('./pages/Dashboard'))
 // Dashboards spécifiques par rôle
 const AdminDashboard = lazy(() => import('./pages/Admin/Dashboard'))
 const StudentDashboard = lazy(() => import('./pages/Student/Dashboard'))
@@ -33,9 +32,8 @@ const preloadPages = () => {
   const preloadRegistrationSuccess = () => import('./pages/RegistrationSuccess');
   const preloadVerificationSuccess = () => import('./pages/VerificationSuccess');
   const preloadVerificationError = () => import('./pages/VerificationError');
-  const preloadProfil = () => import('./pages/Profil'); // Préchargement du Profil
-  const preloadDashboard = () => import('./pages/Dashboard'); // Préchargement du Dashboard
-  const preloadHomePage = () => import('./components/HomePage'); // Préchargement de HomePage
+  const preloadProfil = () => import('./pages/Profil');
+  const preloadHomePage = () => import('./components/HomePage');
   const preloadAdminDashboard = () => import('./pages/Admin/Dashboard');
   const preloadStudentDashboard = () => import('./pages/Student/Dashboard');
   const preloadTeacherDashboard = () => import('./pages/Teacher/Dashboard');
@@ -51,7 +49,6 @@ const preloadPages = () => {
   preloadVerificationSuccess();
   preloadVerificationError();
   preloadProfil();
-  preloadDashboard();
   preloadHomePage();
   preloadAdminDashboard();
   preloadStudentDashboard();
@@ -104,7 +101,6 @@ const App = () => {
                 {/* Routes protégées nécessitant une authentification */}
                 <Route element={<ProtectedRoute />}>
                   <Route path="/profil" element={<Profil />} />
-                  <Route path="/dashboard" element={<Dashboard />} />
                   {/* Dashboards spécifiques par rôle */}
                   <Route path="/admin/dashboard" element={<AdminDashboard />} />
                   <Route path="/student/dashboard" element={<StudentDashboard />} />

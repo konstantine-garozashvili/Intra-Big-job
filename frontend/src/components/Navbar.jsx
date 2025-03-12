@@ -2,6 +2,7 @@ import React, { memo, useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { authService } from '../lib/services/authService';
 import profilService from '../lib/services/profilService';
+import { getDashboardPathByRole, getPrimaryRole } from '@/lib/utils/roleUtils';
 import { Button } from './ui/button';
 import { UserRound, LayoutDashboard, LogOut, Settings, User, Bell } from 'lucide-react';
 import {
@@ -54,6 +55,7 @@ const Navbar = memo(() => {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [userData, setUserData] = useState(null);
+  const [dashboardPath, setDashboardPath] = useState('/login');
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -66,18 +68,11 @@ const Navbar = memo(() => {
       // Si l'utilisateur est connecté, charger ses données
       if (status) {
         try {
-          const profilData = await profilService.getAllProfilData();
-          // Vérifions la structure des données et adaptons l'accès en fonction
-          if (profilData && profilData.user) {
-            setUserData(profilData.user);
-          } else if (profilData && profilData.data && profilData.data.user) {
-            // Alternative si la structure est différente
-            setUserData(profilData.data.user);
-          } else {
-            // Fallback: essayons de récupérer directement les données utilisateur
-            const userData = await profilService.getUserData();
-            setUserData(userData);
-          }
+          const user = await authService.getCurrentUser();
+          setUserData(user);
+          const primaryRole = getPrimaryRole(user.roles);
+          const path = getDashboardPathByRole(primaryRole);
+          setDashboardPath(path);
         } catch (profileError) {
           console.error('Erreur lors de la récupération des données du profil:', profileError);
         }
@@ -164,7 +159,7 @@ const Navbar = memo(() => {
         <div className="container px-4 mx-auto">
           <div className="flex items-center justify-between h-16">
             <div className="flex-shrink-0">
-              <Link to={isAuthenticated ? "/dashboard" : "/login"} className="text-2xl font-black tracking-tight text-white">
+              <Link to={isAuthenticated ? dashboardPath : "/login"} className="text-2xl font-black tracking-tight text-white">
                 Big<span className="text-[#528eb2]">Project</span>
               </Link>
             </div>
@@ -175,7 +170,7 @@ const Navbar = memo(() => {
                 {/* Élements affichés uniquement pour les utilisateurs connectés */}
                 {isAuthenticated && (
                   <Link 
-                    to="/dashboard" 
+                    to={dashboardPath}
                     className="px-3 py-2 rounded-md text-gray-200 hover:text-white hover:bg-[#02284f]/80 transition-colors flex items-center"
                   >
                     <LayoutDashboard className="h-4 w-4 mr-2" />

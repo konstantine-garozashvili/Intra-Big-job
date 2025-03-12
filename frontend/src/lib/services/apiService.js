@@ -1,5 +1,23 @@
 import axios from 'axios';
 
+// Variable pour éviter les redirections multiples
+let isRedirecting = false;
+
+// Fonction pour gérer la déconnexion automatique
+const handleTokenInvalid = () => {
+  if (isRedirecting) return;
+  isRedirecting = true;
+  
+  console.warn('Token invalide détecté, déconnexion automatique...');
+  localStorage.clear();
+  
+  // Rediriger vers la page de connexion avec un message
+  setTimeout(() => {
+    window.location.href = '/login?error=session_expired';
+    isRedirecting = false;
+  }, 100);
+};
+
 // Configurer des intercepteurs pour logger les requêtes et réponses
 axios.interceptors.request.use(request => {
   // Ne pas afficher les informations sensibles comme les mots de passe
@@ -70,6 +88,11 @@ axios.interceptors.response.use(response => {
     }
   }
   
+  // Gérer automatiquement les erreurs 401 (non autorisé) - token invalide ou expiré
+  if (error.response?.status === 401 && !error.config.url.includes('/login_check')) {
+    handleTokenInvalid();
+  }
+  
   return Promise.reject(error);
 });
 
@@ -107,8 +130,6 @@ const apiService = {
       const response = await axios.get(url, authOptions);
       return response.data;
     } catch (error) {
-      console.error(`Erreur API GET ${path}:`, error);
-      console.error(`[apiService] Détails de l'erreur:`, error.response || error.message);
       throw error;
     }
   },
@@ -122,14 +143,10 @@ const apiService = {
    */
   async post(path, data = {}, options = {}) {
     try {
-      console.log(`[apiService] POST ${path}:`, { data: { ...data, password: data.password ? '***' : undefined } });
       const url = normalizeApiUrl(path);
       const response = await axios.post(url, data, options);
-      console.log(`[apiService] POST ${path} Réponse:`, response.status);
       return response.data;
     } catch (error) {
-      console.error(`Erreur API POST ${path}:`, error);
-      console.error(`[apiService] Détails de l'erreur:`, error.response?.data || error.message);
       throw error;
     }
   },
@@ -175,7 +192,6 @@ const apiService = {
   withAuth(options = {}) {
     const token = localStorage.getItem('token');
     if (!token) {
-      console.warn('Tentative d\'appel API authentifié sans token');
       return options;
     }
     
