@@ -12,6 +12,11 @@ const Profil = lazy(() => import('./pages/Profil'))
 // Dashboards spécifiques par rôle
 const AdminDashboard = lazy(() => import('./pages/Admin/Dashboard'))
 const StudentDashboard = lazy(() => import('./pages/Student/Dashboard'))
+// Pages étudiantes
+const StudentSchedule = lazy(() => import('./pages/Student/Schedule'))
+const StudentGrades = lazy(() => import('./pages/Student/Grades'))
+const StudentAbsences = lazy(() => import('./pages/Student/Absences'))
+const StudentProjects = lazy(() => import('./pages/Student/Projects'))
 const TeacherDashboard = lazy(() => import('./pages/Teacher/Dashboard'))
 const HRDashboard = lazy(() => import('./pages/HR/Dashboard'))
 const SuperAdminDashboard = lazy(() => import('./pages/SuperAdmin/Dashboard'))
@@ -41,7 +46,7 @@ const preloadPages = () => {
   const preloadSuperAdminDashboard = () => import('./pages/SuperAdmin/Dashboard');
   const preloadGuestDashboard = () => import('./pages/Guest/Dashboard');
   const preloadRecruiterDashboard = () => import('./pages/Recruiter/Dashboard');
-  
+
   // Déclencher le préchargement
   preloadLogin();
   preloadRegister();
@@ -63,7 +68,7 @@ const preloadPages = () => {
 const PrefetchHandler = () => {
   const location = useLocation();
   const [hasPreloaded, setHasPreloaded] = useState(false);
-  
+
   useEffect(() => {
     if (!hasPreloaded) {
       // Précharger les pages au premier rendu
@@ -71,7 +76,7 @@ const PrefetchHandler = () => {
       setHasPreloaded(true);
     }
   }, [hasPreloaded]);
-  
+
   return null;
 };
 
@@ -88,7 +93,7 @@ const App = () => {
               <Route element={<MainLayout />}>
                 {/* Route racine avec redirection automatique */}
                 <Route path="/" element={<HomePage />} />
-                
+
                 {/* Routes publiques - Accès interdit aux utilisateurs authentifiés */}
                 <Route element={<PublicRoute />}>
                   <Route path="/login" element={<Login />} />
@@ -97,20 +102,27 @@ const App = () => {
                   <Route path="/verification-success" element={<VerificationSuccess />} />
                   <Route path="/verification-error" element={<VerificationError />} />
                 </Route>
-                
+
                 {/* Routes protégées nécessitant une authentification */}
                 <Route element={<ProtectedRoute />}>
                   <Route path="/profil" element={<Profil />} />
                   {/* Dashboards spécifiques par rôle */}
                   <Route path="/admin/dashboard" element={<AdminDashboard />} />
-                  <Route path="/student/dashboard" element={<StudentDashboard />} />
+                  {/* Routes étudiantes */}
+                  <Route path="/student">
+                    <Route path="dashboard" element={<StudentDashboard />} />
+                    <Route path="schedule" element={<StudentSchedule />} />
+                    <Route path="grades" element={<StudentGrades />} />
+                    <Route path="absences" element={<StudentAbsences />} />
+                    <Route path="projects" element={<StudentProjects />} />
+                  </Route>
                   <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
                   <Route path="/hr/dashboard" element={<HRDashboard />} />
                   <Route path="/super-admin/dashboard" element={<SuperAdminDashboard />} />
                   <Route path="/guest/dashboard" element={<GuestDashboard />} />
                   <Route path="/recruiter/dashboard" element={<RecruiterDashboard />} />
                 </Route>
-                
+
                 {/* Redirection des routes inconnues vers la page d'accueil */}
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Route>
