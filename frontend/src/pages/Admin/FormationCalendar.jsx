@@ -10,7 +10,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import "./Calendrier.css";
 
 const FormationCalendar = () => {
@@ -24,9 +26,10 @@ const FormationCalendar = () => {
     const [editMode, setEditMode] = useState(false);
     const [selectedInfo, setSelectedInfo] = useState(null);
     const [currentView, setCurrentView] = useState('timeGridDay');
-
+    const [selectedDayEvents, setSelectedDayEvents] = useState([]);
+    const [showDayEventsModal, setShowDayEventsModal] = useState(false);
+    const [selectedDate, setSelectedDate] = useState(null);
     const calendarRef = useRef(null);
-
     const [newEvent, setNewEvent] = useState({
         title: '',
         date: '',
@@ -121,9 +124,9 @@ const FormationCalendar = () => {
             const headers = {
                 'Authorization': `Bearer ${localStorage.getItem('token')}`,
                 'Content-Type': 'application/json'
-              };
+            };
 
-            await apiService.post('/create-event', eventData, { headers});
+            await apiService.post('/create-event', eventData, { headers });
 
             await fetchEvents();
 
@@ -220,6 +223,163 @@ const FormationCalendar = () => {
         const calendarApi = calendarRef.current.getApi();
         calendarApi.changeView(viewName);
         setCurrentView(viewName);
+    };
+
+    const countEventsForDay = (date) => {
+        if (!events || events.length === 0) return 0;
+
+        const dayStart = new Date(date);
+        dayStart.setHours(0, 0, 0, 0);
+
+        const dayEnd = new Date(date);
+        dayEnd.setHours(23, 59, 59, 999);
+
+        return events.filter(event => {
+            const eventStart = new Date(event.start);
+            return eventStart >= dayStart && eventStart <= dayEnd;
+        }).length;
+    };
+
+    const handleDayClick = (info) => {
+        if (info.view.type === 'dayGridMonth') {
+            const dayStart = new Date(info.date);
+            dayStart.setHours(0, 0, 0, 0);
+
+            const dayEnd = new Date(info.date);
+            dayEnd.setHours(23, 59, 59, 999);
+
+            const dayEvents = events.filter(event => {
+                const eventStart = new Date(event.start);
+                return eventStart >= dayStart && eventStart <= dayEnd;
+            });
+
+            setSelectedDayEvents(dayEvents);
+            setSelectedDate(info.date);
+            setShowDayEventsModal(true);
+        }
+    };
+
+    const dayCellContent = (args) => {
+        const { date, dayNumberText, view } = args;
+
+        if (view.type !== 'dayGridMonth') {
+            return { html: dayNumberText };
+        }
+
+        const isToday = new Date().toDateString() === date.toDateString();
+
+        const eventCount = countEventsForDay(date);
+
+        return (
+            <div className="flex flex-col h-full">
+                <div className={`text-right p-1 ${isToday ? 'bg-blue-100 font-bold rounded-full w-7 h-7 flex items-center justify-center ml-auto' : ''}`}>
+                    {dayNumberText}
+                </div>
+                <div className="flex items-center justify-center flex-grow">
+                    {eventCount > 0 && (
+                        <div className="event-count-indicator">
+                            {eventCount} {eventCount === 1 ? 'événement' : 'événements'}
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    };
+
+    const DayEventsModal = () => {
+        if (!selectedDate) return null;
+
+        const formattedDate = format(selectedDate, 'EEEE d MMMM yyyy', { locale: fr });
+
+        return (
+            <Dialog open={showDayEventsModal} onOpenChange={setShowDayEventsModal}>
+                <DialogContent className="max-w-lg day-events-dialog">
+                    <DialogHeader className="flex flex-row items-center justify-between">
+                        <DialogTitle className="capitalize">
+                            Événements du {formattedDate}
+                        </DialogTitle>
+                        <button
+                            onClick={() => setShowDayEventsModal(false)}
+                            className="p-1 rounded-full hover:bg-gray-100"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                    </DialogHeader>
+
+                    <div className="event-list-container">
+                        {selectedDayEvents.length === 0 ? (
+                            <p className="py-4 text-center text-gray-500">Aucun événement ce jour</p>
+                        ) : (
+                            <div className="space-y-2">
+                                {selectedDayEvents.map((event) => {
+                                    const startDate = new Date(event.start);
+                                    const endDate = new Date(event.end);
+
+                                    return (
+                                        <div
+                                            key={event.id}
+                                            className="p-3 border rounded-md cursor-pointer hover:bg-gray-50 event-list-item"
+                                            onClick={() => {
+                                                const eventObj = {
+                                                    id: event.id,
+                                                    title: event.title,
+                                                    date: startDate.toISOString().split('T')[0],
+                                                    startTime: startDate.toTimeString().substring(0, 5),
+                                                    endTime: endDate.toTimeString().substring(0, 5),
+                                                    location: event.extendedProps.location || '',
+                                                    type: event.extendedProps.type || '',
+                                                    description: event.extendedProps.description || '',
+                                                };
+
+                                                setNewEvent(eventObj);
+
+                                                if (event.extendedProps.participants && Array.isArray(event.extendedProps.participants)) {
+                                                    setSelectedParticipants(event.extendedProps.participants.map(p =>
+                                                        typeof p === 'object' ? p.id : p
+                                                    ));
+                                                } else {
+                                                    setSelectedParticipants([]);
+                                                }
+
+                                                setEditMode(true);
+                                                setShowDayEventsModal(false);
+                                                setShowAddModal(true);
+                                            }}
+                                        >
+                                            <div className="flex items-start justify-between">
+                                                <h3 className="font-medium">{event.title}</h3>
+                                                <span className="text-sm text-gray-500">
+                                                    {startDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} -
+                                                    {endDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                            </div>
+
+                                            {event.extendedProps.location && (
+                                                <p className="mt-1 text-sm text-gray-600">
+                                                    <span className="font-medium">Lieu:</span> {event.extendedProps.location}
+                                                </p>
+                                            )}
+
+                                            {event.extendedProps.type && (
+                                                <p className="text-sm text-gray-600">
+                                                    <span className="font-medium">Type:</span> {event.extendedProps.type}
+                                                </p>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowDayEventsModal(false)}>
+                            Fermer
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        );
     };
 
     return (
@@ -341,6 +501,9 @@ const FormationCalendar = () => {
                             omitZeroMinute: currentView === 'timeGridDay'
                         }}
                         slotLabelInterval={currentView === 'timeGridDay' ? "01:00" : null}
+
+                        dateClick={handleDayClick}
+                        dayCellContent={dayCellContent}
                     />
                 </div>
             )}
@@ -478,6 +641,8 @@ const FormationCalendar = () => {
                     </DialogContent>
                 </Dialog>
             )}
+
+            {showDayEventsModal && <DayEventsModal />}
         </div>
     );
 };

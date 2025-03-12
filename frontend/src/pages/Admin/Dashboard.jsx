@@ -227,13 +227,13 @@ const AdminDashboard = () => {
                             >
                               <Edit size={16} />
                             </button>
-                            <button
+                            {/* <button
                               className="p-1 text-red-600 bg-red-100 rounded hover:bg-red-200"
                               title="Supprimer"
                               onClick={() => openDeleteModal(user)}
                             >
                               <Trash2 size={16} />
-                            </button>
+                            </button> */}
                           </div>
                         </td>
                       </tr>
@@ -321,9 +321,9 @@ const AdminDashboard = () => {
               <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
                 Annuler
               </Button>
-              <Button variant="destructive" onClick={handleDeleteUser}>
+              {/* <Button variant="destructive" onClick={handleDeleteUser}>
                 Supprimer
-              </Button>
+              </Button> */}
             </DialogFooter>
           </DialogContent>
         </Dialog>
