@@ -262,7 +262,7 @@ class DocumentController extends AbstractController
             
             return $this->json([
                 'success' => true,
-                'message' => 'CV uploaded successfully',
+                'message' => 'CV mis à jour avec succès',
                 'document' => [
                     'id' => $document->getId(),
                     'name' => $document->getName(),
