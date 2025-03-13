@@ -26,7 +26,7 @@ export const addressService = {
       
       return response.data.features || [];
     } catch (error) {
-      console.error('Erreur lors de la recherche d\'adresses:', error);
+      // console.error('Erreur lors de la recherche d\'adresses:', error);
       throw error;
     }
   },
@@ -48,7 +48,7 @@ export const addressService = {
       
       return response.data.features[0] || null;
     } catch (error) {
-      console.error('Erreur lors du géocodage inverse:', error);
+      // console.error('Erreur lors du géocodage inverse:', error);
       throw error;
     }
   },

@@ -27,7 +27,7 @@ const JobSeekingSettings = memo(({ profile, onProfileUpdate }) => {
         setIsSeekingApprenticeship(Boolean(profile.isSeekingApprenticeship));
       }
     } catch (error) {
-      console.error('Error parsing profile data:', error);
+      // console.error('Error parsing profile data:', error);
     }
   }, [profile]);
 
@@ -70,7 +70,7 @@ const JobSeekingSettings = memo(({ profile, onProfileUpdate }) => {
         throw new Error('Invalid response format');
       }
     } catch (error) {
-      console.error('Erreur lors de la mise à jour du statut de recherche:', error);
+      // console.error('Erreur lors de la mise à jour du statut de recherche:', error);
       toast.error('Une erreur est survenue lors de la mise à jour de votre statut de recherche');
     } finally {
       setLoading(false);

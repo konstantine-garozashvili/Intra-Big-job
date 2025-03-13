@@ -28,10 +28,10 @@ export const getQueryClient = () => {
  */
 export const clearQueryCache = () => {
   if (queryClientInstance) {
-    console.log('Vidage du cache React Query...');
+    // console.log('Vidage du cache React Query...');
     queryClientInstance.clear();
     return true;
   }
-  console.warn('Impossible de vider le cache: queryClient non défini');
+  // console.warn('Impossible de vider le cache: queryClient non défini');
   return false;
 }; 

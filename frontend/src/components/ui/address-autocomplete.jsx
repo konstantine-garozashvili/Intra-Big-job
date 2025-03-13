@@ -61,7 +61,7 @@ export const AddressAutocomplete = React.forwardRef(({
       setSuggestions(results);
       setShowSuggestions(results.length > 0);
     } catch (error) {
-      console.error("Erreur lors de la recherche d'adresses:", error);
+      // console.error("Erreur lors de la recherche d'adresses:", error);
     } finally {
       setIsLoading(false);
     }

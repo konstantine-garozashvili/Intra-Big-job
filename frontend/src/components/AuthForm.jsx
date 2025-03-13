@@ -79,14 +79,14 @@ export function AuthForm() {
         navigate('/profile')
       }
     } catch (error) {
-      console.error('=== ERREUR DE CONNEXION ===')
-      console.error('Type d\'erreur:', error.name)
-      console.error('Message d\'erreur:', error.message)
+      // console.error('=== ERREUR DE CONNEXION ===')
+      // console.error('Type d\'erreur:', error.name)
+      // console.error('Message d\'erreur:', error.message)
       
-      if (error.response) {
-        console.error('Statut HTTP:', error.response.status)
-        console.error('Données de réponse:', error.response.data)
-      }
+      // if (error.response) {
+      //  console.error('Statut HTTP:', error.response.status)
+      //  console.error('Données de réponse:', error.response.data)
+      // }
       
       // Gérer les erreurs de l'API
       if (error.response) {

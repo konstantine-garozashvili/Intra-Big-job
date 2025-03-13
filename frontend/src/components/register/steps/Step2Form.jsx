@@ -43,7 +43,6 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
 
   // Validation de l'étape 2
   const validateStep2 = () => {
-    console.log("Validation étape 2...");
     
     const newErrors = {};
     let valid = true;
