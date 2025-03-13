@@ -32,28 +32,25 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
         $this->getEntityManager()->persist($user);
         $this->getEntityManager()->flush();
     }
-
     public function findAutocompleteResults(string $searchTerm, ?array $allowedRoles = null): array
     {
+        // Create the query builder
         $qb = $this->createQueryBuilder('u')
             ->where('u.lastName LIKE :term OR u.firstName LIKE :term')
             ->setParameter('term', '%' . $searchTerm . '%')
             ->orderBy('u.lastName', 'ASC')
             ->setMaxResults(10);
-
-        // If restrictions are set, add conditions to filter users by their roles.
-        if ($allowedRoles !== null && count($allowedRoles) > 0) {
-            $orX = $qb->expr()->orX();
-            foreach ($allowedRoles as $key => $role) {
-                // Assuming that the roles field is a string (or serialized) that contains the role name.
-                $orX->add("u.roles LIKE :role$key");
-                $qb->setParameter("role$key", '%' . $role . '%');
-            }
-            $qb->andWhere($orX);
-        }
-
+    
+        // // If roles are defined, filter users based on allowed roles
+        // if ($allowedRoles !== null && count($allowedRoles) > 0) {
+        //     $qb->join('u.userRoles', 'ur')
+        //         ->andWhere('u.id = ur.user')
+        //         ->andWhere('ur.role IN (:allowedRoles)') // Match role from user_role
+        //         ->setParameter('allowedRoles', $allowedRoles);
+        // }
         return $qb->getQuery()->getResult();
     }
+    
 
     //    /**
     //     * @return User[] Returns an array of User objects

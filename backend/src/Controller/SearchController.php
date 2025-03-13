@@ -25,27 +25,32 @@ class SearchController extends AbstractController
         $allowedRoles = null;
         if (!$currentUser) {
             // Guest: limit to students and recruiters only.
-            $allowedRoles = ['ROLE_STUDENT', 'ROLE_RECRUITER'];
+            $allowedRoles = ["ROLE_STUDENT", "ROLE_RECRUITER", ];
         } else {
             $userRoles = $currentUser->getRoles();
             if (in_array('ROLE_STUDENT', $userRoles, true)) {
                 // Student: restrict access to admins and superadmins.
                 // (Allowed: students, teachers, recruiters, etc.)
-                $allowedRoles = ['ROLE_STUDENT', 'ROLE_TEACHER', 'ROLE_RECRUITER'];
+                $allowedRoles = ["ROLE_STUDENT", "ROLE_TEACHER", "ROLE_RECRUITER", ];
             }
             // For teachers and others, no restrictions (allowedRoles remains null).
         }
 
         // Use a custom repository method to search users with optional role restrictions.
-        $results = $userRepository->findAutocompleteResults($query, $allowedRoles);
+        $results = $userRepository->findAutocompleteResults($query, $allowedRoles ?? []);
 
         // Prepare JSON data (returning id, lastName and firstName)
         $data = [];
         foreach ($results as $user) {
+            $role = $user->getRoles()[0];
+            if ($allowedRoles !== null && !in_array($role, $allowedRoles, true)) {
+                continue;
+            }
             $data[] = [
                 'id'        => $user->getId(),
                 'lastName'  => $user->getLastName(),
                 'firstName' => $user->getFirstName(),
+                'role' => $role
             ];
         }
 
