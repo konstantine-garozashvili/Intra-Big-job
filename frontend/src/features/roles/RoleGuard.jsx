@@ -1,4 +1,6 @@
 import { useRoles } from './roleContext';
+import { useRolePermissions } from './useRolePermissions';
+import { Navigate } from 'react-router-dom';
 
 /**
  * Component that conditionally renders content based on user roles
@@ -29,6 +31,19 @@ const RoleGuard = ({
   } else {
     return hasAnyRole(roles) ? children : fallback;
   }
+};
+
+/**
+ * Component that redirects users to their role-specific dashboard
+ * Useful for redirecting from generic routes like "/" or "/dashboard"
+ * 
+ * @returns {React.ReactNode} A Navigate component to the appropriate dashboard
+ */
+export const RoleDashboardRedirect = () => {
+  const permissions = useRolePermissions();
+  const dashboardPath = permissions.getRoleDashboardPath();
+  
+  return <Navigate to={dashboardPath} replace />;
 };
 
 export default RoleGuard; 

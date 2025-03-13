@@ -34,7 +34,7 @@ const CVUpload = memo(({ userData, onUpdate }) => {
     isPending: isUploading
   } = useApiMutation('/api/documents/upload/cv', 'post', 'userCVDocument', {
     onSuccess: () => {
-      toast.success('CV mis à jour avec succès');
+      toast.success('CV uploaded successfully');
       setCvFile(null);
       refetchCV();
       if (onUpdate) onUpdate();

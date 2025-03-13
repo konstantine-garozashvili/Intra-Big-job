@@ -650,4 +650,63 @@ class UserController extends AbstractController
             ], 500);
         }
     }
+
+    /**
+     * Récupère tous les utilisateurs avec leurs relations
+     * Endpoint utilisé par le tableau de bord administrateur
+     */
+    #[Route('/users', name: 'api_get_all_users', methods: ['GET'])]
+    public function getAllUsers(): JsonResponse
+    {
+        try {
+            // Vérifier si l'utilisateur a les droits d'accès (ADMIN ou SUPERADMIN)
+            $currentUser = $this->security->getUser();
+            if (!$currentUser || (!$this->isGranted('ROLE_ADMIN') && !$this->isGranted('ROLE_SUPERADMIN'))) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Accès non autorisé'
+                ], 403);
+            }
+            
+            // Utiliser la méthode du repository qui charge déjà les relations
+            $allUsers = $this->userRepository->findAllWithRelations();
+            
+            $usersData = [];
+            foreach ($allUsers as $user) {
+                // Extraire les rôles depuis la relation userRoles
+                $roles = [];
+                foreach ($user->getUserRoles() as $userRole) {
+                    $roles[] = [
+                        'id' => $userRole->getRole()->getId(),
+                        'name' => $userRole->getRole()->getName(),
+                    ];
+                }
+                
+                // Construire la structure de données attendue par le frontend
+                $userData = [
+                    'id' => $user->getId(),
+                    'firstName' => $user->getFirstName(),
+                    'lastName' => $user->getLastName(),
+                    'email' => $user->getEmail(),
+                    'phoneNumber' => $user->getPhoneNumber(),
+                    'birthDate' => $user->getBirthDate() ? $user->getBirthDate()->format('Y-m-d') : null,
+                    'createdAt' => $user->getCreatedAt() ? $user->getCreatedAt()->format('Y-m-d H:i:s') : null,
+                    'updatedAt' => $user->getUpdatedAt() ? $user->getUpdatedAt()->format('Y-m-d H:i:s') : null,
+                    'roles' => $roles
+                ];
+                
+                $usersData[] = $userData;
+            }
+            
+            return $this->json([
+                'success' => true,
+                'data' => $usersData
+            ]);
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Une erreur est survenue lors de la récupération des utilisateurs: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }
