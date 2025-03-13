@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate, Outlet } from 'react-router-dom'
 import { lazy, Suspense, useState, useEffect } from 'react'
 import MainLayout from './components/MainLayout'
-import { RoleProvider } from './features/roles'
+import { RoleProvider, RoleDashboardRedirect } from './features/roles'
 
 // Import différé des pages pour améliorer les performances
 const Login = lazy(() => import('./pages/Login'))
@@ -140,7 +140,8 @@ const App = () => {
                   
                   <Route element={<ProtectedRoute />}>
                     {/* Regular protected routes */}
-                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/dashboard" element={<RoleDashboardRedirect />} />
+                    <Route path="/role/dashboard" element={<RoleDashboardRedirect />} />
                     
                     {/* Profile view route */}
                     <Route path="/profile" element={<ProfileView />} />
@@ -169,7 +170,7 @@ const App = () => {
                     
                     <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
                     <Route path="/hr/dashboard" element={<HRDashboard />} />
-                    <Route path="/super-admin/dashboard" element={<SuperAdminDashboard />} />
+                    <Route path="/superadmin/dashboard" element={<SuperAdminDashboard />} />
                     <Route path="/guest/dashboard" element={<GuestDashboard />} />
                     <Route path="/recruiter/dashboard" element={<RecruiterDashboard />} />
                   </Route>
