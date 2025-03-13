@@ -1,9 +1,114 @@
-import React, { memo, useState, useEffect } from 'react';
+import React, { memo, useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { authService } from '../lib/services/authService';
-import { Link } from 'react-router-dom';
-import {User, UserPlus, Shield , Users, GraduationCap,Calendar,MessageCircle,BookOpen, Bell, PiggyBank,Camera,Handshake,School,LayoutDashboard,Briefcase, Share2,Clipboard} from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import {
+  User, 
+  UserPlus, 
+  Shield, 
+  Users, 
+  GraduationCap,
+  Calendar,
+  MessageCircle,
+  BookOpen, 
+  Bell, 
+  PiggyBank,
+  Camera,
+  Handshake,
+  School,
+  LayoutDashboard,
+  Briefcase, 
+  Share2,
+  Clipboard,
+  ChevronDown,
+  ChevronRight,
+  LogOut,
+  X,
+  Menu
+} from 'lucide-react';
 
+// Style personnalisé pour les animations et transitions
+const customStyles = `
+  .menu-item {
+    position: relative;
+    transition: all 0.2s ease;
+    border-radius: 0.375rem;
+    margin: 0.25rem 0.5rem;
+  }
+  
+  .menu-item:hover {
+    background-color: rgba(82, 142, 178, 0.2);
+    transform: translateX(4px);
+  }
+  
+  .menu-item.active {
+    background-color: rgba(82, 142, 178, 0.3);
+    border-left: 3px solid #528eb2;
+  }
+  
+  .submenu-item {
+    transition: all 0.2s ease;
+    border-radius: 0.375rem;
+    margin: 0.25rem 0.5rem;
+  }
+  
+  .submenu-item:hover {
+    background-color: rgba(82, 142, 178, 0.3);
+    transform: translateX(4px);
+  }
+  
+  .chevron-icon {
+    transition: transform 0.3s ease;
+  }
+  
+  .chevron-icon.open {
+    transform: rotate(90deg);
+  }
+  
+  .menu-burger-button {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+    margin-right: 0.75rem;
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+  }
+  
+  .menu-burger-button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    transform: scale(1.05);
+  }
+  
+  .menu-burger-button:active {
+    transform: scale(0.95);
+  }
+  
+  .sidebar-menu {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 20vw;
+    height: 100vh;
+    background-color: #00284f;
+    color: white;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    z-index: 50;
+    overflow: hidden;
+    border-right: 1px solid rgba(82, 142, 178, 0.2);
+  }
+  
+  @media (max-width: 768px) {
+    .sidebar-menu {
+      width: 80vw;
+    }
+  }
+`;
 
 const MenuBurger = memo(() => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -11,6 +116,34 @@ const MenuBurger = memo(() => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [userRole, setUserRole] = useState(null);
   const [openSubMenus, setOpenSubMenus] = useState({});
+  const menuRef = useRef(null);
+  const buttonRef = useRef(null);
+  const navigate = useNavigate();
+
+  // Gestionnaire de clic à l'extérieur du menu
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        menuOpen && 
+        menuRef.current && 
+        !menuRef.current.contains(event.target) &&
+        buttonRef.current && 
+        !buttonRef.current.contains(event.target)
+      ) {
+        setMenuOpen(false);
+      }
+    };
+
+    // Ajouter l'écouteur d'événement lorsque le menu est ouvert
+    if (menuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    // Nettoyer l'écouteur d'événement
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [menuOpen]);
 
   useEffect(() => {
     const checkAuthentication = async () => {
@@ -63,7 +196,8 @@ const MenuBurger = memo(() => {
   const toggleSubMenu = (menu) => {
     setOpenSubMenus((prev) => {
       return {
-        [menu]: !prev[menu] // Ferme tous les autres et bascule uniquement celui cliqué
+        ...prev,
+        [menu]: !prev[menu] // Bascule uniquement le menu cliqué
       };
     });
   };
@@ -73,7 +207,7 @@ const MenuBurger = memo(() => {
     {
       key: 'eleves',
       label: 'Élèves',
-      icon: <GraduationCap className="mr-2" />,
+      icon: <GraduationCap className="w-5 h-5 mr-2 text-[#528eb2]" />,
       roles: ['ROLE_SUPERADMIN', 'ROLE_ADMIN', 'ROLE_TEACHER', 'ROLE_HR', 'ROLE_RECRUITER'],
       links: [
         { name: 'Gestion des élèves', to: '/eleves', roles: ['ROLE_ADMIN', 'ROLE_TEACHER','ROLE_SUPERADMIN'] },
@@ -81,7 +215,6 @@ const MenuBurger = memo(() => {
         { name: 'Dossiers', to: '/eleves/dossiers', roles: ['ROLE_ADMIN', 'ROLE_HR','ROLE_TEACHER','ROLE_SUPERADMIN'] },
         { name: 'Certificats et Diplômes', to: '/eleves/certificats', roles: ['ROLE_ADMIN', 'ROLE_TEACHER','ROLE_STUDENT','ROLE_SUPERADMIN'] },
         { name: 'Historique des Absences', to: '/eleves/absences', roles: ['ROLE_ADMIN', 'ROLE_TEACHER','ROLE_HR'] },
-
       ],
     },
     
@@ -105,9 +238,8 @@ const MenuBurger = memo(() => {
       links: [
         { name: 'Liste des invités', to: '/invites', roles: ['ROLE_ADMIN','ROLE_SUPERADMIN'] },
         { name: 'Gestion des invités', to: '/invites/' , roles: ['ROLE_ADMIN', 'ROLE_SUPERADMIN']},
-        { name: 'Test d’admission', to: '/invites/test_admission' , roles: ['ROLE_ADMIN', 'ROLE_HR','ROLE_SUPERADMIN']},
+        { name: "Test d'admission", to: '/invites/test_admission' , roles: ['ROLE_ADMIN', 'ROLE_HR','ROLE_SUPERADMIN']},
         { name: 'Statistiques des Invités', to: '/admin/invite/statistiques', roles: ['ROLE_ADMIN', 'ROLE_SUPERADMIN'] },
-        
       ],
     },
     {
@@ -156,7 +288,7 @@ const MenuBurger = memo(() => {
     },
     {
       key: 'aide',
-      label: 'Besoin d’aide ?',
+      label: "Besoin d'aide ?",
       icon: <Calendar className="mr-2" />,
       links: [ // Pas de `roles`, donc accessible à tout le monde
         { name: 'FAQ', to: '/aide/faq' },
@@ -172,7 +304,7 @@ const MenuBurger = memo(() => {
       links: [
         { name: 'Envoyer une candidature', to: '/nous-rejoindre/candidature' },
         { name: 'Processus de recrutement', to: '/nous-rejoindre/recrutement' },
-        { name: 'Offres d\'emploi', to: '/nous-rejoindre/offres' },
+        { name: "Offres d'emploi", to: '/nous-rejoindre/offres' },
         { name: 'Devenir partenaire', to: '/nous-rejoindre/partenaire' },
         { name: 'Devenir sponsor', to: '/nous-rejoindre/sponsor' },
       ],
@@ -180,156 +312,224 @@ const MenuBurger = memo(() => {
     
   ];
 
+  // Fonction de déconnexion
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+      
+      // Déclencher un événement personnalisé pour informer l'application de la déconnexion
+      window.dispatchEvent(new Event("logout-success"));
+      
+      setMenuOpen(false);
+      navigate("/login");
+    } catch (error) {
+      console.error("Erreur lors de la déconnexion:", error);
+    }
+  };
+
   return (
     <div className="relative">
-      <button className="menu-burger-button text-gray-200 hover:text-white focus:outline-none" onClick={toggleMenu}>
-        <svg className="w-10 h-auto mr-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
+      {/* Injection des styles personnalisés */}
+      <style>{customStyles}</style>
+      
+      <button 
+        ref={buttonRef}
+        className="menu-burger-button text-gray-200 hover:text-white focus:outline-none" 
+        onClick={toggleMenu}
+        aria-label="Menu principal"
+      >
+        <Menu className="w-6 h-6" />
       </button>
 
       <AnimatePresence>
         {menuOpen && (
           <motion.div
-            initial={{ x: '-100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '-100%' }}
-            transition={{ duration: 0.3 }}
-            className="fixed top-0 left-0 w-[20vw] h-full bg-[#00284f] text-white shadow-lg z-50"
+            ref={menuRef}
+            initial={{ x: '-100%', opacity: 1 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: '-100%', opacity: 1 }}
+            transition={{ 
+              duration: 0.3, 
+              type: "spring", 
+              stiffness: 300, 
+              damping: 30,
+              opacity: { duration: 0 } // Désactive l'animation de l'opacité
+            }}
+            className="sidebar-menu"
           >
             <div className="flex flex-col h-full">
-              <div className="flex items-center p-4 border-b border-blue-700">
-                <div className="w-12 h-12 bg-white rounded-full mr-3" />
-                <div>
-                  <p className="font-semibold">{userData ? `${userData.firstName} ${userData.lastName}` : ''}</p>
-                  <p className="text-sm text-blue-200">{userRole}</p>
+              <div className="flex items-center p-4 border-b border-blue-700 bg-gradient-to-r from-[#00284f] to-[#003a6b]">
+                <div className="w-12 h-12 bg-white/20 rounded-full mr-3 flex items-center justify-center">
+                  <User className="w-6 h-6 text-white" />
                 </div>
-                <button className="ml-auto text-white" onClick={toggleMenu}>
-                  ✕
+                <div>
+                  <p className="font-semibold">{userData ? `${userData.firstName} ${userData.lastName}` : 'Utilisateur'}</p>
+                  <p className="text-sm text-blue-200">{userRole || 'Non connecté'}</p>
+                </div>
+                <button 
+                  className="ml-auto text-white p-2 rounded-full hover:bg-blue-800/50 transition-colors" 
+                  onClick={toggleMenu}
+                  aria-label="Fermer le menu"
+                >
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <div className="scrollable-div">
+              <div className="scrollable-div overflow-y-auto flex-grow">
                 <ul className="py-2">
-                {(userRole === 'ROLE_STUDENT' || userRole === 'ROLE_TEACHER'|| userRole === 'ROLE_ADMIN'|| userRole === 'ROLE_SUPERADMIN') &&(
-                    <li className="flex items-center px-4 py-2 hover:bg-blue-800">
-                      <LayoutDashboard className="w-5 h-5 mr-2" />
-                      <Link to="/dashboard">Tableau de bord</Link>
+                  {(userRole === 'ROLE_STUDENT' || userRole === 'ROLE_TEACHER'|| userRole === 'ROLE_ADMIN'|| userRole === 'ROLE_SUPERADMIN') &&(
+                    <li className="menu-item">
+                      <Link to="/dashboard" className="flex items-center px-4 py-2.5 w-full">
+                        <LayoutDashboard className="w-5 h-5 mr-2 text-[#528eb2]" />
+                        <span>Tableau de bord</span>
+                      </Link>
                     </li>
                   )}
+                  
+
+                  
                   {(userRole === 'ROLE_STUDENT' || userRole === 'ROLE_TEACHER'|| userRole === 'ROLE_ADMIN'|| userRole === 'ROLE_SUPERADMIN') &&(
-                    <li className="flex items-center px-4 py-2 hover:bg-blue-800">
-                      <Bell className="w-5 h-5 mr-2" />
-                      <Link to="/notifications">Notifications</Link>
-                    </li>
-                  )}
-                  {(userRole === 'ROLE_STUDENT' || userRole === 'ROLE_TEACHER'|| userRole === 'ROLE_ADMIN'|| userRole === 'ROLE_SUPERADMIN') &&(
-                    <li className="flex items-center px-4 py-2 hover:bg-blue-800">
-                      <MessageCircle className="w-5 h-5 mr-2" />
-                      <Link to="/messagerie">Ma Messagerie</Link>
+                    <li className="menu-item">
+                      <Link to="/messagerie" className="flex items-center px-4 py-2.5 w-full">
+                        <MessageCircle className="w-5 h-5 mr-2 text-[#528eb2]" />
+                        <span>Ma Messagerie</span>
+                      </Link>
                     </li>
                   )}
 
-                  
                   {(userRole === 'ROLE_STUDENT' || userRole === 'ROLE_TEACHER') && (
                     <>
-                      <li className="flex items-center px-4 py-2 hover:bg-blue-800">
-                        <Clipboard className="w-5 h-5 mr-2" />
-                        <Link to="/cours">Mes Cours</Link>
+                      <li className="menu-item">
+                        <Link to="/cours" className="flex items-center px-4 py-2.5 w-full">
+                          <Clipboard className="w-5 h-5 mr-2 text-[#528eb2]" />
+                          <span>Mes Cours</span>
+                        </Link>
                       </li>
-                      <li className="flex items-center px-4 py-2 hover:bg-blue-800">
-                        <Briefcase className="w-5 h-5 mr-2" />
-                        <Link to="/projet">Mes Projets</Link>
+                      <li className="menu-item">
+                        <Link to="/projet" className="flex items-center px-4 py-2.5 w-full">
+                          <Briefcase className="w-5 h-5 mr-2 text-[#528eb2]" />
+                          <span>Mes Projets</span>
+                        </Link>
                       </li>
                     </>
                   )}
+                  
                   {userRole === 'ROLE_SUPERADMIN' && (
-                    <li className="flex items-center px-4 py-2 hover:bg-blue-800">
-                      <School className="w-5 h-5 mr-2" />
-                      <Link to="/centres_formations">Centres de formations</Link>
+                    <li className="menu-item">
+                      <Link to="/centres_formations" className="flex items-center px-4 py-2.5 w-full">
+                        <School className="w-5 h-5 mr-2 text-[#528eb2]" />
+                        <span>Centres de formations</span>
+                      </Link>
                     </li>
                   )}
                   
                   {(userRole === 'ROLE_HR' || userRole === 'ROLE_RECRUITER') && (
-                    <li className="flex items-center px-4 py-2 hover:bg-blue-800">
-                      <Share2 className="w-5 h-5 mr-2" />
-                      <Link to="/candidatures">Candidatures</Link>
+                    <li className="menu-item">
+                      <Link to="/candidatures" className="flex items-center px-4 py-2.5 w-full">
+                        <Share2 className="w-5 h-5 mr-2 text-[#528eb2]" />
+                        <span>Candidatures</span>
+                      </Link>
                     </li>
                   )}
                   
-                  
-                  <li className="flex items-center px-4 py-2 hover:bg-blue-800">
-                  <BookOpen className="w-5 h-5 mr-2" />
-                    <Link to="/formations">Formations</Link>
+                  <li className="menu-item">
+                    <Link to="/formations" className="flex items-center px-4 py-2.5 w-full">
+                      <BookOpen className="w-5 h-5 mr-2 text-[#528eb2]" />
+                      <span>Formations</span>
+                    </Link>
                   </li>
-                  
                   
                   {menuItems.map(({ key, icon, label, roles, links }) =>
-                  // Vérifie si le rôle de l'utilisateur est inclus ou si les rôles sont indéfinis (permet à tout le monde d'accéder à cet élément)
-                  (!roles || roles.includes(userRole)) ? ( // Vérifie si aucun rôle n'est défini ou si le rôle de l'utilisateur est inclus
-                    <React.Fragment key={key}>
-                      <li
-                        className="flex items-center px-4 py-2 hover:bg-blue-800 cursor-pointer"
-                        onClick={() => toggleSubMenu(key)}
-                      >
-                        {icon}
-                        {label} <span className="ml-auto">{openSubMenus[key] ? '▼' : '►'}</span>
-                      </li>
+                    (!roles || roles.includes(userRole)) ? (
+                      <React.Fragment key={key}>
+                        <li
+                          className={`menu-item ${openSubMenus[key] ? 'active' : ''}`}
+                          onClick={() => toggleSubMenu(key)}
+                        >
+                          <div className="flex items-center px-4 py-2.5 w-full cursor-pointer">
+                            {icon}
+                            <span>{label}</span>
+                            <div className="ml-auto">
+                              {openSubMenus[key] ? (
+                                <ChevronDown className="w-4 h-4 text-[#528eb2]" />
+                              ) : (
+                                <ChevronRight className={`w-4 h-4 text-[#528eb2] chevron-icon ${openSubMenus[key] ? 'open' : ''}`} />
+                              )}
+                            </div>
+                          </div>
+                        </li>
 
-                      <AnimatePresence>
-                        {openSubMenus[key] && (
-                          <motion.ul
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            className="pl-6 bg-[blue-800]"
-                          >
-                            {links
-                              .filter(link => !link.roles || link.roles.includes(userRole)) // Filtrage des liens avec ou sans rôles
-                              .map((link, index) => (
-                                <li key={index} className="px-4 py-2 hover:bg-[#528eb2]">
-                                  <Link to={link.to}>{link.name}</Link>
-                                </li>
-                              ))}
-                          </motion.ul>
-                        )}
-                      </AnimatePresence>
-                    </React.Fragment>
-                  ) : null
-                )}
-                {(userRole === 'ROLE_STUDENT') && (
-                  <li className="flex items-center px-4 py-2 hover:bg-blue-800">
-                    <Clipboard className="w-5 h-5 mr-2" />
-                    <Link to="/justification-absence">Justifier une absence</Link>
-                  </li>
-                )}
-
-                  {(userRole === 'ROLE_STUDENT' || userRole === 'ROLE_TEACHER'|| userRole === 'ROLE_ADMIN'|| userRole === 'ROLE_SUPERADMIN') &&(
-                    <li className="flex items-center px-4 py-2 hover:bg-blue-800">
-                      <PiggyBank className="w-5 h-5 mr-2" />
-                      <Link to="/cagnottes">Cagnottes</Link>
-                    </li>
+                        <AnimatePresence>
+                          {openSubMenus[key] && (
+                            <motion.ul
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.2 }}
+                              className="pl-4 overflow-hidden"
+                            >
+                              {links
+                                .filter(link => !link.roles || link.roles.includes(userRole))
+                                .map((link, index) => (
+                                  <li key={index} className="submenu-item">
+                                    <Link to={link.to} className="flex items-center px-4 py-2 w-full text-sm text-gray-300 hover:text-white">
+                                      <div className="w-1 h-1 bg-[#528eb2] rounded-full mr-2"></div>
+                                      {link.name}
+                                    </Link>
+                                  </li>
+                                ))}
+                            </motion.ul>
+                          )}
+                        </AnimatePresence>
+                      </React.Fragment>
+                    ) : null
                   )}
-                  {(userRole === 'ROLE_STUDENT' || userRole === 'ROLE_TEACHER'|| userRole === 'ROLE_ADMIN'|| userRole === 'ROLE_SUPERADMIN') &&(
-                    <li className="flex items-center px-4 py-2 hover:bg-blue-800">
-                      <Handshake className="w-5 h-5 mr-2" />
-                      <Link to="/sponsors">Sponsors</Link>
-                    </li>
-                  )}
-                  {(userRole === 'ROLE_STUDENT' || userRole === 'ROLE_TEACHER'|| userRole === 'ROLE_ADMIN'|| userRole === 'ROLE_SUPERADMIN' || userRole === 'ROLE_RECRUITER') &&(
-                    <li className="flex items-center px-4 py-2 hover:bg-blue-800">
-                      <Camera className="w-5 h-5 mr-2" />
-                      <Link to="/Trombinoscope">Trombinoscope</Link>
-                    </li>
-                  )}
-
                   
+                  {(userRole === 'ROLE_STUDENT') && (
+                    <li className="menu-item">
+                      <Link to="/justification-absence" className="flex items-center px-4 py-2.5 w-full">
+                        <Clipboard className="w-5 h-5 mr-2 text-[#528eb2]" />
+                        <span>Justifier une absence</span>
+                      </Link>
+                    </li>
+                  )}
+
+                  {(userRole === 'ROLE_STUDENT' || userRole === 'ROLE_TEACHER'|| userRole === 'ROLE_ADMIN'|| userRole === 'ROLE_SUPERADMIN') &&(
+                    <li className="menu-item">
+                      <Link to="/cagnottes" className="flex items-center px-4 py-2.5 w-full">
+                        <PiggyBank className="w-5 h-5 mr-2 text-[#528eb2]" />
+                        <span>Cagnottes</span>
+                      </Link>
+                    </li>
+                  )}
+                  
+                  {(userRole === 'ROLE_STUDENT' || userRole === 'ROLE_TEACHER'|| userRole === 'ROLE_ADMIN'|| userRole === 'ROLE_SUPERADMIN') &&(
+                    <li className="menu-item">
+                      <Link to="/sponsors" className="flex items-center px-4 py-2.5 w-full">
+                        <Handshake className="w-5 h-5 mr-2 text-[#528eb2]" />
+                        <span>Sponsors</span>
+                      </Link>
+                    </li>
+                  )}
+                  
+                  {(userRole === 'ROLE_STUDENT' || userRole === 'ROLE_TEACHER'|| userRole === 'ROLE_ADMIN'|| userRole === 'ROLE_SUPERADMIN' || userRole === 'ROLE_RECRUITER') &&(
+                    <li className="menu-item">
+                      <Link to="/Trombinoscope" className="flex items-center px-4 py-2.5 w-full">
+                        <Camera className="w-5 h-5 mr-2 text-[#528eb2]" />
+                        <span>Trombinoscope</span>
+                      </Link>
+                    </li>
+                  )}
                 </ul>
               </div>
 
-              <div className="p-4 border-t border-blue-700">
-                <button className="flex items-center w-full text-left hover:bg-blue-800 px-4 py-2 mt-2">
-                  Déconnexion
+              <div className="p-4 border-t border-blue-700 mt-auto">
+                <button 
+                  className="menu-item flex items-center w-full px-4 py-2.5 text-left text-red-300 hover:text-red-200"
+                  onClick={handleLogout}
+                >
+                  <LogOut className="w-5 h-5 mr-2" />
+                  <span>Déconnexion</span>
                 </button>
               </div>
             </div>

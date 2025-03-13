@@ -1,7 +1,7 @@
 import React, { memo, useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { authService } from "../lib/services/authService";
-import profilService from "../lib/services/profilService";
+import { profileService } from "../pages/Global/Profile/services/profileService";
 import { Button } from "./ui/button";
 import {
   UserRound,
@@ -10,6 +10,7 @@ import {
   Settings,
   User,
   Bell,
+  Menu,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -30,8 +31,8 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { MenuBurger } from "./MenuBurger";
 
-// Style personnalisé pour le menu dropdown
-const customDropdownStyles = `
+// Style personnalisé pour le menu dropdown et le bouton burger
+const customStyles = `
   .navbar-dropdown-item {
     display: flex !important;
     align-items: center !important;
@@ -53,10 +54,37 @@ const customDropdownStyles = `
     background-color: rgba(225, 29, 72, 0.1) !important;
     color: #be123c !important;
   }
+  
+  .menu-burger-btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+    margin-right: 0.75rem;
+  }
+  
+  .menu-burger-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    transform: scale(1.05);
+  }
+  
+  .menu-burger-btn:active {
+    transform: scale(0.95);
+  }
+  
+  @media (max-width: 768px) {
+    .menu-burger-btn {
+      margin-right: 0.5rem;
+    }
+  }
 `;
 
 // Utilisation de React.memo pour éviter les rendus inutiles de la barre de navigation
-const Navbar = memo(() => {
+const Navbar = memo(({ user }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -74,23 +102,40 @@ const Navbar = memo(() => {
       // Si l'utilisateur est connecté, charger ses données
       if (status) {
         try {
-          const profilData = await profilService.getAllProfilData();
-          // Vérifions la structure des données et adaptons l'accès en fonction
-          if (profilData && profilData.user) {
-            setUserData(profilData.user);
-          } else if (profilData && profilData.data && profilData.data.user) {
-            // Alternative si la structure est différente
-            setUserData(profilData.data.user);
+          // Si un utilisateur est passé en props, l'utiliser
+          if (user) {
+            console.log('Using user from props:', user);
+            setUserData(user);
           } else {
-            // Fallback: essayons de récupérer directement les données utilisateur
-            const userData = await profilService.getUserData();
+            // Sinon, essayer de récupérer les données depuis l'API
+            const userData = await authService.getCurrentUser();
+            console.log('User data from API:', userData);
             setUserData(userData);
           }
-        } catch (profileError) {
+        } catch (userError) {
           console.error(
-            "Erreur lors de la récupération des données du profil:",
-            profileError
+            "Erreur lors de la récupération des données utilisateur:",
+            userError
           );
+          
+          // Fallback: essayer de récupérer les données du profil
+          try {
+            const profileData = await profileService.getAllProfileData();
+            console.log('Profile data from API:', profileData);
+            
+            if (profileData?.user) {
+              setUserData(profileData.user);
+            } else if (profileData?.data?.user) {
+              setUserData(profileData.data.user);
+            } else {
+              setUserData(profileData);
+            }
+          } catch (profileError) {
+            console.error(
+              "Erreur lors de la récupération des données du profil:",
+              profileError
+            );
+          }
         }
       } else {
         setUserData(null);
@@ -108,7 +153,7 @@ const Navbar = memo(() => {
   // Vérifier l'état d'authentification au chargement et lors des changements de route
   useEffect(() => {
     checkAuthStatus();
-  }, [location.pathname]);
+  }, [location.pathname, user]);
 
   // Ajouter un écouteur d'événement pour les changements d'authentification
   useEffect(() => {
@@ -172,13 +217,15 @@ const Navbar = memo(() => {
   return (
     <>
       {/* Injection des styles personnalisés */}
-      <style>{customDropdownStyles}</style>
+      <style>{customStyles}</style>
 
       <nav className="bg-[#02284f] shadow-lg">
         <div className="container px-4 mx-auto">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
-              <MenuBurger />
+              <div className="menu-burger-wrapper">
+                <MenuBurger />
+              </div>
               <div className="flex-shrink-0">
                 <Link
                   to={isAuthenticated ? "/dashboard" : "/login"}
@@ -191,10 +238,11 @@ const Navbar = memo(() => {
 
             <div className="hidden md:block">
               <div className="flex items-center ml-10 space-x-1">
+                
                 {/* Élements affichés uniquement pour les utilisateurs connectés */}
                 {isAuthenticated && (
-                  <Link
-                    to="/dashboard"
+                  <Link 
+                    to="/dashboard" 
                     className="px-3 py-2 rounded-md text-gray-200 hover:text-white hover:bg-[#02284f]/80 transition-colors flex items-center"
                   >
                     <LayoutDashboard className="h-4 w-4 mr-2" />
@@ -209,35 +257,27 @@ const Navbar = memo(() => {
                 {isAuthenticated ? (
                   <div className="flex items-center">
                     {/* Notification icon (placeholder) */}
-                    <Button
-                      variant="ghost"
+                    <Button 
+                      variant="ghost" 
                       className="rounded-full w-10 h-10 p-0 bg-transparent text-gray-200 hover:bg-[#02284f]/80 hover:text-white mr-2"
                     >
                       <Bell className="h-5 w-5" />
                     </Button>
-
+                    
                     {/* Dropdown menu */}
                     <DropdownMenu onOpenChange={setDropdownOpen}>
                       <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={`rounded-full w-10 h-10 p-0 ${
-                            dropdownOpen
-                              ? "bg-[#528eb2]/20 border-[#528eb2]"
-                              : "bg-transparent border-gray-500"
-                          } hover:bg-[#02284f]/80 hover:text-white hover:border-gray-400 transition-all duration-300`}
+                        <Button 
+                          variant="outline" 
+                          className={`rounded-full w-10 h-10 p-0 ${dropdownOpen ? 'bg-[#528eb2]/20 border-[#528eb2]' : 'bg-transparent border-gray-500'} hover:bg-[#02284f]/80 hover:text-white hover:border-gray-400 transition-all duration-300`}
                         >
-                          <UserRound
-                            className={`h-5 w-5 ${
-                              dropdownOpen ? "text-white" : "text-gray-200"
-                            }`}
-                          />
+                          <UserRound className={`h-5 w-5 ${dropdownOpen ? 'text-white' : 'text-gray-200'}`} />
                         </Button>
                       </DropdownMenuTrigger>
                       <AnimatePresence>
                         {dropdownOpen && (
-                          <DropdownMenuContent
-                            align="end"
+                          <DropdownMenuContent 
+                            align="end" 
                             className="w-64 mt-2 p-0 overflow-hidden border border-gray-100 shadow-xl rounded-xl"
                             asChild
                             forceMount
@@ -256,38 +296,41 @@ const Navbar = memo(() => {
                                   </div>
                                   <div className="ml-3">
                                     <h3 className="font-medium text-sm">
-                                      {userData
+                                      {userData?.firstName && userData?.lastName 
                                         ? `${userData.firstName} ${userData.lastName}`
-                                        : "Utilisateur"}
+                                        : userData?.user?.firstName && userData?.user?.lastName
+                                          ? `${userData.user.firstName} ${userData.user.lastName}`
+                                          : 'Utilisateur'}
                                     </h3>
                                     <p className="text-xs text-gray-300">
-                                      {userData
-                                        ? userData.email
-                                        : "utilisateur@example.com"}
+                                      {userData?.email || userData?.user?.email || 'utilisateur@example.com'}
                                     </p>
                                   </div>
                                 </div>
                               </div>
-
+                              
                               {/* Corps du dropdown avec les options */}
                               <div className="py-1 bg-white">
-                                <DropdownMenuItem
-                                  className="flex items-center p-3"
-                                  onClick={() => navigate("/profil")}
+                                <DropdownMenuItem 
+                                  className="navbar-dropdown-item"
+                                  onClick={() => navigate('/profile')}
                                 >
                                   <User className="mr-2 h-4 w-4 text-[#528eb2]" />
                                   <span>Mon profil</span>
                                 </DropdownMenuItem>
-
-                                <DropdownMenuItem className="flex items-center p-3">
+                                
+                                <DropdownMenuItem 
+                                  className="navbar-dropdown-item"
+                                  onClick={() => navigate('/settings/profile')}
+                                >
                                   <Settings className="mr-2 h-4 w-4 text-[#528eb2]" />
                                   <span>Paramètres</span>
                                 </DropdownMenuItem>
-
+                                
                                 <DropdownMenuSeparator className="my-1 bg-gray-100" />
-
-                                <DropdownMenuItem
-                                  className="flex items-center p-3 text-red-600"
+                                
+                                <DropdownMenuItem 
+                                  className="navbar-dropdown-item danger"
                                   onClick={() => setLogoutDialogOpen(true)}
                                 >
                                   <LogOut className="mr-2 h-4 w-4" />
@@ -302,16 +345,10 @@ const Navbar = memo(() => {
                   </div>
                 ) : (
                   <>
-                    <Link
-                      to="/login"
-                      className="px-4 py-2 text-gray-200 transition-colors rounded-md hover:text-white"
-                    >
+                    <Link to="/login" className="px-4 py-2 text-gray-200 transition-colors rounded-md hover:text-white">
                       Connexion
                     </Link>
-                    <Link
-                      to="/register"
-                      className="ml-2 px-4 py-2 bg-[#528eb2] rounded-md text-white font-medium hover:bg-[#528eb2]/90 transition-all transform hover:scale-105"
-                    >
+                    <Link to="/register" className="ml-2 px-4 py-2 bg-[#528eb2] rounded-md text-white font-medium hover:bg-[#528eb2]/90 transition-all transform hover:scale-105">
                       Inscription
                     </Link>
                   </>
@@ -320,20 +357,11 @@ const Navbar = memo(() => {
             </div>
 
             <div className="md:hidden">
-              <button className="text-gray-200 hover:text-white focus:outline-none">
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M4 6h16M4 12h16M4 18h16"
-                  />
-                </svg>
+              <button 
+                className="menu-burger-btn text-gray-200 hover:text-white focus:outline-none"
+                aria-label="Menu mobile"
+              >
+                <Menu className="w-6 h-6" />
               </button>
             </div>
           </div>
@@ -341,19 +369,15 @@ const Navbar = memo(() => {
 
         {/* Dialogue de confirmation de déconnexion */}
         {logoutDialogOpen && (
-          <Dialog
-            open={logoutDialogOpen}
-            onOpenChange={(open) => !isLoggingOut && setLogoutDialogOpen(open)}
-          >
+          <Dialog open={logoutDialogOpen} onOpenChange={(open) => !isLoggingOut && setLogoutDialogOpen(open)}>
             <DialogContent className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-hidden rounded-2xl border-0 shadow-xl">
-              <div className="overflow-y-auto max-h-[70vh] fade-in-up">
+              <div
+                className="overflow-y-auto max-h-[70vh] fade-in-up"
+              >
                 <DialogHeader>
-                  <DialogTitle className="text-xl font-semibold">
-                    Confirmation de déconnexion
-                  </DialogTitle>
+                  <DialogTitle className="text-xl font-semibold">Confirmation de déconnexion</DialogTitle>
                   <DialogDescription className="text-base mt-2">
-                    Êtes-vous sûr de vouloir vous déconnecter de votre compte ?
-                    Toutes vos sessions actives seront fermées.
+                    Êtes-vous sûr de vouloir vous déconnecter de votre compte ? Toutes vos sessions actives seront fermées.
                   </DialogDescription>
                 </DialogHeader>
               </div>
@@ -370,9 +394,7 @@ const Navbar = memo(() => {
                   variant="destructive"
                   onClick={handleLogout}
                   disabled={isLoggingOut}
-                  className={`rounded-full bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 transition-all duration-200 ${
-                    isLoggingOut ? "opacity-80" : ""
-                  }`}
+                  className={`rounded-full bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 transition-all duration-200 ${isLoggingOut ? 'opacity-80' : ''}`}
                 >
                   {isLoggingOut ? "Déconnexion..." : "Se déconnecter"}
                 </Button>

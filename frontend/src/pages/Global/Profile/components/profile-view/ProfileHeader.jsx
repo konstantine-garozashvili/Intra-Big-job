@@ -123,21 +123,20 @@ const ProfileHeader = ({ userData, isPublicProfile = false, profilePictureData }
 
   return (
     <motion.div 
-      className="w-full bg-background/50 backdrop-blur-sm rounded-xl shadow-md overflow-hidden border border-border/5"
+      className="w-full bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl shadow-md overflow-hidden border border-gray-100 dark:border-gray-700"
       variants={containerVariants}
       initial="hidden"
       animate="visible"
     >
-      <div className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/5 pointer-events-none" />
-        <div className="p-6 sm:p-8 relative">
-          <div className="flex flex-col sm:flex-row gap-6 items-start">
-            <motion.div 
-              variants={itemVariants}
-              className="relative group"
-            >
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/80 to-indigo-600/80 rounded-full opacity-75 group-hover:opacity-100 blur transition duration-300" />
-              <Avatar className="relative h-24 w-24 sm:h-32 sm:w-32 ring-2 ring-background">
+      <div className="relative p-4 sm:p-6">
+        {/* Effet de halo bleu subtil */}
+        <div className="absolute left-0 top-0 w-1/3 h-full bg-blue-500/10 blur-[40px] pointer-events-none" />
+        
+        <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-center sm:items-start relative">
+          {/* Avatar */}
+          <motion.div variants={itemVariants} className="relative z-10">
+            <div className="rounded-full p-0.5 bg-gradient-to-br from-blue-400/30 to-indigo-600/30">
+              <Avatar className="h-20 w-20 sm:h-24 sm:w-24 ring-2 ring-white/10">
                 {!imageError && profilePictureUrl && (
                   <AvatarImage 
                     src={profilePictureUrl} 
@@ -147,110 +146,112 @@ const ProfileHeader = ({ userData, isPublicProfile = false, profilePictureData }
                     className={`transition-opacity duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
                   />
                 )}
-                <AvatarFallback className="text-3xl bg-gradient-to-br from-primary/90 to-indigo-600/90 text-white font-medium">
+                <AvatarFallback className="text-2xl bg-gradient-to-br from-primary/90 to-indigo-600/90 text-white font-medium">
                   {userInitials}
                 </AvatarFallback>
               </Avatar>
+            </div>
+          </motion.div>
+          
+          {/* Informations principales */}
+          <div className="flex-1 min-w-0 text-center sm:text-left">
+            <motion.div variants={itemVariants}>
+              <h1 className="text-xl sm:text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-indigo-600">
+                {userData.user.firstName} {userData.user.lastName}
+              </h1>
+              
+              {userData.user.specialization && (
+                <div className="flex items-center justify-center sm:justify-start gap-2 mt-1">
+                  <span className="text-sm text-muted-foreground">
+                    {userData.user.specialization.domain?.name || domainData?.name}
+                    {userData.user.specialization.name && (
+                      <span className="mx-1.5 opacity-40">•</span>
+                    )}
+                    {userData.user.specialization.name}
+                  </span>
+                </div>
+              )}
             </motion.div>
             
-            <div className="flex-1 min-w-0">
-              <div className="flex flex-col gap-4">
-                <motion.div variants={itemVariants} className="w-full space-y-4">
-                  <div className="flex flex-col gap-4">
-                    <div className="space-y-1.5">
-                      <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-indigo-600">
-                        {userData.user.firstName} {userData.user.lastName}
-                      </h1>
-                      {userData.user.specialization && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-muted-foreground">
-                            {userData.user.specialization.domain?.name || domainData?.name}
-                            {userData.user.specialization.name && (
-                              <span className="mx-1.5 opacity-40">•</span>
-                            )}
-                            {userData.user.specialization.name}
-                          </span>
-                        </div>
-                      )}
-                    </div>
+            {/* Badges de rôle */}
+            <motion.div 
+              variants={itemVariants} 
+              className="flex flex-wrap justify-center sm:justify-start gap-1.5 mt-2"
+            >
+              <AnimatePresence>
+                {userData.user?.roles?.map((role, index) => (
+                  <motion.div
+                    key={role.name}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    transition={{ duration: 0.2, delay: index * 0.1 }}
+                    onHoverStart={() => setHoveredBadge(role.name)}
+                    onHoverEnd={() => setHoveredBadge(null)}
+                  >
+                    <Badge 
+                      className={`bg-gradient-to-r ${getRoleBadgeColor(role.name)} text-white px-2.5 py-0.5 text-xs rounded-full transition-all duration-300 ${
+                        hoveredBadge === role.name ? 'shadow-lg scale-105' : ''
+                      }`}
+                    >
+                      {translateRoleName(role.name)}
+                    </Badge>
+                  </motion.div>
+                )) || (
+                  <Badge className={`bg-gradient-to-r ${getRoleBadgeColor("USER")} text-white px-2.5 py-0.5 text-xs rounded-full`}>
+                    {translateRoleName("USER")}
+                  </Badge>
+                )}
 
-                    <div className="flex flex-wrap gap-2">
-                      <AnimatePresence>
-                        {userData.user?.roles?.map((role, index) => (
-                          <motion.div
-                            key={role.name}
-                            initial={{ opacity: 0, scale: 0.8 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.8 }}
-                            transition={{ duration: 0.2, delay: index * 0.1 }}
-                            onHoverStart={() => setHoveredBadge(role.name)}
-                            onHoverEnd={() => setHoveredBadge(null)}
-                          >
-                            <Badge 
-                              className={`bg-gradient-to-r ${getRoleBadgeColor(role.name)} text-white px-3 py-1 rounded-full transition-all duration-300 ${
-                                hoveredBadge === role.name ? 'shadow-lg scale-105' : ''
-                              }`}
-                            >
-                              {translateRoleName(role.name)}
-                            </Badge>
-                          </motion.div>
-                        )) || (
-                          <Badge className={`bg-gradient-to-r ${getRoleBadgeColor("USER")} text-white px-3 py-1 rounded-full`}>
-                            {translateRoleName("USER")}
-                          </Badge>
-                        )}
-
-                        {userData.studentProfile?.isSeekingInternship && (
-                          <Badge className="bg-gradient-to-r from-amber-500/90 to-amber-700/90 text-white px-3 py-1 rounded-full">
-                            Recherche Stage
-                          </Badge>
-                        )}
-                        
-                        {userData.studentProfile?.isSeekingApprenticeship && (
-                          <Badge className="bg-gradient-to-r from-green-500/90 to-green-700/90 text-white px-3 py-1 rounded-full">
-                            Recherche Alternance
-                          </Badge>
-                        )}
-                      </AnimatePresence>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {userData.studentProfile?.portfolioUrl && (
-                        <motion.div
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: 20 }}
-                          transition={{ duration: 0.3, delay: 0.2 }}
-                        >
-                          <div
-                            onClick={() => window.open(userData.studentProfile.portfolioUrl, '_blank')}
-                            className="group flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-500/90 via-violet-500/90 to-purple-500/90 hover:from-indigo-600/90 hover:via-violet-600/90 hover:to-purple-600/90 text-white cursor-pointer transition-all duration-300 hover:shadow-lg hover:shadow-violet-500/20"
-                          >
-                            <span className="text-sm font-medium">Voir mon portfolio</span>
-                            <ChevronRightIcon className="h-4 w-4 transform transition-transform duration-300 group-hover:translate-x-1" />
-                          </div>
-                        </motion.div>
-                      )}
-                      
-                      {!isPublicProfile && (
-                        <motion.div variants={itemVariants}>
-                          <Button 
-                            asChild 
-                            variant="outline" 
-                            className="border-primary/20 hover:border-primary/50 hover:bg-primary/5 transition-all duration-300"
-                          >
-                            <Link to="/settings/profile" className="flex items-center gap-2">
-                              Modifier
-                              <ChevronRightIcon className="h-4 w-4" />
-                            </Link>
-                          </Button>
-                        </motion.div>
-                      )}
-                    </div>
-                  </div>
-                </motion.div>
-              </div>
-            </div>
+                {userData.studentProfile?.isSeekingInternship && (
+                  <Badge className="bg-gradient-to-r from-amber-500/90 to-amber-700/90 text-white px-2.5 py-0.5 text-xs rounded-full">
+                    Recherche Stage
+                  </Badge>
+                )}
+                
+                {userData.studentProfile?.isSeekingApprenticeship && (
+                  <Badge className="bg-gradient-to-r from-green-500/90 to-green-700/90 text-white px-2.5 py-0.5 text-xs rounded-full">
+                    Recherche Alternance
+                  </Badge>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          </div>
+          
+          {/* Boutons d'action */}
+          <div className="flex gap-2 mt-2 sm:mt-0">
+            {userData.studentProfile?.portfolioUrl && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                transition={{ duration: 0.3, delay: 0.2 }}
+              >
+                <div
+                  onClick={() => window.open(userData.studentProfile.portfolioUrl, '_blank')}
+                  className="group flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-indigo-500/90 via-violet-500/90 to-purple-500/90 hover:from-indigo-600/90 hover:via-violet-600/90 hover:to-purple-600/90 text-white cursor-pointer transition-all duration-300 hover:shadow-lg hover:shadow-violet-500/20"
+                >
+                  <span className="text-xs font-medium">Voir mon portfolio</span>
+                  <ChevronRightIcon className="h-3.5 w-3.5 transform transition-transform duration-300 group-hover:translate-x-0.5" />
+                </div>
+              </motion.div>
+            )}
+            
+            {!isPublicProfile && (
+              <motion.div variants={itemVariants}>
+                <Button 
+                  asChild 
+                  variant="outline" 
+                  size="sm"
+                  className="border-primary/20 hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 text-xs h-auto py-1.5"
+                >
+                  <Link to="/settings/profile" className="flex items-center gap-1.5">
+                    Modifier
+                    <ChevronRightIcon className="h-3.5 w-3.5" />
+                  </Link>
+                </Button>
+              </motion.div>
+            )}
           </div>
         </div>
       </div>

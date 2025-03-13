@@ -143,10 +143,10 @@ const CVUpload = memo(({ userData, onUpdate }) => {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
       
-      toast.success('Document downloaded successfully');
+      toast.success('Document téléchargé avec succès');
     } catch (error) {
-      console.error('Error downloading CV:', error);
-      toast.error('Failed to download CV');
+      console.error('Erreur lors du téléchargement du CV:', error);
+      toast.error('Erreur lors du téléchargement du CV');
     }
   }, [cvDocument]);
 
