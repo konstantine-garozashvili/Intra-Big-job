@@ -19,6 +19,12 @@ axios.interceptors.request.use(request => {
   // Ajouter les credentials et les headers CORS
   request.withCredentials = true;
   
+  // Récupérer le token depuis le localStorage si disponible
+  const token = localStorage.getItem('token');
+  if (token) {
+    request.headers['Authorization'] = `Bearer ${token}`;
+  }
+  
   return request;
 }, error => {
   console.error('Erreur lors de la préparation de la requête:', error);
@@ -110,11 +116,7 @@ const apiService = {
   async get(path, options = {}) {
     try {
       const url = normalizeApiUrl(path);
-      const authOptions = this.withAuth({
-        ...options,
-        withCredentials: true,
-      });
-      const response = await axios.get(url, authOptions);
+      const response = await axios.get(url, options);
       return response.data;
     } catch (error) {
       console.error(`Erreur API GET ${path}:`, error);
@@ -146,13 +148,7 @@ const apiService = {
     try {
       console.log(`[apiService] POST ${path}:`, { data: { ...data, password: data.password ? '***' : undefined } });
       const url = normalizeApiUrl(path);
-      const completeOptions = {
-        ...options,
-        withCredentials: true,
-      };
-      
-      const authOptions = this.withAuth(completeOptions);
-      const response = await axios.post(url, data, authOptions);
+      const response = await axios.post(url, data, options);
       return response.data;
     } catch (error) {
       console.error(
@@ -192,11 +188,24 @@ const apiService = {
    */
   async put(path, data = {}, options = {}) {
     try {
-      const response = await axios.put(normalizeApiUrl(path), data, options);
+      const url = normalizeApiUrl(path);
+      const response = await axios.put(url, data, options);
       return response.data;
     } catch (error) {
       console.error(`Erreur API PUT ${path}:`, error);
-      throw error;
+      
+      // Gestion spécifique des erreurs CORS
+      if (error.message && error.message.includes('Network Error')) {
+        console.error('Erreur réseau possible - Problème CORS');
+        return { success: false, message: 'Erreur de communication avec le serveur' };
+      }
+      
+      // Retourner une réponse formatée en cas d'erreur pour éviter les crashes
+      if (error.response && error.response.data) {
+        return { success: false, message: error.response.data.message || 'Une erreur est survenue' };
+      }
+      
+      return { success: false, message: 'Une erreur est survenue' };
     }
   },
   
@@ -214,6 +223,25 @@ const apiService = {
       console.error(`Erreur API DELETE ${path}:`, error);
       throw error;
     }
+  },
+  
+  /**
+   * Fonctions spécifiques pour la gestion des rôles utilisateurs
+   */
+  async getUsersByRole(roleName) {
+    return this.get(`/user-roles/users/${roleName}`);
+  },
+  
+  async getAllRoles() {
+    return this.get('/user-roles/roles');
+  },
+  
+  async changeUserRole(userId, oldRoleName, newRoleName) {
+    return this.post('/user-roles/change-role', {
+      userId,
+      oldRoleName,
+      newRoleName
+    });
   },
   
   /**
