@@ -30,7 +30,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { ArrowUp, ArrowDown, ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react";
+import { ArrowUp, ArrowDown, ChevronLeft, ChevronRight, MoreHorizontal, Loader2 } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
 
 // Configuration de la base URL pour l'API (uniquement pour ce composant)
@@ -56,8 +56,6 @@ export default function GuestStudentRoleManager() {
     // État pour stocker les utilisateurs et les rôles
     const [guestUsers, setGuestUsers] = useState([]);
     const [studentUsers, setStudentUsers] = useState([]);
-    const [filteredUsers, setFilteredUsers] = useState([]);
-    const [displayedUsers, setDisplayedUsers] = useState([]);
     const [roles, setRoles] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [selectedUser, setSelectedUser] = useState(null);
@@ -77,7 +75,6 @@ export default function GuestStudentRoleManager() {
     // État pour la pagination
     const [pagination, setPagination] = useState({
         currentPage: 1,
-        totalPages: 1,
         itemsPerPage: 10
     });
     
@@ -254,6 +251,28 @@ export default function GuestStudentRoleManager() {
         }
     }, [selectedUser, roles]);
 
+    // Fonction pour gérer le changement de sélection de rôle
+    const handleRoleToggle = useCallback((role) => {
+        // Mise à jour de la sélection
+        setSelectedRoles(prev => ({
+            ...prev,
+            [role]: !prev[role]
+        }));
+        
+        // Réinitialiser la pagination
+        setPagination(prev => ({
+            ...prev,
+            currentPage: 1
+        }));
+        
+        // Chargement des étudiants si nécessaire (une seule fois)
+        if (role === 'student' && !selectedRoles.student && studentUsers.length === 0) {
+            setIsLoading(true);
+            fetchUsersByRole(roles.find(r => r.name.toLowerCase().includes('student'))?.name || 'ROLE_STUDENT')
+                .finally(() => setIsLoading(false));
+        }
+    }, [selectedRoles, studentUsers.length, roles, fetchUsersByRole]);
+
     // Charger les données initiales
     useEffect(() => {
         async function loadInitialData() {
@@ -312,9 +331,9 @@ export default function GuestStudentRoleManager() {
         loadInitialData();
     }, [fetchRoles, fetchUsersByRole, selectedRoles.student]);
 
-    // Effet pour filtrer les utilisateurs en fonction des filtres de rôle sélectionnés
-    useEffect(() => {
-        // Recalculer la liste des utilisateurs en fonction des filtres sélectionnés
+    // Mémoisation des utilisateurs filtrés pour éviter les recalculs inutiles
+    const filteredUsers = useMemo(() => {
+        console.log("Recalcul des utilisateurs filtrés...");
         const newFilteredUsers = [];
         
         if (selectedRoles.guest) {
@@ -326,7 +345,7 @@ export default function GuestStudentRoleManager() {
         }
         
         // Appliquer le tri
-        const sortedUsers = [...newFilteredUsers].sort((a, b) => {
+        return [...newFilteredUsers].sort((a, b) => {
             if (a[sortConfig.key] < b[sortConfig.key]) {
                 return sortConfig.direction === 'ascending' ? -1 : 1;
             }
@@ -335,24 +354,19 @@ export default function GuestStudentRoleManager() {
             }
             return 0;
         });
-        
-        setFilteredUsers(sortedUsers);
-        
-        // Recalculer la pagination
-        const newTotalPages = Math.ceil(sortedUsers.length / pagination.itemsPerPage);
-        setPagination(prev => ({
-            ...prev,
-            currentPage: prev.currentPage > newTotalPages ? 1 : prev.currentPage,
-            totalPages: newTotalPages
-        }));
     }, [guestUsers, studentUsers, selectedRoles, sortConfig]);
-
-    // Mettre à jour la liste des utilisateurs lorsque la pagination change
-    useEffect(() => {
+    
+    // Mémoisation des utilisateurs paginés pour éviter les recalculs inutiles
+    const currentUsers = useMemo(() => {
         const startIndex = (pagination.currentPage - 1) * pagination.itemsPerPage;
-        const paginatedUsers = filteredUsers.slice(startIndex, startIndex + pagination.itemsPerPage);
-        setDisplayedUsers(paginatedUsers);
+        const endIndex = startIndex + pagination.itemsPerPage;
+        return filteredUsers.slice(startIndex, endIndex);
     }, [filteredUsers, pagination.currentPage, pagination.itemsPerPage]);
+
+    // Mémoisation du nombre total de pages
+    const totalPages = useMemo(() => {
+        return Math.ceil(filteredUsers.length / pagination.itemsPerPage);
+    }, [filteredUsers.length, pagination.itemsPerPage]);
 
     // Fonction pour ouvrir la boîte de dialogue de changement de rôle
     const openChangeRoleDialog = (user) => {
@@ -397,13 +411,13 @@ export default function GuestStudentRoleManager() {
 
     // Rendu de la pagination
     const renderPagination = () => {
-        if (pagination.totalPages <= 1) return null;
+        if (totalPages <= 1) return null;
         
         const pageItems = [];
         const maxPages = 5; // Nombre maximal de liens de page à afficher
         
         let startPage = Math.max(1, pagination.currentPage - Math.floor(maxPages / 2));
-        let endPage = Math.min(pagination.totalPages, startPage + maxPages - 1);
+        let endPage = Math.min(totalPages, startPage + maxPages - 1);
         
         if (endPage - startPage + 1 < maxPages) {
             startPage = Math.max(1, endPage - maxPages + 1);
@@ -431,7 +445,7 @@ export default function GuestStudentRoleManager() {
         
         // Bouton suivant
         pageItems.push(
-            <div key="next" className="cursor-pointer" onClick={() => handlePageChange(Math.min(pagination.totalPages, pagination.currentPage + 1))}>
+            <div key="next" className="cursor-pointer" onClick={() => handlePageChange(Math.min(totalPages, pagination.currentPage + 1))}>
                 <ChevronRight className="w-4 h-4" />
             </div>
         );
@@ -445,6 +459,14 @@ export default function GuestStudentRoleManager() {
 
     // Options par page pour la pagination
     const itemsPerPageOptions = [10, 25, 50, 100];
+
+    // Fonction pour gérer le changement de page
+    const handlePageChange = (newPage) => {
+        setPagination({
+            ...pagination,
+            currentPage: newPage
+        });
+    };
 
     return (
         <div className="container mx-auto p-4">
@@ -462,7 +484,7 @@ export default function GuestStudentRoleManager() {
                                 <Checkbox 
                                     id="guest-filter" 
                                     checked={selectedRoles.guest}
-                                    onCheckedChange={() => handleRoleFilterChange('guest')}
+                                    onCheckedChange={() => handleRoleToggle('guest')}
                                 />
                                 <Label htmlFor="guest-filter">Invités</Label>
                             </div>
@@ -470,7 +492,7 @@ export default function GuestStudentRoleManager() {
                                 <Checkbox 
                                     id="student-filter" 
                                     checked={selectedRoles.student}
-                                    onCheckedChange={() => handleRoleFilterChange('student')}
+                                    onCheckedChange={() => handleRoleToggle('student')}
                                 />
                                 <Label htmlFor="student-filter">Élèves</Label>
                             </div>
@@ -483,11 +505,11 @@ export default function GuestStudentRoleManager() {
                                 className="p-2 border rounded-md"
                                 value={pagination.itemsPerPage}
                                 onChange={(e) => {
-                                    setPagination(prev => ({
-                                        ...prev,
+                                    setPagination({
+                                        ...pagination,
                                         itemsPerPage: Number(e.target.value),
                                         currentPage: 1
-                                    }));
+                                    });
                                 }}
                             >
                                 {itemsPerPageOptions.map(option => (
@@ -503,7 +525,9 @@ export default function GuestStudentRoleManager() {
                     </div>
                     
                     {isLoading ? (
-                        <div className="text-center py-4">Chargement des utilisateurs...</div>
+                        <div className="text-center py-8 flex justify-center">
+                            <Loader2 className="w-8 h-8 text-gray-500 animate-spin" />
+                        </div>
                     ) : (
                         <div>
                             <Table>
@@ -532,21 +556,21 @@ export default function GuestStudentRoleManager() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {displayedUsers.map(user => (
+                                    {currentUsers.map(user => (
                                         <TableRow key={user.id}>
                                             <TableCell>{user.lastName}</TableCell>
                                             <TableCell>{user.firstName}</TableCell>
                                             <TableCell>{user.email}</TableCell>
                                             <TableCell>
                                                 {user.roles.map(role => {
-                                                    // Remplacer les noms techniques par des badges colorés
-                                                    if (role.name === "ROLE_GUEST") {
-                                                        return <Badge variant="guest" key={role.name}>Invité</Badge>;
+                                                    // Remplacer les noms techniques par des badges colorés en français
+                                                    if (role.name === "ROLE_GUEST" || role.name === "GUEST") {
+                                                        return <Badge variant="guest" key={role.id || role.name}>Invité</Badge>;
                                                     }
-                                                    if (role.name === "ROLE_STUDENT") {
-                                                        return <Badge variant="student" key={role.name}>Élève</Badge>;
+                                                    if (role.name === "ROLE_STUDENT" || role.name === "STUDENT") {
+                                                        return <Badge variant="student" key={role.id || role.name}>Élève</Badge>;
                                                     }
-                                                    return <Badge key={role.name}>{role.name}</Badge>;
+                                                    return <Badge key={role.id || role.name}>{role.name}</Badge>;
                                                 })}
                                             </TableCell>
                                             <TableCell className="text-right">
@@ -578,7 +602,7 @@ export default function GuestStudentRoleManager() {
                             {selectedUser && (
                                 <p>
                                     Vous êtes sur le point de {
-                                        selectedUser.roles.some(role => role.name.toLowerCase().includes('guest'))
+                                        getCurrentRole(selectedUser).toLowerCase().includes('guest')
                                         ? "promouvoir"
                                         : "rétrograder"
                                     } <strong>{selectedUser.firstName} {selectedUser.lastName}</strong>.
@@ -591,10 +615,7 @@ export default function GuestStudentRoleManager() {
                         {selectedUser && (
                             <p>
                                 Rôle actuel : <strong>{(() => {
-                                    const roleName = selectedUser.roles.find(
-                                        role => role.name.toLowerCase().includes('guest') || 
-                                              role.name.toLowerCase().includes('student')
-                                    )?.name || '';
+                                    const roleName = getCurrentRole(selectedUser);
                                     
                                     if (roleName === "ROLE_GUEST") return "Invité";
                                     if (roleName === "ROLE_STUDENT") return "Élève";
@@ -606,9 +627,7 @@ export default function GuestStudentRoleManager() {
                             <p className="mt-2">
                                 Nouveau rôle : <strong>
                                     {(() => {
-                                        const newRoleName = selectedUser.roles.some(role => role.name.toLowerCase().includes('guest'))
-                                            ? roles.find(r => r.name.toLowerCase().includes('student'))?.name
-                                            : roles.find(r => r.name.toLowerCase().includes('guest'))?.name;
+                                        const newRoleName = getNewRole(selectedUser);
                                             
                                         if (newRoleName === "ROLE_GUEST") return "Invité";
                                         if (newRoleName === "ROLE_STUDENT") return "Élève";
@@ -624,14 +643,14 @@ export default function GuestStudentRoleManager() {
                             Annuler
                         </Button>
                         <Button 
+                            disabled={isProcessing} 
                             onClick={handleRoleChange}
-                            disabled={isProcessing}
                         >
-                            {isProcessing ? "Modification en cours..." : (
-                                selectedUser?.roles.some(role => role.name.toLowerCase().includes('guest'))
-                                ? "Promouvoir en élève"
-                                : "Rétrograder en invité"
-                            )}
+                            {isProcessing ? 
+                                'Traitement en cours...' : 
+                                selectedUser && getCurrentRole(selectedUser).toLowerCase().includes('guest') ?
+                                    'Promouvoir en élève' : 'Rétrograder en invité'
+                            }
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -646,13 +665,5 @@ export default function GuestStudentRoleManager() {
             direction = 'descending';
         }
         setSortConfig({ key, direction });
-    }
-    
-    // Fonction pour gérer le changement de page
-    function handlePageChange(pageNumber) {
-        setPagination(prev => ({
-            ...prev,
-            currentPage: pageNumber
-        }));
     }
 }
