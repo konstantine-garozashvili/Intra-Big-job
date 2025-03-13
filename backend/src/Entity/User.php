@@ -71,6 +71,7 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     private ?\DateTimeImmutable $resetPasswordExpires = null;
 
     #[ORM\OneToMany(mappedBy: 'user', targetEntity: UserRole::class, orphanRemoval: true)]
+    #[Groups(['user:read', 'message:read'])]
     private Collection $userRoles;
 
     #[ORM\ManyToOne]

@@ -11,6 +11,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 
 #[Route('/api/messages')]
 class MessageController extends AbstractController
@@ -37,8 +38,17 @@ class MessageController extends AbstractController
         
         $messages = $this->messageRepository->findGlobalMessages($limit, $offset);
         
+        $context = [
+            'groups' => ['message:read'],
+            AbstractNormalizer::CIRCULAR_REFERENCE_HANDLER => function ($object) {
+                return $object->getId();
+            },
+            'enable_max_depth' => true,
+            'json_encode_options' => JSON_PRETTY_PRINT
+        ];
+        
         return $this->json([
-            'messages' => $this->serializer->normalize($messages, null, ['groups' => 'message:read'])
+            'messages' => json_decode($this->serializer->serialize($messages, 'json', $context), true)
         ]);
     }
 
@@ -47,8 +57,17 @@ class MessageController extends AbstractController
     {
         $messages = $this->messageRepository->findRecentGlobalMessages();
         
+        $context = [
+            'groups' => ['message:read'],
+            AbstractNormalizer::CIRCULAR_REFERENCE_HANDLER => function ($object) {
+                return $object->getId();
+            },
+            'enable_max_depth' => true,
+            'json_encode_options' => JSON_PRETTY_PRINT
+        ];
+        
         return $this->json([
-            'messages' => $this->serializer->normalize($messages, null, ['groups' => 'message:read'])
+            'messages' => json_decode($this->serializer->serialize($messages, 'json', $context), true)
         ]);
     }
 
@@ -81,10 +100,19 @@ class MessageController extends AbstractController
             $this->entityManager->persist($message);
             $this->entityManager->flush();
             
+            $context = [
+                'groups' => ['message:read'],
+                AbstractNormalizer::CIRCULAR_REFERENCE_HANDLER => function ($object) {
+                    return $object->getId();
+                },
+                'enable_max_depth' => true,
+                'json_encode_options' => JSON_PRETTY_PRINT
+            ];
+            
             // Return success response with the created message
             return $this->json([
                 'message' => 'Message sent successfully',
-                'data' => $this->serializer->normalize($message, null, ['groups' => 'message:read'])
+                'data' => json_decode($this->serializer->serialize($message, 'json', $context), true)
             ], Response::HTTP_CREATED);
             
         } catch (\Exception $e) {

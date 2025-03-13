@@ -104,6 +104,11 @@ const ChatWindow = ({ onClose }) => {
                 {message.sender.id !== user?.id && (
                   <div className="font-semibold text-xs text-gray-600">
                     {message.sender.firstName} {message.sender.lastName}
+                    {message.sender.userRoles && message.sender.userRoles.length > 0 && (
+                      <span className="ml-1 text-xs font-normal text-gray-500">
+                        ({message.sender.userRoles.map(userRole => userRole.role.name).join(', ')})
+                      </span>
+                    )}
                   </div>
                 )}
                 <div>{message.content}</div>
