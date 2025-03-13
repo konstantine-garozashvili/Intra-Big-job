@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Edit, Trash2 } from 'lucide-react';
-import FormationCalendar from './FormationCalendar';
+import Calendar from './Calendar';
 import apiService from '@/lib/services/apiService';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -146,7 +146,7 @@ const AdminDashboard = () => {
     <div className="min-h-screen bg-gray-50">
       <main className="px-6 py-8">
         <div className="mt-8">
-          <FormationCalendar />
+          <Calendar />
         </div>
 
         <div className="p-6 mt-8 bg-white rounded-lg shadow">
