@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
 import ProfileProgress from '../pages/Global/Profile/components/profile-view/ProfileProgress';
 import { RoleGuard, ROLES, useRoles } from '../features/roles';
@@ -14,6 +14,11 @@ const MainLayout = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showProgress, setShowProgress] = useState(false);
   const { hasRole } = useRoles();
+  const location = useLocation();
+
+  // Pages qui doivent être affichées en plein écran sans marges internes
+  const fullScreenPages = ['/register', '/login'];
+  const isFullScreenPage = fullScreenPages.includes(location.pathname);
 
   // Fetch user data when the component mounts
   useEffect(() => {
@@ -42,15 +47,17 @@ const MainLayout = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Navbar user={userData} />
-      <main className="container mx-auto px-4 py-8">
+      
+      <main className={`flex-grow ${isFullScreenPage ? '' : 'container mx-auto px-4 py-8'}`}>
         <Outlet />
       </main>
 
       {showProgress && !isLoading && profileData && hasRole(ROLES.GUEST) && (
         <ProfileProgress userData={profileData} />
       )}
+      
       <Footer />
     </div>
   );

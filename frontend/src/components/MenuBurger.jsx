@@ -2,6 +2,8 @@ import React, { memo, useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { authService } from '../lib/services/authService';
 import { Link, useNavigate } from 'react-router-dom';
+import { useRoles, ROLES } from '../features/roles/roleContext';
+import { useRoleUI } from '../features/roles/useRolePermissions';
 import {
   User, 
   UserPlus, 
@@ -22,7 +24,6 @@ import {
   Clipboard,
   ChevronDown,
   ChevronRight,
-  LogOut,
   X,
   Menu
 } from 'lucide-react';
@@ -111,14 +112,16 @@ const customStyles = `
 `;
 
 const MenuBurger = memo(() => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userData, setUserData] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [userRole, setUserRole] = useState(null);
   const [openSubMenus, setOpenSubMenus] = useState({});
   const menuRef = useRef(null);
   const buttonRef = useRef(null);
   const navigate = useNavigate();
+  
+  // Utiliser le système de rôles
+  const { roles, hasRole, hasAnyRole } = useRoles();
+  const { translateRoleName } = useRoleUI();
 
   // Gestionnaire de clic à l'extérieur du menu
   useEffect(() => {
@@ -151,41 +154,24 @@ const MenuBurger = memo(() => {
         const user = await authService.getCurrentUser();
         if (user) {
           setUserData(user);
-          setIsAuthenticated(true);
-          setUserRole(user.roles?.[0] || null);
         } else {
           setUserData(null);
-          setIsAuthenticated(false);
-          setUserRole(null);
         }
       } catch (error) {
         setUserData(null);
-        setIsAuthenticated(false);
-        setUserRole(null);
       }
     };
   
     checkAuthentication();
-  
-    // 🔥 Gérer la déconnexion
-    const handleLogoutEvent = () => {
-      setUserData(null);
-      setIsAuthenticated(false);
-      setUserRole(null);
-      setMenuOpen(false); // Ferme le menu au cas où
-      setOpenSubMenus({}); // 🔄 Réinitialise les sous-menus
-    };
   
     // 🚀 Gérer la connexion
     const handleLoginEvent = async () => {
       await checkAuthentication(); // Recharge l'état après connexion
     };
   
-    window.addEventListener('logout-success', handleLogoutEvent);
     window.addEventListener('login-success', handleLoginEvent);
   
     return () => {
-      window.removeEventListener('logout-success', handleLogoutEvent);
       window.removeEventListener('login-success', handleLoginEvent);
     };
   }, []);
@@ -195,9 +181,23 @@ const MenuBurger = memo(() => {
 
   const toggleSubMenu = (menu) => {
     setOpenSubMenus((prev) => {
+      // If the clicked menu is already open, close it
+      if (prev[menu]) {
+        return {
+          ...prev,
+          [menu]: false
+        };
+      }
+      
+      // Otherwise, close all menus and open only the clicked one
+      const newState = {};
+      Object.keys(prev).forEach(key => {
+        newState[key] = false;
+      });
+      
       return {
-        ...prev,
-        [menu]: !prev[menu] // Bascule uniquement le menu cliqué
+        ...newState,
+        [menu]: true
       };
     });
   };
@@ -208,13 +208,13 @@ const MenuBurger = memo(() => {
       key: 'eleves',
       label: 'Élèves',
       icon: <GraduationCap className="w-5 h-5 mr-2 text-[#528eb2]" />,
-      roles: ['ROLE_SUPERADMIN', 'ROLE_ADMIN', 'ROLE_TEACHER', 'ROLE_HR', 'ROLE_RECRUITER'],
+      roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.HR, ROLES.RECRUITER],
       links: [
-        { name: 'Gestion des élèves', to: '/eleves', roles: ['ROLE_ADMIN', 'ROLE_TEACHER','ROLE_SUPERADMIN'] },
-        { name: 'Résultats', to: '/eleves/resultats', roles: ['ROLE_TEACHER', 'ROLE_SUPERADMIN'] },
-        { name: 'Dossiers', to: '/eleves/dossiers', roles: ['ROLE_ADMIN', 'ROLE_HR','ROLE_TEACHER','ROLE_SUPERADMIN'] },
-        { name: 'Certificats et Diplômes', to: '/eleves/certificats', roles: ['ROLE_ADMIN', 'ROLE_TEACHER','ROLE_STUDENT','ROLE_SUPERADMIN'] },
-        { name: 'Historique des Absences', to: '/eleves/absences', roles: ['ROLE_ADMIN', 'ROLE_TEACHER','ROLE_HR'] },
+        { name: 'Gestion des élèves', to: '/eleves', roles: [ROLES.ADMIN, ROLES.TEACHER, ROLES.SUPER_ADMIN] },
+        { name: 'Résultats', to: '/eleves/resultats', roles: [ROLES.TEACHER, ROLES.SUPER_ADMIN] },
+        { name: 'Dossiers', to: '/eleves/dossiers', roles: [ROLES.ADMIN, ROLES.HR, ROLES.TEACHER, ROLES.SUPER_ADMIN] },
+        { name: 'Certificats et Diplômes', to: '/eleves/certificats', roles: [ROLES.ADMIN, ROLES.TEACHER, ROLES.STUDENT, ROLES.SUPER_ADMIN] },
+        { name: 'Historique des Absences', to: '/eleves/absences', roles: [ROLES.ADMIN, ROLES.TEACHER, ROLES.HR] },
       ],
     },
     
@@ -222,68 +222,66 @@ const MenuBurger = memo(() => {
       key: 'enseignants',
       label: 'Enseignants',
       icon: <User className="mr-2" />,
-      roles: ['ROLE_SUPERADMIN', 'ROLE_ADMIN', 'ROLE_HR','ROLE_RECRUITER'],
+      roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.HR, ROLES.RECRUITER],
       links: [
-        { name: 'Liste des enseignants', to: '/enseignants' , roles: ['ROLE_ADMIN', 'ROLE_HR','ROLE_TEACHER','ROLE_SUPERADMIN']},
-        { name: 'Statistiques et Rapports', to: '/enseignants/statistiques' , roles: ['ROLE_ADMIN', 'ROLE_HR','ROLE_TEACHER','ROLE_SUPERADMIN']},
-        { name: 'Gestion des Projets', to: '/enseignants/projets' , roles: ['ROLE_ADMIN','ROLE_TEACHER']},
-        { name: 'Commentaire', to: '/enseignants/commentaire', roles: ['ROLE_ADMIN', 'ROLE_HR','ROLE_TEACHER','ROLE_SUPERADMIN'] },
+        { name: 'Liste des enseignants', to: '/enseignants', roles: [ROLES.ADMIN, ROLES.HR, ROLES.TEACHER, ROLES.SUPER_ADMIN] },
+        { name: 'Statistiques et Rapports', to: '/enseignants/statistiques', roles: [ROLES.ADMIN, ROLES.HR, ROLES.TEACHER, ROLES.SUPER_ADMIN] },
+        { name: 'Gestion des Projets', to: '/enseignants/projets', roles: [ROLES.ADMIN, ROLES.TEACHER] },
+        { name: 'Commentaire', to: '/enseignants/commentaire', roles: [ROLES.ADMIN, ROLES.HR, ROLES.TEACHER, ROLES.SUPER_ADMIN] },
       ],
     },
     {
       key: 'invites',
       label: 'Invités',
       icon: <UserPlus className="mr-2" />,
-      roles: ['ROLE_SUPERADMIN', 'ROLE_ADMIN'],
+      roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN],
       links: [
-        { name: 'Liste des invités', to: '/invites', roles: ['ROLE_ADMIN','ROLE_SUPERADMIN'] },
-        { name: 'Gestion des invités', to: '/invites/' , roles: ['ROLE_ADMIN', 'ROLE_SUPERADMIN']},
-        { name: "Test d'admission", to: '/invites/test_admission' , roles: ['ROLE_ADMIN', 'ROLE_HR','ROLE_SUPERADMIN']},
-        { name: 'Statistiques des Invités', to: '/admin/invite/statistiques', roles: ['ROLE_ADMIN', 'ROLE_SUPERADMIN'] },
+        { name: 'Liste des invités', to: '/invites', roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN] },
+        { name: 'Gestion des invités', to: '/invites/', roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN] },
+        { name: "Test d'admission", to: '/invites/test_admission', roles: [ROLES.ADMIN, ROLES.HR, ROLES.SUPER_ADMIN] },
+        { name: 'Statistiques des Invités', to: '/admin/invite/statistiques', roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN] },
       ],
     },
     {
       key: 'rh',
       label: 'RH',
       icon: <Users className="mr-2" />,
-      roles: ['ROLE_SUPERADMIN', 'ROLE_ADMIN'],
+      roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN],
       links: [
-        { name: 'Gestion des Formateurs', to: '/rh/formateurs' , roles: ['ROLE_ADMIN', 'ROLE_SUPERADMIN', 'ROLE_HR']},
-        { name: 'Gestion des Candidatures', to: '/rh/candidatures', roles: ['ROLE_ADMIN', 'ROLE_SUPERADMIN', 'ROLE_HR'] },
-        { name: 'Suivi des Absences et Congés', to: '/rh/absences' , roles: ['ROLE_ADMIN', 'ROLE_SUPERADMIN', 'ROLE_HR']},
-        { name: 'Planning des Formateurs', to: '/rh/planning' , roles: ['ROLE_ADMIN', 'ROLE_SUPERADMIN', 'ROLE_HR']},
-        { name: 'Archivage des Dossiers', to: '/rh/archivage', roles: ['ROLE_ADMIN', 'ROLE_SUPERADMIN', 'ROLE_HR'] },
-    { name: 'Suivi des Recrutements', to: '/rh/recrutement' , roles: ['ROLE_ADMIN', 'ROLE_SUPERADMIN', 'ROLE_HR']},
-    
+        { name: 'Gestion des Formateurs', to: '/rh/formateurs', roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.HR] },
+        { name: 'Gestion des Candidatures', to: '/rh/candidatures', roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.HR] },
+        { name: 'Suivi des Absences et Congés', to: '/rh/absences', roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.HR] },
+        { name: 'Planning des Formateurs', to: '/rh/planning', roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.HR] },
+        { name: 'Archivage des Dossiers', to: '/rh/archivage', roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.HR] },
+        { name: 'Suivi des Recrutements', to: '/rh/recrutement', roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.HR] },
       ],
     },
     {
       key: 'admins',
       label: 'Admins',
       icon: <Shield className="mr-2" />,
-      roles: ['ROLE_SUPERADMIN'],
+      roles: [ROLES.SUPER_ADMIN],
       links: [
-        { name: 'Gestion des utilisateurs', to: '/admin/utilisateurs' , roles: ['ROLE_ADMIN','ROLE_SUPERADMIN']},
-        { name: 'Gestion des Formations', to: '/admin/formations' , roles: ['ROLE_ADMIN','ROLE_SUPERADMIN']},
-        { name: 'Suivi des Inscriptions', to: '/admin/inscriptions' , roles: ['ROLE_ADMIN','ROLE_SUPERADMIN']},
-        { name: 'Gestion des Paiements', to: '/admin/paiements' , roles: ['ROLE_ADMIN','ROLE_SUPERADMIN']},
-        { name: 'Suivi des Absences', to: '/admin/absences', roles: ['ROLE_ADMIN','ROLE_SUPERADMIN'] },
-        { name: 'Statistiques Administratives', to: '/admin/statistiques' , roles: ['ROLE_ADMIN','ROLE_SUPERADMIN']}, 
-        { name: 'Les logs', to: '/admin/logs' },
-        { name: 'Gestion des partenaires', to: '/admin/partenariats', roles: ['ROLE_ADMIN','ROLE_SUPERADMIN'] },  
+        { name: 'Gestion des utilisateurs', to: '/admin/utilisateurs', roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN] },
+        { name: 'Gestion des Formations', to: '/admin/formations', roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN] },
+        { name: 'Suivi des Inscriptions', to: '/admin/inscriptions', roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN] },
+        { name: 'Gestion des Paiements', to: '/admin/paiements', roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN] },
+        { name: 'Suivi des Absences', to: '/admin/absences', roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN] },
+        { name: 'Statistiques Administratives', to: '/admin/statistiques', roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN] }, 
+        { name: 'Les logs', to: '/admin/logs', roles: [ROLES.SUPER_ADMIN] },
+        { name: 'Gestion des partenaires', to: '/admin/partenariats', roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN] },  
       ],
     },
     {
       key: 'plannings',
       label: 'Plannings',
       icon: <Calendar className="mr-2" />,
-      roles: ['ROLE_SUPERADMIN', 'ROLE_ADMIN', 'ROLE_TEACHER','ROLE_HR','ROLE_RECRUITER','ROLE_STUDENT'],
+      roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.HR, ROLES.RECRUITER, ROLES.STUDENT],
       links: [
         { name: 'Evènement', to: '/plannings/évènements' },
         { name: 'Agenda', to: '/plannings/agenda' },
         { name: 'Réservation de salle', to: '/plannings/reservation-salle' },
-      { name: 'Réservation de matériel', to: '/plannings/reservation-materiel' }
-        
+        { name: 'Réservation de matériel', to: '/plannings/reservation-materiel' }
       ],
     },
     {
@@ -309,23 +307,7 @@ const MenuBurger = memo(() => {
         { name: 'Devenir sponsor', to: '/nous-rejoindre/sponsor' },
       ],
     },
-    
   ];
-
-  // Fonction de déconnexion
-  const handleLogout = async () => {
-    try {
-      await authService.logout();
-      
-      // Déclencher un événement personnalisé pour informer l'application de la déconnexion
-      window.dispatchEvent(new Event("logout-success"));
-      
-      setMenuOpen(false);
-      navigate("/login");
-    } catch (error) {
-      console.error("Erreur lors de la déconnexion:", error);
-    }
-  };
 
   return (
     <div className="relative">
@@ -358,26 +340,52 @@ const MenuBurger = memo(() => {
             className="sidebar-menu"
           >
             <div className="flex flex-col h-full">
-              <div className="flex items-center p-4 border-b border-blue-700 bg-gradient-to-r from-[#00284f] to-[#003a6b]">
-                <div className="w-12 h-12 bg-white/20 rounded-full mr-3 flex items-center justify-center">
-                  <User className="w-6 h-6 text-white" />
+              {roles.length > 0 && (
+                <div className="flex items-center p-4 border-b border-blue-700 bg-gradient-to-r from-[#00284f] to-[#003a6b]">
+                  <div className="w-12 h-12 bg-white/20 rounded-full mr-3 flex items-center justify-center">
+                    <User className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <p className="font-semibold">{userData ? `${userData.firstName} ${userData.lastName}` : 'Utilisateur'}</p>
+                    <p className="text-sm text-blue-200">{translateRoleName(roles[0])}</p>
+                  </div>
+                  <button 
+                    className="ml-auto text-white p-2 rounded-full hover:bg-blue-800/50 transition-colors" 
+                    onClick={toggleMenu}
+                    aria-label="Fermer le menu"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
-                <div>
-                  <p className="font-semibold">{userData ? `${userData.firstName} ${userData.lastName}` : 'Utilisateur'}</p>
-                  <p className="text-sm text-blue-200">{userRole || 'Non connecté'}</p>
+              )}
+              
+              {!roles.length && (
+                <div className="p-4 border-b border-blue-700 bg-gradient-to-r from-[#00284f] to-[#003a6b]">
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-xl font-semibold text-white">Bienvenue</h2>
+                    <button 
+                      className="text-white p-2 rounded-full hover:bg-blue-800/50 transition-colors" 
+                      onClick={toggleMenu}
+                      aria-label="Fermer le menu"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                  <p className="text-sm text-blue-200 mb-3">Connectez-vous pour accéder à toutes les fonctionnalités</p>
+                  <Link 
+                    to="/login" 
+                    className="flex items-center justify-center w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    <User className="w-4 h-4 mr-2" />
+                    Se connecter
+                  </Link>
                 </div>
-                <button 
-                  className="ml-auto text-white p-2 rounded-full hover:bg-blue-800/50 transition-colors" 
-                  onClick={toggleMenu}
-                  aria-label="Fermer le menu"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+              )}
 
               <div className="scrollable-div overflow-y-auto flex-grow">
                 <ul className="py-2">
-                  {(userRole === 'ROLE_STUDENT' || userRole === 'ROLE_TEACHER'|| userRole === 'ROLE_ADMIN'|| userRole === 'ROLE_SUPERADMIN') &&(
+                  {hasAnyRole([ROLES.STUDENT, ROLES.TEACHER, ROLES.ADMIN, ROLES.SUPER_ADMIN]) && (
                     <li className="menu-item">
                       <Link to="/dashboard" className="flex items-center px-4 py-2.5 w-full">
                         <LayoutDashboard className="w-5 h-5 mr-2 text-[#528eb2]" />
@@ -386,9 +394,7 @@ const MenuBurger = memo(() => {
                     </li>
                   )}
                   
-
-                  
-                  {(userRole === 'ROLE_STUDENT' || userRole === 'ROLE_TEACHER'|| userRole === 'ROLE_ADMIN'|| userRole === 'ROLE_SUPERADMIN') &&(
+                  {hasAnyRole([ROLES.STUDENT, ROLES.TEACHER, ROLES.ADMIN, ROLES.SUPER_ADMIN]) && (
                     <li className="menu-item">
                       <Link to="/messagerie" className="flex items-center px-4 py-2.5 w-full">
                         <MessageCircle className="w-5 h-5 mr-2 text-[#528eb2]" />
@@ -397,7 +403,7 @@ const MenuBurger = memo(() => {
                     </li>
                   )}
 
-                  {(userRole === 'ROLE_STUDENT' || userRole === 'ROLE_TEACHER') && (
+                  {hasAnyRole([ROLES.STUDENT, ROLES.TEACHER]) && (
                     <>
                       <li className="menu-item">
                         <Link to="/cours" className="flex items-center px-4 py-2.5 w-full">
@@ -414,7 +420,7 @@ const MenuBurger = memo(() => {
                     </>
                   )}
                   
-                  {userRole === 'ROLE_SUPERADMIN' && (
+                  {hasRole(ROLES.SUPER_ADMIN) && (
                     <li className="menu-item">
                       <Link to="/centres_formations" className="flex items-center px-4 py-2.5 w-full">
                         <School className="w-5 h-5 mr-2 text-[#528eb2]" />
@@ -423,7 +429,7 @@ const MenuBurger = memo(() => {
                     </li>
                   )}
                   
-                  {(userRole === 'ROLE_HR' || userRole === 'ROLE_RECRUITER') && (
+                  {hasAnyRole([ROLES.HR, ROLES.RECRUITER]) && (
                     <li className="menu-item">
                       <Link to="/candidatures" className="flex items-center px-4 py-2.5 w-full">
                         <Share2 className="w-5 h-5 mr-2 text-[#528eb2]" />
@@ -439,8 +445,8 @@ const MenuBurger = memo(() => {
                     </Link>
                   </li>
                   
-                  {menuItems.map(({ key, icon, label, roles, links }) =>
-                    (!roles || roles.includes(userRole)) ? (
+                  {menuItems.map(({ key, icon, label, roles: itemRoles, links }) =>
+                    (!itemRoles || hasAnyRole(itemRoles)) ? (
                       <React.Fragment key={key}>
                         <li
                           className={`menu-item ${openSubMenus[key] ? 'active' : ''}`}
@@ -469,7 +475,7 @@ const MenuBurger = memo(() => {
                               className="pl-4 overflow-hidden"
                             >
                               {links
-                                .filter(link => !link.roles || link.roles.includes(userRole))
+                                .filter(link => !link.roles || hasAnyRole(link.roles))
                                 .map((link, index) => (
                                   <li key={index} className="submenu-item">
                                     <Link to={link.to} className="flex items-center px-4 py-2 w-full text-sm text-gray-300 hover:text-white">
@@ -485,7 +491,7 @@ const MenuBurger = memo(() => {
                     ) : null
                   )}
                   
-                  {(userRole === 'ROLE_STUDENT') && (
+                  {hasRole(ROLES.STUDENT) && (
                     <li className="menu-item">
                       <Link to="/justification-absence" className="flex items-center px-4 py-2.5 w-full">
                         <Clipboard className="w-5 h-5 mr-2 text-[#528eb2]" />
@@ -494,7 +500,7 @@ const MenuBurger = memo(() => {
                     </li>
                   )}
 
-                  {(userRole === 'ROLE_STUDENT' || userRole === 'ROLE_TEACHER'|| userRole === 'ROLE_ADMIN'|| userRole === 'ROLE_SUPERADMIN') &&(
+                  {hasAnyRole([ROLES.STUDENT, ROLES.TEACHER, ROLES.ADMIN, ROLES.SUPER_ADMIN]) && (
                     <li className="menu-item">
                       <Link to="/cagnottes" className="flex items-center px-4 py-2.5 w-full">
                         <PiggyBank className="w-5 h-5 mr-2 text-[#528eb2]" />
@@ -503,7 +509,7 @@ const MenuBurger = memo(() => {
                     </li>
                   )}
                   
-                  {(userRole === 'ROLE_STUDENT' || userRole === 'ROLE_TEACHER'|| userRole === 'ROLE_ADMIN'|| userRole === 'ROLE_SUPERADMIN') &&(
+                  {hasAnyRole([ROLES.STUDENT, ROLES.TEACHER, ROLES.ADMIN, ROLES.SUPER_ADMIN]) && (
                     <li className="menu-item">
                       <Link to="/sponsors" className="flex items-center px-4 py-2.5 w-full">
                         <Handshake className="w-5 h-5 mr-2 text-[#528eb2]" />
@@ -512,7 +518,7 @@ const MenuBurger = memo(() => {
                     </li>
                   )}
                   
-                  {(userRole === 'ROLE_STUDENT' || userRole === 'ROLE_TEACHER'|| userRole === 'ROLE_ADMIN'|| userRole === 'ROLE_SUPERADMIN' || userRole === 'ROLE_RECRUITER') &&(
+                  {hasAnyRole([ROLES.STUDENT, ROLES.TEACHER, ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.RECRUITER]) && (
                     <li className="menu-item">
                       <Link to="/Trombinoscope" className="flex items-center px-4 py-2.5 w-full">
                         <Camera className="w-5 h-5 mr-2 text-[#528eb2]" />
@@ -521,16 +527,6 @@ const MenuBurger = memo(() => {
                     </li>
                   )}
                 </ul>
-              </div>
-
-              <div className="p-4 border-t border-blue-700 mt-auto">
-                <button 
-                  className="menu-item flex items-center w-full px-4 py-2.5 text-left text-red-300 hover:text-red-200"
-                  onClick={handleLogout}
-                >
-                  <LogOut className="w-5 h-5 mr-2" />
-                  <span>Déconnexion</span>
-                </button>
               </div>
             </div>
           </motion.div>
