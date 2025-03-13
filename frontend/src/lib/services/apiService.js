@@ -19,6 +19,12 @@ axios.interceptors.request.use(request => {
   // Ajouter les credentials et les headers CORS
   request.withCredentials = true;
   
+  // Récupérer le token depuis le localStorage si disponible
+  const token = localStorage.getItem('token');
+  if (token) {
+    request.headers['Authorization'] = `Bearer ${token}`;
+  }
+  
   return request;
 }, error => {
   console.error('Erreur lors de la préparation de la requête:', error);
@@ -110,11 +116,7 @@ const apiService = {
   async get(path, options = {}) {
     try {
       const url = normalizeApiUrl(path);
-      const authOptions = this.withAuth({
-        ...options,
-        withCredentials: true,
-      });
-      const response = await axios.get(url, authOptions);
+      const response = await axios.get(url, options);
       return response.data;
     } catch (error) {
       console.error(`Erreur API GET ${path}:`, error);
@@ -146,13 +148,7 @@ const apiService = {
     try {
       console.log(`[apiService] POST ${path}:`, { data: { ...data, password: data.password ? '***' : undefined } });
       const url = normalizeApiUrl(path);
-      const completeOptions = {
-        ...options,
-        withCredentials: true,
-      };
-      
-      const authOptions = this.withAuth(completeOptions);
-      const response = await axios.post(url, data, authOptions);
+      const response = await axios.post(url, data, options);
       return response.data;
     } catch (error) {
       console.error(
@@ -193,11 +189,7 @@ const apiService = {
   async put(path, data = {}, options = {}) {
     try {
       const url = normalizeApiUrl(path);
-      const authOptions = this.withAuth({
-        ...options,
-        withCredentials: true,
-      });
-      const response = await axios.put(url, data, authOptions);
+      const response = await axios.put(url, data, options);
       return response.data;
     } catch (error) {
       console.error(`Erreur API PUT ${path}:`, error);
