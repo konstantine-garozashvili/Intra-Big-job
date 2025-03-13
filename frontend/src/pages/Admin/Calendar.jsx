@@ -13,8 +13,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, X, Calendar as CalendarIcon, Clock, MapPin, Users, Info, Plus } from 'lucide-react';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
 import PageTransition from '../../components/PageTransition';
 import "./Calendar.css";
 
@@ -305,7 +303,12 @@ const Calendar = () => {
     const DayEventsModal = () => {
         if (!selectedDate) return null;
 
-        const formattedDate = format(selectedDate, 'EEEE d MMMM yyyy', { locale: fr });
+        const formattedDate = new Intl.DateTimeFormat('fr-FR', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        }).format(selectedDate);
         const capitalizedDate = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
 
         return (
