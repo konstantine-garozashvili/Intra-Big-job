@@ -18,10 +18,22 @@ const CareerSettings = lazy(() => import('./pages/Global/Profile/views/CareerSet
 const ProfileView = lazy(() => import('./pages/Global/Profile/views/ProfileView'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 
+// Dashboards spécifiques par rôle
+const AdminDashboard = lazy(() => import('./pages/Admin/Dashboard'))
+const StudentDashboard = lazy(() => import('./pages/Student/Dashboard'))
+// Pages étudiantes
+const StudentSchedule = lazy(() => import('./pages/Student/Schedule'))
+const StudentGrades = lazy(() => import('./pages/Student/Grades'))
+const StudentAbsences = lazy(() => import('./pages/Student/Absences'))
+const StudentProjects = lazy(() => import('./pages/Student/Projects'))
+const TeacherDashboard = lazy(() => import('./pages/Teacher/Dashboard'))
+const HRDashboard = lazy(() => import('./pages/HR/Dashboard'))
+const SuperAdminDashboard = lazy(() => import('./pages/SuperAdmin/Dashboard'))
+const GuestDashboard = lazy(() => import('./pages/Guest/Dashboard'))
+const RecruiterDashboard = lazy(() => import('./pages/Recruiter/Dashboard'))
+
 // Import du composant HomePage 
 const HomePage = lazy(() => import('./components/HomePage'))
-
-// Import de notre page de test CV
 
 import { Toaster } from './components/ui/sonner'
 import './index.css'
@@ -67,6 +79,17 @@ const useIntelligentPreload = () => {
         // Précharger la page de paramètres par défaut
         preloadComponent(() => import('./pages/Global/Profile/views/SettingsProfile'));
       }
+    }
+    // Préchargement pour les routes spécifiques aux rôles
+    else if (currentPath.includes('/admin')) {
+      preloadComponent(() => import('./pages/Admin/Dashboard'));
+    }
+    else if (currentPath.includes('/student')) {
+      preloadComponent(() => import('./pages/Student/Dashboard'));
+      preloadComponent(() => import('./pages/Student/Schedule'));
+    }
+    else if (currentPath.includes('/teacher')) {
+      preloadComponent(() => import('./pages/Teacher/Dashboard'));
     }
   }, [currentPath]);
   
@@ -131,6 +154,24 @@ const App = () => {
                       <Route path="/settings/security" element={<SecuritySettings />} />
                       <Route path="/settings/notifications" element={<NotificationSettings />} />
                     </Route>
+                    
+                    {/* Dashboards spécifiques par rôle */}
+                    <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                    
+                    {/* Routes étudiantes */}
+                    <Route path="/student">
+                      <Route path="dashboard" element={<StudentDashboard />} />
+                      <Route path="schedule" element={<StudentSchedule />} />
+                      <Route path="grades" element={<StudentGrades />} />
+                      <Route path="absences" element={<StudentAbsences />} />
+                      <Route path="projects" element={<StudentProjects />} />
+                    </Route>
+                    
+                    <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
+                    <Route path="/hr/dashboard" element={<HRDashboard />} />
+                    <Route path="/super-admin/dashboard" element={<SuperAdminDashboard />} />
+                    <Route path="/guest/dashboard" element={<GuestDashboard />} />
+                    <Route path="/recruiter/dashboard" element={<RecruiterDashboard />} />
                   </Route>
                   
                   {/* Redirection des routes inconnues vers la page d'accueil */}

@@ -2,7 +2,6 @@ import React, { memo, useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { authService } from "../lib/services/authService";
 import { profileService } from "../pages/Global/Profile/services/profileService";
-import { getDashboardPathByRole, getPrimaryRole } from '@/lib/utils/roleUtils';
 import { Button } from "./ui/button";
 import {
   UserRound,
@@ -91,7 +90,6 @@ const Navbar = memo(({ user }) => {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [userData, setUserData] = useState(null);
-  const [dashboardPath, setDashboardPath] = useState('/dashboard');
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -110,11 +108,6 @@ const Navbar = memo(({ user }) => {
             console.log('Using user from props:', user);
             setUserData(user);
             
-            // Déterminer le chemin du tableau de bord en fonction du rôle
-            const primaryRole = getPrimaryRole(user.roles);
-            const path = getDashboardPathByRole(primaryRole);
-            setDashboardPath(path);
-
             // Déclencher un événement de changement de rôle si l'état d'authentification a changé
             if (!wasAuthenticated) {
               console.log('Dispatching role-change event from Navbar (login)');
@@ -126,11 +119,6 @@ const Navbar = memo(({ user }) => {
             console.log('User data from API:', userData);
             setUserData(userData);
             
-            // Déterminer le chemin du tableau de bord en fonction du rôle
-            const primaryRole = getPrimaryRole(userData.roles);
-            const path = getDashboardPathByRole(primaryRole);
-            setDashboardPath(path);
-
             // Déclencher un événement de changement de rôle si l'état d'authentification a changé
             if (!wasAuthenticated) {
               console.log('Dispatching role-change event from Navbar (login)');
@@ -148,24 +136,14 @@ const Navbar = memo(({ user }) => {
             const profileData = await profileService.getAllProfileData();
             console.log('Profile data from API:', profileData);
             
-            let userDataToUse;
             if (profileData?.user) {
-              userDataToUse = profileData.user;
+              setUserData(profileData.user);
             } else if (profileData?.data?.user) {
-              userDataToUse = profileData.data.user;
+              setUserData(profileData.data.user);
             } else {
-              userDataToUse = profileData;
+              setUserData(profileData);
             }
             
-            setUserData(userDataToUse);
-            
-            // Déterminer le chemin du tableau de bord en fonction du rôle
-            if (userDataToUse?.roles) {
-              const primaryRole = getPrimaryRole(userDataToUse.roles);
-              const path = getDashboardPathByRole(primaryRole);
-              setDashboardPath(path);
-            }
-
             // Déclencher un événement de changement de rôle si l'état d'authentification a changé
             if (!wasAuthenticated) {
               console.log('Dispatching role-change event from Navbar (login)');
@@ -180,7 +158,6 @@ const Navbar = memo(({ user }) => {
         }
       } else {
         setUserData(null);
-        setDashboardPath('/login');
         
         // Déclencher un événement de changement de rôle si l'état d'authentification a changé
         if (wasAuthenticated) {
@@ -195,7 +172,6 @@ const Navbar = memo(({ user }) => {
       );
       setIsAuthenticated(false);
       setUserData(null);
-      setDashboardPath('/login');
     }
   };
 
@@ -280,7 +256,7 @@ const Navbar = memo(({ user }) => {
               </div>
               <div className="flex-shrink-0">
                 <Link
-                  to={isAuthenticated ? dashboardPath : "/login"}
+                  to={isAuthenticated ? "/dashboard" : "/login"}
                   className="text-2xl font-black tracking-tight text-white"
                 >
                   Big<span className="text-[#528eb2]">Project</span>
@@ -294,7 +270,7 @@ const Navbar = memo(({ user }) => {
                 {/* Élements affichés uniquement pour les utilisateurs connectés */}
                 {isAuthenticated && (
                   <Link 
-                    to={dashboardPath}
+                    to="/dashboard" 
                     className="px-3 py-2 rounded-md text-gray-200 hover:text-white hover:bg-[#02284f]/80 transition-colors flex items-center"
                   >
                     <LayoutDashboard className="h-4 w-4 mr-2" />
@@ -420,64 +396,40 @@ const Navbar = memo(({ user }) => {
         </div>
 
         {/* Dialogue de confirmation de déconnexion */}
-        <AnimatePresence>
-          {logoutDialogOpen && (
-            <Dialog open={logoutDialogOpen} onOpenChange={(open) => !isLoggingOut && setLogoutDialogOpen(open)}>
-              <DialogContent className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-hidden rounded-2xl border-0 shadow-xl">
-                <motion.div
-                  className="overflow-y-auto max-h-[70vh]"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
+        {logoutDialogOpen && (
+          <Dialog open={logoutDialogOpen} onOpenChange={(open) => !isLoggingOut && setLogoutDialogOpen(open)}>
+            <DialogContent className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-hidden rounded-2xl border-0 shadow-xl">
+              <div
+                className="overflow-y-auto max-h-[70vh] fade-in-up"
+              >
+                <DialogHeader>
+                  <DialogTitle className="text-xl font-semibold">Confirmation de déconnexion</DialogTitle>
+                  <DialogDescription className="text-base mt-2">
+                    Êtes-vous sûr de vouloir vous déconnecter de votre compte ? Toutes vos sessions actives seront fermées.
+                  </DialogDescription>
+                </DialogHeader>
+              </div>
+              <DialogFooter className="mt-6 flex justify-end space-x-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setLogoutDialogOpen(false)}
+                  disabled={isLoggingOut}
+                  className="rounded-full border-2 hover:bg-gray-100 transition-all duration-200"
                 >
-                  <DialogHeader>
-                    <DialogTitle className="text-xl font-semibold">Confirmation de déconnexion</DialogTitle>
-                    <DialogDescription className="text-base mt-2">
-                      Êtes-vous sûr de vouloir vous déconnecter de votre compte ? Toutes vos sessions actives seront fermées.
-                    </DialogDescription>
-                  </DialogHeader>
-                </motion.div>
-                <DialogFooter className="mt-6 flex justify-end space-x-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => setLogoutDialogOpen(false)}
-                    disabled={isLoggingOut}
-                    className="rounded-full border-2 hover:bg-gray-100 transition-all duration-200"
-                  >
-                    Annuler
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    onClick={handleLogout}
-                    disabled={isLoggingOut}
-                    className={`rounded-full bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 transition-all duration-200 ${isLoggingOut ? 'opacity-80' : ''}`}
-                  >
-                    {isLoggingOut ? (
-                      <>
-                        <motion.div
-                          animate={{ rotate: 360 }}
-                          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                          className="mr-2 h-4 w-4"
-                        >
-                          <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                        </motion.div>
-                        Déconnexion en cours...
-                      </>
-                    ) : (
-                      <>
-                        <LogOut className="mr-2 h-4 w-4" />
-                        Se déconnecter
-                      </>
-                    )}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          )}
-        </AnimatePresence>
+                  Annuler
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
+                  className={`rounded-full bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 transition-all duration-200 ${isLoggingOut ? 'opacity-80' : ''}`}
+                >
+                  {isLoggingOut ? "Déconnexion..." : "Se déconnecter"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
       </nav>
     </>
   );

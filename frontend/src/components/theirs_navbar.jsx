@@ -1,18 +1,10 @@
-import React, { memo, useState, useEffect } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
-import { authService } from "../lib/services/authService";
-import { profileService } from "../pages/Global/Profile/services/profileService";
+import React, { memo, useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { authService } from '../lib/services/authService';
+import profilService from '../lib/services/profilService';
 import { getDashboardPathByRole, getPrimaryRole } from '@/lib/utils/roleUtils';
-import { Button } from "./ui/button";
-import {
-  UserRound,
-  LayoutDashboard,
-  LogOut,
-  Settings,
-  User,
-  Bell,
-  Menu,
-} from "lucide-react";
+import { Button } from './ui/button';
+import { UserRound, LayoutDashboard, LogOut, Settings, User, Bell } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,7 +12,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
   DropdownMenuLabel,
-} from "./ui/dropdown-menu";
+} from './ui/dropdown-menu';
 import {
   Dialog,
   DialogContent,
@@ -28,12 +20,11 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "./ui/dialog";
-import { motion, AnimatePresence } from "framer-motion";
-import { MenuBurger } from "./MenuBurger";
+} from './ui/dialog';
+import { motion, AnimatePresence } from 'framer-motion';
 
-// Style personnalisé pour le menu dropdown et le bouton burger
-const customStyles = `
+// Style personnalisé pour le menu dropdown
+const customDropdownStyles = `
   .navbar-dropdown-item {
     display: flex !important;
     align-items: center !important;
@@ -55,43 +46,16 @@ const customStyles = `
     background-color: rgba(225, 29, 72, 0.1) !important;
     color: #be123c !important;
   }
-  
-  .menu-burger-btn {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    transition: all 0.2s ease;
-    margin-right: 0.75rem;
-  }
-  
-  .menu-burger-btn:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    transform: scale(1.05);
-  }
-  
-  .menu-burger-btn:active {
-    transform: scale(0.95);
-  }
-  
-  @media (max-width: 768px) {
-    .menu-burger-btn {
-      margin-right: 0.5rem;
-    }
-  }
 `;
 
 // Utilisation de React.memo pour éviter les rendus inutiles de la barre de navigation
-const Navbar = memo(({ user }) => {
+const Navbar = memo(() => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [userData, setUserData] = useState(null);
-  const [dashboardPath, setDashboardPath] = useState('/dashboard');
+  const [dashboardPath, setDashboardPath] = useState('/login');
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -99,110 +63,33 @@ const Navbar = memo(({ user }) => {
   const checkAuthStatus = async () => {
     try {
       const status = authService.isLoggedIn();
-      const wasAuthenticated = isAuthenticated;
       setIsAuthenticated(status);
-
+      
       // Si l'utilisateur est connecté, charger ses données
       if (status) {
         try {
-          // Si un utilisateur est passé en props, l'utiliser
-          if (user) {
-            console.log('Using user from props:', user);
-            setUserData(user);
-            
-            // Déterminer le chemin du tableau de bord en fonction du rôle
-            const primaryRole = getPrimaryRole(user.roles);
-            const path = getDashboardPathByRole(primaryRole);
-            setDashboardPath(path);
-
-            // Déclencher un événement de changement de rôle si l'état d'authentification a changé
-            if (!wasAuthenticated) {
-              console.log('Dispatching role-change event from Navbar (login)');
-              window.dispatchEvent(new Event('role-change'));
-            }
-          } else {
-            // Sinon, essayer de récupérer les données depuis l'API
-            const userData = await authService.getCurrentUser();
-            console.log('User data from API:', userData);
-            setUserData(userData);
-            
-            // Déterminer le chemin du tableau de bord en fonction du rôle
-            const primaryRole = getPrimaryRole(userData.roles);
-            const path = getDashboardPathByRole(primaryRole);
-            setDashboardPath(path);
-
-            // Déclencher un événement de changement de rôle si l'état d'authentification a changé
-            if (!wasAuthenticated) {
-              console.log('Dispatching role-change event from Navbar (login)');
-              window.dispatchEvent(new Event('role-change'));
-            }
-          }
-        } catch (userError) {
-          console.error(
-            "Erreur lors de la récupération des données utilisateur:",
-            userError
-          );
-          
-          // Fallback: essayer de récupérer les données du profil
-          try {
-            const profileData = await profileService.getAllProfileData();
-            console.log('Profile data from API:', profileData);
-            
-            let userDataToUse;
-            if (profileData?.user) {
-              userDataToUse = profileData.user;
-            } else if (profileData?.data?.user) {
-              userDataToUse = profileData.data.user;
-            } else {
-              userDataToUse = profileData;
-            }
-            
-            setUserData(userDataToUse);
-            
-            // Déterminer le chemin du tableau de bord en fonction du rôle
-            if (userDataToUse?.roles) {
-              const primaryRole = getPrimaryRole(userDataToUse.roles);
-              const path = getDashboardPathByRole(primaryRole);
-              setDashboardPath(path);
-            }
-
-            // Déclencher un événement de changement de rôle si l'état d'authentification a changé
-            if (!wasAuthenticated) {
-              console.log('Dispatching role-change event from Navbar (login)');
-              window.dispatchEvent(new Event('role-change'));
-            }
-          } catch (profileError) {
-            console.error(
-              "Erreur lors de la récupération des données du profil:",
-              profileError
-            );
-          }
+          const user = await authService.getCurrentUser();
+          setUserData(user);
+          const primaryRole = getPrimaryRole(user.roles);
+          const path = getDashboardPathByRole(primaryRole);
+          setDashboardPath(path);
+        } catch (profileError) {
+          console.error('Erreur lors de la récupération des données du profil:', profileError);
         }
       } else {
         setUserData(null);
-        setDashboardPath('/login');
-        
-        // Déclencher un événement de changement de rôle si l'état d'authentification a changé
-        if (wasAuthenticated) {
-          console.log('Dispatching role-change event from Navbar (logout)');
-          window.dispatchEvent(new Event('role-change'));
-        }
       }
     } catch (error) {
-      console.error(
-        "Erreur lors de la vérification du statut d'authentification:",
-        error
-      );
+      console.error('Erreur lors de la vérification du statut d\'authentification:', error);
       setIsAuthenticated(false);
       setUserData(null);
-      setDashboardPath('/login');
     }
   };
 
   // Vérifier l'état d'authentification au chargement et lors des changements de route
   useEffect(() => {
     checkAuthStatus();
-  }, [location.pathname, user]);
+  }, [location.pathname]);
 
   // Ajouter un écouteur d'événement pour les changements d'authentification
   useEffect(() => {
@@ -212,13 +99,13 @@ const Navbar = memo(({ user }) => {
     };
 
     // Ajouter des écouteurs d'événements personnalisés
-    window.addEventListener("login-success", handleAuthChange);
-    window.addEventListener("logout-success", handleAuthChange);
-
+    window.addEventListener('login-success', handleAuthChange);
+    window.addEventListener('logout-success', handleAuthChange);
+    
     // Nettoyage lors du démontage du composant
     return () => {
-      window.removeEventListener("login-success", handleAuthChange);
-      window.removeEventListener("logout-success", handleAuthChange);
+      window.removeEventListener('login-success', handleAuthChange);
+      window.removeEventListener('logout-success', handleAuthChange);
     };
   }, []);
 
@@ -226,20 +113,17 @@ const Navbar = memo(({ user }) => {
   const handleLogout = async () => {
     try {
       setIsLoggingOut(true);
-
-      await authService.logout();
-
-      // Déclencher un événement personnalisé pour informer la navbar de la déconnexion
-      window.dispatchEvent(new Event("logout-success"));
       
-      // Déclencher également un événement de changement de rôle
-      window.dispatchEvent(new Event("role-change"));
-
+      await authService.logout();
+      
+      // Déclencher un événement personnalisé pour informer la navbar de la déconnexion
+      window.dispatchEvent(new Event('logout-success'));
+      
       setLogoutDialogOpen(false);
       setIsAuthenticated(false);
-      navigate("/login");
+      navigate('/login');
     } catch (error) {
-      console.error("Erreur lors de la déconnexion:", error);
+      console.error('Erreur lors de la déconnexion:', error);
       setIsLoggingOut(false);
     }
   };
@@ -250,42 +134,34 @@ const Navbar = memo(({ user }) => {
       opacity: 0,
       y: -10,
       scale: 0.95,
-      transition: { duration: 0.2, ease: "easeOut" },
+      transition: { duration: 0.2, ease: "easeOut" }
     },
     visible: {
       opacity: 1,
       y: 0,
       scale: 1,
-      transition: { duration: 0.2, ease: "easeOut" },
+      transition: { duration: 0.2, ease: "easeOut" }
     },
     exit: {
       opacity: 0,
       y: -10,
       scale: 0.95,
-      transition: { duration: 0.1, ease: "easeIn" },
-    },
+      transition: { duration: 0.1, ease: "easeIn" }
+    }
   };
 
   return (
     <>
       {/* Injection des styles personnalisés */}
-      <style>{customStyles}</style>
-
+      <style>{customDropdownStyles}</style>
+      
       <nav className="bg-[#02284f] shadow-lg">
         <div className="container px-4 mx-auto">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center">
-              <div className="menu-burger-wrapper">
-                <MenuBurger />
-              </div>
-              <div className="flex-shrink-0">
-                <Link
-                  to={isAuthenticated ? dashboardPath : "/login"}
-                  className="text-2xl font-black tracking-tight text-white"
-                >
-                  Big<span className="text-[#528eb2]">Project</span>
-                </Link>
-              </div>
+            <div className="flex-shrink-0">
+              <Link to={isAuthenticated ? dashboardPath : "/login"} className="text-2xl font-black tracking-tight text-white">
+                Big<span className="text-[#528eb2]">Project</span>
+              </Link>
             </div>
 
             <div className="hidden md:block">
@@ -347,16 +223,8 @@ const Navbar = memo(({ user }) => {
                                     <UserRound className="h-6 w-6" />
                                   </div>
                                   <div className="ml-3">
-                                    <h3 className="font-medium text-sm">
-                                      {userData?.firstName && userData?.lastName 
-                                        ? `${userData.firstName} ${userData.lastName}`
-                                        : userData?.user?.firstName && userData?.user?.lastName
-                                          ? `${userData.user.firstName} ${userData.user.lastName}`
-                                          : 'Utilisateur'}
-                                    </h3>
-                                    <p className="text-xs text-gray-300">
-                                      {userData?.email || userData?.user?.email || 'utilisateur@example.com'}
-                                    </p>
+                                    <h3 className="font-medium text-sm">{userData ? `${userData.firstName} ${userData.lastName}` : 'Utilisateur'}</h3>
+                                    <p className="text-xs text-gray-300">{userData ? userData.email : 'utilisateur@example.com'}</p>
                                   </div>
                                 </div>
                               </div>
@@ -364,16 +232,15 @@ const Navbar = memo(({ user }) => {
                               {/* Corps du dropdown avec les options */}
                               <div className="py-1 bg-white">
                                 <DropdownMenuItem 
-                                  className="navbar-dropdown-item"
-                                  onClick={() => navigate('/profile')}
+                                  className="flex items-center p-3" 
+                                  onClick={() => navigate('/profil')}
                                 >
                                   <User className="mr-2 h-4 w-4 text-[#528eb2]" />
                                   <span>Mon profil</span>
                                 </DropdownMenuItem>
                                 
                                 <DropdownMenuItem 
-                                  className="navbar-dropdown-item"
-                                  onClick={() => navigate('/settings/profile')}
+                                  className="flex items-center p-3"
                                 >
                                   <Settings className="mr-2 h-4 w-4 text-[#528eb2]" />
                                   <span>Paramètres</span>
@@ -382,7 +249,7 @@ const Navbar = memo(({ user }) => {
                                 <DropdownMenuSeparator className="my-1 bg-gray-100" />
                                 
                                 <DropdownMenuItem 
-                                  className="navbar-dropdown-item danger"
+                                  className="flex items-center p-3 text-red-600"
                                   onClick={() => setLogoutDialogOpen(true)}
                                 >
                                   <LogOut className="mr-2 h-4 w-4" />
@@ -409,11 +276,10 @@ const Navbar = memo(({ user }) => {
             </div>
 
             <div className="md:hidden">
-              <button 
-                className="menu-burger-btn text-gray-200 hover:text-white focus:outline-none"
-                aria-label="Menu mobile"
-              >
-                <Menu className="w-6 h-6" />
+              <button className="text-gray-200 hover:text-white focus:outline-none">
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
               </button>
             </div>
           </div>
@@ -484,6 +350,6 @@ const Navbar = memo(({ user }) => {
 });
 
 // Ajout d'un nom d'affichage pour les outils de développement
-Navbar.displayName = "Navbar";
+Navbar.displayName = 'Navbar';
 
 export default Navbar;
