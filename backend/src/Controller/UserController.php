@@ -3,6 +3,8 @@
 namespace App\Controller;
 
 use App\Entity\User;
+use App\Entity\UserRole;
+use App\Entity\Role;
 use App\Repository\UserRepository;
 use App\Service\RegistrationService;
 use App\Service\DocumentStorageFactory;
@@ -659,53 +661,167 @@ class UserController extends AbstractController
     public function getAllUsers(): JsonResponse
     {
         try {
-            // Vérifier si l'utilisateur a les droits d'accès (ADMIN ou SUPERADMIN)
-            $currentUser = $this->security->getUser();
-            if (!$currentUser || (!$this->isGranted('ROLE_ADMIN') && !$this->isGranted('ROLE_SUPERADMIN'))) {
-                return $this->json([
-                    'success' => false,
-                    'message' => 'Accès non autorisé'
-                ], 403);
-            }
-            
-            // Utiliser la méthode du repository qui charge déjà les relations
-            $allUsers = $this->userRepository->findAllWithRelations();
-            
-            $usersData = [];
-            foreach ($allUsers as $user) {
-                // Extraire les rôles depuis la relation userRoles
-                $roles = [];
-                foreach ($user->getUserRoles() as $userRole) {
-                    $roles[] = [
-                        'id' => $userRole->getRole()->getId(),
-                        'name' => $userRole->getRole()->getName(),
-                    ];
-                }
-                
-                // Construire la structure de données attendue par le frontend
-                $userData = [
-                    'id' => $user->getId(),
-                    'firstName' => $user->getFirstName(),
-                    'lastName' => $user->getLastName(),
-                    'email' => $user->getEmail(),
-                    'phoneNumber' => $user->getPhoneNumber(),
-                    'birthDate' => $user->getBirthDate() ? $user->getBirthDate()->format('Y-m-d') : null,
-                    'createdAt' => $user->getCreatedAt() ? $user->getCreatedAt()->format('Y-m-d H:i:s') : null,
-                    'updatedAt' => $user->getUpdatedAt() ? $user->getUpdatedAt()->format('Y-m-d H:i:s') : null,
-                    'roles' => $roles
-                ];
-                
-                $usersData[] = $userData;
-            }
+            $users = $this->userRepository->findAllWithRoles();
             
             return $this->json([
                 'success' => true,
-                'data' => $usersData
+                'data' => $users
             ]);
         } catch (\Exception $e) {
             return $this->json([
                 'success' => false,
                 'message' => 'Une erreur est survenue lors de la récupération des utilisateurs: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * Update a specific user by ID
+     */
+    #[Route('/users/{id}', name: 'api_update_user', methods: ['PUT'])]
+    public function updateUser(
+        int $id,
+        Request $request,
+        EntityManagerInterface $entityManager,
+        ValidatorInterface $validator
+    ): JsonResponse {
+        try {
+            $user = $entityManager->getRepository(User::class)->find($id);
+
+            if (!$user) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Utilisateur non trouvé'
+                ], 404);
+            }
+
+            $data = json_decode($request->getContent(), true);
+
+            if (isset($data['firstName'])) {
+                $user->setFirstName($data['firstName']);
+            }
+
+            if (isset($data['lastName'])) {
+                $user->setLastName($data['lastName']);
+            }
+
+            if (isset($data['email'])) {
+                $existingUser = $entityManager->getRepository(User::class)->findOneBy(['email' => $data['email']]);
+                if ($existingUser && $existingUser->getId() !== $user->getId()) {
+                    return $this->json([
+                        'success' => false,
+                        'message' => 'Cet email est déjà utilisé par un autre utilisateur.'
+                    ], 400);
+                }
+                $user->setEmail($data['email']);
+            }
+
+            if (isset($data['phoneNumber'])) {
+                $user->setPhoneNumber($data['phoneNumber']);
+            }
+
+            if (isset($data['birthDate'])) {
+                $user->setBirthDate(new \DateTime($data['birthDate']));
+            }
+
+            if (isset($data['nationality']) && is_numeric($data['nationality'])) {
+                $nationality = $entityManager->getRepository('App\Entity\Nationality')->find($data['nationality']);
+                if ($nationality) {
+                    $user->setNationality($nationality);
+                }
+            }
+
+            if (isset($data['roles']) && is_array($data['roles'])) {
+                foreach ($user->getUserRoles() as $userRole) {
+                    $entityManager->remove($userRole);
+                }
+
+                $roleRepository = $entityManager->getRepository('App\Entity\Role');
+                foreach ($data['roles'] as $roleId) {
+                    $role = $roleRepository->find($roleId);
+                    if ($role) {
+                        $userRole = new \App\Entity\UserRole();
+                        $userRole->setUser($user);
+                        $userRole->setRole($role);
+                        $entityManager->persist($userRole);
+                    }
+                }
+            }
+
+            $user->setUpdatedAt(new \DateTimeImmutable());
+
+            $errors = $validator->validate($user);
+            if (count($errors) > 0) {
+                $errorMessages = [];
+                foreach ($errors as $error) {
+                    $errorMessages[$error->getPropertyPath()] = $error->getMessage();
+                }
+
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Erreurs de validation',
+                    'errors' => $errorMessages
+                ], 400);
+            }
+
+            $entityManager->flush();
+
+            $roles = [];
+            foreach ($user->getUserRoles() as $userRole) {
+                $roles[] = [
+                    'id' => $userRole->getRole()->getId(),
+                    'name' => $userRole->getRole()->getName(),
+                ];
+            }
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Utilisateur mis à jour avec succès',
+                'user' => [
+                    'id' => $user->getId(),
+                    'firstName' => $user->getFirstName(),
+                    'lastName' => $user->getLastName(),
+                    'email' => $user->getEmail(),
+                    'roles' => $roles
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Une erreur est survenue lors de la mise à jour: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * Delete a specific user by ID
+     */
+    #[Route('/users/{id}', name: 'api_delete_user', methods: ['DELETE'])]
+    public function deleteUser(
+        int $id,
+        EntityManagerInterface $entityManager
+    ): JsonResponse {
+        try {
+            $user = $entityManager->getRepository(User::class)->find($id);
+
+            if (!$user) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Utilisateur non trouvé'
+                ], 404);
+            }
+
+            $entityManager->remove($user);
+            $entityManager->flush();
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Utilisateur supprimé avec succès'
+            ]);
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Une erreur est survenue lors de la suppression: ' . $e->getMessage()
             ], 500);
         }
     }
