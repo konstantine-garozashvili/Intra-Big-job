@@ -17,7 +17,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard'))
 // Import du composant HomePage
 const HomePage = lazy(() => import('./components/HomePage'))
 // Import de la page de gestion des rôles utilisateurs
-const UserRoleManagement = lazy(() => import('./pages/Recruiter/UserRoleManagement'))
+const GuestStudentRoleManager = lazy(() => import('./pages/Recruiter/GuestStudentRoleManager'))
 import { Toaster } from './components/ui/sonner'
 import './index.css'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -37,7 +37,7 @@ const preloadPages = () => {
   const preloadProfil = () => import('./pages/Profil'); // Préchargement du Profil
   const preloadDashboard = () => import('./pages/Dashboard'); // Préchargement du Dashboard
   const preloadHomePage = () => import('./components/HomePage'); // Préchargement de HomePage
-  const preloadUserRoleManagement = () => import('./pages/Recruiter/UserRoleManagement'); // Préchargement de UserRoleManagement
+  const preloadGuestStudentRoleManager = () => import('./pages/Recruiter/GuestStudentRoleManager'); // Préchargement de GuestStudentRoleManager
   
   // Déclencher le préchargement
   preloadLogin();
@@ -51,7 +51,7 @@ const preloadPages = () => {
   preloadProfil();
   preloadDashboard();
   preloadHomePage();
-  preloadUserRoleManagement();
+  preloadGuestStudentRoleManager();
 };
 
 // Composant pour observer les liens et précharger les pages correspondantes
@@ -104,7 +104,7 @@ const App = () => {
                   
                   {/* Routes pour les recruteurs */}
                   <Route path="/recruiter">
-                    <Route path="user-roles" element={<UserRoleManagement />} />
+                    <Route path="guest-student-roles" element={<GuestStudentRoleManager />} />
                   </Route>
                 </Route>
                 
