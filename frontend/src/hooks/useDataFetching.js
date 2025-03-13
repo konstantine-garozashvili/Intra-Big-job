@@ -43,7 +43,7 @@ export const useDataFetching = (fetchFunction, {
       
       return result;
     } catch (err) {
-      console.error('Error fetching data:', err);
+      // console.error('Error fetching data:', err);
       setError(err);
       throw err;
     } finally {
@@ -113,7 +113,7 @@ export const useVisibilityFetch = (fetchFunction, {
       
       return result;
     } catch (err) {
-      console.error('Error fetching data:', err);
+      // console.error('Error fetching data:', err);
       setError(err);
     } finally {
       setLoading(false);
@@ -207,7 +207,7 @@ export const useInteractionFetch = (fetchFunction) => {
       
       return result;
     } catch (err) {
-      console.error('Error fetching data:', err);
+      // console.error('Error fetching data:', err);
       setError(err);
       throw err;
     } finally {

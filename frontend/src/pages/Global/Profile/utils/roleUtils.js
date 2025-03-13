@@ -55,9 +55,9 @@ export const isStudent = (userRole) => {
  * @returns {boolean} - Whether the user is a guest
  */
 export const isGuest = (userRole) => {
-  console.log('isGuest called with:', userRole);
+  // console.log('isGuest called with:', userRole);
   const result = userRole === 'ROLE_GUEST' || userRole === 'GUEST';
-  console.log('isGuest result:', result);
+  // console.log('isGuest result:', result);
   return result;
 };
 

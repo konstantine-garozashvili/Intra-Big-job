@@ -132,7 +132,7 @@ const UserProfileSettings = () => {
       
       return hasBirthdayOccurredThisYear ? age : age - 1;
     } catch (e) {
-      console.error('Error calculating age:', e);
+      // console.error('Error calculating age:', e);
       return null;
     }
   };
@@ -216,7 +216,7 @@ const UserProfileSettings = () => {
         updateLocalState(field, profileData?.data?.user?.[field] || null);
       }
       
-      console.error(`Error saving ${field}:`, error);
+      // console.error(`Error saving ${field}:`, error);
       toast.error(`Erreur lors de la mise à jour de ${field}`);
     }
   };
@@ -268,7 +268,7 @@ const UserProfileSettings = () => {
       queryClient.invalidateQueries({ queryKey: ['userProfileData'] });
       
     } catch (error) {
-      console.error('Error saving address:', error);
+      // console.error('Error saving address:', error);
       toast.error('Erreur lors de la mise à jour de l\'adresse');
       
       // Refetch to revert to the server state on error

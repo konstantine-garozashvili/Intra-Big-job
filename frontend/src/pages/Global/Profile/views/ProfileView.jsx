@@ -40,19 +40,19 @@ const ProfileView = () => {
   // Add debugging logs
   useEffect(() => {
     if (isPublicProfile) {
-      console.log('Public Profile Mode:', { userId });
-      console.log('Public Profile Data:', publicProfileData);
-      console.log('Public Profile Loading:', isLoadingPublicProfile);
-      console.log('Public Profile Error:', publicProfileError);
+      // console.log('Public Profile Mode:', { userId });
+      // console.log('Public Profile Data:', publicProfileData);
+      // console.log('Public Profile Loading:', isLoadingPublicProfile);
+      // console.log('Public Profile Error:', publicProfileError);
     } else {
-      console.log('Current Profile Mode');
-      console.log('Current Profile Data:', currentProfileData);
-      console.log('Current Profile Loading:', isLoadingCurrentProfile);
-      console.log('Current Profile Error:', currentProfileError);
+      // console.log('Current Profile Mode');
+      // console.log('Current Profile Data:', currentProfileData);
+      // console.log('Current Profile Loading:', isLoadingCurrentProfile);
+      // console.log('Current Profile Error:', currentProfileError);
     }
     
     // Log profile picture data
-    console.log('Profile Picture Data:', profilePictureData);
+    // console.log('Profile Picture Data:', profilePictureData);
   }, [userId, publicProfileData, currentProfileData, isLoadingPublicProfile, isLoadingCurrentProfile, publicProfileError, currentProfileError, profilePictureData]);
   
   // Fetch documents separately
@@ -60,10 +60,10 @@ const ProfileView = () => {
     const fetchDocuments = async () => {
       try {
         const docs = await documentService.getDocuments(true); // Force refresh
-        console.log('Fetched documents:', docs);
+        // console.log('Fetched documents:', docs);
         setDocuments(docs);
       } catch (error) {
-        console.error('Error fetching documents:', error);
+        // console.error('Error fetching documents:', error);
       }
     };
     
@@ -86,7 +86,7 @@ const ProfileView = () => {
   };
 
   if (isLoading) {
-    console.log('Rendering loading state');
+    // console.log('Rendering loading state');
     return (
       <div className="w-full max-w-7xl mx-auto px-4 py-6 space-y-8" data-testid="profile-loading">
         {/* Profile Header Skeleton */}
@@ -184,7 +184,7 @@ const ProfileView = () => {
   }
 
   if (error) {
-    console.log('Rendering error state:', error);
+    // console.log('Rendering error state:', error);
     return (
       <div className="w-full max-w-7xl mx-auto px-4 py-6" data-testid="profile-error">
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative" role="alert">
@@ -196,7 +196,7 @@ const ProfileView = () => {
   }
 
   if (!data) {
-    console.log('No data available:', { data });
+    // console.log('No data available:', { data });
     return (
       <div className="w-full max-w-7xl mx-auto px-4 py-6" data-testid="profile-no-data">
         <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded relative" role="alert">
@@ -225,10 +225,10 @@ const ProfileView = () => {
     } : null;
   }
   
-  console.log('Extracted user data:', userData);
+  // console.log('Extracted user data:', userData);
   
   if (!userData || !userData.user) {
-    console.log('Invalid user data structure:', { userData });
+    // console.log('Invalid user data structure:', { userData });
     return (
       <div className="w-full max-w-7xl mx-auto px-4 py-6" data-testid="profile-invalid-data">
         <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded relative" role="alert">
@@ -242,22 +242,22 @@ const ProfileView = () => {
   // Add profile picture URL from the separate profile picture query if available
   if (profilePictureData && profilePictureData.data && profilePictureData.data.profile_picture_url) {
     userData.user.profilePictureUrl = profilePictureData.data.profile_picture_url;
-    console.log('Added profile picture URL from separate query:', userData.user.profilePictureUrl);
+    // console.log('Added profile picture URL from separate query:', userData.user.profilePictureUrl);
   }
   
-  console.log('=== DÉBUT DES LOGS DE DÉBOGAGE PROFILEVIEW ===');
-  console.log('Data complète:', data);
-  console.log('UserData:', userData);
+  // console.log('=== DÉBUT DES LOGS DE DÉBOGAGE PROFILEVIEW ===');
+  // console.log('Data complète:', data);
+  // console.log('UserData:', userData);
   
   // Add detailed role debugging
-  console.log('User roles:', userData.user.roles);
-  if (userData.user.roles && userData.user.roles.length > 0) {
-    console.log('First role:', userData.user.roles[0]);
-    console.log('First role name:', userData.user.roles[0].name);
-    console.log('Is guest check result:', isGuest(userData.user.roles[0].name));
-  } else {
-    console.log('No roles found for user');
-  }
+  // console.log('User roles:', userData.user.roles);
+  // if (userData.user.roles && userData.user.roles.length > 0) {
+  //   console.log('First role:', userData.user.roles[0]);
+  //   console.log('First role name:', userData.user.roles[0].name);
+  //   console.log('Is guest check result:', isGuest(userData.user.roles[0].name));
+  // } else {
+  //   console.log('No roles found for user');
+  // }
   
   // Log the condition result
   const isGuestUser = () => {
@@ -281,10 +281,10 @@ const ProfileView = () => {
     return false;
   };
   
-  console.log('isPublicProfile:', isPublicProfile);
-  console.log('isGuestUser result:', isGuestUser());
+  // console.log('isPublicProfile:', isPublicProfile);
+  // console.log('isGuestUser result:', isGuestUser());
   
-  console.log('=== FIN DES LOGS DE DÉBOGAGE PROFILEVIEW ===');
+  // console.log('=== FIN DES LOGS DE DÉBOGAGE PROFILEVIEW ===');
 
   return (
     <motion.div

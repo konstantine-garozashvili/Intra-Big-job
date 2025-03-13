@@ -146,7 +146,7 @@ export const useUserCV = (userId = null) => {
           return { success: true, data: documents };
         }
       } catch (error) {
-        console.error('Error fetching CV document:', error);
+        // console.error('Error fetching CV document:', error);
         return { success: false, error: error.message };
       }
     },

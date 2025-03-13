@@ -68,7 +68,7 @@ const ProfilePicture = ({ userData, onProfilePictureChange, isLoading: externalL
 
   // Fonction pour forcer le rafraîchissement des données
   const forceRefresh = useCallback(() => {
-    console.log("Forçage du rafraîchissement des données de la photo de profil");
+    // console.log("Forçage du rafraîchissement des données de la photo de profil");
     refetch();
   }, [refetch]);
 
@@ -152,13 +152,13 @@ const ProfilePicture = ({ userData, onProfilePictureChange, isLoading: externalL
           URL.revokeObjectURL(tempUrl);
           
           toast.error('Erreur lors de la mise à jour de la photo de profil');
-          console.error('Error uploading profile picture:', error);
+          // console.error('Error uploading profile picture:', error);
           setIsUploading(false);
         }
       });
     } catch (error) {
       toast.error('Erreur lors de la mise à jour de la photo de profil');
-      console.error('Error uploading profile picture:', error);
+      // console.error('Error uploading profile picture:', error);
       setIsUploading(false);
     }
   };
@@ -189,12 +189,12 @@ const ProfilePicture = ({ userData, onProfilePictureChange, isLoading: externalL
           setLocalProfilePictureUrl(previousUrl);
           
           toast.error('Erreur lors de la suppression de la photo de profil');
-          console.error('Error deleting profile picture:', error);
+          // console.error('Error deleting profile picture:', error);
         }
       });
     } catch (error) {
       toast.error('Erreur lors de la suppression de la photo de profil');
-      console.error('Error deleting profile picture:', error);
+      // console.error('Error deleting profile picture:', error);
     } finally {
       setIsDeleting(false);
     }

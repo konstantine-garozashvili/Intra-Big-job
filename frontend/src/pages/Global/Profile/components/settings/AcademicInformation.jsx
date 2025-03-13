@@ -38,7 +38,7 @@ const AcademicInformation = ({
       
       toast.success('Informations académiques mises à jour avec succès');
     } catch (error) {
-      console.error('Error updating academic information:', error);
+      // console.error('Error updating academic information:', error);
       toast.error('Erreur lors de la mise à jour des informations académiques');
     }
   };

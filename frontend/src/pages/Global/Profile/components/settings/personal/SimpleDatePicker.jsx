@@ -27,7 +27,7 @@ export const SimpleDatePicker = ({ selected, onSelect, disabled, className }) =>
       const adjustedDate = new Date(date.getTime() - timezoneOffset);
       onSelect(adjustedDate);
     } catch (e) {
-      console.error('Error handling date change:', e);
+      // console.error('Error handling date change:', e);
     }
   };
 
@@ -45,7 +45,7 @@ export const SimpleDatePicker = ({ selected, onSelect, disabled, className }) =>
       const adjustedDate = new Date(d.getTime() - timezoneOffset);
       return adjustedDate.toISOString().split('T')[0];
     } catch (e) {
-      console.error('Error formatting date for input:', e);
+      // console.error('Error formatting date for input:', e);
       return '';
     }
   };

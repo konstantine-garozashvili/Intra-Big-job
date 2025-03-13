@@ -67,7 +67,7 @@ export const usePersonalInformation = ({
       
       return birthDate <= minAgeDate;
     } catch (e) {
-      console.error('Error validating age:', e);
+      // console.error('Error validating age:', e);
       return false;
     }
   };
