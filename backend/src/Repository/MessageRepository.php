@@ -49,4 +49,16 @@ class MessageRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
+
+    /**
+     * Find messages older than a specific date
+     */
+    public function findMessagesOlderThan(\DateTimeInterface $date): array
+    {
+        return $this->createQueryBuilder('m')
+            ->andWhere('m.createdAt < :date')
+            ->setParameter('date', $date)
+            ->getQuery()
+            ->getResult();
+    }
 }
