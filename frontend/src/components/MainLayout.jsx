@@ -3,7 +3,6 @@ import { Outlet } from 'react-router-dom';
 import Navbar from './Navbar';
 import AttendancePopup from './signature/AttendancePopup';
 import { Toaster } from './ui/sonner';
-import Chat from './chat/Chat';
 
 const MainLayout = () => {
   return (
@@ -13,7 +12,6 @@ const MainLayout = () => {
         <Outlet />
       </main>
       <AttendancePopup />
-      <Chat />
       <Toaster />
     </div>
   );

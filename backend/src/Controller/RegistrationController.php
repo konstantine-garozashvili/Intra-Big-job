@@ -41,7 +41,7 @@ class RegistrationController extends AbstractController
             
             return $this->json([
                 'success' => true,
-                'message' => 'Inscription réussie. Un email de confirmation a été envoyé à votre adresse email.',
+                'message' => 'Inscription réussie. Vous pouvez maintenant vous connecter.',
                 'userId' => $user->getId()
             ]);
         } catch (UniqueConstraintViolationException $e) {

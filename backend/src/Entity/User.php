@@ -87,9 +87,6 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     #[ORM\OneToMany(mappedBy: 'user', targetEntity: Signature::class, orphanRemoval: true)]
     private Collection $signatures;
 
-    #[ORM\OneToMany(mappedBy: 'sender', targetEntity: Message::class, orphanRemoval: true)]
-    private Collection $sentMessages;
-
     public function __construct()
     {
         $this->createdAt = new \DateTimeImmutable();
@@ -97,7 +94,6 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
         $this->diplomas = new ArrayCollection();
         $this->addresses = new ArrayCollection();
         $this->signatures = new ArrayCollection();
-        $this->sentMessages = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -387,36 +383,6 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
             // set the owning side to null (unless already changed)
             if ($signature->getUser() === $this) {
                 $signature->setUser(null);
-            }
-        }
-
-        return $this;
-    }
-
-    /**
-     * @return Collection<int, Message>
-     */
-    public function getSentMessages(): Collection
-    {
-        return $this->sentMessages;
-    }
-
-    public function addSentMessage(Message $message): static
-    {
-        if (!$this->sentMessages->contains($message)) {
-            $this->sentMessages->add($message);
-            $message->setSender($this);
-        }
-
-        return $this;
-    }
-
-    public function removeSentMessage(Message $message): static
-    {
-        if ($this->sentMessages->removeElement($message)) {
-            // set the owning side to null (unless already changed)
-            if ($message->getSender() === $this) {
-                $message->setSender(null);
             }
         }
 
