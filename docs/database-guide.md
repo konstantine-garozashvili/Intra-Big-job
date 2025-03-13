@@ -58,11 +58,9 @@ Doctrine permet de définir facilement des relations entre entités:
 Si vous avez des erreurs liées à la structure de la base de données:
 
 
-
 ```bash
 # Supprimer le schéma et le recréer
 docker exec -it infra-backend-1 php bin/console doctrine:schema:drop --force
 docker exec -it infra-backend-1 php bin/console doctrine:migrations:migrate --no-interaction
 ```
-
 

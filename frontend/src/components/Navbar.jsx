@@ -1,9 +1,16 @@
-import React, { memo, useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { authService } from '../lib/services/authService';
-import { profileService } from '@/pages/Global/Profile/services/profileService';
-import { Button } from './ui/button';
-import { UserRound, LayoutDashboard, LogOut, Settings, User, Bell, LogIn } from 'lucide-react';
+import React, { memo, useState, useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { authService } from "../lib/services/authService";
+import profilService from "../lib/services/profilService";
+import { Button } from "./ui/button";
+import {
+  UserRound,
+  LayoutDashboard,
+  LogOut,
+  Settings,
+  User,
+  Bell,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,7 +18,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
   DropdownMenuLabel,
-} from './ui/dropdown-menu';
+} from "./ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -19,8 +26,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from './ui/dialog';
-import { motion, AnimatePresence } from 'framer-motion';
+} from "./ui/dialog";
+import { motion, AnimatePresence } from "framer-motion";
+import { MenuBurger } from "./MenuBurger";
 
 // Style personnalisé pour le menu dropdown
 const customDropdownStyles = `
@@ -56,22 +64,17 @@ const Navbar = memo(() => {
   const [userData, setUserData] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
-  
-  // Check if we're on a public route
-  const isPublicRoute = location.pathname.includes('/login') || 
-                        location.pathname.includes('/register') ||
-                        location.pathname.includes('/verification');
 
   // Vérifier l'état d'authentification
   const checkAuthStatus = async () => {
     try {
       const status = authService.isLoggedIn();
       setIsAuthenticated(status);
-      
+
       // Si l'utilisateur est connecté, charger ses données
       if (status) {
         try {
-          const profilData = await profileService.getAllProfileData();
+          const profilData = await profilService.getAllProfilData();
           // Vérifions la structure des données et adaptons l'accès en fonction
           if (profilData && profilData.user) {
             setUserData(profilData.user);
@@ -80,17 +83,23 @@ const Navbar = memo(() => {
             setUserData(profilData.data.user);
           } else {
             // Fallback: essayons de récupérer directement les données utilisateur
-            const userData = await profileService.getUserProfile();
+            const userData = await profilService.getUserData();
             setUserData(userData);
           }
         } catch (profileError) {
-          console.error('Erreur lors de la récupération des données du profil:', profileError);
+          console.error(
+            "Erreur lors de la récupération des données du profil:",
+            profileError
+          );
         }
       } else {
         setUserData(null);
       }
     } catch (error) {
-      console.error('Erreur lors de la vérification du statut d\'authentification:', error);
+      console.error(
+        "Erreur lors de la vérification du statut d'authentification:",
+        error
+      );
       setIsAuthenticated(false);
       setUserData(null);
     }
@@ -98,15 +107,8 @@ const Navbar = memo(() => {
 
   // Vérifier l'état d'authentification au chargement et lors des changements de route
   useEffect(() => {
-    // Only check auth status if not on a public route
-    if (!isPublicRoute) {
-      checkAuthStatus();
-    } else {
-      // Reset state for public routes
-      setIsAuthenticated(false);
-      setUserData(null);
-    }
-  }, [location.pathname, isPublicRoute]);
+    checkAuthStatus();
+  }, [location.pathname]);
 
   // Ajouter un écouteur d'événement pour les changements d'authentification
   useEffect(() => {
@@ -116,13 +118,13 @@ const Navbar = memo(() => {
     };
 
     // Ajouter des écouteurs d'événements personnalisés
-    window.addEventListener('login-success', handleAuthChange);
-    window.addEventListener('logout-success', handleAuthChange);
-    
+    window.addEventListener("login-success", handleAuthChange);
+    window.addEventListener("logout-success", handleAuthChange);
+
     // Nettoyage lors du démontage du composant
     return () => {
-      window.removeEventListener('login-success', handleAuthChange);
-      window.removeEventListener('logout-success', handleAuthChange);
+      window.removeEventListener("login-success", handleAuthChange);
+      window.removeEventListener("logout-success", handleAuthChange);
     };
   }, []);
 
@@ -130,18 +132,17 @@ const Navbar = memo(() => {
   const handleLogout = async () => {
     try {
       setIsLoggingOut(true);
-      
+
       await authService.logout();
-      
+
       // Déclencher un événement personnalisé pour informer la navbar de la déconnexion
-      window.dispatchEvent(new Event('logout-success'));
-      
+      window.dispatchEvent(new Event("logout-success"));
+
       setLogoutDialogOpen(false);
       setIsAuthenticated(false);
-      navigate('/login');
+      navigate("/login");
     } catch (error) {
-      console.error('Erreur lors de la déconnexion:', error);
-    } finally {
+      console.error("Erreur lors de la déconnexion:", error);
       setIsLoggingOut(false);
     }
   };
@@ -152,43 +153,48 @@ const Navbar = memo(() => {
       opacity: 0,
       y: -10,
       scale: 0.95,
-      transition: { duration: 0.2, ease: "easeOut" }
+      transition: { duration: 0.2, ease: "easeOut" },
     },
     visible: {
       opacity: 1,
       y: 0,
       scale: 1,
-      transition: { duration: 0.2, ease: "easeOut" }
+      transition: { duration: 0.2, ease: "easeOut" },
     },
     exit: {
       opacity: 0,
       y: -10,
       scale: 0.95,
-      transition: { duration: 0.1, ease: "easeIn" }
-    }
+      transition: { duration: 0.1, ease: "easeIn" },
+    },
   };
 
   return (
     <>
       {/* Injection des styles personnalisés */}
       <style>{customDropdownStyles}</style>
-      
+
       <nav className="bg-[#02284f] shadow-lg">
         <div className="container px-4 mx-auto">
           <div className="flex items-center justify-between h-16">
-            <div className="flex-shrink-0">
-              <Link to={isAuthenticated ? "/dashboard" : "/login"} className="text-2xl font-black tracking-tight text-white">
-                Big<span className="text-[#528eb2]">Project</span>
-              </Link>
+            <div className="flex items-center">
+              <MenuBurger />
+              <div className="flex-shrink-0">
+                <Link
+                  to={isAuthenticated ? "/dashboard" : "/login"}
+                  className="text-2xl font-black tracking-tight text-white"
+                >
+                  Big<span className="text-[#528eb2]">Project</span>
+                </Link>
+              </div>
             </div>
 
             <div className="hidden md:block">
               <div className="flex items-center ml-10 space-x-1">
-                
                 {/* Élements affichés uniquement pour les utilisateurs connectés */}
                 {isAuthenticated && (
-                  <Link 
-                    to="/dashboard" 
+                  <Link
+                    to="/dashboard"
                     className="px-3 py-2 rounded-md text-gray-200 hover:text-white hover:bg-[#02284f]/80 transition-colors flex items-center"
                   >
                     <LayoutDashboard className="h-4 w-4 mr-2" />
@@ -203,27 +209,35 @@ const Navbar = memo(() => {
                 {isAuthenticated ? (
                   <div className="flex items-center">
                     {/* Notification icon (placeholder) */}
-                    <Button 
-                      variant="ghost" 
+                    <Button
+                      variant="ghost"
                       className="rounded-full w-10 h-10 p-0 bg-transparent text-gray-200 hover:bg-[#02284f]/80 hover:text-white mr-2"
                     >
                       <Bell className="h-5 w-5" />
                     </Button>
-                    
+
                     {/* Dropdown menu */}
                     <DropdownMenu onOpenChange={setDropdownOpen}>
                       <DropdownMenuTrigger asChild>
-                        <Button 
-                          variant="outline" 
-                          className={`rounded-full w-10 h-10 p-0 ${dropdownOpen ? 'bg-[#528eb2]/20 border-[#528eb2]' : 'bg-transparent border-gray-500'} hover:bg-[#02284f]/80 hover:text-white hover:border-gray-400 transition-all duration-300`}
+                        <Button
+                          variant="outline"
+                          className={`rounded-full w-10 h-10 p-0 ${
+                            dropdownOpen
+                              ? "bg-[#528eb2]/20 border-[#528eb2]"
+                              : "bg-transparent border-gray-500"
+                          } hover:bg-[#02284f]/80 hover:text-white hover:border-gray-400 transition-all duration-300`}
                         >
-                          <UserRound className={`h-5 w-5 ${dropdownOpen ? 'text-white' : 'text-gray-200'}`} />
+                          <UserRound
+                            className={`h-5 w-5 ${
+                              dropdownOpen ? "text-white" : "text-gray-200"
+                            }`}
+                          />
                         </Button>
                       </DropdownMenuTrigger>
                       <AnimatePresence>
                         {dropdownOpen && (
-                          <DropdownMenuContent 
-                            align="end" 
+                          <DropdownMenuContent
+                            align="end"
                             className="w-64 mt-2 p-0 overflow-hidden border border-gray-100 shadow-xl rounded-xl"
                             asChild
                             forceMount
@@ -241,34 +255,39 @@ const Navbar = memo(() => {
                                     <UserRound className="h-6 w-6" />
                                   </div>
                                   <div className="ml-3">
-                                    <h3 className="font-medium text-sm">{userData ? `${userData.firstName} ${userData.lastName}` : 'Utilisateur'}</h3>
-                                    <p className="text-xs text-gray-300">{userData ? userData.email : 'utilisateur@example.com'}</p>
+                                    <h3 className="font-medium text-sm">
+                                      {userData
+                                        ? `${userData.firstName} ${userData.lastName}`
+                                        : "Utilisateur"}
+                                    </h3>
+                                    <p className="text-xs text-gray-300">
+                                      {userData
+                                        ? userData.email
+                                        : "utilisateur@example.com"}
+                                    </p>
                                   </div>
                                 </div>
                               </div>
-                              
+
                               {/* Corps du dropdown avec les options */}
                               <div className="py-1 bg-white">
-                                <DropdownMenuItem 
-                                  className="navbar-dropdown-item"
-                                  onClick={() => navigate('/profile')}
+                                <DropdownMenuItem
+                                  className="flex items-center p-3"
+                                  onClick={() => navigate("/profil")}
                                 >
                                   <User className="mr-2 h-4 w-4 text-[#528eb2]" />
                                   <span>Mon profil</span>
                                 </DropdownMenuItem>
-                                
-                                <DropdownMenuItem 
-                                  className="navbar-dropdown-item"
-                                  onClick={() => navigate('/settings/profile')}
-                                >
+
+                                <DropdownMenuItem className="flex items-center p-3">
                                   <Settings className="mr-2 h-4 w-4 text-[#528eb2]" />
                                   <span>Paramètres</span>
                                 </DropdownMenuItem>
-                                
+
                                 <DropdownMenuSeparator className="my-1 bg-gray-100" />
-                                
-                                <DropdownMenuItem 
-                                  className="navbar-dropdown-item danger"
+
+                                <DropdownMenuItem
+                                  className="flex items-center p-3 text-red-600"
                                   onClick={() => setLogoutDialogOpen(true)}
                                 >
                                   <LogOut className="mr-2 h-4 w-4" />
@@ -283,10 +302,16 @@ const Navbar = memo(() => {
                   </div>
                 ) : (
                   <>
-                    <Link to="/login" className="px-4 py-2 text-gray-200 transition-colors rounded-md hover:text-white">
+                    <Link
+                      to="/login"
+                      className="px-4 py-2 text-gray-200 transition-colors rounded-md hover:text-white"
+                    >
                       Connexion
                     </Link>
-                    <Link to="/register" className="ml-2 px-4 py-2 bg-[#528eb2] rounded-md text-white font-medium hover:bg-[#528eb2]/90 transition-all transform hover:scale-105">
+                    <Link
+                      to="/register"
+                      className="ml-2 px-4 py-2 bg-[#528eb2] rounded-md text-white font-medium hover:bg-[#528eb2]/90 transition-all transform hover:scale-105"
+                    >
                       Inscription
                     </Link>
                   </>
@@ -296,8 +321,18 @@ const Navbar = memo(() => {
 
             <div className="md:hidden">
               <button className="text-gray-200 hover:text-white focus:outline-none">
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
                 </svg>
               </button>
             </div>
@@ -306,15 +341,19 @@ const Navbar = memo(() => {
 
         {/* Dialogue de confirmation de déconnexion */}
         {logoutDialogOpen && (
-          <Dialog open={logoutDialogOpen} onOpenChange={(open) => !isLoggingOut && setLogoutDialogOpen(open)}>
+          <Dialog
+            open={logoutDialogOpen}
+            onOpenChange={(open) => !isLoggingOut && setLogoutDialogOpen(open)}
+          >
             <DialogContent className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-hidden rounded-2xl border-0 shadow-xl">
-              <div
-                className="overflow-y-auto max-h-[70vh] fade-in-up"
-              >
+              <div className="overflow-y-auto max-h-[70vh] fade-in-up">
                 <DialogHeader>
-                  <DialogTitle className="text-xl font-semibold">Confirmation de déconnexion</DialogTitle>
+                  <DialogTitle className="text-xl font-semibold">
+                    Confirmation de déconnexion
+                  </DialogTitle>
                   <DialogDescription className="text-base mt-2">
-                    Êtes-vous sûr de vouloir vous déconnecter de votre compte ? Toutes vos sessions actives seront fermées.
+                    Êtes-vous sûr de vouloir vous déconnecter de votre compte ?
+                    Toutes vos sessions actives seront fermées.
                   </DialogDescription>
                 </DialogHeader>
               </div>
@@ -331,7 +370,9 @@ const Navbar = memo(() => {
                   variant="destructive"
                   onClick={handleLogout}
                   disabled={isLoggingOut}
-                  className={`rounded-full bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 transition-all duration-200 ${isLoggingOut ? 'opacity-80' : ''}`}
+                  className={`rounded-full bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 transition-all duration-200 ${
+                    isLoggingOut ? "opacity-80" : ""
+                  }`}
                 >
                   {isLoggingOut ? "Déconnexion..." : "Se déconnecter"}
                 </Button>
@@ -345,6 +386,6 @@ const Navbar = memo(() => {
 });
 
 // Ajout d'un nom d'affichage pour les outils de développement
-Navbar.displayName = 'Navbar';
+Navbar.displayName = "Navbar";
 
 export default Navbar;

@@ -5,6 +5,8 @@ import ProfileProgress from '../pages/Global/Profile/components/profile-view/Pro
 import { RoleGuard, ROLES } from '../features/roles';
 import { authService } from '../lib/services/authService';
 import { profileService } from '../pages/Global/Profile/services/profileService';
+import Footer from './Footer';
+
 
 const MainLayout = () => {
   const [userData, setUserData] = useState(null);
@@ -47,6 +49,7 @@ const MainLayout = () => {
       {showProgress && !isLoading && profileData && (
         <ProfileProgress userData={profileData} />
       )}
+      <Footer />
     </div>
   );
 };

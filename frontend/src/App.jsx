@@ -9,6 +9,7 @@ const Register = lazy(() => import('./pages/Register'))
 const RegistrationSuccess = lazy(() => import('./pages/RegistrationSuccess'))
 const VerificationSuccess = lazy(() => import('./pages/VerificationSuccess'))
 const VerificationError = lazy(() => import('./pages/VerificationError'))
+
 // Lazy loading pour le Profil et Dashboard
 const SettingsProfile = lazy(() => import('./pages/Global/Profile/views/SettingsProfile'))
 const SecuritySettings = lazy(() => import('./pages/Global/Profile/views/SecuritySettings'))
@@ -16,10 +17,13 @@ const NotificationSettings = lazy(() => import('./pages/Global/Profile/views/Not
 const CareerSettings = lazy(() => import('./pages/Global/Profile/views/CareerSettings'))
 const ProfileView = lazy(() => import('./pages/Global/Profile/views/ProfileView'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
+
 // Import du composant HomePage 
 const HomePage = lazy(() => import('./components/HomePage'))
+
 // Import de notre page de test CV
 const CVTestPage = lazy(() => import('./pages/Global/Profile/views/CVTestPage'))
+
 import { Toaster } from './components/ui/sonner'
 import './index.css'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -112,30 +116,30 @@ const App = () => {
                     <Route path="/verification-error" element={<VerificationError />} />
                   </Route>
                   
-                <Route element={<ProtectedRoute />}>
-                  {/* Regular protected routes */}
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  
-                  {/* Profile view route */}
-                  <Route path="/profile" element={<ProfileView />} />
-                  <Route path="/profile/:userId" element={<ProfileView />} />
-                  
-                  {/* Settings routes avec ProfileLayout */}
-                  <Route element={<ProfileLayout />}>
-                    <Route path="/settings" element={<Navigate to="/settings/profile" replace />} />
-                    <Route path="/settings/profile" element={<SettingsProfile />} />
-                    <Route path="/settings/career" element={<CareerSettings />} />
-                    <Route path="/settings/security" element={<SecuritySettings />} />
-                    <Route path="/settings/notifications" element={<NotificationSettings />} />
-                    {/* Test route for CV functionality */}
-                    <Route path="/settings/cv-test" element={<CVTestPage />} />
-                    {/* Add other settings-related routes here */}
+                  <Route element={<ProtectedRoute />}>
+                    {/* Regular protected routes */}
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    
+                    {/* Profile view route */}
+                    <Route path="/profile" element={<ProfileView />} />
+                    <Route path="/profile/:userId" element={<ProfileView />} />
+                    
+                    {/* Settings routes avec ProfileLayout */}
+                    <Route element={<ProfileLayout />}>
+                      <Route path="/settings" element={<Navigate to="/settings/profile" replace />} />
+                      <Route path="/settings/profile" element={<SettingsProfile />} />
+                      <Route path="/settings/career" element={<CareerSettings />} />
+                      <Route path="/settings/security" element={<SecuritySettings />} />
+                      <Route path="/settings/notifications" element={<NotificationSettings />} />
+                      {/* Test route for CV functionality */}
+                      <Route path="/settings/cv-test" element={<CVTestPage />} />
+                      {/* Add other settings-related routes here */}
+                    </Route>
                   </Route>
+                  
+                  {/* Redirection des routes inconnues vers la page d'accueil */}
+                  <Route path="*" element={<Navigate to="/" replace />} />
                 </Route>
-                
-                {/* Redirection des routes inconnues vers la page d'accueil */}
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Route>
               </Routes>
             </RoleProvider>
             <Toaster />

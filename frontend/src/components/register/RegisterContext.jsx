@@ -56,14 +56,12 @@ export const RegisterProvider = ({ children }) => {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-
   // États pour les champs du formulaire - Étape 3: Adresse
   const [addressName, setAddressName] = useState("");
   const [addressComplement, setAddressComplement] = useState("");
   const [city, setCity] = useState("");
   const [postalCode, setPostalCode] = useState("");
   const [acceptTerms, setAcceptTerms] = useState(false);
-
   // États pour la validation et les erreurs
   const [step1Valid, setStep1Valid] = useState(false);
   const [step1Attempted, setStep1Attempted] = useState(false);
