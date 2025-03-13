@@ -22,7 +22,6 @@ const Dashboard = lazy(() => import('./pages/Dashboard'))
 const HomePage = lazy(() => import('./components/HomePage'))
 
 // Import de notre page de test CV
-const CVTestPage = lazy(() => import('./pages/Global/Profile/views/CVTestPage'))
 
 import { Toaster } from './components/ui/sonner'
 import './index.css'
@@ -131,9 +130,6 @@ const App = () => {
                       <Route path="/settings/career" element={<CareerSettings />} />
                       <Route path="/settings/security" element={<SecuritySettings />} />
                       <Route path="/settings/notifications" element={<NotificationSettings />} />
-                      {/* Test route for CV functionality */}
-                      <Route path="/settings/cv-test" element={<CVTestPage />} />
-                      {/* Add other settings-related routes here */}
                     </Route>
                   </Route>
                   

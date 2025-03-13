@@ -26,7 +26,7 @@ class AwsS3SetupCommand extends Command
 
     protected function configure(): void
     {
-        $this->setHelp('This command tests your AWS connection and creates the S3 bucket if it doesn\'t exist');
+        $this->setHelp('This command tests your AWS connection and verifies object operations on your S3 bucket');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -45,89 +45,66 @@ class AwsS3SetupCommand extends Command
         }
         
         $io->success('AWS credentials are configured');
+        $io->text('Using bucket: ' . $bucketName);
+        $io->text('Region: ' . $region);
         
-        // Check S3 connection and bucket existence
-        $io->section('S3 Connection Check');
+        // Skip bucket existence check and creation - assume bucket exists
+        $io->section('S3 Object Operations Test');
         try {
-            // List buckets to verify connection
-            $buckets = $this->s3Client->listBuckets();
-            $io->success('Successfully connected to AWS S3');
+            // Test bucket permissions by performing object operations
+            $testKey = 'test-file-' . uniqid() . '.txt';
             
-            // Check for our bucket
-            $bucketExists = false;
-            foreach ($buckets['Buckets'] as $bucket) {
-                if ($bucket['Name'] === $bucketName) {
-                    $bucketExists = true;
-                    break;
-                }
-            }
-            
-            if ($bucketExists) {
-                $io->success(sprintf('Bucket "%s" exists in your AWS account', $bucketName));
-            } else {
-                $io->warning(sprintf('Bucket "%s" does not exist. Attempting to create it...', $bucketName));
+            // Test PUT operation
+            try {
+                $io->text('Testing upload operation...');
+                $this->s3Client->putObject([
+                    'Bucket' => $bucketName,
+                    'Key' => $testKey,
+                    'Body' => 'This is a test file to verify bucket permissions',
+                    'ContentType' => 'text/plain',
+                ]);
                 
-                // Create the bucket
+                $io->success('Successfully uploaded a test file to the bucket');
+                
+                // Test GET operation by creating a pre-signed URL
                 try {
-                    $this->s3Client->createBucket([
+                    $io->text('Testing pre-signed URL generation...');
+                    $command = $this->s3Client->getCommand('GetObject', [
                         'Bucket' => $bucketName,
-                        'CreateBucketConfiguration' => [
-                            'LocationConstraint' => $region,
-                        ],
+                        'Key' => $testKey,
                     ]);
                     
-                    // Add CORS configuration
-                    $this->s3Client->putBucketCors([
-                        'Bucket' => $bucketName,
-                        'CORSConfiguration' => [
-                            'CORSRules' => [
-                                [
-                                    'AllowedHeaders' => ['*'],
-                                    'AllowedMethods' => ['GET', 'PUT', 'POST', 'DELETE', 'HEAD'],
-                                    'AllowedOrigins' => ['*'], // In production, limit this to your domains
-                                    'MaxAgeSeconds' => 3000,
-                                ],
-                            ],
-                        ],
-                    ]);
+                    $presignedUrl = $this->s3Client->createPresignedRequest($command, '+60 minutes')->getUri();
+                    $io->info(sprintf('Pre-signed URL for test file: %s', $presignedUrl));
                     
-                    $io->success(sprintf('Bucket "%s" created successfully in region %s', $bucketName, $region));
+                    // Test DELETE operation
+                    try {
+                        $io->text('Testing delete operation...');
+                        $this->s3Client->deleteObject([
+                            'Bucket' => $bucketName,
+                            'Key' => $testKey,
+                        ]);
+                        
+                        $io->success('Test file cleaned up successfully');
+                    } catch (S3Exception $e) {
+                        $io->error(sprintf('Failed to delete test file: %s', $e->getMessage()));
+                        $io->warning('You may need to manually delete the test file from your bucket');
+                        return Command::FAILURE;
+                    }
                 } catch (S3Exception $e) {
-                    $io->error(sprintf('Failed to create bucket: %s', $e->getMessage()));
+                    $io->error(sprintf('Failed to generate pre-signed URL: %s', $e->getMessage()));
                     return Command::FAILURE;
                 }
+            } catch (S3Exception $e) {
+                $io->error(sprintf('Failed to upload test file: %s', $e->getMessage()));
+                $io->text('Error details: ' . $e->getAwsErrorMessage());
+                return Command::FAILURE;
             }
-            
-            // Test bucket permissions
-            $io->section('Testing Bucket Permissions');
-            $testKey = 'test-file-' . uniqid() . '.txt';
-            $this->s3Client->putObject([
-                'Bucket' => $bucketName,
-                'Key' => $testKey,
-                'Body' => 'This is a test file to verify bucket permissions',
-            ]);
-            
-            $io->success('Successfully uploaded a test file to the bucket');
-            
-            // Get a pre-signed URL for the test file
-            $command = $this->s3Client->getCommand('GetObject', [
-                'Bucket' => $bucketName,
-                'Key' => $testKey,
-            ]);
-            
-            $presignedUrl = $this->s3Client->createPresignedRequest($command, '+60 minutes')->getUri();
-            $io->info(sprintf('Pre-signed URL for test file: %s', $presignedUrl));
-            
-            // Clean up test file
-            $this->s3Client->deleteObject([
-                'Bucket' => $bucketName,
-                'Key' => $testKey,
-            ]);
-            
-            $io->success('Test file cleaned up');
             
         } catch (S3Exception $e) {
             $io->error(sprintf('S3 Error: %s', $e->getMessage()));
+            $io->text('Error code: ' . $e->getAwsErrorCode());
+            $io->text('Error message: ' . $e->getAwsErrorMessage());
             return Command::FAILURE;
         } catch (\Exception $e) {
             $io->error(sprintf('General Error: %s', $e->getMessage()));
@@ -135,6 +112,8 @@ class AwsS3SetupCommand extends Command
         }
         
         $io->success('AWS S3 is correctly configured and ready to use!');
+        $io->text('Your application can now use S3 for document storage.');
+        
         return Command::SUCCESS;
     }
 } 
