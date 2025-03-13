@@ -13,6 +13,9 @@ const ChatSidebar = ({ isOpen, onClose }) => {
   const [user, setUser] = useState(null);
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
+  const [privateChats, setPrivateChats] = useState({});
+  const [activeChat, setActiveChat] = useState('global');
+  const [selectedUser, setSelectedUser] = useState(null);
   const messagesEndRef = useRef(null);
 
   // Get current user when component mounts
@@ -21,15 +24,22 @@ const ChatSidebar = ({ isOpen, onClose }) => {
     setUser(userData);
   }, []);
 
-  // Fetch messages when component mounts or when activeTab changes
+  // Fetch messages when component mounts or when activeTab/activeChat changes
   useEffect(() => {
-    if (isOpen && activeTab === 'global') {
-      fetchMessages();
-      // Set up polling to check for new messages every 5 seconds
-      const interval = setInterval(fetchMessages, 5000);
-      return () => clearInterval(interval);
+    if (isOpen) {
+      if (activeTab === 'global' && activeChat === 'global') {
+        fetchMessages();
+        // Set up polling to check for new messages every 5 seconds
+        const interval = setInterval(fetchMessages, 5000);
+        return () => clearInterval(interval);
+      } else if (activeTab === 'global' && activeChat !== 'global' && selectedUser) {
+        fetchPrivateMessages(selectedUser.id);
+        // Set up polling for private messages
+        const interval = setInterval(() => fetchPrivateMessages(selectedUser.id), 5000);
+        return () => clearInterval(interval);
+      }
     }
-  }, [isOpen, activeTab]);
+  }, [isOpen, activeTab, activeChat, selectedUser]);
 
   // Fetch users when component mounts or when switching to users tab
   useEffect(() => {
@@ -60,6 +70,31 @@ const ChatSidebar = ({ isOpen, onClose }) => {
     }
   };
 
+  const fetchPrivateMessages = async (userId) => {
+    try {
+      setLoading(true);
+      // This endpoint will need to be implemented in the backend
+      const response = await apiService.get(`/messages/private/${userId}`, apiService.withAuth());
+      
+      // Update the private chat messages for this user
+      setPrivateChats(prev => ({
+        ...prev,
+        [userId]: response.messages || []
+      }));
+      
+      // Update the current messages display
+      if (activeChat === userId) {
+        setMessages(response.messages || []);
+      }
+      
+      setLoading(false);
+    } catch (err) {
+      console.error(`Error fetching private messages with user ${userId}:`, err);
+      setError('Failed to load private messages');
+      setLoading(false);
+    }
+  };
+
   const fetchUsers = async () => {
     try {
       setLoadingUsers(true);
@@ -77,10 +112,20 @@ const ChatSidebar = ({ isOpen, onClose }) => {
     if (!newMessage.trim()) return;
 
     try {
-      // Use the post method with withAuth to ensure the request is authenticated
-      await apiService.post('/messages', { content: newMessage }, apiService.withAuth());
+      if (activeChat === 'global') {
+        // Send global message
+        await apiService.post('/messages', { content: newMessage }, apiService.withAuth());
+        fetchMessages(); // Refresh messages after sending
+      } else if (selectedUser) {
+        // Send private message
+        await apiService.post('/messages/private', { 
+          content: newMessage,
+          recipientId: selectedUser.id
+        }, apiService.withAuth());
+        fetchPrivateMessages(selectedUser.id); // Refresh private messages
+      }
+      
       setNewMessage('');
-      fetchMessages(); // Refresh messages after sending
     } catch (err) {
       console.error('Error sending message:', err);
       setError('Failed to send message');
@@ -90,9 +135,35 @@ const ChatSidebar = ({ isOpen, onClose }) => {
   // Handle tab change
   const handleTabChange = (tab) => {
     setActiveTab(tab);
+    
+    // If switching to global chat tab, reset to global chat
+    if (tab === 'global') {
+      setActiveChat('global');
+      setSelectedUser(null);
+      fetchMessages();
+    }
+    
+    // If switching to users tab and no users loaded yet, fetch them
     if (tab === 'users' && users.length === 0) {
       fetchUsers();
     }
+  };
+
+  // Handle starting a private chat with a user
+  const handleStartPrivateChat = (user) => {
+    setActiveTab('global'); // Switch to chat tab
+    setActiveChat(user.id); // Set active chat to this user's ID
+    setSelectedUser(user); // Store the selected user
+    
+    // Fetch private messages with this user
+    fetchPrivateMessages(user.id);
+  };
+
+  // Handle returning to global chat
+  const handleReturnToGlobalChat = () => {
+    setActiveChat('global');
+    setSelectedUser(null);
+    fetchMessages();
   };
 
   return (
@@ -109,40 +180,57 @@ const ChatSidebar = ({ isOpen, onClose }) => {
     >
       {/* Chat header */}
       <div className="bg-blue-600 text-white px-4 py-3 flex justify-between items-center">
-        <h3 className="font-medium">Chat</h3>
-        <button onClick={onClose} className="text-white hover:text-gray-200">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-          </svg>
-        </button>
+        <h3 className="font-medium">
+          {activeChat === 'global' ? 'Chat' : `Chat avec ${selectedUser?.firstName} ${selectedUser?.lastName}`}
+        </h3>
+        <div className="flex items-center">
+          {activeChat !== 'global' && (
+            <button 
+              onClick={handleReturnToGlobalChat} 
+              className="text-white hover:text-gray-200 mr-3"
+              title="Retour au chat global"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
+              </svg>
+            </button>
+          )}
+          <button onClick={onClose} className="text-white hover:text-gray-200">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+          </button>
+        </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex border-b border-gray-200">
-        <button
-          className={`flex-1 py-3 font-medium text-sm ${
-            activeTab === 'global' 
-              ? 'text-blue-600 border-b-2 border-blue-600' 
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-          onClick={() => handleTabChange('global')}
-        >
-          Chat Global
-        </button>
-        <button
-          className={`flex-1 py-3 font-medium text-sm ${
-            activeTab === 'users' 
-              ? 'text-blue-600 border-b-2 border-blue-600' 
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-          onClick={() => handleTabChange('users')}
-        >
-          Utilisateurs
-        </button>
-      </div>
+      {/* Tabs - Only show if not in a private chat */}
+      {activeChat === 'global' && (
+        <div className="flex border-b border-gray-200">
+          <button
+            className={`flex-1 py-3 font-medium text-sm ${
+              activeTab === 'global' 
+                ? 'text-blue-600 border-b-2 border-blue-600' 
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+            onClick={() => handleTabChange('global')}
+          >
+            Chat Global
+          </button>
+          <button
+            className={`flex-1 py-3 font-medium text-sm ${
+              activeTab === 'users' 
+                ? 'text-blue-600 border-b-2 border-blue-600' 
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+            onClick={() => handleTabChange('users')}
+          >
+            Utilisateurs
+          </button>
+        </div>
+      )}
 
       {/* Content based on active tab */}
-      <div className="h-[calc(100%-106px)] flex flex-col">
+      <div className={`${activeChat === 'global' ? 'h-[calc(100%-106px)]' : 'h-[calc(100%-60px)]'} flex flex-col`}>
         {activeTab === 'global' ? (
           <>
             {/* Chat messages */}
@@ -162,7 +250,7 @@ const ChatSidebar = ({ isOpen, onClose }) => {
                 type="text"
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="Écrivez votre message..."
+                placeholder={`Écrivez votre message${activeChat !== 'global' ? ` à ${selectedUser?.firstName}` : ''}...`}
                 className="flex-1 border border-gray-300 rounded-l-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               />
               <button 
@@ -177,7 +265,11 @@ const ChatSidebar = ({ isOpen, onClose }) => {
           </>
         ) : (
           <div className="flex-1 overflow-y-auto p-3 bg-gray-50">
-            <UsersList users={users} loading={loadingUsers} />
+            <UsersList 
+              users={users} 
+              loading={loadingUsers} 
+              onStartPrivateChat={handleStartPrivateChat}
+            />
           </div>
         )}
       </div>
