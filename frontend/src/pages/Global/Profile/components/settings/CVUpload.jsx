@@ -4,6 +4,14 @@ import { Button } from "@/components/ui/button";
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { useApiQuery, useApiMutation } from '@/hooks/useReactQuery';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 // Importer le service documentService directement dans le composant
 import documentService from '../../services/documentService';
@@ -12,6 +20,7 @@ const CVUpload = memo(({ userData, onUpdate }) => {
   const [cvFile, setCvFile] = useState(null);
   const [dragActive, setDragActive] = useState(false);
   const [fileError, setFileError] = useState(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   // Fetch CV document using React Query
   const { 
@@ -104,12 +113,14 @@ const CVUpload = memo(({ userData, onUpdate }) => {
       toast.error('No document to delete');
       return;
     }
-    
-    if (!window.confirm('Are you sure you want to delete this CV?')) {
-      return;
-    }
+    setIsDeleteDialogOpen(true);
+  }, [cvDocument]);
+
+  const confirmDelete = useCallback(() => {
+    if (!cvDocument || !cvDocument.id) return;
     
     deleteCV(cvDocument.id);
+    setIsDeleteDialogOpen(false);
   }, [cvDocument, deleteCV]);
 
   // Handle document download
@@ -191,6 +202,33 @@ const CVUpload = memo(({ userData, onUpdate }) => {
 
   return (
     <div className="space-y-4">
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmer la suppression</DialogTitle>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir supprimer votre CV ? Cette action est irréversible.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex justify-end space-x-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(false)}
+            >
+              Annuler
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? 'Suppression...' : 'Supprimer'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* CV Document Display */}
       {cvDocument && (
         <div className="bg-gray-50 p-3 sm:p-4 rounded-lg border border-gray-200">

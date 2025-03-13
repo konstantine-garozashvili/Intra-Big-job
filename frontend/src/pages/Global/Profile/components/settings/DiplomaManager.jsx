@@ -4,6 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { toast } from 'sonner';
 import { diplomaService } from '../../services/diplomaService';
@@ -15,6 +23,8 @@ import { useApiQuery, useApiMutation } from '@/hooks/useReactQuery';
 const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
   const userRole = userData?.role;
   const [isAdding, setIsAdding] = useState(false);
+  const [diplomaToDelete, setDiplomaToDelete] = useState(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
   const [newDiploma, setNewDiploma] = useState({
     diplomaId: '',
@@ -178,13 +188,18 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
     addDiplomaMutation.mutate(newDiploma);
   };
   
-  const handleDeleteDiploma = async (id) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce diplôme ?')) {
-      return;
-    }
+  const handleDeleteDiploma = async (diploma) => {
+    setDiplomaToDelete(diploma);
+    setIsDeleteDialogOpen(true);
+  };
+  
+  const confirmDelete = async () => {
+    if (!diplomaToDelete) return;
     
     // Pass the ID directly to the mutation
-    deleteDiplomaMutation.mutate(id);
+    deleteDiplomaMutation.mutate(diplomaToDelete.id);
+    setIsDeleteDialogOpen(false);
+    setDiplomaToDelete(null);
   };
   
   const cancelAdd = () => {
@@ -206,6 +221,36 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
 
   return (
     <div className="space-y-4">
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmer la suppression</DialogTitle>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir supprimer le diplôme "{diplomaToDelete?.diploma?.name}" ? Cette action est irréversible.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex justify-end space-x-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsDeleteDialogOpen(false);
+                setDiplomaToDelete(null);
+              }}
+            >
+              Annuler
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={deleteDiplomaMutation.isPending}
+            >
+              {deleteDiplomaMutation.isPending ? 'Suppression...' : 'Supprimer'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="flex items-center gap-2 mb-4">
         <GraduationCap className="h-5 w-5 text-blue-600" />
         <h2 className="text-lg font-semibold">Gestion des diplômes</h2>
@@ -373,7 +418,7 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => handleDeleteDiploma(diploma.id)}
+                      onClick={() => handleDeleteDiploma(diploma)}
                       disabled={deleteDiplomaMutation.isPending}
                       className="h-8 w-8 text-red-500 hover:text-red-600"
                     >
