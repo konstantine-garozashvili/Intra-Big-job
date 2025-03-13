@@ -14,15 +14,15 @@ class Role
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(['role:read', 'user:read'])]
+    #[Groups(['role:read', 'user:read', 'message:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(['role:read', 'user:read'])]
+    #[Groups(['role:read', 'user:read', 'message:read'])]
     private ?string $name = null;
 
     #[ORM\Column(length: 255, nullable: true)]
-    #[Groups(['role:read', 'user:read'])]
+    #[Groups(['role:read', 'user:read', 'message:read'])]
     private ?string $description = null;
 
     #[ORM\OneToMany(mappedBy: 'role', targetEntity: UserRole::class)]

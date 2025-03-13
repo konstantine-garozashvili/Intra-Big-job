@@ -108,8 +108,9 @@ class RegistrationService
         // Sauvegarder en base de données
         $this->entityManager->flush();
         
-        // Générer un token de vérification et envoyer l'email de confirmation
-        $this->verificationService->sendVerificationEmail($user);
+        // Pour le développement, marquer l'utilisateur comme vérifié automatiquement
+        $user->setIsEmailVerified(true);
+        $this->entityManager->flush();
         
         return $user;
     }

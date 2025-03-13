@@ -12,7 +12,7 @@ class UserRole
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(['user_role:read'])]
+    #[Groups(['user_role:read', 'message:read'])]
     private ?int $id = null;
 
     #[ORM\ManyToOne(inversedBy: 'userRoles')]
@@ -22,7 +22,7 @@ class UserRole
 
     #[ORM\ManyToOne(inversedBy: 'userRoles')]
     #[ORM\JoinColumn(nullable: false)]
-    #[Groups(['user_role:read'])]
+    #[Groups(['user_role:read', 'message:read'])]
     private ?Role $role = null;
 
     public function getId(): ?int

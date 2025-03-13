@@ -18,15 +18,15 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(['user:read'])]
+    #[Groups(['user:read', 'message:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(['user:read'])]
+    #[Groups(['user:read', 'message:read'])]
     private ?string $lastName = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(['user:read'])]
+    #[Groups(['user:read', 'message:read'])]
     private ?string $firstName = null;
 
     #[ORM\Column(type: Types::DATE_MUTABLE)]
@@ -71,6 +71,7 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     private ?\DateTimeImmutable $resetPasswordExpires = null;
 
     #[ORM\OneToMany(mappedBy: 'user', targetEntity: UserRole::class, orphanRemoval: true)]
+    #[Groups(['user:read', 'message:read'])]
     private Collection $userRoles;
 
     #[ORM\ManyToOne]
