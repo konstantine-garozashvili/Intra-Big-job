@@ -192,11 +192,28 @@ const apiService = {
    */
   async put(path, data = {}, options = {}) {
     try {
-      const response = await axios.put(normalizeApiUrl(path), data, options);
+      const url = normalizeApiUrl(path);
+      const authOptions = this.withAuth({
+        ...options,
+        withCredentials: true,
+      });
+      const response = await axios.put(url, data, authOptions);
       return response.data;
     } catch (error) {
       console.error(`Erreur API PUT ${path}:`, error);
-      throw error;
+      
+      // Gestion spécifique des erreurs CORS
+      if (error.message && error.message.includes('Network Error')) {
+        console.error('Erreur réseau possible - Problème CORS');
+        return { success: false, message: 'Erreur de communication avec le serveur' };
+      }
+      
+      // Retourner une réponse formatée en cas d'erreur pour éviter les crashes
+      if (error.response && error.response.data) {
+        return { success: false, message: error.response.data.message || 'Une erreur est survenue' };
+      }
+      
+      return { success: false, message: 'Une erreur est survenue' };
     }
   },
   
@@ -214,6 +231,25 @@ const apiService = {
       console.error(`Erreur API DELETE ${path}:`, error);
       throw error;
     }
+  },
+  
+  /**
+   * Fonctions spécifiques pour la gestion des rôles utilisateurs
+   */
+  async getUsersByRole(roleName) {
+    return this.get(`/user-roles/users/${roleName}`);
+  },
+  
+  async getAllRoles() {
+    return this.get('/user-roles/roles');
+  },
+  
+  async changeUserRole(userId, oldRoleName, newRoleName) {
+    return this.post('/user-roles/change-role', {
+      userId,
+      oldRoleName,
+      newRoleName
+    });
   },
   
   /**
