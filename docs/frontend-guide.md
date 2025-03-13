@@ -22,22 +22,77 @@ frontend/
 │   ├── assets/         # Images, polices, etc.
 │   ├── components/     # Composants React réutilisables
 │   │   ├── ui/         # Composants UI de base (Shadcn)
-│   │   └── ...         # Autres composants spécifiques
+│   │   └── shared/     # Composants partagés entre domaines
 │   ├── lib/            # Utilitaires et fonctions d'aide
-│   ├── pages/          # Composants de pages
+│   ├── pages/          # Pages par domaine
+│   │   ├── Admin/      # Pages Admin
+│   │   ├── HR/         # Pages RH
+│   │   ├── Student/    # Pages Étudiant
+│   │   ├── SuperAdmin/ # Pages Super Admin
+│   │   ├── Teacher/    # Pages Professeur
+│   │   └── User/       # Pages Utilisateur
 │   ├── services/       # Services (API, authentification, etc.)
 │   ├── layouts/        # Layouts de l'application
 │   ├── hooks/          # Hooks React personnalisés
 │   ├── context/        # Contextes React
 │   ├── App.jsx         # Composant racine
-│   ├── main.jsx        # Point d'entrée de l'application
-│   └── ...
+│   └── main.jsx        # Point d'entrée de l'application
 ├── .eslintrc.js        # Configuration ESLint
 ├── vite.config.js      # Configuration Vite
 ├── tailwind.config.js  # Configuration Tailwind CSS
-├── postcss.config.js   # Configuration PostCSS
 └── package.json        # Dépendances et scripts NPM
 ```
+
+## 🎨 Guide des Couleurs
+
+Les variables de couleurs sont définies dans `src/index.css` :
+
+```css
+:root {
+  /* Couleurs Principales */
+  --color-primary: #528eb2    /* Couleur principale */
+  --color-secondary: #02284f  /* Couleur secondaire */
+  --color-white: #FFFFFF      /* Blanc */
+
+  /* Couleurs Système */
+  --background: #FFFFFF       /* Fond */
+  --foreground: #020817      /* Texte principal */
+  --muted: #f1f5f9          /* Éléments atténués */
+  --accent: #528eb2         /* Accent (10% opacité) */
+  --border: #e2e8f0         /* Bordures */
+
+  /* Couleurs Graphiques */
+  --chart-1: #528eb2        /* Principal */
+  --chart-2: #003366        /* Foncé */
+  --chart-3: #02284f        /* Secondaire */
+  --chart-4: #235465        /* Variante */
+  --chart-5: #addde6        /* Clair */
+}
+```
+
+## 🧩 Organisation des Composants
+
+### Composants Publics
+
+Les composants publics sont organisés en deux catégories :
+
+1. **Composants UI (`/components/ui/`)** :
+   - Composants de base réutilisables (Shadcn)
+   - Éléments d'interface génériques
+   - Styles cohérents avec le design system
+
+2. **Composants Partagés (`/components/shared/`)** :
+   - Composants métier réutilisables
+   - Fonctionnalités communes à plusieurs domaines
+   - Composants de layout partagés
+
+### Services Partagés
+
+Les services partagés (`/services/`) gèrent :
+- Appels API communs
+- Authentification
+- Utilitaires partagés
+- Gestion d'état globale
 
 ## 🚀 Démarrage rapide
 
@@ -69,10 +124,9 @@ Ce projet utilise la bibliothèque de composants [Shadcn UI](https://ui.shadcn.c
 #### Ajouter un nouveau composant Shadcn
 
 ```bash
-docker exec -it infra-frontend-1 npx shadcn-ui@latest add <nom-du-composant> --legacy-peer-deps
+docker exec -it infra-frontend-1 sh
+npx shadcn-ui@latest add <nom-du-composant>
 
-# Exemple:
-docker exec -it infra-frontend-1 npx shadcn-ui@latest add button --legacy-peer-deps
 ```
 
 > Note: L'option `--legacy-peer-deps` est nécessaire en raison de certaines incompatibilités de dépendances.

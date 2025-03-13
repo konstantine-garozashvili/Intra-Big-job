@@ -1,0 +1,156 @@
+/* CSS animations to replace Framer Motion */
+
+/* Fade in from bottom */
+.fade-in-up {
+  animation: fadeInUp 0.3s ease forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Fade in from top */
+.fade-in-down {
+  animation: fadeInDown 0.3s ease forwards;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Simple fade in */
+.fade-in {
+  animation: fadeIn 0.3s ease forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Fade out */
+.fade-out {
+  animation: fadeOut 0.3s ease forwards;
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* For elements that need to be hidden initially */
+.initially-hidden {
+  opacity: 0;
+}
+
+/* For elements that need to be shown with a delay */
+.delay-100 {
+  animation-delay: 100ms;
+}
+
+.delay-200 {
+  animation-delay: 200ms;
+}
+
+.delay-300 {
+  animation-delay: 300ms;
+}
+
+/* Hardware acceleration for smoother animations */
+.hw-accelerated {
+  will-change: opacity, transform;
+  transform: translateZ(0);
+}
+
+/* Animation pour les transitions d'image */
+.image-fade-in {
+  opacity: 0;
+  animation: fadeIn 0.3s ease-in-out forwards;
+}
+
+.image-fade-out {
+  opacity: 1;
+  animation: fadeOut 0.3s ease-in-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Animation de transition douce pour les images */
+.smooth-image {
+  transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+}
+
+.smooth-image-enter {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+.smooth-image-enter-active {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.smooth-image-exit {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.smooth-image-exit-active {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+/* Animation pour le chargement */
+.pulse {
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.6;
+  }
+} 
