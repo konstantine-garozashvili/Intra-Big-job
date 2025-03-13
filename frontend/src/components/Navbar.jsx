@@ -213,6 +213,7 @@ const Navbar = memo(({ user }) => {
 
       setLogoutDialogOpen(false);
       setIsAuthenticated(false);
+      setIsLoggingOut(false);
       navigate("/login");
     } catch (error) {
       console.error("Erreur lors de la déconnexion:", error);
