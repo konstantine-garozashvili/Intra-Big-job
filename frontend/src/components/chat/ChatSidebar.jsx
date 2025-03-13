@@ -29,14 +29,12 @@ const ChatSidebar = ({ isOpen, onClose }) => {
     if (isOpen) {
       if (activeTab === 'global' && activeChat === 'global') {
         fetchMessages();
-        // Set up polling to check for new messages every 5 seconds
+        // Set up polling to check for new messages every 5 seconds for global chat only
         const interval = setInterval(fetchMessages, 5000);
         return () => clearInterval(interval);
       } else if (activeTab === 'global' && activeChat !== 'global' && selectedUser) {
+        // For private chats, just fetch once without polling
         fetchPrivateMessages(selectedUser.id);
-        // Set up polling for private messages
-        const interval = setInterval(() => fetchPrivateMessages(selectedUser.id), 5000);
-        return () => clearInterval(interval);
       }
     }
   }, [isOpen, activeTab, activeChat, selectedUser]);
@@ -122,7 +120,9 @@ const ChatSidebar = ({ isOpen, onClose }) => {
           content: newMessage,
           recipientId: selectedUser.id
         }, apiService.withAuth());
-        fetchPrivateMessages(selectedUser.id); // Refresh private messages
+        
+        // Refresh private messages immediately after sending
+        fetchPrivateMessages(selectedUser.id);
       }
       
       setNewMessage('');
