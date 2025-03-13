@@ -29,7 +29,7 @@ class MessageRepository extends ServiceEntityRepository
         return $this->createQueryBuilder('m')
             ->andWhere('m.isGlobal = :isGlobal')
             ->setParameter('isGlobal', true)
-            ->orderBy('m.createdAt', 'DESC')
+            ->orderBy('m.createdAt', 'ASC')
             ->setMaxResults($limit)
             ->setFirstResult($offset)
             ->getQuery()
@@ -44,7 +44,7 @@ class MessageRepository extends ServiceEntityRepository
         return $this->createQueryBuilder('m')
             ->andWhere('m.isGlobal = :isGlobal')
             ->setParameter('isGlobal', true)
-            ->orderBy('m.createdAt', 'DESC')
+            ->orderBy('m.createdAt', 'ASC')
             ->setMaxResults($limit)
             ->getQuery()
             ->getResult();
