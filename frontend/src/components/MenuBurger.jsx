@@ -1,4 +1,4 @@
-import React, { memo, useState, useEffect, useRef } from 'react';
+import React, { memo, useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { authService } from '../lib/services/authService';
 import { Link, useNavigate } from 'react-router-dom';
@@ -120,8 +120,30 @@ const MenuBurger = memo(() => {
   const navigate = useNavigate();
   
   // Utiliser le système de rôles
-  const { roles, hasRole, hasAnyRole } = useRoles();
+  const { roles, hasRole, hasAnyRole, refreshRoles } = useRoles();
   const { translateRoleName } = useRoleUI();
+
+  // Fonction pour vérifier l'authentification et mettre à jour les données utilisateur
+  const checkAuthentication = useCallback(async () => {
+    try {
+      if (authService.isLoggedIn()) {
+        const user = await authService.getCurrentUser();
+        if (user) {
+          console.log('MenuBurger: User data updated', user);
+          setUserData(user);
+        } else {
+          console.log('MenuBurger: No user data found');
+          setUserData(null);
+        }
+      } else {
+        console.log('MenuBurger: User not logged in');
+        setUserData(null);
+      }
+    } catch (error) {
+      console.error('MenuBurger: Error checking authentication', error);
+      setUserData(null);
+    }
+  }, []);
 
   // Gestionnaire de clic à l'extérieur du menu
   useEffect(() => {
@@ -148,34 +170,50 @@ const MenuBurger = memo(() => {
     };
   }, [menuOpen]);
 
+  // Effet pour vérifier l'authentification et écouter les événements d'authentification
   useEffect(() => {
-    const checkAuthentication = async () => {
-      try {
-        const user = await authService.getCurrentUser();
-        if (user) {
-          setUserData(user);
-        } else {
-          setUserData(null);
-        }
-      } catch (error) {
-        setUserData(null);
-      }
-    };
-  
+    // Vérifier l'authentification au chargement
     checkAuthentication();
   
-    // 🚀 Gérer la connexion
+    // Gestionnaires d'événements pour les changements d'authentification
     const handleLoginEvent = async () => {
-      await checkAuthentication(); // Recharge l'état après connexion
+      console.log('MenuBurger: Login event detected');
+      await checkAuthentication();
+      refreshRoles(); // Rafraîchir les rôles après connexion
     };
   
-    window.addEventListener('login-success', handleLoginEvent);
+    const handleLogoutEvent = async () => {
+      console.log('MenuBurger: Logout event detected');
+      setUserData(null);
+      // Les rôles seront automatiquement mis à jour par le contexte
+    };
   
+    const handleRoleChangeEvent = async () => {
+      console.log('MenuBurger: Role change event detected');
+      await checkAuthentication();
+      refreshRoles(); // Rafraîchir les rôles après changement de rôle
+    };
+  
+    // Ajouter les écouteurs d'événements
+    window.addEventListener('login-success', handleLoginEvent);
+    window.addEventListener('logout-success', handleLogoutEvent);
+    window.addEventListener('role-change', handleRoleChangeEvent);
+  
+    // Nettoyer les écouteurs d'événements
     return () => {
       window.removeEventListener('login-success', handleLoginEvent);
+      window.removeEventListener('logout-success', handleLogoutEvent);
+      window.removeEventListener('role-change', handleRoleChangeEvent);
     };
-  }, []);
+  }, [checkAuthentication, refreshRoles]);
   
+  // Effet pour fermer le menu lorsque les rôles changent
+  useEffect(() => {
+    // Fermer le menu si les rôles changent et que le menu est ouvert
+    if (menuOpen) {
+      setMenuOpen(false);
+    }
+  }, [roles]);
   
   const toggleMenu = () => setMenuOpen(!menuOpen);
 
@@ -310,7 +348,7 @@ const MenuBurger = memo(() => {
   ];
 
   return (
-    <div className="relative">
+    <div className="relative" key={roles.join('-')}>
       {/* Injection des styles personnalisés */}
       <style>{customStyles}</style>
       
@@ -338,6 +376,7 @@ const MenuBurger = memo(() => {
               opacity: { duration: 0 } // Désactive l'animation de l'opacité
             }}
             className="sidebar-menu"
+            key={`menu-${roles.join('-')}`}
           >
             <div className="flex flex-col h-full">
               {roles.length > 0 && (

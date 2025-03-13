@@ -1,11 +1,11 @@
 ---
 description: 
-globs: 
+globs: .jsx
 alwaysApply: false
 ---
 ---
 description: 
-globs: 
+globs: .jsx
 alwaysApply: false
 ---
 ---

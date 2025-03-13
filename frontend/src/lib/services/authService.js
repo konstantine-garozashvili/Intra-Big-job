@@ -262,6 +262,11 @@ export const authService = {
       console.error('Détails:', error.response?.data || error.message);
       throw error;
     }
+  },
+
+  // Méthode pour déclencher manuellement une mise à jour des rôles
+  triggerRoleUpdate: () => {
+    triggerRoleUpdate();
   }
 };
 
@@ -313,5 +318,11 @@ function getDeviceInfo() {
     deviceName
   };
 }
+
+// Fonction pour déclencher manuellement une mise à jour des rôles
+export const triggerRoleUpdate = () => {
+  console.log('Manually triggering role update');
+  window.dispatchEvent(new Event('role-change'));
+};
 
 export default authService; 

@@ -97,6 +97,7 @@ const Navbar = memo(({ user }) => {
   const checkAuthStatus = async () => {
     try {
       const status = authService.isLoggedIn();
+      const wasAuthenticated = isAuthenticated;
       setIsAuthenticated(status);
 
       // Si l'utilisateur est connecté, charger ses données
@@ -106,11 +107,23 @@ const Navbar = memo(({ user }) => {
           if (user) {
             console.log('Using user from props:', user);
             setUserData(user);
+            
+            // Déclencher un événement de changement de rôle si l'état d'authentification a changé
+            if (!wasAuthenticated) {
+              console.log('Dispatching role-change event from Navbar (login)');
+              window.dispatchEvent(new Event('role-change'));
+            }
           } else {
             // Sinon, essayer de récupérer les données depuis l'API
             const userData = await authService.getCurrentUser();
             console.log('User data from API:', userData);
             setUserData(userData);
+            
+            // Déclencher un événement de changement de rôle si l'état d'authentification a changé
+            if (!wasAuthenticated) {
+              console.log('Dispatching role-change event from Navbar (login)');
+              window.dispatchEvent(new Event('role-change'));
+            }
           }
         } catch (userError) {
           console.error(
@@ -130,6 +143,12 @@ const Navbar = memo(({ user }) => {
             } else {
               setUserData(profileData);
             }
+            
+            // Déclencher un événement de changement de rôle si l'état d'authentification a changé
+            if (!wasAuthenticated) {
+              console.log('Dispatching role-change event from Navbar (login)');
+              window.dispatchEvent(new Event('role-change'));
+            }
           } catch (profileError) {
             console.error(
               "Erreur lors de la récupération des données du profil:",
@@ -139,6 +158,12 @@ const Navbar = memo(({ user }) => {
         }
       } else {
         setUserData(null);
+        
+        // Déclencher un événement de changement de rôle si l'état d'authentification a changé
+        if (wasAuthenticated) {
+          console.log('Dispatching role-change event from Navbar (logout)');
+          window.dispatchEvent(new Event('role-change'));
+        }
       }
     } catch (error) {
       console.error(
@@ -182,6 +207,9 @@ const Navbar = memo(({ user }) => {
 
       // Déclencher un événement personnalisé pour informer la navbar de la déconnexion
       window.dispatchEvent(new Event("logout-success"));
+      
+      // Déclencher également un événement de changement de rôle
+      window.dispatchEvent(new Event("role-change"));
 
       setLogoutDialogOpen(false);
       setIsAuthenticated(false);
