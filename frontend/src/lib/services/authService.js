@@ -15,10 +15,7 @@ export const authService = {
    */
   async register(userData) {
     try {
-      console.log('[authService] Début de l\'inscription:', { ...userData, password: '***' });
       const response = await apiService.post('/register', userData);
-      
-      console.log('[authService] Inscription réussie:', response);
       
       // Si la réponse contient un token (certaines API peuvent fournir un token immédiatement)
       if (response && response.token) {
@@ -31,8 +28,6 @@ export const authService = {
         data: response
       };
     } catch (error) {
-      console.error('[authService] Erreur lors de l\'inscription:', error);
-      console.error('[authService] Détails:', error.response?.data || error.message);
       throw error;
     }
   },
@@ -78,8 +73,6 @@ export const authService = {
       
       return response;
     } catch (error) {
-      console.error('Erreur lors de la connexion:', error);
-      console.error('Détails de l\'erreur:', error.response?.data || error.message);
       throw error;
     }
   },
@@ -117,8 +110,6 @@ export const authService = {
       
       return response;
     } catch (error) {
-      console.error('Erreur lors du rafraîchissement du token:', error);
-      console.error('Détails de l\'erreur de rafraîchissement:', error.response?.data || error.message);
       // Si le refresh token est invalide, déconnecter l'utilisateur
       if (error.response && (error.response.status === 401 || error.response.status === 403)) {
         this.logout();
@@ -144,11 +135,8 @@ export const authService = {
         
         await apiService.post('/token/revoke', revokeData).catch((error) => {
           // Ignorer les erreurs lors de la révocation
-          console.warn('Échec de révocation du refresh token:', error.message);
         });
       }
-    } catch (error) {
-      console.warn('Erreur pendant la déconnexion:', error);
     } finally {
       // Nettoyer le localStorage
       localStorage.removeItem('token');
@@ -177,8 +165,6 @@ export const authService = {
       // Vider le cache React Query
       clearQueryCache();
     } catch (error) {
-      console.error('Erreur lors de la déconnexion de tous les appareils:', error);
-      console.error('Détails:', error.response?.data || error.message);
       throw error;
     }
   },
@@ -191,8 +177,6 @@ export const authService = {
       const devices = await apiService.get('/token/devices');
       return devices;
     } catch (error) {
-      console.error('Erreur lors de la récupération des appareils:', error);
-      console.error('Détails:', error.response?.data || error.message);
       throw error;
     }
   },
@@ -240,8 +224,6 @@ export const authService = {
       
       return userData;
     } catch (error) {
-      console.error('Erreur lors de la récupération des données utilisateur:', error);
-      console.error('Détails:', error.response?.data || error.message);
       throw error;
     }
   },
@@ -258,8 +240,6 @@ export const authService = {
       const response = await apiService.post('/change-password', passwordData, apiService.withAuth());
       return response;
     } catch (error) {
-      console.error('Erreur lors du changement de mot de passe:', error);
-      console.error('Détails:', error.response?.data || error.message);
       throw error;
     }
   },
@@ -321,7 +301,6 @@ function getDeviceInfo() {
 
 // Fonction pour déclencher manuellement une mise à jour des rôles
 export const triggerRoleUpdate = () => {
-  console.log('Manually triggering role update');
   window.dispatchEvent(new Event('role-change'));
 };
 

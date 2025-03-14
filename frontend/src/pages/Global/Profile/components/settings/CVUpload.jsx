@@ -210,7 +210,7 @@ const CVUpload = memo(({ userData, onUpdate }) => {
   return (
     <div className="space-y-4">
       {/* Delete Confirmation Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Confirmer la suppression</DialogTitle>
@@ -221,13 +221,13 @@ const CVUpload = memo(({ userData, onUpdate }) => {
           <DialogFooter className="flex justify-end space-x-2">
             <Button
               variant="outline"
-              onClick={() => setIsDeleteDialogOpen(false)}
+              onClick={() => setDeleteDialogOpen(false)}
             >
               Annuler
             </Button>
             <Button
               variant="destructive"
-              onClick={confirmDelete}
+              onClick={confirmDeleteDocument}
               disabled={isDeleting}
             >
               {isDeleting ? 'Suppression...' : 'Supprimer'}
@@ -380,40 +380,6 @@ const CVUpload = memo(({ userData, onUpdate }) => {
             <div className="h-2 bg-gray-200 rounded w-24 sm:w-32"></div>
           </div>
         </div>
-      )}
-
-      {/* Delete Confirmation Dialog */}
-      {deleteDialogOpen && (
-        <Dialog open={deleteDialogOpen} onOpenChange={(open) => !isDeleting && setDeleteDialogOpen(open)}>
-          <DialogContent className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-hidden rounded-2xl border-0 shadow-xl">
-            <div className="overflow-y-auto max-h-[70vh] fade-in-up">
-              <DialogHeader>
-                <DialogTitle className="text-xl font-semibold">Confirmation de suppression</DialogTitle>
-                <DialogDescription className="text-base mt-2">
-                  Êtes-vous sûr de vouloir supprimer ce CV ? Cette action est irréversible.
-                </DialogDescription>
-              </DialogHeader>
-            </div>
-            <DialogFooter className="mt-6 flex justify-end space-x-2">
-              <Button
-                variant="outline"
-                onClick={() => setDeleteDialogOpen(false)}
-                disabled={isDeleting}
-                className="rounded-full border-2 hover:bg-gray-100 transition-all duration-200"
-              >
-                Annuler
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={confirmDeleteDocument}
-                disabled={isDeleting}
-                className={`rounded-full bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 transition-all duration-200 ${isDeleting ? 'opacity-80' : ''}`}
-              >
-                {isDeleting ? "Suppression..." : "Supprimer"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       )}
     </div>
   );

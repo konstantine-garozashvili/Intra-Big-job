@@ -43,7 +43,6 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
     'availableDiplomas',
     {
       onError: (error) => {
-        console.error('Error fetching diplomas:', error);
         toast.error('Erreur lors du chargement des diplômes');
       }
     }
@@ -51,34 +50,23 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
 
   // Ensure availableDiplomas is always an array
   const availableDiplomas = React.useMemo(() => {
-    console.log('Processing availableDiplomasResponse:', availableDiplomasResponse);
-    
     if (!availableDiplomasResponse) {
-      console.log('No response data, returning empty array');
       return [];
     }
     
     // Check if response has a success property and data array
     if (availableDiplomasResponse.success && Array.isArray(availableDiplomasResponse.data)) {
-      console.log('Found success.data array structure:', availableDiplomasResponse.data);
       return availableDiplomasResponse.data;
     }
     
     // If response is already an array, use it directly
     if (Array.isArray(availableDiplomasResponse)) {
-      console.log('Response is already an array:', availableDiplomasResponse);
       return availableDiplomasResponse;
     }
     
     // Fallback to empty array if we can't determine the structure
-    console.warn('Unexpected availableDiplomas format:', availableDiplomasResponse);
     return [];
   }, [availableDiplomasResponse]);
-
-  // Log the final availableDiplomas for debugging
-  React.useEffect(() => {
-    console.log('Final availableDiplomas:', availableDiplomas);
-  }, [availableDiplomas]);
 
   // Setup mutations for adding and deleting diplomas
   const addDiplomaMutation = useApiMutation(
@@ -112,8 +100,6 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
         setIsAdding(false);
       },
       onError: (error) => {
-        console.error('Error adding diploma:', error);
-        
         // Check for specific error messages from the API
         if (error.response) {
           // Handle 400 Bad Request errors which might indicate validation issues
@@ -159,7 +145,6 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
         setDiplomaToDelete(null);
       },
       onError: (error) => {
-        console.error('Error deleting diploma:', error);
         toast.error('Erreur lors de la suppression du diplôme');
       }
     }
@@ -231,7 +216,7 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
   return (
     <div className="space-y-4">
       {/* Delete Confirmation Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Confirmer la suppression</DialogTitle>
@@ -243,7 +228,7 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
             <Button
               variant="outline"
               onClick={() => {
-                setIsDeleteDialogOpen(false);
+                setDeleteDialogOpen(false);
                 setDiplomaToDelete(null);
               }}
             >
@@ -251,7 +236,7 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
             </Button>
             <Button
               variant="destructive"
-              onClick={confirmDelete}
+              onClick={confirmDeleteDiploma}
               disabled={deleteDiplomaMutation.isPending}
             >
               {deleteDiplomaMutation.isPending ? 'Suppression...' : 'Supprimer'}
@@ -458,40 +443,6 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
             </div>
           )}
         </>
-      )}
-
-      {/* Delete Confirmation Dialog */}
-      {deleteDialogOpen && diplomaToDelete && (
-        <Dialog open={deleteDialogOpen} onOpenChange={(open) => !deleteDiplomaMutation.isPending && setDeleteDialogOpen(open)}>
-          <DialogContent className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-hidden rounded-2xl border-0 shadow-xl">
-            <div className="overflow-y-auto max-h-[70vh] fade-in-up">
-              <DialogHeader>
-                <DialogTitle className="text-xl font-semibold">Confirmation de suppression</DialogTitle>
-                <DialogDescription className="text-base mt-2">
-                  Êtes-vous sûr de vouloir supprimer le diplôme "{diplomaToDelete.diploma.name}" ? Cette action est irréversible.
-                </DialogDescription>
-              </DialogHeader>
-            </div>
-            <DialogFooter className="mt-6 flex justify-end space-x-2">
-              <Button
-                variant="outline"
-                onClick={() => setDeleteDialogOpen(false)}
-                disabled={deleteDiplomaMutation.isPending}
-                className="rounded-full border-2 hover:bg-gray-100 transition-all duration-200"
-              >
-                Annuler
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={confirmDeleteDiploma}
-                disabled={deleteDiplomaMutation.isPending}
-                className={`rounded-full bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 transition-all duration-200 ${deleteDiplomaMutation.isPending ? 'opacity-80' : ''}`}
-              >
-                {deleteDiplomaMutation.isPending ? "Suppression..." : "Supprimer"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       )}
     </div>
   );
