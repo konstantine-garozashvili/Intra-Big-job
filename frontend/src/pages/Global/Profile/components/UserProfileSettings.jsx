@@ -237,8 +237,10 @@ const UserProfileSettings = () => {
       // Make the API call in the background
       if (field === 'portfolioUrl' && isStudent) {
         await updatePortfolioUrl({ portfolioUrl: value });
+        toast.success('Mise à jour réussie');
       } else {
         await updatePersonalInfo(dataToSave);
+        toast.success('Mise à jour réussie');
       }
       
       // If we're updating birthDate, calculate and update the age
@@ -342,6 +344,9 @@ const UserProfileSettings = () => {
         const previousData = queryClient.getQueryData(['userProfileData']);
         
         return { previousData };
+      },
+      onSuccess: (data, variables) => {
+        toast.success('Informations mises à jour avec succès');
       },
       onError: (err, variables, context) => {
         // Rollback on error
