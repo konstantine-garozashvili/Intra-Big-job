@@ -142,7 +142,22 @@ export const SearchBar = () => {
         onKeyDown={handleKeyDown}
         onFocus={() => query.length >= 2 && setShowSuggestions(true)}
       />
-      
+      {showSuggestions && suggestions.length == 0 && (
+        <div style={styles.suggestionsContainer}>
+          <div
+            style={{
+              ...styles.suggestionItem,
+              backgroundColor: '#f5f5f5',
+              borderRadius: '5px',
+              padding: '12px 16px',
+              textAlign: 'center',
+              color: '#999',
+            }}
+          >
+          Aucun utilisateur trouver
+        </div>
+        </div>
+      )}
       {showSuggestions && suggestions.length > 0 && (
         <div style={styles.suggestionsContainer}>
           {suggestions.map((user, index) => (
