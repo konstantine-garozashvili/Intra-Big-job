@@ -78,6 +78,23 @@ export const useRolePermissions = () => {
              permissions.isTeacher() || 
              permissions.isHR();
     },
+    
+    /**
+     * Get the dashboard path based on the user's role
+     * @returns {string} The path to the appropriate dashboard
+     */
+    getRoleDashboardPath: () => {
+      if (hasRole(ROLES.SUPER_ADMIN)) return '/superadmin/dashboard';
+      if (hasRole(ROLES.ADMIN)) return '/admin/dashboard';
+      if (hasRole(ROLES.HR)) return '/hr/dashboard';
+      if (hasRole(ROLES.TEACHER)) return '/teacher/dashboard';
+      if (hasRole(ROLES.STUDENT)) return '/student/dashboard';
+      if (hasRole(ROLES.RECRUITER)) return '/recruiter/dashboard';
+      if (hasRole(ROLES.GUEST)) return '/guest/dashboard';
+      
+      // Default fallback
+      return '/dashboard';
+    },
   }), [hasRole]);
 
   return permissions;

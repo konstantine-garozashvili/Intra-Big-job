@@ -4,17 +4,26 @@ import { Button } from "@/components/ui/button";
 import { toast } from 'sonner';
 import { useProfilePicture } from '../../hooks/useProfilePicture';
 import { Skeleton } from "@/components/ui/skeleton";
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 // Skeleton component for the profile picture
 const ProfilePictureSkeleton = () => {
   return (
-    <div className="p-0 sm:p-1">
-      <div className="flex justify-center">
-        <div className="relative">
-          <Skeleton className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full" />
-          <Skeleton className="absolute bottom-0 right-0 w-5 h-5 sm:w-6 sm:h-6 rounded-full" />
-        </div>
+    <div className="flex flex-col items-center">
+      <div className="relative mb-2">
+        <Skeleton className="w-20 h-20 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full" />
+        <Skeleton className="absolute bottom-2 right-2 w-6 h-6 sm:w-8 sm:h-8 rounded-full" />
       </div>
+      <Skeleton className="h-6 w-32 mb-1" />
+      <Skeleton className="h-4 w-48" />
     </div>
   );
 };
@@ -26,6 +35,10 @@ const ProfilePicture = ({ userData, onProfilePictureChange, isLoading: externalL
   const [localProfilePictureUrl, setLocalProfilePictureUrl] = useState(null);
   const [previousUrl, setPreviousUrl] = useState(null);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  
+  // Accès direct au client de requête pour forcer l'invalidation
+  const queryClient = useQueryClient();
   
   // Use the custom hook for profile picture operations
   const {
@@ -70,7 +83,11 @@ const ProfilePicture = ({ userData, onProfilePictureChange, isLoading: externalL
   const forceRefresh = useCallback(() => {
     // console.log("Forçage du rafraîchissement des données de la photo de profil");
     refetch();
-  }, [refetch]);
+    
+    // Invalider également les requêtes de profil public et profil courant
+    queryClient.invalidateQueries({ queryKey: ['currentProfile'] });
+    queryClient.invalidateQueries({ queryKey: ['publicProfile'] });
+  }, [refetch, queryClient]);
 
   const handleProfilePictureClick = () => {
     if (isUploading || isDeleting) return; // Éviter les clics pendant les opérations
@@ -163,13 +180,13 @@ const ProfilePicture = ({ userData, onProfilePictureChange, isLoading: externalL
     }
   };
   
-  const handleDeleteProfilePicture = async () => {
+  const handleDeleteProfilePicture = () => {
+    // Ouvrir le dialogue de confirmation
+    setDeleteDialogOpen(true);
+  };
+  
+  const confirmDeleteProfilePicture = async () => {
     try {
-      // Confirmation avant suppression
-      if (!window.confirm('Êtes-vous sûr de vouloir supprimer votre photo de profil ?')) {
-        return;
-      }
-      
       setIsDeleting(true);
       
       // Optimistic update - supprimer immédiatement l'image dans l'UI
@@ -197,6 +214,7 @@ const ProfilePicture = ({ userData, onProfilePictureChange, isLoading: externalL
       // console.error('Error deleting profile picture:', error);
     } finally {
       setIsDeleting(false);
+      setDeleteDialogOpen(false);
     }
   };
 
@@ -209,15 +227,15 @@ const ProfilePicture = ({ userData, onProfilePictureChange, isLoading: externalL
   }
 
   return (
-    <div className="p-0 sm:p-1">
-      <div className="flex items-center justify-center">
-        <div className="relative">
+    <div className="p-4 sm:p-6 max-w-md mx-auto">
+      <div className="flex flex-col items-center">
+        <div className="relative mb-3">
           <div 
-            className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden group relative cursor-pointer border-2 border-white dark:border-gray-700 shadow-sm"
+            className="w-20 h-20 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden group relative cursor-pointer border-2 border-white dark:border-gray-700 shadow-sm"
             onClick={handleProfilePictureClick}
           >
             {componentIsLoading ? (
-              <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-gray-400 animate-spin" />
+              <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 text-gray-400 animate-spin" />
             ) : localProfilePictureUrl ? (
               <img 
                 src={localProfilePictureUrl} 
@@ -225,10 +243,10 @@ const ProfilePicture = ({ userData, onProfilePictureChange, isLoading: externalL
                 className="w-full h-full object-cover"
               />
             ) : (
-              <UserRound className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-gray-400" />
+              <UserRound className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 text-gray-400" />
             )}
             <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-              <Camera className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white" />
+              <Camera className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 text-white" />
             </div>
           </div>
           <input
@@ -238,34 +256,74 @@ const ProfilePicture = ({ userData, onProfilePictureChange, isLoading: externalL
             className="hidden"
             onChange={handleProfilePictureChange}
           />
+          
+          {/* Icône d'upload - positionnée en bas à droite */}
           <Button
             variant="ghost"
             size="icon"
-            className="absolute bottom-0 right-0 rounded-full p-0.5 sm:p-1 bg-white dark:bg-gray-700 shadow-sm hover:bg-gray-100 dark:hover:bg-gray-600"
+            className="absolute bottom-0 right-0 rounded-full p-1 sm:p-1.5 md:p-2 bg-white dark:bg-gray-700 shadow-sm hover:bg-gray-100 dark:hover:bg-gray-600"
             onClick={handleProfilePictureClick}
             disabled={componentIsLoading}
           >
-            <Upload className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+            <Upload className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5" />
           </Button>
           
-          {/* Icône de suppression */}
+          {/* Icône de suppression - positionnée en haut à droite avec un espacement */}
           {localProfilePictureUrl && (
             <Button
               variant="ghost"
               size="icon"
               onClick={handleDeleteProfilePicture}
               disabled={componentIsLoading}
-              className="absolute top-0 right-0 rounded-full p-0.5 sm:p-1 bg-white dark:bg-gray-700 shadow-sm hover:bg-red-50 hover:text-red-600 transition-colors"
+              className="absolute top-0 right-0 rounded-full p-1 sm:p-1.5 md:p-2 bg-white dark:bg-gray-700 shadow-sm hover:bg-red-50 hover:text-red-600 transition-colors"
             >
               {isDeleting ? (
-                <Loader2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 animate-spin" />
+                <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 animate-spin" />
               ) : (
-                <Trash2 className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5" />
               )}
             </Button>
           )}
         </div>
+        
+        {/* Texte intégré directement dans le composant */}
+        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1">Photo de profil</h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400">Mettre à jour votre photo</p>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      {deleteDialogOpen && (
+        <Dialog open={deleteDialogOpen} onOpenChange={(open) => !isDeleting && setDeleteDialogOpen(open)}>
+          <DialogContent className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-hidden rounded-2xl border-0 shadow-xl">
+            <div className="overflow-y-auto max-h-[70vh] fade-in-up">
+              <DialogHeader>
+                <DialogTitle className="text-xl font-semibold">Confirmation de suppression</DialogTitle>
+                <DialogDescription className="text-base mt-2">
+                  Êtes-vous sûr de vouloir supprimer votre photo de profil ? Cette action est irréversible.
+                </DialogDescription>
+              </DialogHeader>
+            </div>
+            <DialogFooter className="mt-6 flex justify-end space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => setDeleteDialogOpen(false)}
+                disabled={isDeleting}
+                className="rounded-full border-2 hover:bg-gray-100 transition-all duration-200"
+              >
+                Annuler
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={confirmDeleteProfilePicture}
+                disabled={isDeleting}
+                className={`rounded-full bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 transition-all duration-200 ${isDeleting ? 'opacity-80' : ''}`}
+              >
+                {isDeleting ? "Suppression..." : "Supprimer"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };

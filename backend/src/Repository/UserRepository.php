@@ -125,28 +125,50 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
             ->getResult();
     }
 
-    //    /**
-    //     * @return User[] Returns an array of User objects
-    //     */
-    //    public function findByExampleField($value): array
-    //    {
-    //        return $this->createQueryBuilder('u')
-    //            ->andWhere('u.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->orderBy('u.id', 'ASC')
-    //            ->setMaxResults(10)
-    //            ->getQuery()
-    //            ->getResult()
-    //        ;
-    //    }
+    /**
+     * Find all users with their roles for admin dashboard
+     * 
+     * @return array Returns an array of User objects with their roles
+     */
+    public function findAllWithRoles(): array
+    {
+        $users = $this->createQueryBuilder('u')
+            ->select('u', 'ur', 'r')
+            ->leftJoin('u.userRoles', 'ur')
+            ->leftJoin('ur.role', 'r')
+            ->orderBy('u.lastName', 'ASC')
+            ->addOrderBy('u.firstName', 'ASC')
+            ->getQuery()
+            ->getResult();
+            
+        $result = [];
+        
+        foreach ($users as $user) {
+            $roles = [];
+            foreach ($user->getUserRoles() as $userRole) {
+                $roles[] = [
+                    'id' => $userRole->getRole()->getId(),
+                    'name' => $userRole->getRole()->getName(),
+                ];
+            }
+            
+            $userData = [
+                'id' => $user->getId(),
+                'firstName' => $user->getFirstName(),
+                'lastName' => $user->getLastName(),
+                'email' => $user->getEmail(),
+                'phoneNumber' => $user->getPhoneNumber(),
+                'birthDate' => $user->getBirthDate() ? $user->getBirthDate()->format('Y-m-d') : null,
+                'createdAt' => $user->getCreatedAt() ? $user->getCreatedAt()->format('Y-m-d H:i:s') : null,
+                'updatedAt' => $user->getUpdatedAt() ? $user->getUpdatedAt()->format('Y-m-d H:i:s') : null,
+                'roles' => $roles
+            ];
+            
+            $result[] = $userData;
+        }
+        
+        return $result;
+    }
 
-    //    public function findOneBySomeField($value): ?User
-    //    {
-    //        return $this->createQueryBuilder('u')
-    //            ->andWhere('u.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->getQuery()
-    //            ->getOneOrNullResult()
-    //        ;
-    //    }
+
 }

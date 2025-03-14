@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { authService } from '@/lib/services/authService';
 
 // Create context
 const ProfileLayoutContext = createContext({
@@ -18,23 +20,30 @@ export const ProfileLayoutProvider = ({ children }) => {
   const [currentSection, setCurrentSection] = useState(null);
   const [visitedSections, setVisitedSections] = useState(new Set());
   const timerRef = useRef(null);
-  const sidebarTimerRef = useRef(null);
   const previousPathRef = useRef('');
 
-  // Effet pour charger la sidebar immédiatement lors du premier rendu
-  useEffect(() => {
-    // Simuler un temps de chargement plus long pour le skeleton
-    // pour s'assurer que toutes les données utilisateur sont chargées
-    sidebarTimerRef.current = setTimeout(() => {
-      setIsSidebarLoaded(true);
-    }, 1800); // Délai augmenté pour permettre le chargement complet des données utilisateur
+  // Use React Query to fetch user data and control sidebar loading state
+  const { data: userData, isLoading: isUserDataLoading, isSuccess } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => authService.getCurrentUser(),
+    staleTime: 5 * 60 * 1000,
+    cacheTime: 30 * 60 * 1000,
+    enabled: authService.isLoggedIn(),
+    refetchOnWindowFocus: false,
+    retry: 1,
+  });
 
-    return () => {
-      if (sidebarTimerRef.current) {
-        clearTimeout(sidebarTimerRef.current);
-      }
-    };
-  }, []);
+  // Update sidebar loaded state based on user data loading
+  useEffect(() => {
+    if (isSuccess && userData) {
+      // Add a small delay to ensure smooth transition
+      const timer = setTimeout(() => {
+        setIsSidebarLoaded(true);
+      }, 300);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isSuccess, userData]);
 
   // Update current section based on route
   useEffect(() => {
@@ -111,6 +120,7 @@ export const ProfileLayoutProvider = ({ children }) => {
       setLayoutLoading: setIsLayoutLoading,
       currentSection,
       isSidebarLoaded,
+      isUserDataLoading,
       visitedSections
     }}>
       {children}
