@@ -4,6 +4,17 @@ import { clearQueryCache } from '../utils/queryClientUtils';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
+// Générer un identifiant de session unique
+export const generateSessionId = () => {
+  return Date.now().toString(36) + Math.random().toString(36).substring(2);
+};
+
+// Stocker l'identifiant de session actuel
+let currentSessionId = localStorage.getItem('session_id') || generateSessionId();
+
+// Exposer l'identifiant de session pour l'utiliser dans les clés de requête
+export const getSessionId = () => currentSessionId;
+
 /**
  * Service pour l'authentification et la gestion des utilisateurs
  */
@@ -61,6 +72,18 @@ export const authService = {
         device_name: deviceName,
         device_type: deviceType
       };
+      
+      // Nettoyer les données de l'utilisateur précédent
+      localStorage.removeItem('token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user');
+      
+      // Générer un nouvel identifiant de session
+      currentSessionId = generateSessionId();
+      localStorage.setItem('session_id', currentSessionId);
+      
+      // Vider COMPLÈTEMENT le cache React Query pour éviter les problèmes de données persistantes
+      clearQueryCache();
       
       console.log('Envoi de la requête de connexion...');
       // Utiliser directement la route standard JWT
@@ -203,10 +226,21 @@ export const authService = {
       localStorage.removeItem('token');
       localStorage.removeItem('refresh_token');
       localStorage.removeItem('user');
+      
+      // Générer un nouvel identifiant de session pour la prochaine connexion
+      currentSessionId = generateSessionId();
+      localStorage.setItem('session_id', currentSessionId);
+      
       // Ne pas supprimer device_id pour maintenir l'identification de l'appareil
       
-      // Vider le cache React Query
+      // Vider COMPLÈTEMENT le cache React Query
       clearQueryCache();
+      
+      // Forcer un rafraîchissement de la page pour garantir un état propre
+      // Cette approche est plus radicale mais garantit qu'aucune donnée ne persiste
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 100);
     }
   },
   

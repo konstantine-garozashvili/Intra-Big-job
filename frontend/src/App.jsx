@@ -104,15 +104,20 @@ const PrefetchHandler = () => {
   useEffect(() => {
     // Précharger les données utilisateur dès que l'utilisateur est authentifié
     if (localStorage.getItem('token')) {
-      import('./hooks/useDashboardQueries').then(module => {
-        const { useUserData } = module;
-        const queryClient = import('./lib/services/queryClient').then(qcModule => {
-          const { getQueryClient } = qcModule;
-          const qc = getQueryClient();
-          
+      Promise.all([
+        import('./hooks/useDashboardQueries'),
+        import('./lib/services/queryClient'),
+        import('./lib/services/authService')
+      ]).then(([dashboardModule, queryClientModule, authModule]) => {
+        const { getQueryClient } = queryClientModule;
+        const { getSessionId } = authModule;
+        const qc = getQueryClient();
+        const sessionId = getSessionId();
+        
+        if (qc) {
           // Précharger les données utilisateur
           qc.prefetchQuery({
-            queryKey: ['user-data'],
+            queryKey: ['user-data', 'anonymous', sessionId],
             queryFn: async () => {
               const { default: apiService } = await import('./lib/services/apiService');
               return await apiService.get('/me', {}, true, 30 * 60 * 1000);
@@ -120,10 +125,52 @@ const PrefetchHandler = () => {
             staleTime: 30 * 60 * 1000,
             cacheTime: 60 * 60 * 1000
           });
-        });
+        }
       });
     }
   }, [location.pathname]);
+  
+  // Ajouter un écouteur d'événement pour forcer l'actualisation des données utilisateur lors d'un changement d'utilisateur
+  useEffect(() => {
+    const handleUserChange = () => {
+      // Importer dynamiquement les modules nécessaires
+      Promise.all([
+        import('./lib/services/queryClient'),
+        import('./lib/services/authService')
+      ]).then(([queryClientModule, authModule]) => {
+        const { getQueryClient } = queryClientModule;
+        const { getSessionId } = authModule;
+        const qc = getQueryClient();
+        const sessionId = getSessionId();
+        
+        if (qc) {
+          console.log('Invalidation des requêtes avec le nouvel identifiant de session:', sessionId);
+          
+          // Invalider toutes les requêtes liées à l'utilisateur
+          qc.invalidateQueries({ queryKey: ['user-data'] });
+          
+          // Invalider également les requêtes de dashboard
+          qc.invalidateQueries({ queryKey: ['teacher-dashboard'] });
+          qc.invalidateQueries({ queryKey: ['admin-users'] });
+          qc.invalidateQueries({ queryKey: ['admin-dashboard'] });
+          qc.invalidateQueries({ queryKey: ['student-dashboard'] });
+          qc.invalidateQueries({ queryKey: ['hr-dashboard'] });
+          
+          console.log('Toutes les requêtes utilisateur ont été invalidées suite à un changement d\'utilisateur');
+        }
+      });
+    };
+    
+    // Ajouter les écouteurs d'événements
+    window.addEventListener('login-success', handleUserChange);
+    window.addEventListener('role-change', handleUserChange);
+    
+    // Nettoyer les écouteurs d'événements
+    return () => {
+      window.removeEventListener('login-success', handleUserChange);
+      window.removeEventListener('role-change', handleUserChange);
+    };
+  }, []);
   
   return null;
 };

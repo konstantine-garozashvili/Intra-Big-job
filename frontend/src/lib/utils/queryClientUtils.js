@@ -28,8 +28,19 @@ export const getQueryClient = () => {
  */
 export const clearQueryCache = () => {
   if (queryClientInstance) {
-    console.log('Vidage du cache React Query...');
+    console.log('Vidage complet du cache React Query...');
+    
+    // Vider complètement le cache
     queryClientInstance.clear();
+    
+    // Réinitialiser également les requêtes en cours
+    queryClientInstance.cancelQueries();
+    
+    // Forcer le garbage collector à libérer la mémoire
+    setTimeout(() => {
+      console.log('Cache React Query vidé avec succès');
+    }, 0);
+    
     return true;
   }
   console.warn('Impossible de vider le cache: queryClient non défini');

@@ -1,5 +1,5 @@
 import { useApiQuery } from './useReactQuery';
-import { authService } from '@/lib/services/authService';
+import { authService, getSessionId } from '@/lib/services/authService';
 import { teacherService } from '@/lib/services/teacherService';
 import apiService from '@/lib/services/apiService';
 import { getQueryClient } from '@/lib/services/queryClient';
@@ -9,11 +9,30 @@ import { getQueryClient } from '@/lib/services/queryClient';
  * @returns {Object} - Données utilisateur et état de la requête
  */
 export const useUserData = () => {
-  return useApiQuery('/me', 'user-data', {
+  // Récupérer l'ID de l'utilisateur actuel depuis le localStorage pour l'utiliser comme partie de la clé de requête
+  // Cela garantit que les données sont actualisées lors d'un changement d'utilisateur
+  const getUserKey = () => {
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        return user.id || 'anonymous';
+      }
+    } catch (e) {
+      console.error('Erreur lors de la récupération de l\'ID utilisateur:', e);
+    }
+    return 'anonymous';
+  };
+
+  // Utiliser l'identifiant de session dans la clé de requête pour garantir que les données sont actualisées
+  // lors d'un changement de session (connexion/déconnexion)
+  const sessionId = getSessionId();
+
+  return useApiQuery('/me', ['user-data', getUserKey(), sessionId], {
     staleTime: 30 * 60 * 1000, // 30 minutes (augmenté)
     cacheTime: 60 * 60 * 1000, // 1 heure (augmenté)
     refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    refetchOnMount: true, // Toujours refetch au montage pour garantir des données fraîches
     refetchOnReconnect: false,
     select: (data) => {
       // Extraire l'objet utilisateur si la réponse contient un objet "user"
@@ -29,22 +48,23 @@ export const useUserData = () => {
 export const useTeacherDashboardData = () => {
   // Utiliser useApiQuery pour récupérer les données utilisateur
   const userQuery = useUserData();
+  const sessionId = getSessionId();
   
   // Utiliser useApiQuery pour récupérer les données du dashboard enseignant
   const dashboardQuery = useApiQuery(
     '/teacher/dashboard', 
-    'teacher-dashboard', 
+    ['teacher-dashboard', sessionId], 
     {
       staleTime: 15 * 60 * 1000, // 15 minutes
       cacheTime: 30 * 60 * 1000, // 30 minutes
       refetchOnWindowFocus: false,
-      refetchOnMount: false,
+      refetchOnMount: true, // Toujours refetch au montage pour garantir des données fraîches
       refetchOnReconnect: false,
       // Utiliser initialData pour éviter l'affichage de chargement si possible
       initialData: () => {
         try {
           // Vérifier si des données sont déjà en cache
-          const cachedData = getQueryClient().getQueryData(['teacher-dashboard']);
+          const cachedData = getQueryClient().getQueryData(['teacher-dashboard', sessionId]);
           if (cachedData) return cachedData;
           return undefined;
         } catch (e) {
@@ -85,22 +105,23 @@ export const useTeacherDashboardData = () => {
 export const useAdminDashboardData = () => {
   // Utiliser useApiQuery pour récupérer les données utilisateur
   const userQuery = useUserData();
+  const sessionId = getSessionId();
   
   // Utiliser useApiQuery pour récupérer la liste des utilisateurs
   const usersQuery = useApiQuery(
     '/users', 
-    'admin-users', 
+    ['admin-users', sessionId], 
     {
       staleTime: 10 * 60 * 1000, // 10 minutes (augmenté)
       cacheTime: 30 * 60 * 1000, // 30 minutes (augmenté)
       refetchOnWindowFocus: false,
-      refetchOnMount: false,
+      refetchOnMount: true, // Toujours refetch au montage pour garantir des données fraîches
       refetchOnReconnect: false,
       // Utiliser initialData pour éviter l'affichage de chargement si possible
       initialData: () => {
         try {
           // Vérifier si des données sont déjà en cache
-          const cachedData = getQueryClient().getQueryData(['admin-users']);
+          const cachedData = getQueryClient().getQueryData(['admin-users', sessionId]);
           if (cachedData) return cachedData;
           return undefined;
         } catch (e) {
