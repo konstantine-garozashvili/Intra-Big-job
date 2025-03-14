@@ -2,7 +2,6 @@ import React from 'react';
 import { User, Calendar, Globe } from 'lucide-react';
 import EditableField from '../personal/EditableField';
 import { StaticField } from './StaticField';
-import { DatePickerField } from './DatePickerField';
 import { formatDate } from './utils';
 
 export const PersonalInfoSection = ({ 
@@ -63,28 +62,12 @@ export const PersonalInfoSection = ({
         />
       )}
       
-      {/* Birth Date */}
-      {isFieldEditable('birthDate') ? (
-        <DatePickerField 
-          field="birthDate"
-          label="Date de naissance"
-          icon={<Calendar className="h-4 w-4 mr-2 text-blue-500" />}
-          userData={userData}
-          editedData={editedData}
-          editMode={editMode}
-          setEditMode={toggleFieldEdit}
-          handleInputChange={handleInputChange}
-          handleCancelField={handleCancelField}
-          onSave={onSave}
-          isAdmin={true}
-        />
-      ) : (
-        <StaticField 
-          label="Date de naissance"
-          icon={<Calendar className="h-4 w-4 mr-2 text-blue-500" />}
-          value={`${formatDate(userData.birthDate)}${userData.age ? ` (${userData.age} ans)` : ''}`}
-        />
-      )}
+      {/* Birth Date - Toujours afficher en mode statique pour éviter les problèmes */}
+      <StaticField 
+        label="Date de naissance"
+        icon={<Calendar className="h-4 w-4 mr-2 text-blue-500" />}
+        value={`${formatDate(userData.birthDate)}${userData.age ? ` (${userData.age} ans)` : ''}`}
+      />
 
       {/* Nationality */}
       <StaticField 
