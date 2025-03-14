@@ -1,0 +1,17 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Liste des formations{% endblock %}
+
+{% block body %}
+<h1>Liste des formations</h1>
+<ul>
+    {% for formation in formations %}
+        <li>
+            <strong>{{ formation.name }}</strong> - Promotion : {{ formation.promotion }}
+            <a href="{{ path('formation_add_students', {id: formation.id}) }}">Ajouter des étudiants</a>
+        </li>
+    {% else %}
+        <li>Aucune formation trouvée.</li>
+    {% endfor %}
+</ul>
+{% endblock %}

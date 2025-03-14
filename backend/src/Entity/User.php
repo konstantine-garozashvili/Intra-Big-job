@@ -73,6 +73,9 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     #[ORM\OneToMany(mappedBy: 'user', targetEntity: UserRole::class, orphanRemoval: true)]
     private Collection $userRoles;
 
+    #[ORM\ManyToMany(targetEntity: Formation::class, mappedBy: 'students')]
+    private Collection $formations;
+
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
     #[Groups(['user:read'])]
@@ -86,6 +89,7 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
 
     public function __construct()
     {
+        $this->formations = new ArrayCollection();
         $this->createdAt = new \DateTimeImmutable();
         $this->userRoles = new ArrayCollection();
         $this->diplomas = new ArrayCollection();
@@ -398,5 +402,30 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     {
         // If you store any temporary, sensitive data on the user, clear it here
         // $this->plainPassword = null;
+    }
+
+    /**
+ * @return Collection<int, Formation>
+ */
+    public function getFormations(): Collection
+    {
+        return $this->formations;
+    }
+
+    public function addFormation(Formation $formation): self
+    {
+        if (!$this->formations->contains($formation)) {
+            $this->formations[] = $formation;
+            $formation->addStudent($this); // Assure-toi que dans Formation, la méthode addStudent() existe
+        }
+        return $this;
+    }
+
+    public function removeFormation(Formation $formation): self
+    {
+        if ($this->formations->removeElement($formation)) {
+            $formation->removeStudent($this); // Assure-toi que dans Formation, la méthode removeStudent() existe
+        }
+        return $this;
     }
 }
