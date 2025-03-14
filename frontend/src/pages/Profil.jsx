@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import profilService from "../lib/services/profilService";
 import { authService } from "../lib/services/authService";
+import { studentProfileService } from "../lib/services";
 import { useNavigate } from "react-router-dom";
 import {
   Card,
@@ -26,6 +27,8 @@ import {
   Mail,
   Phone,
   Calendar,
+  Briefcase,
+  GraduationCap,
 } from "lucide-react";
 import {
   Dialog,
@@ -84,6 +87,7 @@ const Profil = () => {
   const [profilData, setProfilData] = useState(null);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [studentData, setStudentData] = useState(null);
   const navigate = useNavigate();
 
   // Fonction de déconnexion
@@ -110,6 +114,17 @@ const Profil = () => {
         // Charger toutes les données en une seule requête
         const allData = await profilService.getAllProfilData();
         setProfilData(allData);
+
+        // Si l'utilisateur est un étudiant, charger les données du profil étudiant
+        const user = await authService.getCurrentUser();
+        if (user?.roles?.includes('ROLE_STUDENT')) {
+          try {
+            const studentProfile = await studentProfileService.getMyProfile();
+            setStudentData(studentProfile);
+          } catch (studentError) {
+            console.error("Erreur lors du chargement du profil étudiant:", studentError);
+          }
+        }
 
         setLoading(false);
       } catch (error) {
@@ -494,9 +509,107 @@ const Profil = () => {
           </motion.div>
         </div>
 
-        {/* Sections tabulaires - Ajout d'une hauteur fixe pour stabiliser le contenu et éviter les secousses lors du changement d'onglet */}
+        {/* Nouvelle carte pour la recherche d'emploi (si étudiant) */}
+        {studentData && (studentData.isSeekingInternship || studentData.isSeekingApprenticeship) && (
+          <motion.div
+            custom={2}
+            variants={cardVariants}
+            initial="hidden"
+            animate="visible"
+            className="mb-8"
+          >
+            <Card className="overflow-hidden border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
+              <CardHeader className="bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-950 dark:to-blue-950 pb-6">
+                <div className="flex items-center">
+                  <Briefcase className="h-6 w-6 mr-2 text-indigo-600 dark:text-indigo-400" />
+                  <CardTitle className="text-xl">Recherche d'emploi</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="space-y-4">
+                  <div className="flex flex-col space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4">
+                    {/* Status de recherche de stage */}
+                    <motion.div
+                      custom={0}
+                      variants={itemVariants}
+                      initial="hidden"
+                      animate="visible"
+                      className="flex-1 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 p-4 rounded-xl"
+                    >
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-medium text-lg text-gray-700 dark:text-gray-200 flex items-center">
+                          <Briefcase className="h-4 w-4 mr-2 text-blue-500" />
+                          Recherche de stage
+                        </h3>
+                        <div className={`rounded-full w-3 h-3 ${studentData.isSeekingInternship ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                      </div>
+                      <p className="mt-2 text-gray-600 dark:text-gray-300">
+                        {studentData.isSeekingInternship 
+                          ? "Vous êtes actuellement à la recherche d'un stage." 
+                          : "Vous n'êtes pas à la recherche d'un stage pour le moment."}
+                      </p>
+                      {studentData.availableFromDate && studentData.isSeekingInternship && (
+                        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                          <span className="font-medium">Disponible à partir du:</span>{' '}
+                          {new Date(studentData.availableFromDate).toLocaleDateString()}
+                        </p>
+                      )}
+                    </motion.div>
+
+                    {/* Status de recherche d'alternance */}
+                    <motion.div
+                      custom={1}
+                      variants={itemVariants}
+                      initial="hidden"
+                      animate="visible"
+                      className="flex-1 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/30 dark:to-pink-900/30 p-4 rounded-xl"
+                    >
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-medium text-lg text-gray-700 dark:text-gray-200 flex items-center">
+                          <GraduationCap className="h-4 w-4 mr-2 text-purple-500" />
+                          Recherche d'alternance
+                        </h3>
+                        <div className={`rounded-full w-3 h-3 ${studentData.isSeekingApprenticeship ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                      </div>
+                      <p className="mt-2 text-gray-600 dark:text-gray-300">
+                        {studentData.isSeekingApprenticeship 
+                          ? "Vous êtes actuellement à la recherche d'une alternance." 
+                          : "Vous n'êtes pas à la recherche d'une alternance pour le moment."}
+                      </p>
+                      {studentData.availableFromDate && studentData.isSeekingApprenticeship && (
+                        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                          <span className="font-medium">Disponible à partir du:</span>{' '}
+                          {new Date(studentData.availableFromDate).toLocaleDateString()}
+                        </p>
+                      )}
+                    </motion.div>
+                  </div>
+
+                  {/* Note concernant la modification des paramètres */}
+                  <motion.div
+                    custom={2}
+                    variants={itemVariants}
+                    initial="hidden"
+                    animate="visible"
+                    className="text-center"
+                  >
+                    <Button 
+                      variant="outline" 
+                      onClick={() => navigate('/settings/career')}
+                      className="text-sm"
+                    >
+                      Modifier mes préférences de recherche
+                    </Button>
+                  </motion.div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
+        {/* Sections tabulaires - mettre à jour le paramètre custom */}
         <motion.div
-          custom={2}
+          custom={studentData && (studentData.isSeekingInternship || studentData.isSeekingApprenticeship) ? 3 : 2}
           variants={cardVariants}
           initial="hidden"
           animate="visible"
