@@ -2,6 +2,7 @@ import React, { memo, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PhoneInput } from '@/components/ui/phone-input';
+import { NameInput } from '@/components/ui/name-input';
 import { Label } from '@/components/ui/label';
 import { Pencil, Loader2 } from 'lucide-react';
 import { Skeleton } from "@/components/ui/skeleton";
@@ -87,6 +88,13 @@ const EditableField = memo(({
           <div className="space-y-2 sm:space-y-3">
             {type === 'phone' ? (
               <PhoneInput
+                value={editedValue || ''}
+                onChange={onChange}
+                placeholder={`Votre ${label.toLowerCase()}`}
+                className="w-full text-sm"
+              />
+            ) : field === 'firstName' || field === 'lastName' ? (
+              <NameInput
                 value={editedValue || ''}
                 onChange={onChange}
                 placeholder={`Votre ${label.toLowerCase()}`}
