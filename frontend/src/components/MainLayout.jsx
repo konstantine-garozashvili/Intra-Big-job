@@ -127,6 +127,9 @@ const MainLayout = () => {
           <ProfileProgress userData={profileData} />
         )}
         
+        {/* Spacer div to add more space above footer */}
+        <div className="h-8"></div>
+        
         {/* Footer sans transition */}
         <Footer />
       </div>
