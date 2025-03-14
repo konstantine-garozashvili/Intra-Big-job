@@ -3,6 +3,22 @@ import authService from '@services/authService';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
+// Simple event emitter for document updates
+export const documentEvents = {
+  listeners: new Set(),
+  
+  // Subscribe to document updates
+  subscribe(callback) {
+    this.listeners.add(callback);
+    return () => this.listeners.delete(callback);
+  },
+  
+  // Notify all subscribers about document updates
+  notify() {
+    this.listeners.forEach(callback => callback());
+  }
+};
+
 // Cache for document requests
 const documentCache = {
   documents: null,
@@ -80,6 +96,9 @@ class DocumentService {
       // Clear cache after upload
       documentCache.clear();
       
+      // Notify subscribers about the update
+      documentEvents.notify();
+      
       return response.data;
     } catch (error) {
       throw error;
@@ -107,6 +126,9 @@ class DocumentService {
       );
       
       documentCache.clear();
+      
+      // Notify subscribers about the update
+      documentEvents.notify();
       
       return response.data;
     } catch (error) {
@@ -154,6 +176,9 @@ class DocumentService {
       );
       
       documentCache.clear();
+      
+      // Notify subscribers about the update
+      documentEvents.notify();
       
       return response.data;
     } catch (error) {

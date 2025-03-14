@@ -1,5 +1,21 @@
 import apiService from '@/lib/services/apiService';
 
+// Simple event emitter for diploma updates
+export const diplomaEvents = {
+  listeners: new Set(),
+  
+  // Subscribe to diploma updates
+  subscribe(callback) {
+    this.listeners.add(callback);
+    return () => this.listeners.delete(callback);
+  },
+  
+  // Notify all subscribers about diploma updates
+  notify() {
+    this.listeners.forEach(callback => callback());
+  }
+};
+
 /**
  * Service for managing user diplomas
  */
@@ -54,6 +70,10 @@ class DiplomaService {
   async addUserDiploma(diplomaData) {
     try {
       const response = await apiService.post('/api/user-diplomas', diplomaData);
+      
+      // Notify subscribers about the update
+      diplomaEvents.notify();
+      
       return response.data;
     } catch (error) {
       throw error;
@@ -68,6 +88,10 @@ class DiplomaService {
   async deleteUserDiploma(id) {
     try {
       const response = await apiService.delete(`/api/user-diplomas/${id}`);
+      
+      // Notify subscribers about the update
+      diplomaEvents.notify();
+      
       return response.data;
     } catch (error) {
       throw error;

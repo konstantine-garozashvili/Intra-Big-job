@@ -2,6 +2,11 @@ import axios from 'axios';
 
 // Configurer des intercepteurs pour les requêtes et réponses
 axios.interceptors.request.use(request => {
+  // Ajouter le token d'authentification à toutes les requêtes si disponible
+  const token = localStorage.getItem('token');
+  if (token) {
+    request.headers.Authorization = `Bearer ${token}`;
+  }
   return request;
 }, error => {
   return Promise.reject(error);

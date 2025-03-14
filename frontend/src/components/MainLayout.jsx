@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, createContext, useMemo } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
 import ProfileProgress from '../pages/Global/Profile/components/profile-view/ProfileProgress';
@@ -7,6 +7,12 @@ import { authService } from '../lib/services/authService';
 import { profileService } from '../pages/Global/Profile/services/profileService';
 import Footer from './Footer';
 
+// Create a context for profile data and refresh function
+export const ProfileContext = createContext({
+  profileData: null,
+  refreshProfileData: () => {},
+  isProfileLoading: false
+});
 
 const MainLayout = () => {
   const [userData, setUserData] = useState(null);
@@ -19,6 +25,26 @@ const MainLayout = () => {
   // Pages qui doivent être affichées en plein écran sans marges internes
   const fullScreenPages = ['/register', '/login'];
   const isFullScreenPage = fullScreenPages.includes(location.pathname);
+
+  // Create a memoized refresh function that can be called from child components
+  const refreshProfileData = useCallback(async () => {
+    if (authService.isLoggedIn()) {
+      try {
+        setIsLoading(true);
+        // Only fetch profile data since we already have basic user data
+        const newProfileData = await profileService.getAllProfileData();
+        // S'assurer que les données sont bien mises à jour avant de les retourner
+        setProfileData(newProfileData);
+        setIsLoading(false);
+        return newProfileData; // Retourner les nouvelles données pour permettre aux composants de les utiliser
+      } catch (error) {
+        console.error('Error refreshing profile data:', error);
+        setIsLoading(false);
+        return null;
+      }
+    }
+    return null;
+  }, []);
 
   // Fetch user data when the component mounts
   useEffect(() => {
@@ -46,20 +72,29 @@ const MainLayout = () => {
     fetchUserData();
   }, []);
 
-  return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Navbar user={userData} />
-      
-      <main className={`flex-grow ${isFullScreenPage ? '' : 'container mx-auto px-4 py-8'}`}>
-        <Outlet />
-      </main>
+  // Create a memoized context value to prevent unnecessary re-renders
+  const profileContextValue = useMemo(() => ({
+    profileData,
+    refreshProfileData,
+    isProfileLoading: isLoading
+  }), [profileData, refreshProfileData, isLoading]);
 
-      {showProgress && !isLoading && profileData && hasRole(ROLES.GUEST) && (
-        <ProfileProgress userData={profileData} />
-      )}
-      
-      <Footer />
-    </div>
+  return (
+    <ProfileContext.Provider value={profileContextValue}>
+      <div className="min-h-screen bg-background flex flex-col">
+        <Navbar user={userData} />
+        
+        <main className={`flex-grow ${isFullScreenPage ? '' : 'container mx-auto px-4 py-8'}`}>
+          <Outlet />
+        </main>
+
+        {showProgress && profileData && hasRole(ROLES.GUEST) && (
+          <ProfileProgress userData={profileData} />
+        )}
+        
+        <Footer />
+      </div>
+    </ProfileContext.Provider>
   );
 };
 

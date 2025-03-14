@@ -148,20 +148,61 @@ const CareerSettings = () => {
     }
   });
 
-  // Mise à jour profil
+  // Mise à jour profil - Optimisée pour éviter le rebond des switches
   const updateProfileMutation = useMutation({
-    mutationFn: (profileData) => studentProfileService.updateProfile(profileData),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['studentProfile'] });
-      // Mettre également à jour le cache directement
+    mutationFn: (profileData) => studentProfileService.updateJobSeekingStatus(profileData),
+    onMutate: async (newProfileData) => {
+      // Annuler les requêtes en cours pour éviter les écrasements
+      await queryClient.cancelQueries({ queryKey: ['studentProfile'] });
+      
+      // Sauvegarder l'état précédent
+      const previousProfile = queryClient.getQueryData(['studentProfile']);
+      
+      // Mettre à jour le cache de manière optimiste
       queryClient.setQueryData(['studentProfile'], (oldData) => {
-        return { ...oldData, ...data };
+        if (!oldData) return oldData;
+        
+        // Créer une copie profonde pour éviter les mutations
+        const updatedProfile = JSON.parse(JSON.stringify(oldData));
+        
+        // Mettre à jour les valeurs selon la structure du profil
+        if (updatedProfile.studentProfile) {
+          updatedProfile.studentProfile.isSeekingInternship = newProfileData.isSeekingInternship;
+          updatedProfile.studentProfile.isSeekingApprenticeship = newProfileData.isSeekingApprenticeship;
+        } else {
+          updatedProfile.isSeekingInternship = newProfileData.isSeekingInternship;
+          updatedProfile.isSeekingApprenticeship = newProfileData.isSeekingApprenticeship;
+        }
+        
+        return updatedProfile;
       });
-      toast.success('Profil mis à jour avec succès');
+      
+      // Retourner le contexte pour le rollback si nécessaire
+      return { previousProfile };
     },
-    onError: (error) => {
+    onError: (error, variables, context) => {
+      // En cas d'erreur, restaurer l'état précédent
+      if (context?.previousProfile) {
+        queryClient.setQueryData(['studentProfile'], context.previousProfile);
+      }
       console.error("Erreur de mise à jour:", error);
       toast.error('Erreur lors de la mise à jour du profil');
+    },
+    onSuccess: (data) => {
+      // Mettre à jour le cache avec les données du serveur
+      queryClient.setQueryData(['studentProfile'], (oldData) => {
+        if (!oldData) return data;
+        
+        // Fusionner les données existantes avec les nouvelles données
+        return { ...oldData, ...data };
+      });
+      
+      // Rafraîchir silencieusement les données en arrière-plan
+      queryClient.invalidateQueries({ 
+        queryKey: ['studentProfile'],
+        refetchActive: false // Ne pas déclencher de re-render immédiat
+      });
+      
     }
   });
 
@@ -208,16 +249,18 @@ const CareerSettings = () => {
     (isStudent && isFetchingProfile) ||
     (hasValidRole && (isFetchingCv || isFetchingDiplomas));
 
-  // LOGS pour le débogage
-  console.log('CareerSettings - État:', {
-    userRole,
-    isStudent,
-    isGuest,
-    hasValidRole,
-    userStatus,
-    isInitialLoading,
-    isRefreshing
-  });
+  // Réduire les logs de débogage pour éviter la pollution de la console
+  React.useEffect(() => {
+    console.log('CareerSettings - État initial:', {
+      userRole,
+      isStudent,
+      isGuest,
+      hasValidRole,
+      userStatus,
+      isInitialLoading,
+      isRefreshing
+    });
+  }, []);
 
   // Chargement initial - Afficher un squelette
   if (isInitialLoading) {

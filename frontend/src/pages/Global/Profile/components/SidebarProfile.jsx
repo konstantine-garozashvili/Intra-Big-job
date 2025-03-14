@@ -120,12 +120,6 @@ const SidebarProfile = memo(({ onNavigate }) => {
     }
   }, [navigate]);
 
-  // Si les données sont en cours de chargement et qu'il n'y a pas encore d'utilisateur, 
-  // on peut afficher un indicateur de chargement ou simplement retourner null
-  if (isLoading && !user) {
-    return null; // Ou un spinner/skeleton si nécessaire
-  }
-
   return (
     <div className="space-y-4">
       <nav className="space-y-1">

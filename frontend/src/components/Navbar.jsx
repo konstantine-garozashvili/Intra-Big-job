@@ -10,7 +10,6 @@ import {
   Settings,
   User,
   Bell,
-  Menu,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -18,7 +17,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
-  DropdownMenuLabel,
 } from "./ui/dropdown-menu";
 import {
   Dialog,
@@ -79,6 +77,18 @@ const customStyles = `
   @media (max-width: 768px) {
     .menu-burger-btn {
       margin-right: 0.5rem;
+    }
+    
+    .mobile-auth-buttons {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .mobile-auth-buttons a {
+      font-size: 0.875rem;
+      padding: 0.5rem 0.75rem;
     }
   }
 `;
@@ -243,6 +253,110 @@ const Navbar = memo(({ user }) => {
     },
   };
 
+  // Composant pour le menu utilisateur (réutilisé pour desktop et mobile)
+  const UserMenu = () => (
+    <div className="flex items-center">
+      {/* Notification icon (placeholder) */}
+      <Button 
+        variant="ghost" 
+        className="rounded-full w-10 h-10 p-0 bg-transparent text-gray-200 hover:bg-[#02284f]/80 hover:text-white mr-2"
+      >
+        <Bell className="h-5 w-5" />
+      </Button>
+      
+      {/* Dropdown menu */}
+      <DropdownMenu onOpenChange={setDropdownOpen}>
+        <DropdownMenuTrigger asChild>
+          <Button 
+            variant="outline" 
+            className={`rounded-full w-10 h-10 p-0 ${dropdownOpen ? 'bg-[#528eb2]/20 border-[#528eb2]' : 'bg-transparent border-gray-500'} hover:bg-[#02284f]/80 hover:text-white hover:border-gray-400 transition-all duration-300`}
+          >
+            <UserRound className={`h-5 w-5 ${dropdownOpen ? 'text-white' : 'text-gray-200'}`} />
+          </Button>
+        </DropdownMenuTrigger>
+        <AnimatePresence>
+          {dropdownOpen && (
+            <DropdownMenuContent 
+              align="end" 
+              className="w-64 mt-2 p-0 overflow-hidden border border-gray-100 shadow-xl rounded-xl"
+              asChild
+              forceMount
+            >
+              <motion.div
+                initial="enter"
+                animate="visible"
+                exit="exit"
+                variants={dropdownMenuStyles}
+              >
+                {/* En-tête du dropdown avec avatar et nom */}
+                <div className="bg-gradient-to-r from-[#02284f] to-[#03386b] p-4 text-white">
+                  <div className="flex items-center">
+                    <div className="bg-white/20 rounded-full p-2.5">
+                      <UserRound className="h-6 w-6" />
+                    </div>
+                    <div className="ml-3">
+                      <h3 className="font-medium text-sm">
+                        {userData?.firstName && userData?.lastName 
+                          ? `${userData.firstName} ${userData.lastName}`
+                          : userData?.user?.firstName && userData?.user?.lastName
+                            ? `${userData.user.firstName} ${userData.user.lastName}`
+                            : 'Utilisateur'}
+                      </h3>
+                      <p className="text-xs text-gray-300">
+                        {userData?.email || userData?.user?.email || 'utilisateur@example.com'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Corps du dropdown avec les options */}
+                <div className="py-1 bg-white">
+                  <DropdownMenuItem 
+                    className="navbar-dropdown-item"
+                    onClick={() => navigate('/profile')}
+                  >
+                    <User className="mr-2 h-4 w-4 text-[#528eb2]" />
+                    <span>Mon profil</span>
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuItem 
+                    className="navbar-dropdown-item"
+                    onClick={() => navigate('/settings/profile')}
+                  >
+                    <Settings className="mr-2 h-4 w-4 text-[#528eb2]" />
+                    <span>Paramètres</span>
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuSeparator className="my-1 bg-gray-100" />
+                  
+                  <DropdownMenuItem 
+                    className="navbar-dropdown-item danger"
+                    onClick={() => setLogoutDialogOpen(true)}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Déconnexion</span>
+                  </DropdownMenuItem>
+                </div>
+              </motion.div>
+            </DropdownMenuContent>
+          )}
+        </AnimatePresence>
+      </DropdownMenu>
+    </div>
+  );
+
+  // Composant pour les boutons d'authentification (réutilisé pour desktop et mobile)
+  const AuthButtons = () => (
+    <>
+      <Link to="/login" className="px-4 py-2 text-gray-200 transition-colors rounded-md hover:text-white">
+        Connexion
+      </Link>
+      <Link to="/register" className="ml-2 px-4 py-2 bg-[#528eb2] rounded-md text-white font-medium hover:bg-[#528eb2]/90 transition-all transform hover:scale-105">
+        Inscription
+      </Link>
+    </>
+  );
+
   return (
     <>
       {/* Injection des styles personnalisés */}
@@ -251,6 +365,7 @@ const Navbar = memo(({ user }) => {
       <nav className="bg-[#02284f] shadow-lg">
         <div className="container px-4 mx-auto">
           <div className="flex items-center justify-between h-16">
+            {/* Partie gauche: Burger menu et logo */}
             <div className="flex items-center">
               <div className="menu-burger-wrapper">
                 <MenuBurger />
@@ -265,9 +380,9 @@ const Navbar = memo(({ user }) => {
               </div>
             </div>
 
+            {/* Partie centrale: Navigation (visible uniquement sur desktop) */}
             <div className="hidden md:block">
               <div className="flex items-center ml-10 space-x-1">
-                
                 {/* Élements affichés uniquement pour les utilisateurs connectés */}
                 {isAuthenticated && (
                   <Link 
@@ -281,117 +396,24 @@ const Navbar = memo(({ user }) => {
               </div>
             </div>
 
+            {/* Partie droite: Authentification (desktop) */}
             <div className="hidden md:block">
               <div className="flex items-center ml-4">
-                {isAuthenticated ? (
-                  <div className="flex items-center">
-                    {/* Notification icon (placeholder) */}
-                    <Button 
-                      variant="ghost" 
-                      className="rounded-full w-10 h-10 p-0 bg-transparent text-gray-200 hover:bg-[#02284f]/80 hover:text-white mr-2"
-                    >
-                      <Bell className="h-5 w-5" />
-                    </Button>
-                    
-                    {/* Dropdown menu */}
-                    <DropdownMenu onOpenChange={setDropdownOpen}>
-                      <DropdownMenuTrigger asChild>
-                        <Button 
-                          variant="outline" 
-                          className={`rounded-full w-10 h-10 p-0 ${dropdownOpen ? 'bg-[#528eb2]/20 border-[#528eb2]' : 'bg-transparent border-gray-500'} hover:bg-[#02284f]/80 hover:text-white hover:border-gray-400 transition-all duration-300`}
-                        >
-                          <UserRound className={`h-5 w-5 ${dropdownOpen ? 'text-white' : 'text-gray-200'}`} />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <AnimatePresence>
-                        {dropdownOpen && (
-                          <DropdownMenuContent 
-                            align="end" 
-                            className="w-64 mt-2 p-0 overflow-hidden border border-gray-100 shadow-xl rounded-xl"
-                            asChild
-                            forceMount
-                          >
-                            <motion.div
-                              initial="enter"
-                              animate="visible"
-                              exit="exit"
-                              variants={dropdownMenuStyles}
-                            >
-                              {/* En-tête du dropdown avec avatar et nom */}
-                              <div className="bg-gradient-to-r from-[#02284f] to-[#03386b] p-4 text-white">
-                                <div className="flex items-center">
-                                  <div className="bg-white/20 rounded-full p-2.5">
-                                    <UserRound className="h-6 w-6" />
-                                  </div>
-                                  <div className="ml-3">
-                                    <h3 className="font-medium text-sm">
-                                      {userData?.firstName && userData?.lastName 
-                                        ? `${userData.firstName} ${userData.lastName}`
-                                        : userData?.user?.firstName && userData?.user?.lastName
-                                          ? `${userData.user.firstName} ${userData.user.lastName}`
-                                          : 'Utilisateur'}
-                                    </h3>
-                                    <p className="text-xs text-gray-300">
-                                      {userData?.email || userData?.user?.email || 'utilisateur@example.com'}
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-                              
-                              {/* Corps du dropdown avec les options */}
-                              <div className="py-1 bg-white">
-                                <DropdownMenuItem 
-                                  className="navbar-dropdown-item"
-                                  onClick={() => navigate('/profile')}
-                                >
-                                  <User className="mr-2 h-4 w-4 text-[#528eb2]" />
-                                  <span>Mon profil</span>
-                                </DropdownMenuItem>
-                                
-                                <DropdownMenuItem 
-                                  className="navbar-dropdown-item"
-                                  onClick={() => navigate('/settings/profile')}
-                                >
-                                  <Settings className="mr-2 h-4 w-4 text-[#528eb2]" />
-                                  <span>Paramètres</span>
-                                </DropdownMenuItem>
-                                
-                                <DropdownMenuSeparator className="my-1 bg-gray-100" />
-                                
-                                <DropdownMenuItem 
-                                  className="navbar-dropdown-item danger"
-                                  onClick={() => setLogoutDialogOpen(true)}
-                                >
-                                  <LogOut className="mr-2 h-4 w-4" />
-                                  <span>Déconnexion</span>
-                                </DropdownMenuItem>
-                              </div>
-                            </motion.div>
-                          </DropdownMenuContent>
-                        )}
-                      </AnimatePresence>
-                    </DropdownMenu>
-                  </div>
-                ) : (
-                  <>
-                    <Link to="/login" className="px-4 py-2 text-gray-200 transition-colors rounded-md hover:text-white">
-                      Connexion
-                    </Link>
-                    <Link to="/register" className="ml-2 px-4 py-2 bg-[#528eb2] rounded-md text-white font-medium hover:bg-[#528eb2]/90 transition-all transform hover:scale-105">
-                      Inscription
-                    </Link>
-                  </>
-                )}
+                {isAuthenticated ? <UserMenu /> : <AuthButtons />}
               </div>
             </div>
 
+            {/* Partie droite: Authentification (mobile) - Remplace le burger menu de droite */}
             <div className="md:hidden">
-              <button 
-                className="menu-burger-btn text-gray-200 hover:text-white focus:outline-none"
-                aria-label="Menu mobile"
-              >
-                <Menu className="w-6 h-6" />
-              </button>
+              <div className="flex items-center">
+                {isAuthenticated ? (
+                  <UserMenu />
+                ) : (
+                  <div className="mobile-auth-buttons">
+                    <AuthButtons />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
