@@ -222,10 +222,8 @@ const UserProfileSettings = () => {
         userData.age = calculateAge(value);
       }
       
-      // Show success toast only if no error was thrown
-      if (field !== 'portfolioUrl') {
-        toast.success('Mise à jour réussie');
-      }
+      // Show success toast
+      toast.success('Mise à jour réussie');
       
     } catch (error) {
       // Revert optimistic update on error
@@ -337,6 +335,9 @@ const UserProfileSettings = () => {
         const previousData = queryClient.getQueryData(['userProfileData']);
         
         return { previousData };
+      },
+      onSuccess: (data, variables) => {
+        toast.success('Informations mises à jour avec succès');
       },
       onError: (err, variables, context) => {
         // Rollback on error
