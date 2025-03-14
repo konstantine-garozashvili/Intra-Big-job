@@ -177,7 +177,10 @@ const Navbar = memo(() => {
 
             <div className="hidden md:block">
               <div className="flex items-center ml-10 space-x-1">
-                
+              {isAuthenticated && (
+
+              <SearchBar />
+              )}
                 {/* Élements affichés uniquement pour les utilisateurs connectés */}
                 {isAuthenticated && (
                   
@@ -185,10 +188,11 @@ const Navbar = memo(() => {
                     to="/dashboard" 
                     className="px-3 py-2 rounded-md text-gray-200 hover:text-white hover:bg-[#02284f]/80 transition-colors flex items-center"
                   >
-                    <SearchBar />
+
                     <LayoutDashboard className="h-4 w-4 mr-2" />
                     Tableau de bord
                   </Link>
+                  
                 )}
               </div>
             </div>
