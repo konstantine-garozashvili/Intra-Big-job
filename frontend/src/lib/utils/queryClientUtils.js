@@ -30,15 +30,24 @@ export const clearQueryCache = () => {
   if (queryClientInstance) {
     console.log('Vidage complet du cache React Query...');
     
+    // Annuler toutes les requêtes en cours
+    queryClientInstance.cancelQueries();
+    
     // Vider complètement le cache
     queryClientInstance.clear();
     
-    // Réinitialiser également les requêtes en cours
-    queryClientInstance.cancelQueries();
+    // Invalider explicitement toutes les requêtes pour s'assurer qu'elles sont rechargées
+    queryClientInstance.invalidateQueries();
     
-    // Forcer le garbage collector à libérer la mémoire
+    // Réinitialiser l'état du client
+    queryClientInstance.resetQueries();
+    
+    // Forcer un garbage collection pour libérer la mémoire
     setTimeout(() => {
       console.log('Cache React Query vidé avec succès');
+      
+      // Forcer un rafraîchissement des données après la déconnexion
+      window.dispatchEvent(new CustomEvent('query-cache-cleared'));
     }, 0);
     
     return true;

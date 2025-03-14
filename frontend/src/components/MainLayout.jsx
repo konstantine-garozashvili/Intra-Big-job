@@ -48,8 +48,22 @@ const MainLayout = () => {
     return null;
   }, []);
 
-  // Fetch user data when the component mounts
+  // Écouter les événements d'authentification
   useEffect(() => {
+    const handleLoginSuccess = () => {
+      setIsAuthenticated(true);
+      // Rafraîchir les données utilisateur
+      fetchUserData();
+    };
+
+    const handleLogoutSuccess = () => {
+      setIsAuthenticated(false);
+      // Réinitialiser les données utilisateur
+      setUserData(null);
+      setProfileData(null);
+    };
+    
+    // Fonction pour récupérer les données utilisateur
     const fetchUserData = async () => {
       if (authService.isLoggedIn()) {
         try {
@@ -70,8 +84,26 @@ const MainLayout = () => {
         setIsLoading(false);
       }
     };
+
+    // Vérifier l'état d'authentification au montage
+    setIsAuthenticated(authService.isLoggedIn());
     
+    // Charger les données utilisateur au montage
     fetchUserData();
+
+    // Ajouter les écouteurs d'événements
+    window.addEventListener('login-success', handleLoginSuccess);
+    window.addEventListener('logout-success', handleLogoutSuccess);
+    window.addEventListener('auth-logout-success', handleLogoutSuccess);
+    window.addEventListener('query-cache-cleared', handleLogoutSuccess);
+
+    // Nettoyer les écouteurs d'événements
+    return () => {
+      window.removeEventListener('login-success', handleLoginSuccess);
+      window.removeEventListener('logout-success', handleLogoutSuccess);
+      window.removeEventListener('auth-logout-success', handleLogoutSuccess);
+      window.removeEventListener('query-cache-cleared', handleLogoutSuccess);
+    };
   }, []);
 
   // Create a memoized context value to prevent unnecessary re-renders
@@ -81,47 +113,11 @@ const MainLayout = () => {
     isProfileLoading: isLoading
   }), [profileData, refreshProfileData, isLoading]);
 
-  // Écouter les événements d'authentification
-  useEffect(() => {
-    const handleLoginSuccess = () => {
-      setIsTransitioning(true);
-      setTimeout(() => {
-        setIsAuthenticated(true);
-        setTimeout(() => setIsTransitioning(false), 300);
-      }, 50);
-    };
-
-    const handleLogoutSuccess = () => {
-      setIsTransitioning(true);
-      setTimeout(() => {
-        setIsAuthenticated(false);
-        setTimeout(() => setIsTransitioning(false), 300);
-      }, 50);
-    };
-
-    // Vérifier l'état d'authentification au montage
-    setIsAuthenticated(authService.isLoggedIn());
-
-    // Ajouter les écouteurs d'événements
-    window.addEventListener('login-success', handleLoginSuccess);
-    window.addEventListener('logout-success', handleLogoutSuccess);
-    window.addEventListener('auth-logout-success', handleLogoutSuccess);
-
-    // Nettoyer les écouteurs d'événements
-    return () => {
-      window.removeEventListener('login-success', handleLoginSuccess);
-      window.removeEventListener('logout-success', handleLogoutSuccess);
-      window.removeEventListener('auth-logout-success', handleLogoutSuccess);
-    };
-  }, []);
-
   return (
     <ProfileContext.Provider value={profileContextValue}>
       <div className="flex flex-col min-h-screen bg-gray-50">
-        {/* Navbar avec transition fluide */}
-        <div className={`transition-opacity duration-300 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}>
-          <Navbar user={userData} />
-        </div>
+        {/* Navbar sans transition */}
+        <Navbar user={userData} />
         
         <main className={`flex-grow ${isFullScreenPage ? '' : 'container mx-auto px-4 py-8'}`}>
           <Outlet />
@@ -131,10 +127,8 @@ const MainLayout = () => {
           <ProfileProgress userData={profileData} />
         )}
         
-        {/* Footer avec transition fluide */}
-        <div className={`transition-opacity duration-300 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}>
-          <Footer />
-        </div>
+        {/* Footer sans transition */}
+        <Footer />
       </div>
     </ProfileContext.Provider>
   );

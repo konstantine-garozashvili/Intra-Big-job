@@ -161,14 +161,25 @@ const PrefetchHandler = () => {
       });
     };
     
+    // Fonction pour gérer le nettoyage complet du cache
+    const handleCacheCleared = () => {
+      console.log('Le cache a été complètement vidé, forçage du rafraîchissement des données...');
+      
+      // Forcer un rafraîchissement complet des données
+      // Cette approche est plus radicale mais garantit que les anciennes données ne persistent pas
+      window.location.reload();
+    };
+    
     // Ajouter les écouteurs d'événements
     window.addEventListener('login-success', handleUserChange);
     window.addEventListener('role-change', handleUserChange);
+    window.addEventListener('query-cache-cleared', handleCacheCleared);
     
     // Nettoyer les écouteurs d'événements
     return () => {
       window.removeEventListener('login-success', handleUserChange);
       window.removeEventListener('role-change', handleUserChange);
+      window.removeEventListener('query-cache-cleared', handleCacheCleared);
     };
   }, []);
   
@@ -185,15 +196,8 @@ const AppContent = () => {
     const handleLogoutNavigation = (event) => {
       const { redirectTo } = event.detail;
       
-      // Indiquer que nous sommes en train de naviguer pour éviter les clignotements
-      setIsNavigating(true);
-      
-      // Utiliser setTimeout pour permettre à React de terminer le cycle de rendu actuel
-      setTimeout(() => {
-        navigate(redirectTo);
-        // Réinitialiser l'état après la navigation
-        setTimeout(() => setIsNavigating(false), 300);
-      }, 50);
+      // Naviguer directement sans transition
+      navigate(redirectTo);
     };
     
     window.addEventListener('auth-logout-success', handleLogoutNavigation);
@@ -217,8 +221,8 @@ const AppContent = () => {
       <div className="relative z-10">
         <Suspense fallback={<SuspenseFallback />}>
           <RoleProvider>
-            {/* Ajouter une classe de transition pour éviter les clignotements */}
-            <div className={`transition-opacity duration-300 ${isNavigating ? 'opacity-0' : 'opacity-100'}`}>
+            {/* Supprimer la classe de transition */}
+            <div>
               <Routes>
                 {/* Structure révisée: MainLayout englobe toutes les routes pour préserver la navbar */}
                 <Route element={<MainLayout />}>

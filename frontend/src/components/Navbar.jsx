@@ -26,7 +26,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "./ui/dialog";
-import { motion, AnimatePresence } from "framer-motion";
 import { MenuBurger } from "./MenuBurger";
 import { useRolePermissions } from '@/features/roles/useRolePermissions';
 
@@ -216,46 +215,24 @@ const Navbar = memo(({ user }) => {
     try {
       setIsLoggingOut(true);
 
-      await authService.logout();
-
-      // Déclencher un événement personnalisé pour informer la navbar de la déconnexion
-      window.dispatchEvent(new Event("logout-success"));
-      
-      // Déclencher également un événement de changement de rôle
-      window.dispatchEvent(new Event("role-change"));
-
-      setLogoutDialogOpen(false);
+      // Réinitialiser les données locales avant d'appeler le service de déconnexion
+      setUserData(null);
       setIsAuthenticated(false);
-      setIsLoggingOut(false);
       
-      // Ne pas naviguer directement, laisser l'événement auth-logout-success gérer la navigation
-      // La navigation sera gérée par l'écouteur d'événement dans App.jsx
+      // Fermer la boîte de dialogue de déconnexion
+      setLogoutDialogOpen(false);
+
+      // Appeler le service de déconnexion
+      // Cette fonction va maintenant forcer un rafraîchissement complet de la page
+      await authService.logout();
+      
+      // Note: Le code ci-dessous ne sera pas exécuté car la page sera rafraîchie
+      // mais nous le gardons au cas où le comportement du service changerait
+      setIsLoggingOut(false);
     } catch (error) {
       console.error("Erreur lors de la déconnexion:", error);
       setIsLoggingOut(false);
     }
-  };
-
-  // Style personnalisé pour le menu dropdown
-  const dropdownMenuStyles = {
-    enter: {
-      opacity: 0,
-      y: -10,
-      scale: 0.95,
-      transition: { duration: 0.2, ease: "easeOut" },
-    },
-    visible: {
-      opacity: 1,
-      y: 0,
-      scale: 1,
-      transition: { duration: 0.2, ease: "easeOut" },
-    },
-    exit: {
-      opacity: 0,
-      y: -10,
-      scale: 0.95,
-      transition: { duration: 0.1, ease: "easeIn" },
-    },
   };
 
   // Composant pour le menu utilisateur (réutilisé pour desktop et mobile)
@@ -279,74 +256,63 @@ const Navbar = memo(({ user }) => {
             <UserRound className={`h-5 w-5 ${dropdownOpen ? 'text-white' : 'text-gray-200'}`} />
           </Button>
         </DropdownMenuTrigger>
-        <AnimatePresence>
-          {dropdownOpen && (
-            <DropdownMenuContent 
-              align="end" 
-              className="w-64 mt-2 p-0 overflow-hidden border border-gray-100 shadow-xl rounded-xl"
-              asChild
-              forceMount
-            >
-              <motion.div
-                initial="enter"
-                animate="visible"
-                exit="exit"
-                variants={dropdownMenuStyles}
-                ref={dropdownMenuRef}
+        {dropdownOpen && (
+          <DropdownMenuContent 
+            align="end" 
+            className="w-64 mt-2 p-0 overflow-hidden border border-gray-100 shadow-xl rounded-xl"
+            ref={dropdownMenuRef}
+          >
+            {/* En-tête du dropdown avec avatar et nom */}
+            <div className="bg-gradient-to-r from-[#02284f] to-[#03386b] p-4 text-white">
+              <div className="flex items-center">
+                <div className="bg-white/20 rounded-full p-2.5">
+                  <UserRound className="h-6 w-6" />
+                </div>
+                <div className="ml-3">
+                  <h3 className="font-medium text-sm">
+                    {userData?.firstName && userData?.lastName 
+                      ? `${userData.firstName} ${userData.lastName}`
+                      : userData?.user?.firstName && userData?.user?.lastName
+                        ? `${userData.user.firstName} ${userData.user.lastName}`
+                        : 'Utilisateur'}
+                  </h3>
+                  <p className="text-xs text-gray-300">
+                    {userData?.email || userData?.user?.email || 'utilisateur@example.com'}
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Corps du dropdown avec les options */}
+            <div className="py-1 bg-white">
+              <DropdownMenuItem 
+                className="navbar-dropdown-item"
+                onClick={() => navigate('/profile')}
               >
-                {/* En-tête du dropdown avec avatar et nom */}
-                <div className="bg-gradient-to-r from-[#02284f] to-[#03386b] p-4 text-white">
-                  <div className="flex items-center">
-                    <div className="bg-white/20 rounded-full p-2.5">
-                      <UserRound className="h-6 w-6" />
-                    </div>
-                    <div className="ml-3">
-                      <h3 className="font-medium text-sm">
-                        {userData?.firstName && userData?.lastName 
-                          ? `${userData.firstName} ${userData.lastName}`
-                          : userData?.user?.firstName && userData?.user?.lastName
-                            ? `${userData.user.firstName} ${userData.user.lastName}`
-                            : 'Utilisateur'}
-                      </h3>
-                      <p className="text-xs text-gray-300">
-                        {userData?.email || userData?.user?.email || 'utilisateur@example.com'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Corps du dropdown avec les options */}
-                <div className="py-1 bg-white">
-                  <DropdownMenuItem 
-                    className="navbar-dropdown-item"
-                    onClick={() => navigate('/profile')}
-                  >
-                    <User className="mr-2 h-4 w-4 text-[#528eb2]" />
-                    <span>Mon profil</span>
-                  </DropdownMenuItem>
-                  
-                  <DropdownMenuItem 
-                    className="navbar-dropdown-item"
-                    onClick={() => navigate('/settings/profile')}
-                  >
-                    <Settings className="mr-2 h-4 w-4 text-[#528eb2]" />
-                    <span>Paramètres</span>
-                  </DropdownMenuItem>
-                  
-                  <DropdownMenuSeparator className="my-1 bg-gray-100" />
-                  
-                  <DropdownMenuItem 
-                    className="navbar-dropdown-item danger"
-                    onClick={() => setLogoutDialogOpen(true)}
-                  >
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Déconnexion</span>
-                  </DropdownMenuItem>
-                </div>
-              </motion.div>
-            </DropdownMenuContent>
-          )}
-        </AnimatePresence>
+                <User className="mr-2 h-4 w-4 text-[#528eb2]" />
+                <span>Mon profil</span>
+              </DropdownMenuItem>
+              
+              <DropdownMenuItem 
+                className="navbar-dropdown-item"
+                onClick={() => navigate('/settings/profile')}
+              >
+                <Settings className="mr-2 h-4 w-4 text-[#528eb2]" />
+                <span>Paramètres</span>
+              </DropdownMenuItem>
+              
+              <DropdownMenuSeparator className="my-1 bg-gray-100" />
+              
+              <DropdownMenuItem 
+                className="navbar-dropdown-item danger"
+                onClick={() => setLogoutDialogOpen(true)}
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Déconnexion</span>
+              </DropdownMenuItem>
+            </div>
+          </DropdownMenuContent>
+        )}
       </DropdownMenu>
     </div>
   );

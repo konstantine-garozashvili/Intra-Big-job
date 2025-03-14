@@ -236,11 +236,10 @@ export const authService = {
       // Vider COMPLÈTEMENT le cache React Query
       clearQueryCache();
       
-      // Déclencher un événement personnalisé pour la navigation
-      // Au lieu de forcer un rafraîchissement de la page, nous laissons React Router gérer la navigation
-      window.dispatchEvent(new CustomEvent('auth-logout-success', { 
-        detail: { redirectTo: '/login' } 
-      }));
+      // Solution radicale: forcer un rafraîchissement complet de la page
+      // Cela garantit que toutes les données de l'ancien utilisateur sont effacées
+      console.log('Forçage du rafraîchissement de la page après déconnexion...');
+      window.location.href = '/login';
     }
   },
   
