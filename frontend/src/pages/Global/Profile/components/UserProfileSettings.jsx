@@ -8,6 +8,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { profileService } from '../services/profileService';
 import ProfilePicture from './settings/ProfilePicture';
 import { useProfilePicture } from '../hooks/useProfilePicture';
+import { isValidLinkedInUrl, isValidUrl } from '@/lib/utils/validation';
 
 // Import our components using the barrel export
 import {
@@ -186,6 +187,22 @@ const UserProfileSettings = () => {
           return;
         }
       }
+
+      // Validate LinkedIn URL
+      if (field === 'linkedinUrl' && value) {
+        if (!isValidLinkedInUrl(value)) {
+          toast.error("L'URL LinkedIn doit commencer par 'https://www.linkedin.com/in/'");
+          return;
+        }
+      }
+
+      // Validate portfolio URL
+      if (field === 'portfolioUrl' && value) {
+        if (!isValidUrl(value)) {
+          toast.error("L'URL du portfolio doit commencer par 'https://'");
+          return;
+        }
+      }
       
       // Apply optimistic update immediately
       updateLocalState(field, value);
@@ -205,8 +222,10 @@ const UserProfileSettings = () => {
         userData.age = calculateAge(value);
       }
       
-      // Show success toast
-      toast.success('Mise à jour réussie');
+      // Show success toast only if no error was thrown
+      if (field !== 'portfolioUrl') {
+        toast.success('Mise à jour réussie');
+      }
       
     } catch (error) {
       // Revert optimistic update on error
@@ -214,10 +233,8 @@ const UserProfileSettings = () => {
         updateLocalState('portfolioUrl', profileData?.data?.studentProfile?.portfolioUrl || null);
       } else {
         updateLocalState(field, profileData?.data?.user?.[field] || null);
+        toast.error(`Erreur lors de la mise à jour de ${field}`);
       }
-      
-      // console.error(`Error saving ${field}:`, error);
-      toast.error(`Erreur lors de la mise à jour de ${field}`);
     }
   };
 
@@ -324,7 +341,7 @@ const UserProfileSettings = () => {
       onError: (err, variables, context) => {
         // Rollback on error
         queryClient.setQueryData(['userProfileData'], context.previousData);
-        toast.error('Une erreur est survenue lors de la mise à jour du portfolio');
+        toast.error(err.response?.data?.message || "L'URL du portfolio doit commencer par 'https://'");
       },
       onSettled: () => {
         // Refetch in the background to ensure sync
