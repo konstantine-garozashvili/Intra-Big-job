@@ -344,7 +344,7 @@ const Navbar = memo(({ user }) => {
               </div>
               <div className="flex-shrink-0">
                 <Link
-                  to={isAuthenticated ? "/dashboard" : "/login"}
+                  to={isAuthenticated ? permissions.getRoleDashboardPath() : "/login"}
                   className="text-2xl font-black tracking-tight text-white"
                 >
                   Big<span className="text-[#528eb2]">Project</span>
