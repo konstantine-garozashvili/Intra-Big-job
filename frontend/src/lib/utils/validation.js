@@ -182,26 +182,25 @@ export const isValidBirthDate = (date) => {
 /**
  * Valide un URL LinkedIn
  * @param {string} url - URL LinkedIn à valider
- * @returns {boolean} - True si l'URL est valide
+ * @returns {boolean} - True si l'URL est valide et commence par https://www.linkedin.com/in/
  */
 export const isValidLinkedInUrl = (url) => {
   if (!url) return false;
   
-  // Accepter différents formats d'URL LinkedIn
-  // - Format standard: https://www.linkedin.com/in/username
-  // - Format court: linkedin.com/in/username
-  // - Format avec ou sans www
-  // - Format avec ou sans https://
-  // - Format avec paramètres supplémentaires
-  
-  // Nettoyer l'URL (enlever les espaces)
-  const cleanUrl = url.trim();
-  
-  // Vérifier les différents formats possibles
-  const linkedinRegex = /^(https?:\/\/)?(www\.)?linkedin\.com\/in\/[a-zA-Z0-9_-]+\/?.*$/i;
-  
-  return linkedinRegex.test(cleanUrl);
+  try {
+    const urlObj = new URL(url);
+
+    // Vérifier que l'URL commence par https://www.linkedin.com/in/
+    if (urlObj.protocol === 'https:' && urlObj.hostname === 'www.linkedin.com' && urlObj.pathname.startsWith('/in/')) {
+      return true;
+    }
+    
+    return false;
+  } catch (e) {
+    return false;
+  }
 };
+
 
 /**
  * Valide un URL général
@@ -213,7 +212,7 @@ export const isValidUrl = (url) => {
   
   try {
     const urlObj = new URL(url);
-    return urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
+    return urlObj.protocol === 'https:';
   } catch (e) {
     return false;
   }

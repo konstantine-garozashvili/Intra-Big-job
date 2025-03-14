@@ -204,14 +204,6 @@ const UserProfileSettings = () => {
         }
       }
       
-      // Validation de l'URL LinkedIn
-      if (field === 'linkedinUrl' && value) {
-        if (!isValidLinkedInUrl(value)) {
-          toast.error("Format d'URL LinkedIn invalide. L'URL doit être au format linkedin.com/in/username");
-          return;
-        }
-      }
-      
       // Validation du nom et prénom
       if ((field === 'firstName' || field === 'lastName') && value) {
         if (!isValidName(value)) {
@@ -252,11 +244,6 @@ const UserProfileSettings = () => {
       // If we're updating birthDate, calculate and update the age
       if (field === 'birthDate' && value) {
         userData.age = calculateAge(value);
-      }
-      
-      // Show success toast only if no error was thrown
-      if (field !== 'portfolioUrl') {
-        toast.success('Mise à jour réussie');
       }
       
     } catch (error) {
