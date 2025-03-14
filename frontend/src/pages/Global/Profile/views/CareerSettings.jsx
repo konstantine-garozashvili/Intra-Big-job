@@ -8,7 +8,7 @@ import { diplomaService } from '../services/diplomaService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 // Import des composants liés à la carrière
-import { CVUpload, JobSeekingSettings, DiplomaManager } from '../components/settings';
+import { CVUpload, JobSeekingSettings, DiplomaManager, AvailabilityCalendar } from '../components/settings';
 
 const CareerSettings = () => {
   const queryClient = useQueryClient();
@@ -319,6 +319,23 @@ const CareerSettings = () => {
             </p>
             
             <JobSeekingSettings 
+              profile={studentProfile}
+              onProfileUpdate={(updatedProfileData) => {
+                updateProfileMutation.mutate(updatedProfileData);
+              }}
+            />
+          </div>
+        )}
+
+        {/* Section Disponibilité - Visible uniquement pour les étudiants */}
+        {isStudent && (
+          <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
+            <h2 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-4">Disponibilité</h2>
+            <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
+              Indiquez votre date de disponibilité pour informer les recruteurs de votre calendrier.
+            </p>
+            
+            <AvailabilityCalendar 
               profile={studentProfile}
               onProfileUpdate={(updatedProfileData) => {
                 updateProfileMutation.mutate(updatedProfileData);

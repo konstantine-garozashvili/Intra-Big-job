@@ -174,9 +174,8 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
     addDiplomaMutation.mutate(newDiploma);
   };
   
-  const handleDeleteDiploma = async (id) => {
-    const diploma = diplomas.find(d => d.id === id);
-    if (!diploma) {
+  const handleDeleteDiploma = async (diploma) => {
+    if (!diploma || !diploma.id) {
       toast.error('Diplôme introuvable');
       return;
     }
