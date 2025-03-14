@@ -4,6 +4,14 @@ import { Button } from "@/components/ui/button";
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { useApiQuery, useApiMutation } from '@/hooks/useReactQuery';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 // Importer le service documentService directement dans le composant
 import documentService from '../../services/documentService';
@@ -12,6 +20,7 @@ const CVUpload = memo(({ userData, onUpdate }) => {
   const [cvFile, setCvFile] = useState(null);
   const [dragActive, setDragActive] = useState(false);
   const [fileError, setFileError] = useState(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   // Fetch CV document using React Query
   const { 
@@ -107,11 +116,18 @@ const CVUpload = memo(({ userData, onUpdate }) => {
       return;
     }
     
-    if (!window.confirm('Are you sure you want to delete this CV?')) {
+    setDeleteDialogOpen(true);
+  }, [cvDocument]);
+
+  // Execute CV deletion
+  const confirmDeleteDocument = useCallback(() => {
+    if (!cvDocument || !cvDocument.id) {
+      toast.error('No document to delete');
       return;
     }
     
     deleteCV(cvDocument.id);
+    setDeleteDialogOpen(false);
   }, [cvDocument, deleteCV]);
 
   // Handle document download
