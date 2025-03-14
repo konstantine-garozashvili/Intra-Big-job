@@ -27,6 +27,7 @@ import {
   X,
   Menu
 } from 'lucide-react';
+import { useRolePermissions } from '@/features/roles/useRolePermissions';
 
 // Style personnalisé pour les animations et transitions
 const customStyles = `
@@ -122,6 +123,7 @@ const MenuBurger = memo(() => {
   // Utiliser le système de rôles
   const { roles, hasRole, hasAnyRole, refreshRoles } = useRoles();
   const { translateRoleName } = useRoleUI();
+  const permissions = useRolePermissions();
 
   // Fonction pour vérifier l'authentification et mettre à jour les données utilisateur
   const checkAuthentication = useCallback(async () => {
@@ -426,7 +428,7 @@ const MenuBurger = memo(() => {
                 <ul className="py-2">
                   {hasAnyRole([ROLES.STUDENT, ROLES.TEACHER, ROLES.ADMIN, ROLES.SUPER_ADMIN]) && (
                     <li className="menu-item">
-                      <Link to="/dashboard" className="flex items-center px-4 py-2.5 w-full">
+                      <Link to={permissions.getRoleDashboardPath()} className="flex items-center px-4 py-2.5 w-full">
                         <LayoutDashboard className="w-5 h-5 mr-2 text-[#528eb2]" />
                         <span>Tableau de bord</span>
                       </Link>

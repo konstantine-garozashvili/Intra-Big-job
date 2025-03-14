@@ -40,8 +40,26 @@ const RoleGuard = ({
  * @returns {React.ReactNode} A Navigate component to the appropriate dashboard
  */
 export const RoleDashboardRedirect = () => {
+  console.log('=== COMPOSANT ROLEDASHBOARDREDIRECT RENDU ===');
+  const { roles, isLoading } = useRoles();
   const permissions = useRolePermissions();
+  
+  console.log('Rôles disponibles dans RoleDashboardRedirect:', roles);
+  console.log('Chargement des rôles:', isLoading);
+  
+  // Si les rôles sont en cours de chargement, afficher un indicateur de chargement
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-[50vh]">
+        <div className="w-8 h-8 border-4 border-[#528eb2] border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+  
   const dashboardPath = permissions.getRoleDashboardPath();
+  
+  console.log('Chemin du tableau de bord obtenu:', dashboardPath);
+  console.log('Redirection vers:', dashboardPath);
   
   return <Navigate to={dashboardPath} replace />;
 };

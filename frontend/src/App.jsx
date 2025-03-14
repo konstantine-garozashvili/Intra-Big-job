@@ -141,7 +141,6 @@ const App = () => {
                   <Route element={<ProtectedRoute />}>
                     {/* Regular protected routes */}
                     <Route path="/dashboard" element={<RoleDashboardRedirect />} />
-                    <Route path="/role/dashboard" element={<RoleDashboardRedirect />} />
                     
                     {/* Profile view route */}
                     <Route path="/profile" element={<ProfileView />} />

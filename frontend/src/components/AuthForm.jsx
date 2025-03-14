@@ -63,6 +63,10 @@ export function AuthForm() {
         localStorage.removeItem('rememberedEmail')
       }
       
+      console.log('=== CONNEXION RÉUSSIE ===')
+      console.log('Réponse de login:', response)
+      console.log('Token JWT:', localStorage.getItem('token'))
+      
       toast.success("Connexion réussie", {
         description: "Vous êtes maintenant connecté."
       })
@@ -72,17 +76,39 @@ export function AuthForm() {
       
       // Vérifier s'il y a une page de redirection stockée
       const returnTo = sessionStorage.getItem('returnTo')
+      console.log('Page de redirection stockée:', returnTo)
       
-      // Rediriger vers la page stockée ou le dashboard basé sur le rôle
-      if (returnTo) {
-        sessionStorage.removeItem('returnTo') // Nettoyer après utilisation
-        navigate(returnTo)
-      } else {
-        // Attendre un court instant pour que les rôles soient chargés
+      // Attendre que les rôles soient chargés avant de rediriger
+      try {
+        console.log('Récupération des données utilisateur pour obtenir les rôles...')
+        // Récupérer explicitement les données utilisateur pour s'assurer que les rôles sont disponibles
+        const userData = await authService.getCurrentUser();
+        console.log('Données utilisateur récupérées:', userData);
+        console.log('Rôles utilisateur:', userData.roles);
+        
+        // Forcer le rafraîchissement des rôles
+        permissions.refreshRoles();
+        
+        // Attendre un court instant pour que les rôles soient mis à jour dans le contexte
         setTimeout(() => {
-          const dashboardPath = permissions.getRoleDashboardPath();
-          navigate(dashboardPath);
-        }, 100);
+          // Rediriger vers la page stockée ou le dashboard basé sur le rôle
+          if (returnTo) {
+            console.log('Redirection vers la page stockée:', returnTo)
+            sessionStorage.removeItem('returnTo') // Nettoyer après utilisation
+            navigate(returnTo)
+          } else {
+            // Récupérer les informations de rôle
+            console.log('Récupération du dashboard basé sur le rôle...')
+            const dashboardPath = permissions.getRoleDashboardPath();
+            console.log('Chemin du dashboard obtenu:', dashboardPath)
+            console.log('Redirection vers:', dashboardPath)
+            navigate(dashboardPath);
+          }
+        }, 300);
+      } catch (userError) {
+        console.error('Erreur lors de la récupération des données utilisateur:', userError);
+        // En cas d'erreur, rediriger vers le dashboard par défaut
+        navigate('/dashboard');
       }
     } catch (error) {
       console.error('=== ERREUR DE CONNEXION ===')

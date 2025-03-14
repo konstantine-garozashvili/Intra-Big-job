@@ -28,6 +28,7 @@ import {
 } from "./ui/dialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { MenuBurger } from "./MenuBurger";
+import { useRolePermissions } from '@/features/roles/useRolePermissions';
 
 // Style personnalisé pour le menu dropdown et le bouton burger
 const customStyles = `
@@ -102,6 +103,7 @@ const Navbar = memo(({ user }) => {
   const [userData, setUserData] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
+  const permissions = useRolePermissions();
 
   // Vérifier l'état d'authentification
   const checkAuthStatus = async () => {
@@ -386,7 +388,7 @@ const Navbar = memo(({ user }) => {
                 {/* Élements affichés uniquement pour les utilisateurs connectés */}
                 {isAuthenticated && (
                   <Link 
-                    to="/dashboard" 
+                    to={permissions.getRoleDashboardPath()} 
                     className="px-3 py-2 rounded-md text-gray-200 hover:text-white hover:bg-[#02284f]/80 transition-colors flex items-center"
                   >
                     <LayoutDashboard className="h-4 w-4 mr-2" />
