@@ -7,10 +7,10 @@ import { useApiQuery, useApiMutation } from '@/hooks/useReactQuery';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 
 // Importer le service documentService directement dans le composant
@@ -20,7 +20,7 @@ const CVUpload = memo(({ userData, onUpdate }) => {
   const [cvFile, setCvFile] = useState(null);
   const [dragActive, setDragActive] = useState(false);
   const [fileError, setFileError] = useState(null);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   // Fetch CV document using React Query
   const { 
@@ -43,9 +43,10 @@ const CVUpload = memo(({ userData, onUpdate }) => {
     isPending: isUploading
   } = useApiMutation('/api/documents/upload/cv', 'post', 'userCVDocument', {
     onSuccess: () => {
-      toast.success('CV mis à jour avec succès');
+      toast.success('CV uploaded successfully');
       setCvFile(null);
       refetchCV();
+      
       if (onUpdate) onUpdate();
       
       // Reset file input
@@ -65,6 +66,7 @@ const CVUpload = memo(({ userData, onUpdate }) => {
     onSuccess: () => {
       toast.success('CV deleted successfully');
       refetchCV();
+      
       if (onUpdate) onUpdate();
     },
     onError: (error) => {
@@ -113,14 +115,19 @@ const CVUpload = memo(({ userData, onUpdate }) => {
       toast.error('No document to delete');
       return;
     }
-    setIsDeleteDialogOpen(true);
+    
+    setDeleteDialogOpen(true);
   }, [cvDocument]);
 
-  const confirmDelete = useCallback(() => {
-    if (!cvDocument || !cvDocument.id) return;
+  // Execute CV deletion
+  const confirmDeleteDocument = useCallback(() => {
+    if (!cvDocument || !cvDocument.id) {
+      toast.error('No document to delete');
+      return;
+    }
     
     deleteCV(cvDocument.id);
-    setIsDeleteDialogOpen(false);
+    setDeleteDialogOpen(false);
   }, [cvDocument, deleteCV]);
 
   // Handle document download
@@ -373,6 +380,40 @@ const CVUpload = memo(({ userData, onUpdate }) => {
             <div className="h-2 bg-gray-200 rounded w-24 sm:w-32"></div>
           </div>
         </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {deleteDialogOpen && (
+        <Dialog open={deleteDialogOpen} onOpenChange={(open) => !isDeleting && setDeleteDialogOpen(open)}>
+          <DialogContent className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-hidden rounded-2xl border-0 shadow-xl">
+            <div className="overflow-y-auto max-h-[70vh] fade-in-up">
+              <DialogHeader>
+                <DialogTitle className="text-xl font-semibold">Confirmation de suppression</DialogTitle>
+                <DialogDescription className="text-base mt-2">
+                  Êtes-vous sûr de vouloir supprimer ce CV ? Cette action est irréversible.
+                </DialogDescription>
+              </DialogHeader>
+            </div>
+            <DialogFooter className="mt-6 flex justify-end space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => setDeleteDialogOpen(false)}
+                disabled={isDeleting}
+                className="rounded-full border-2 hover:bg-gray-100 transition-all duration-200"
+              >
+                Annuler
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={confirmDeleteDocument}
+                disabled={isDeleting}
+                className={`rounded-full bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 transition-all duration-200 ${isDeleting ? 'opacity-80' : ''}`}
+              >
+                {isDeleting ? "Suppression..." : "Supprimer"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

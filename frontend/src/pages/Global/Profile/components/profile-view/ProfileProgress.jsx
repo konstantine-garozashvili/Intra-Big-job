@@ -1,23 +1,73 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { CheckCircle2, XCircle, InfoIcon, ExternalLinkIcon, PieChart } from "lucide-react";
+import React, { useState, useEffect, useMemo, useContext } from "react";
+import { CheckCircle2, XCircle, InfoIcon, ExternalLinkIcon, PieChart, RefreshCw } from "lucide-react";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
+import { ProfileContext } from "@/components/MainLayout";
 
 const ProfileProgress = ({ userData }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const { refreshProfileData, isProfileLoading, profileData } = useContext(ProfileContext);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  // Toujours utiliser les données les plus récentes disponibles
+  const [localUserData, setLocalUserData] = useState(userData || profileData);
+  
+  // Référence pour stocker la dernière valeur de profileData pour comparaison
+  const [lastProfileData, setLastProfileData] = useState(null);
 
+  // Mettre à jour les données locales lorsque userData change
+  useEffect(() => {
+    if (userData && !isRefreshing) {
+      setLocalUserData(userData);
+    }
+  }, [userData, isRefreshing]);
+
+  // Mettre à jour les données locales lorsque profileData change
+  useEffect(() => {
+    // Si profileData a changé depuis la dernière fois
+    if (profileData && JSON.stringify(profileData) !== JSON.stringify(lastProfileData)) {
+      setLocalUserData(profileData);
+      setLastProfileData(profileData);
+      
+      // Si nous étions en train de rafraîchir, terminer le rafraîchissement
+      if (isRefreshing) {
+        setIsRefreshing(false);
+      }
+    }
+  }, [profileData, isRefreshing, lastProfileData]);
+
+  // Mécanisme de secours pour s'assurer que l'état de chargement ne reste pas bloqué
+  useEffect(() => {
+    let timeoutId;
+    if (isRefreshing) {
+      // Après 5 secondes, forcer la fin du rafraîchissement si toujours en cours
+      timeoutId = setTimeout(() => {
+        console.log("Timeout de sécurité pour le rafraîchissement");
+        setIsRefreshing(false);
+        // Utiliser les dernières données disponibles
+        if (profileData) {
+          setLocalUserData(profileData);
+        }
+      }, 5000);
+    }
+    
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [isRefreshing, profileData]);
+
+  // Calculer les éléments complétés à partir des données locales
   const { completedItems, completionItems } = useMemo(() => {
-    if (!userData) {
+    if (!localUserData) {
       return { completedItems: 0, completionItems: [] };
     }
 
-    const hasLinkedIn = Boolean(userData?.user?.linkedinUrl);
-    const hasCv = Boolean(userData?.documents?.some(doc => doc?.documentType?.code === 'CV' || doc?.type === 'CV'));
-    const hasDiploma = Boolean(userData?.diplomas?.length > 0);
+    const hasLinkedIn = Boolean(localUserData?.user?.linkedinUrl);
+    const hasCv = Boolean(localUserData?.documents?.some(doc => doc?.documentType?.code === 'CV' || doc?.type === 'CV'));
+    const hasDiploma = Boolean(localUserData?.diplomas?.length > 0);
     
     const items = [
       { 
@@ -47,10 +97,38 @@ const ProfileProgress = ({ userData }) => {
     const completed = [hasLinkedIn, hasCv, hasDiploma].filter(Boolean).length;
 
     return { completedItems: completed, completionItems: items };
-  }, [userData]);
+  }, [localUserData]);
 
-  if (!userData) {
-    return null;
+  // Fonction pour rafraîchir manuellement les données
+  const handleRefresh = async () => {
+    if (isRefreshing || isProfileLoading) return;
+    
+    setIsRefreshing(true);
+    try {
+      const newData = await refreshProfileData();
+      // Mettre à jour directement les données locales si refreshProfileData renvoie des données
+      if (newData) {
+        setLocalUserData(newData);
+        setLastProfileData(newData);
+        setIsRefreshing(false);
+      }
+      // Sinon, l'useEffect qui surveille profileData s'en chargera
+    } catch (error) {
+      console.error("Erreur lors de l'actualisation des données:", error);
+      setIsRefreshing(false);
+    }
+  };
+
+  // Si aucune donnée n'est disponible, afficher un état de chargement au lieu de rien
+  if (!localUserData) {
+    return (
+      <button
+        className="fixed right-8 bottom-8 z-20 flex items-center gap-2 px-4 py-3 rounded-full shadow-lg bg-primary text-primary-foreground hover:bg-primary/90"
+      >
+        <PieChart className="w-5 h-5" />
+        <span className="font-medium">Chargement...</span>
+      </button>
+    );
   }
 
   const percentage = Math.round((completedItems / 3) * 100);
@@ -93,29 +171,39 @@ const ProfileProgress = ({ userData }) => {
                     </PopoverContent>
                   </Popover>
                 </div>
-                <span className="text-sm font-medium">
-                  {completedItems}/3
-                </span>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={handleRefresh}
+                    disabled={isRefreshing || isProfileLoading}
+                    className="inline-flex items-center justify-center rounded-full w-6 h-6 text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
+                    title="Actualiser"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${isRefreshing || isProfileLoading ? 'animate-spin' : ''}`} />
+                  </button>
+                  <span className="text-sm font-medium">
+                    {completedItems}/3
+                  </span>
+                </div>
               </div>
 
               <div className="w-full bg-muted rounded-full h-1.5 mb-4">
                 <div 
-                  className="h-full bg-gradient-to-r from-primary to-primary/80 rounded-full"
+                  className="h-full bg-gradient-to-r from-primary to-primary/80 rounded-full transition-all duration-300"
                   style={{ width: `${percentage}%` }}
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className={`space-y-2 transition-opacity duration-300 ${isRefreshing || isProfileLoading ? 'opacity-50' : 'opacity-100'}`}>
                 {completionItems.map((item) => (
                   <div 
                     key={item.name}
-                    className={`flex items-start gap-3 p-2 rounded-lg ${
+                    className={`flex items-start gap-3 p-2 rounded-lg transition-colors duration-300 ${
                       item.completed 
                         ? 'bg-green-50/50 dark:bg-green-900/10' 
                         : 'bg-red-50/50 dark:bg-red-900/10'
                     }`}
                   >
-                    <div className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mt-0.5 ${
+                    <div className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mt-0.5 transition-colors duration-300 ${
                       item.completed 
                         ? 'text-green-600 dark:text-green-400'
                         : 'text-red-500 dark:text-red-400'

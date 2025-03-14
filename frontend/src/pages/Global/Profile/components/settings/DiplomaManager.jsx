@@ -7,10 +7,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { toast } from 'sonner';
@@ -23,8 +23,8 @@ import { useApiQuery, useApiMutation } from '@/hooks/useReactQuery';
 const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
   const userRole = userData?.role;
   const [isAdding, setIsAdding] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [diplomaToDelete, setDiplomaToDelete] = useState(null);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
   const [newDiploma, setNewDiploma] = useState({
     diplomaId: '',
@@ -156,6 +156,7 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
         
         // Remove the diploma from the list using the setDiplomas prop
         setDiplomas(diplomas.filter(diploma => diploma.id !== variables));
+        setDiplomaToDelete(null);
       },
       onError: (error) => {
         console.error('Error deleting diploma:', error);
@@ -188,18 +189,26 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
     addDiplomaMutation.mutate(newDiploma);
   };
   
-  const handleDeleteDiploma = async (diploma) => {
+  const handleDeleteDiploma = async (id) => {
+    const diploma = diplomas.find(d => d.id === id);
+    if (!diploma) {
+      toast.error('Diplôme introuvable');
+      return;
+    }
+    
     setDiplomaToDelete(diploma);
-    setIsDeleteDialogOpen(true);
+    setDeleteDialogOpen(true);
   };
   
-  const confirmDelete = async () => {
-    if (!diplomaToDelete) return;
+  const confirmDeleteDiploma = () => {
+    if (!diplomaToDelete || !diplomaToDelete.id) {
+      toast.error('Aucun diplôme à supprimer');
+      return;
+    }
     
     // Pass the ID directly to the mutation
     deleteDiplomaMutation.mutate(diplomaToDelete.id);
-    setIsDeleteDialogOpen(false);
-    setDiplomaToDelete(null);
+    setDeleteDialogOpen(false);
   };
   
   const cancelAdd = () => {
@@ -449,6 +458,40 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
             </div>
           )}
         </>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {deleteDialogOpen && diplomaToDelete && (
+        <Dialog open={deleteDialogOpen} onOpenChange={(open) => !deleteDiplomaMutation.isPending && setDeleteDialogOpen(open)}>
+          <DialogContent className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-hidden rounded-2xl border-0 shadow-xl">
+            <div className="overflow-y-auto max-h-[70vh] fade-in-up">
+              <DialogHeader>
+                <DialogTitle className="text-xl font-semibold">Confirmation de suppression</DialogTitle>
+                <DialogDescription className="text-base mt-2">
+                  Êtes-vous sûr de vouloir supprimer le diplôme "{diplomaToDelete.diploma.name}" ? Cette action est irréversible.
+                </DialogDescription>
+              </DialogHeader>
+            </div>
+            <DialogFooter className="mt-6 flex justify-end space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => setDeleteDialogOpen(false)}
+                disabled={deleteDiplomaMutation.isPending}
+                className="rounded-full border-2 hover:bg-gray-100 transition-all duration-200"
+              >
+                Annuler
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={confirmDeleteDiploma}
+                disabled={deleteDiplomaMutation.isPending}
+                className={`rounded-full bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 transition-all duration-200 ${deleteDiplomaMutation.isPending ? 'opacity-80' : ''}`}
+              >
+                {deleteDiplomaMutation.isPending ? "Suppression..." : "Supprimer"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

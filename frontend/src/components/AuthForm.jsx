@@ -3,6 +3,7 @@ import { Loader2 } from "lucide-react"
 import { Link, useNavigate } from "react-router-dom"
 import { authService } from "@/lib/services/authService"
 import { toast } from "sonner"
+import { useRolePermissions } from "@/features/roles/useRolePermissions"
 
 export function AuthForm() {
   const [email, setEmail] = React.useState("")
@@ -12,6 +13,7 @@ export function AuthForm() {
   const [isLoading, setIsLoading] = React.useState(false)
   const [errors, setErrors] = React.useState({})
   const navigate = useNavigate()
+  const permissions = useRolePermissions()
 
   const quickLogin = (role) => {
     const credentials = {
@@ -71,12 +73,16 @@ export function AuthForm() {
       // Vérifier s'il y a une page de redirection stockée
       const returnTo = sessionStorage.getItem('returnTo')
       
-      // Rediriger vers la page stockée ou le profil
+      // Rediriger vers la page stockée ou le dashboard basé sur le rôle
       if (returnTo) {
         sessionStorage.removeItem('returnTo') // Nettoyer après utilisation
         navigate(returnTo)
       } else {
-        navigate('/profile')
+        // Attendre un court instant pour que les rôles soient chargés
+        setTimeout(() => {
+          const dashboardPath = permissions.getRoleDashboardPath();
+          navigate(dashboardPath);
+        }, 100);
       }
     } catch (error) {
       // console.error('=== ERREUR DE CONNEXION ===')
