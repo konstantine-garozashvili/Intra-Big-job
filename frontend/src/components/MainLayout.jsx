@@ -21,6 +21,8 @@ const MainLayout = () => {
   const [showProgress, setShowProgress] = useState(false);
   const { hasRole } = useRoles();
   const location = useLocation();
+  const [isAuthenticated, setIsAuthenticated] = useState(authService.isLoggedIn());
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   // Pages qui doivent être affichées en plein écran sans marges internes
   const fullScreenPages = ['/register', '/login'];
@@ -79,10 +81,47 @@ const MainLayout = () => {
     isProfileLoading: isLoading
   }), [profileData, refreshProfileData, isLoading]);
 
+  // Écouter les événements d'authentification
+  useEffect(() => {
+    const handleLoginSuccess = () => {
+      setIsTransitioning(true);
+      setTimeout(() => {
+        setIsAuthenticated(true);
+        setTimeout(() => setIsTransitioning(false), 300);
+      }, 50);
+    };
+
+    const handleLogoutSuccess = () => {
+      setIsTransitioning(true);
+      setTimeout(() => {
+        setIsAuthenticated(false);
+        setTimeout(() => setIsTransitioning(false), 300);
+      }, 50);
+    };
+
+    // Vérifier l'état d'authentification au montage
+    setIsAuthenticated(authService.isLoggedIn());
+
+    // Ajouter les écouteurs d'événements
+    window.addEventListener('login-success', handleLoginSuccess);
+    window.addEventListener('logout-success', handleLogoutSuccess);
+    window.addEventListener('auth-logout-success', handleLogoutSuccess);
+
+    // Nettoyer les écouteurs d'événements
+    return () => {
+      window.removeEventListener('login-success', handleLoginSuccess);
+      window.removeEventListener('logout-success', handleLogoutSuccess);
+      window.removeEventListener('auth-logout-success', handleLogoutSuccess);
+    };
+  }, []);
+
   return (
     <ProfileContext.Provider value={profileContextValue}>
-      <div className="min-h-screen bg-background flex flex-col">
-        <Navbar user={userData} />
+      <div className="flex flex-col min-h-screen bg-gray-50">
+        {/* Navbar avec transition fluide */}
+        <div className={`transition-opacity duration-300 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}>
+          <Navbar user={userData} />
+        </div>
         
         <main className={`flex-grow ${isFullScreenPage ? '' : 'container mx-auto px-4 py-8'}`}>
           <Outlet />
@@ -92,7 +131,10 @@ const MainLayout = () => {
           <ProfileProgress userData={profileData} />
         )}
         
-        <Footer />
+        {/* Footer avec transition fluide */}
+        <div className={`transition-opacity duration-300 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}>
+          <Footer />
+        </div>
       </div>
     </ProfileContext.Provider>
   );

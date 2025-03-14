@@ -442,3 +442,36 @@
   background-color: #f3f4f6; /* Couleur plus claire pour la piste */
   border-radius: 10px;
 }
+
+/* Styles pour les transitions fluides */
+.page-transition-enter {
+  opacity: 0;
+}
+.page-transition-enter-active {
+  opacity: 1;
+  transition: opacity 300ms;
+}
+.page-transition-exit {
+  opacity: 1;
+}
+.page-transition-exit-active {
+  opacity: 0;
+  transition: opacity 300ms;
+}
+
+/* Styles pour éviter les clignotements pendant le chargement */
+.no-flash {
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  perspective: 1000;
+}
+
+/* Styles pour les composants de navigation */
+.navbar-transition {
+  transition: opacity 300ms ease-in-out, transform 300ms ease-in-out;
+}
+
+.footer-transition {
+  transition: opacity 300ms ease-in-out;
+}

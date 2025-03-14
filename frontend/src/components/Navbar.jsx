@@ -1,4 +1,4 @@
-import React, { memo, useState, useEffect } from "react";
+import React, { memo, useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { authService } from "../lib/services/authService";
 import { profileService } from "../pages/Global/Profile/services/profileService";
@@ -104,6 +104,7 @@ const Navbar = memo(({ user }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const permissions = useRolePermissions();
+  const dropdownMenuRef = useRef(null);
 
   // Vérifier l'état d'authentification
   const checkAuthStatus = async () => {
@@ -226,7 +227,9 @@ const Navbar = memo(({ user }) => {
       setLogoutDialogOpen(false);
       setIsAuthenticated(false);
       setIsLoggingOut(false);
-      navigate("/login");
+      
+      // Ne pas naviguer directement, laisser l'événement auth-logout-success gérer la navigation
+      // La navigation sera gérée par l'écouteur d'événement dans App.jsx
     } catch (error) {
       console.error("Erreur lors de la déconnexion:", error);
       setIsLoggingOut(false);
@@ -289,6 +292,7 @@ const Navbar = memo(({ user }) => {
                 animate="visible"
                 exit="exit"
                 variants={dropdownMenuStyles}
+                ref={dropdownMenuRef}
               >
                 {/* En-tête du dropdown avec avatar et nom */}
                 <div className="bg-gradient-to-r from-[#02284f] to-[#03386b] p-4 text-white">

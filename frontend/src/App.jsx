@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, useLocation, Navigate, Outlet } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate, Outlet, useNavigate } from 'react-router-dom'
 import { lazy, Suspense, useState, useEffect } from 'react'
 import MainLayout from './components/MainLayout'
 import { RoleProvider, RoleDashboardRedirect } from './features/roles'
@@ -175,27 +175,50 @@ const PrefetchHandler = () => {
   return null;
 };
 
-// Layout pour les routes publiques qui inclut la navbar
-const PublicLayout = () => {
-  return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
-      <main className="flex-grow relative z-10">
-        <Outlet />
-      </main>
+// Composant de contenu principal qui utilise les hooks de React Router
+const AppContent = () => {
+  const [isNavigating, setIsNavigating] = useState(false);
+  const navigate = useNavigate();
+
+  // Écouteur d'événement pour la navigation après déconnexion
+  useEffect(() => {
+    const handleLogoutNavigation = (event) => {
+      const { redirectTo } = event.detail;
+      
+      // Indiquer que nous sommes en train de naviguer pour éviter les clignotements
+      setIsNavigating(true);
+      
+      // Utiliser setTimeout pour permettre à React de terminer le cycle de rendu actuel
+      setTimeout(() => {
+        navigate(redirectTo);
+        // Réinitialiser l'état après la navigation
+        setTimeout(() => setIsNavigating(false), 300);
+      }, 50);
+    };
+    
+    window.addEventListener('auth-logout-success', handleLogoutNavigation);
+    
+    return () => {
+      window.removeEventListener('auth-logout-success', handleLogoutNavigation);
+    };
+  }, [navigate]);
+
+  // Fallback élégant pour Suspense
+  const SuspenseFallback = () => (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
     </div>
   );
-};
 
-const App = () => {
   return (
-    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <div className="relative font-poppins">
-        <PrefetchHandler />
-        {/* Wrapper pour le contenu principal avec z-index positif */}
-        <div className="relative z-10">
-          <Suspense fallback={null}>
-            <RoleProvider>
+    <div className="relative font-poppins">
+      <PrefetchHandler />
+      {/* Wrapper pour le contenu principal avec z-index positif */}
+      <div className="relative z-10">
+        <Suspense fallback={<SuspenseFallback />}>
+          <RoleProvider>
+            {/* Ajouter une classe de transition pour éviter les clignotements */}
+            <div className={`transition-opacity duration-300 ${isNavigating ? 'opacity-0' : 'opacity-100'}`}>
               <Routes>
                 {/* Structure révisée: MainLayout englobe toutes les routes pour préserver la navbar */}
                 <Route element={<MainLayout />}>
@@ -251,13 +274,22 @@ const App = () => {
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Route>
               </Routes>
-            </RoleProvider>
-            <Toaster />
-          </Suspense>
-        </div>
+            </div>
+          </RoleProvider>
+          <Toaster />
+        </Suspense>
       </div>
-    </Router>
-  )
-}
+    </div>
+  );
+};
 
-export default App
+// Composant App principal qui configure le Router
+const App = () => {
+  return (
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <AppContent />
+    </Router>
+  );
+};
+
+export default App;

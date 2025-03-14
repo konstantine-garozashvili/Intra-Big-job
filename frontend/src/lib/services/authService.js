@@ -236,11 +236,11 @@ export const authService = {
       // Vider COMPLÈTEMENT le cache React Query
       clearQueryCache();
       
-      // Forcer un rafraîchissement de la page pour garantir un état propre
-      // Cette approche est plus radicale mais garantit qu'aucune donnée ne persiste
-      setTimeout(() => {
-        window.location.href = '/login';
-      }, 100);
+      // Déclencher un événement personnalisé pour la navigation
+      // Au lieu de forcer un rafraîchissement de la page, nous laissons React Router gérer la navigation
+      window.dispatchEvent(new CustomEvent('auth-logout-success', { 
+        detail: { redirectTo: '/login' } 
+      }));
     }
   },
   
