@@ -47,14 +47,26 @@ export const AddressAutocompleteField = ({
       return;
     }
     
-    // Exit edit mode immediately for better UX
-    setEditMode(prev => ({
-      ...prev,
-      [field]: false
-    }));
-    
-    // Call the save function in the background
-    await onSaveAddress();
+    try {
+      // Call the save function first and wait for it to complete
+      await onSaveAddress();
+      
+      // Exit edit mode after successful save
+      setEditMode(prev => ({
+        ...prev,
+        [field]: false
+      }));
+      
+      // Réinitialiser la recherche
+      setSearchQuery('');
+      setSuggestions([]);
+      setShowSuggestions(false);
+      
+    } catch (error) {
+      // En cas d'erreur, on reste en mode édition
+      toast.error("Une erreur est survenue lors de l'enregistrement de l'adresse");
+      console.error("Erreur lors de l'enregistrement de l'adresse:", error);
+    }
   };
   
   // Recherche d'adresses avec autocomplétion

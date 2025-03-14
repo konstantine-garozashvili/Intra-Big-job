@@ -458,22 +458,9 @@ class ProfilController extends AbstractController
                 $address->setComplement($data['complement']);
             }
             
-            // Gestion du code postal
-            if (isset($data['postalCode']) && isset($data['postalCode']['code'])) {
-                $postalCode = $entityManager->getRepository(\App\Entity\PostalCode::class)->findOneBy(['code' => $data['postalCode']['code']]);
-                
-                if (!$postalCode) {
-                    // Créer un nouveau code postal si nécessaire
-                    $postalCode = new \App\Entity\PostalCode();
-                    $postalCode->setCode($data['postalCode']['code']);
-                    $entityManager->persist($postalCode);
-                }
-                
-                $address->setPostalCode($postalCode);
-            }
-            
-            // Gestion de la ville
-            if (isset($data['city']) && isset($data['city']['name'])) {
+            // Gestion du code postal et de la ville
+            if (isset($data['city']) && isset($data['city']['name']) && isset($data['postalCode']) && isset($data['postalCode']['code'])) {
+                // Créer ou récupérer la ville d'abord
                 $city = $entityManager->getRepository(\App\Entity\City::class)->findOneBy(['name' => $data['city']['name']]);
                 
                 if (!$city) {
@@ -483,7 +470,22 @@ class ProfilController extends AbstractController
                     $entityManager->persist($city);
                 }
                 
+                // Ensuite, créer ou récupérer le code postal
+                $postalCode = $entityManager->getRepository(\App\Entity\PostalCode::class)->findOneBy(['code' => $data['postalCode']['code']]);
+                
+                if (!$postalCode) {
+                    // Créer un nouveau code postal si nécessaire
+                    $postalCode = new \App\Entity\PostalCode();
+                    $postalCode->setCode($data['postalCode']['code']);
+                    $postalCode->setCity($city); // Associer la ville au code postal
+                    $entityManager->persist($postalCode);
+                }
+                
+                // Associer le code postal à l'adresse
+                $address->setPostalCode($postalCode);
                 $address->setCity($city);
+            } else {
+                throw new \Exception('Les informations de ville et de code postal sont requises');
             }
             
             // Sauvegarder les modifications

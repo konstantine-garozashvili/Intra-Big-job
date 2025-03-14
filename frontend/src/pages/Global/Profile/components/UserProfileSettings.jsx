@@ -290,38 +290,24 @@ const UserProfileSettings = () => {
         return;
       }
       
-      // Apply optimistic update immediately
-      const updatedUserData = {
-        ...userData,
-        addresses: [{
-          ...formattedAddress,
-          id: userData.addresses?.[0]?.id
-        }]
+      // Créer un objet d'adresse complet avec ID si disponible
+      const addressWithId = {
+        ...formattedAddress,
+        id: userData.addresses?.[0]?.id
       };
       
-      // Update the cache with the new data
-      queryClient.setQueryData(['userProfileData'], {
-        data: {
-          ...profileData?.data,
-          user: updatedUserData,
-          addresses: [formattedAddress]
-        }
-      });
-      
-      // Make the API call in the background
+      // Make the API call first
       await profileService.updateAddress(formattedAddress);
       
       toast.success('Adresse mise à jour avec succès');
       
-      // Refetch in the background to ensure sync
-      queryClient.invalidateQueries({ queryKey: ['userProfileData'] });
+      // Force refetch to get the latest data from the server
+      await queryClient.invalidateQueries({ queryKey: ['userProfileData'] });
+      await refetchProfile();
       
     } catch (error) {
-      // console.error('Error saving address:', error);
+      console.error('Error saving address:', error);
       toast.error('Erreur lors de la mise à jour de l\'adresse');
-      
-      // Refetch to revert to the server state on error
-      queryClient.invalidateQueries({ queryKey: ['userProfileData'] });
     }
   };
 
