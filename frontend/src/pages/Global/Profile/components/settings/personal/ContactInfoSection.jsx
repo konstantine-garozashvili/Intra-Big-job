@@ -2,7 +2,7 @@ import React from 'react';
 import { Mail, Phone, MapPin } from 'lucide-react';
 import EditableField from '../personal/EditableField';
 import { StaticField } from './StaticField';
-import { AddressField } from './AddressField';
+import { AddressAutocompleteField } from './AddressAutocompleteField';
 import { formatAddress } from './utils';
 
 export const ContactInfoSection = ({ 
@@ -43,12 +43,6 @@ export const ContactInfoSection = ({
       address: false
     }));
   };
-
-  // Check if user is admin
-  const isAdmin = React.useMemo(() => {
-    const adminRoles = ['ROLE_ADMIN', 'ROLE_SUPER_ADMIN', 'ADMIN', 'SUPER_ADMIN', 'SUPERADMIN'];
-    return adminRoles.includes(userData?.role);
-  }, [userData?.role]);
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6">
@@ -101,14 +95,14 @@ export const ContactInfoSection = ({
       )}
 
       {isFieldEditable('address') ? (
-        <AddressField 
+        <AddressAutocompleteField 
           userData={userData}
           editedData={editedData}
           editMode={editMode}
           setEditMode={setEditMode}
           setEditedData={setEditedData}
           onSaveAddress={onSaveAddress}
-          isAdmin={isAdmin}
+          isAdmin={true}
           handleCancelAddress={handleCancelAddress}
         />
       ) : (

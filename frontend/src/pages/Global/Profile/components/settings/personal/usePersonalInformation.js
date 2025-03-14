@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { toast } from 'sonner';
+import * as roleUtils from '../../../utils/roleUtils';
 
 export const usePersonalInformation = ({
   userData,
@@ -21,6 +22,11 @@ export const usePersonalInformation = ({
     // Admins can edit everything
     if (isAdmin) return true;
     
+    // Address field is handled by roleUtils.canEditAddress
+    if (field === 'address') {
+      return roleUtils.canEditAddress(userRole);
+    }
+    
     // For all non-admin users, only allow editing specific fields
     const editableFields = ['phoneNumber', 'linkedinUrl'];
     
@@ -31,7 +37,7 @@ export const usePersonalInformation = ({
     
     // Only allow editing the fields in the editableFields array
     return editableFields.includes(field);
-  }, [isAdmin, isStudent]);
+  }, [isAdmin, isStudent, userRole]);
 
   // Function to handle input changes
   const handleInputChange = (field, value) => {

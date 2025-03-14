@@ -101,7 +101,7 @@ export const isFieldEditable = (userRole, fieldName) => {
  * @returns {boolean} - Whether the user can edit address information
  */
 export const canEditAddress = (userRole) => {
-  return isAdmin(userRole);
+  return isAdmin(userRole) || userRole === 'ROLE_SUPER_ADMIN' || userRole === 'SUPER_ADMIN' || userRole === 'SUPERADMIN';
 };
 
 /**
