@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from '@/components/ui/label';
@@ -26,6 +26,10 @@ export const AddressAutocompleteField = ({
   const [suggestions, setSuggestions] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  
+  // Références pour gérer le clic en dehors des suggestions
+  const suggestionsRef = useRef(null);
+  const searchInputRef = useRef(null);
   
   // Toggle edit mode for this field
   const toggleFieldEdit = () => {
@@ -85,6 +89,25 @@ export const AddressAutocompleteField = ({
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery]);
   
+  // Effet pour gérer les clics en dehors des suggestions
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        suggestionsRef.current && 
+        !suggestionsRef.current.contains(event.target) &&
+        searchInputRef.current && 
+        !searchInputRef.current.contains(event.target)
+      ) {
+        setShowSuggestions(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+  
   // Sélection d'une adresse dans les suggestions
   const handleSelectAddress = (suggestion) => {
     // Mettre à jour les données d'adresse
@@ -133,8 +156,14 @@ export const AddressAutocompleteField = ({
               <div className="relative">
                 <Input
                   id="address-search"
+                  ref={searchInputRef}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => {
+                    if (searchQuery.length >= 3 && suggestions.length > 0) {
+                      setShowSuggestions(true);
+                    }
+                  }}
                   placeholder="Commencez à taper une adresse..."
                   className="pr-10"
                 />
@@ -145,24 +174,27 @@ export const AddressAutocompleteField = ({
                     <Search className="h-4 w-4 text-gray-400" />
                   )}
                 </div>
+                
+                {/* Liste des suggestions - Positionnement absolu */}
+                {showSuggestions && (
+                  <div 
+                    ref={suggestionsRef}
+                    className="absolute z-50 left-0 right-0 mt-1 bg-white shadow-lg rounded-md border border-gray-200 max-h-60 overflow-auto"
+                  >
+                    <ul className="py-1">
+                      {suggestions.map((suggestion, index) => (
+                        <li
+                          key={index}
+                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+                          onClick={() => handleSelectAddress(suggestion)}
+                        >
+                          {suggestion.label}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
-              
-              {/* Liste des suggestions */}
-              {showSuggestions && (
-                <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md border border-gray-200 max-h-60 overflow-auto">
-                  <ul className="py-1">
-                    {suggestions.map((suggestion, index) => (
-                      <li
-                        key={index}
-                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm"
-                        onClick={() => handleSelectAddress(suggestion)}
-                      >
-                        {suggestion.label}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
             </div>
             
             {/* Champs d'adresse */}
