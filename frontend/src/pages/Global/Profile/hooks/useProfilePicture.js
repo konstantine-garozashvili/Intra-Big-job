@@ -31,6 +31,21 @@ export function useProfilePicture() {
     }
   );
 
+  // Fonction pour invalider toutes les requêtes liées au profil
+  const invalidateProfileQueries = () => {
+    // Invalider la requête de photo de profil
+    queryClient.invalidateQueries({ queryKey: ['profilePicture'] });
+    
+    // Invalider également les requêtes de profil public et profil courant
+    queryClient.invalidateQueries({ queryKey: ['currentProfile'] });
+    queryClient.invalidateQueries({ queryKey: ['publicProfile'] });
+    
+    // Forcer le rafraîchissement des requêtes actives
+    queryClient.refetchQueries({ queryKey: ['profilePicture'], type: 'active' });
+    queryClient.refetchQueries({ queryKey: ['currentProfile'], type: 'active' });
+    queryClient.refetchQueries({ queryKey: ['publicProfile'], type: 'active' });
+  };
+
   // Mutation for uploading profile picture
   const uploadProfilePictureMutation = useApiMutation(
     '/api/profile/picture',
@@ -44,8 +59,7 @@ export function useProfilePicture() {
         toast.success('Photo de profil mise à jour avec succès');
         // Forcer l'invalidation et le rafraîchissement immédiat
         setTimeout(() => {
-          queryClient.invalidateQueries({ queryKey: ['profilePicture'] });
-          queryClient.refetchQueries({ queryKey: ['profilePicture'], type: 'active' });
+          invalidateProfileQueries();
           setIsOperationPending(false);
         }, 300);
       },
@@ -79,8 +93,7 @@ export function useProfilePicture() {
           
           // Forcer l'invalidation et le rafraîchissement immédiat après un délai
           setTimeout(() => {
-            queryClient.invalidateQueries({ queryKey: ['profilePicture'] });
-            queryClient.refetchQueries({ queryKey: ['profilePicture'], type: 'active' });
+            invalidateProfileQueries();
             setIsOperationPending(false);
             
             if (options.onSuccess) {

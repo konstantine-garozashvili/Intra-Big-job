@@ -4,7 +4,8 @@ import ProfileTabs from "../components/profile-view/ProfileTabs";
 import { motion } from "framer-motion";
 import { useParams } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useCurrentProfile, usePublicProfile, useProfilePicture } from "../hooks/useProfileQueries";
+import { useCurrentProfile, usePublicProfile } from "../hooks/useProfileQueries";
+import { useProfilePicture } from "../hooks/useProfilePicture";
 import { isGuest } from "../utils/roleUtils";
 import documentService from "../services/documentService";
 
@@ -25,17 +26,23 @@ const ProfileView = () => {
     error: publicProfileError 
   } = usePublicProfile(userId);
   
-  // Also fetch profile picture separately
+  // Fetch profile picture using the custom hook
   const {
-    data: profilePictureData,
-    isLoading: isLoadingProfilePicture
+    profilePictureUrl,
+    isLoading: isLoadingProfilePicture,
+    refetch: refetchProfilePicture
   } = useProfilePicture();
   
   // Determine which data to use
   const isPublicProfile = !!userId;
   const data = isPublicProfile ? publicProfileData : currentProfileData;
-  const isLoading = isPublicProfile ? isLoadingPublicProfile : isLoadingCurrentProfile;
+  const isLoading = (isPublicProfile ? isLoadingPublicProfile : isLoadingCurrentProfile) || isLoadingProfilePicture;
   const error = isPublicProfile ? publicProfileError : currentProfileError;
+  
+  // Refetch profile picture when component mounts or userId changes
+  useEffect(() => {
+    refetchProfilePicture();
+  }, [userId, refetchProfilePicture]);
   
   // Add debugging logs
   useEffect(() => {
@@ -52,8 +59,8 @@ const ProfileView = () => {
     }
     
     // Log profile picture data
-    console.log('Profile Picture Data:', profilePictureData);
-  }, [userId, publicProfileData, currentProfileData, isLoadingPublicProfile, isLoadingCurrentProfile, publicProfileError, currentProfileError, profilePictureData]);
+    console.log('Profile Picture URL:', profilePictureUrl);
+  }, [userId, publicProfileData, currentProfileData, isLoadingPublicProfile, isLoadingCurrentProfile, publicProfileError, currentProfileError, profilePictureUrl]);
   
   // Fetch documents separately
   useEffect(() => {
@@ -239,10 +246,10 @@ const ProfileView = () => {
     );
   }
   
-  // Add profile picture URL from the separate profile picture query if available
-  if (profilePictureData && profilePictureData.data && profilePictureData.data.profile_picture_url) {
-    userData.user.profilePictureUrl = profilePictureData.data.profile_picture_url;
-    console.log('Added profile picture URL from separate query:', userData.user.profilePictureUrl);
+  // Toujours utiliser la photo de profil la plus récente du hook useProfilePicture
+  if (profilePictureUrl) {
+    userData.user.profilePictureUrl = profilePictureUrl;
+    console.log('Using latest profile picture URL:', profilePictureUrl);
   }
   
   console.log('=== DÉBUT DES LOGS DE DÉBOGAGE PROFILEVIEW ===');
@@ -297,7 +304,7 @@ const ProfileView = () => {
       <ProfileHeader 
         userData={userData} 
         isPublicProfile={isPublicProfile} 
-        profilePictureData={profilePictureData}
+        profilePictureUrl={profilePictureUrl}
       />
 
       <ProfileTabs 

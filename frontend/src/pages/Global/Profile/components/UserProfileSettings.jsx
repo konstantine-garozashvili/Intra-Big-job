@@ -291,10 +291,13 @@ const UserProfileSettings = () => {
         
         return { previousData };
       },
+      onSuccess: (data, variables) => {
+        toast.success('Informations mises à jour avec succès');
+      },
       onError: (err, variables, context) => {
         // Rollback on error
         queryClient.setQueryData(['userProfileData'], context.previousData);
-        toast.error('Une erreur est survenue lors de la mise à jour');
+        toast.error('Une erreur est survenue lors de la mise à jour du profil');
       },
       onSettled: () => {
         // Refetch in the background to ensure sync
@@ -357,10 +360,7 @@ const UserProfileSettings = () => {
             onProfilePictureChange={() => refetchProfile()}
             isLoading={isProfileLoading}
           />
-          <div className="mt-2 xs:mt-0 xs:ml-3 flex flex-col justify-center text-center xs:text-left">
-            <span className="text-sm sm:text-base font-medium">Photo de profil</span>
-            <span className="text-xs text-muted-foreground">Mettre à jour votre photo</span>
-          </div>
+
         </div>
       </Card>
 

@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { getProfilePictureUrl, getUserInitials } from "@/lib/utils/profileUtils";
 import apiService from "@/lib/services/apiService";
 
-const ProfileHeader = ({ userData, isPublicProfile = false, profilePictureData }) => {
+const ProfileHeader = ({ userData, isPublicProfile = false, profilePictureUrl }) => {
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [domainData, setDomainData] = useState(null);
@@ -89,8 +89,8 @@ const ProfileHeader = ({ userData, isPublicProfile = false, profilePictureData }
 
   const mainRole = getMainRole();
   
-  const profilePictureUrl = userData.user?.profilePictureUrl || 
-                           (profilePictureData?.data?.profile_picture_url) || 
+  const displayProfilePictureUrl = profilePictureUrl || 
+                           userData.user?.profilePictureUrl || 
                            getProfilePictureUrl(userData.user?.profilePicturePath);
   
   const userInitials = getUserInitials(userData.user);
@@ -98,7 +98,7 @@ const ProfileHeader = ({ userData, isPublicProfile = false, profilePictureData }
   useEffect(() => {
     setImageError(false);
     setImageLoaded(false);
-  }, [profilePictureUrl]);
+  }, [displayProfilePictureUrl]);
   
   const handleImageError = () => {
     setImageError(true);
@@ -137,9 +137,9 @@ const ProfileHeader = ({ userData, isPublicProfile = false, profilePictureData }
           <motion.div variants={itemVariants} className="relative z-10">
             <div className="rounded-full p-0.5 bg-gradient-to-br from-blue-400/30 to-indigo-600/30">
               <Avatar className="h-20 w-20 sm:h-24 sm:w-24 ring-2 ring-white/10">
-                {!imageError && profilePictureUrl && (
+                {!imageError && displayProfilePictureUrl && (
                   <AvatarImage 
-                    src={profilePictureUrl} 
+                    src={displayProfilePictureUrl} 
                     alt={`${userData.user.firstName} ${userData.user.lastName}`}
                     onError={handleImageError}
                     onLoad={handleImageLoad}

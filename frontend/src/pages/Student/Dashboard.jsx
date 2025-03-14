@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { authService } from '../../lib/services/authService';
+import { useStudentDashboardData } from '@/hooks/useDashboardQueries';
+import DashboardLayout from '@/components/DashboardLayout';
 import { Calendar, Clock, GraduationCap, UserCheck, FolderGit2 } from 'lucide-react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 
@@ -8,9 +9,7 @@ import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Responsi
  * Tableau de bord spécifique pour les étudiants
  */
 const StudentDashboard = () => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const { user, isLoading, isError, error } = useStudentDashboardData();
 
   // Données du graphique radar des compétences
   const competencesData = [
@@ -53,151 +52,117 @@ const StudentDashboard = () => {
     }
   ];
 
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const userData = await authService.getCurrentUser();
-        setUser(userData);
-      } catch (err) {
-        console.error('Erreur lors de la récupération des données utilisateur:', err);
-        setError('Impossible de charger les informations utilisateur');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUserData();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="container p-8 mx-auto">
-        <div className="p-6 bg-white rounded-lg shadow-lg">
-          <p className="text-gray-600">Chargement en cours...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="container p-8 mx-auto">
-        <div className="p-6 bg-white rounded-lg shadow-lg">
-          <p className="text-red-500">{error}</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="container p-8 mx-auto">
-      {/* En-tête du dashboard */}
-      <div className="p-6 bg-white rounded-lg shadow-lg mb-8">
-        <h1 className="text-3xl font-bold text-gray-800">
-          Bienvenue {user?.firstName} {user?.lastName}
-        </h1>
-        <p className="mt-2 text-gray-600">
-          Voici votre tableau de bord étudiant
-        </p>
-      </div>
+    <DashboardLayout loading={isLoading} error={error?.message} className="p-0">
+      <div className="p-8">
+        {/* En-tête du dashboard */}
+        <div className="p-6 bg-white rounded-lg shadow-lg mb-8">
+          <h1 className="text-3xl font-bold text-gray-800">
+            Bienvenue {user?.firstName} {user?.lastName}
+          </h1>
+          <p className="mt-2 text-gray-600">
+            Voici votre tableau de bord étudiant
+          </p>
+        </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Section des compétences */}
-        <div className="lg:col-span-1 p-6 bg-white rounded-lg shadow-lg">
-          <h2 className="text-xl font-semibold text-gray-800 mb-6">
-            Compétences
-          </h2>
-          <div className="h-[400px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <RadarChart
-                cx="50%"
-                cy="50%"
-                outerRadius="70%"
-                data={competencesData}
-                style={{ backgroundColor: '#f8fafc' }}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Section des compétences */}
+          <div className="lg:col-span-1 p-6 bg-white rounded-lg shadow-lg">
+            <h2 className="text-xl font-semibold text-gray-800 mb-6">
+              Compétences
+            </h2>
+            <div className="h-[400px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <RadarChart
+                  cx="50%"
+                  cy="50%"
+                  outerRadius="70%"
+                  data={competencesData}
+                  style={{ backgroundColor: '#f8fafc' }}
+                >
+                  <PolarGrid
+                    gridType="circle"
+                    stroke="#e2e8f0"
+                    strokeWidth={0.5}
+                  />
+                  <PolarAngleAxis
+                    dataKey="name"
+                    tick={{
+                      fill: '#4a5568',
+                      fontSize: 12,
+                      fontWeight: 500,
+                      dy: 4
+                    }}
+                    stroke="#e2e8f0"
+                    strokeWidth={0.5}
+                  />
+                  <PolarRadiusAxis
+                    angle={30}
+                    domain={[0, 140]}
+                    axisLine={false}
+                    tick={{
+                      fill: '#4a5568',
+                      fontSize: 10
+                    }}
+                    tickCount={7}
+                    stroke="#e2e8f0"
+                    strokeWidth={0.5}
+                  />
+                  <Radar
+                    name="Compétences"
+                    dataKey="value"
+                    stroke="#ff4081"
+                    fill="#ff4081"
+                    fillOpacity={0.3}
+                    dot
+                    activeDot={{ r: 4 }}
+                  />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="mt-4 text-sm text-gray-600">
+              <p className="font-medium">QCP 37873 Bloc 3 - Préparer le déploiement d'une application sécurisée</p>
+            </div>
+          </div>
+
+          {/* Grille des menus */}
+          <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+            {menuItems.map((item, index) => (
+              <Link
+                key={index}
+                to={item.link}
+                className="block p-6 bg-white rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300"
               >
-                <PolarGrid
-                  gridType="circle"
-                  stroke="#e2e8f0"
-                  strokeWidth={0.5}
-                />
-                <PolarAngleAxis
-                  dataKey="name"
-                  tick={{
-                    fill: '#4a5568',
-                    fontSize: 12,
-                    fontWeight: 500,
-                    dy: 4
-                  }}
-                  stroke="#e2e8f0"
-                  strokeWidth={0.5}
-                />
-                <PolarRadiusAxis
-                  angle={30}
-                  domain={[0, 140]}
-                  axisLine={false}
-                  tick={{
-                    fill: '#4a5568',
-                    fontSize: 10
-                  }}
-                  tickCount={7}
-                  stroke="#e2e8f0"
-                  strokeWidth={0.5}
-                />
-                <Radar
-                  name="Compétences"
-                  dataKey="value"
-                  stroke="#ff4081"
-                  fill="#ff4081"
-                  fillOpacity={0.3}
-                  dot
-                  activeDot={{ r: 4 }}
-                />
-              </RadarChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="mt-4 text-sm text-gray-600">
-            <p className="font-medium">QCP 37873 Bloc 3 - Préparer le déploiement d'une application sécurisée</p>
+                <div className="flex items-start space-x-4">
+                  <div className={`p-3 rounded-lg ${item.color}`}>
+                    <item.icon className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h2 className="text-xl font-semibold text-gray-800">
+                      {item.title}
+                    </h2>
+                    <p className="mt-1 text-gray-600">
+                      {item.description}
+                    </p>
+                  </div>
+                </div>
+              </Link>
+            ))}
           </div>
         </div>
 
-        {/* Grille des menus */}
-        <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-          {menuItems.map((item, index) => (
-            <Link
-              key={index}
-              to={item.link}
-              className="block p-6 bg-white rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300"
-            >
-              <div className="flex items-start space-x-4">
-                <div className={`p-3 rounded-lg ${item.color}`}>
-                  <item.icon className="w-6 h-6 text-white" />
-                </div>
-                <div className="flex-1">
-                  <h2 className="text-xl font-semibold text-gray-800">
-                    {item.title}
-                  </h2>
-                  <p className="mt-1 text-gray-600">
-                    {item.description}
-                  </p>
-                </div>
-              </div>
-            </Link>
-          ))}
+        {/* Section des informations rapides */}
+        <div className="mt-8 p-6 bg-white rounded-lg shadow-lg">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">
+            Informations du jour
+          </h2>
+          <div className="flex items-center text-gray-600">
+            <Clock className="w-5 h-5 mr-2" />
+            <span>Prochain cours dans : --:--</span>
+          </div>
         </div>
       </div>
-
-      {/* Section des informations rapides */}
-      <div className="mt-8 p-6 bg-white rounded-lg shadow-lg">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">
-          Informations du jour
-        </h2>
-        <div className="flex items-center text-gray-600">
-          <Clock className="w-5 h-5 mr-2" />
-          <span>Prochain cours dans : --:--</span>
-        </div>
-      </div>
-    </div>
+    </DashboardLayout>
   );
 };
 

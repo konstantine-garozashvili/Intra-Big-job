@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { authService } from '@/lib/services/authService';
+import React, { useState } from 'react';
+import { useHRDashboardData } from '@/hooks/useDashboardQueries';
+import DashboardLayout from '@/components/DashboardLayout';
 import { Chart as ChartJS, ArcElement, CategoryScale, LinearScale, BarElement, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
 import { Pie, Bar, Line } from 'react-chartjs-2';
 
@@ -44,9 +45,7 @@ const mockData = {
  * Tableau de bord spécifique pour les RH
  */
 const HRDashboard = () => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const { user, isLoading, isError, error } = useHRDashboardData();
   const [activeTab, setActiveTab] = useState('overview');
 
   // Options chart communes
@@ -55,23 +54,6 @@ const HRDashboard = () => {
     maintainAspectRatio: false,
     plugins: { legend: { position: 'top' } }
   };
-
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const userData = await authService.getCurrentUser();
-        setUser(userData);
-      } catch (err) {
-        setError('Impossible de charger les informations utilisateur');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchUserData();
-  }, []);
-
-  if (loading) return <div className="p-8 text-gray-600">Chargement en cours...</div>;
-  if (error) return <div className="p-8 text-red-500">{error}</div>;
 
   // Composant TabButton réutilisable
   const TabButton = ({ name, label }) => (
@@ -166,21 +148,23 @@ const HRDashboard = () => {
   };
 
   return (
-    <div className="container p-8 mx-auto">
-      <h2 className="mb-6 text-2xl font-bold text-gray-800">Tableau de bord RH</h2>
+    <DashboardLayout loading={isLoading} error={error?.message} className="p-0">
+      <div className="p-8">
+        <h2 className="mb-6 text-2xl font-bold text-gray-800">Tableau de bord RH</h2>
 
-      <div className="mb-6 border-b border-gray-200">
-        <TabButton name="overview" label="Aperçu" />
-        <TabButton name="employees" label="Employés" />
-        <TabButton name="absences" label="Absences" />
-        <TabButton name="contracts" label="Contrats" />
-        <TabButton name="training" label="Formations" />
-      </div>
+        <div className="mb-6 border-b border-gray-200">
+          <TabButton name="overview" label="Aperçu" />
+          <TabButton name="employees" label="Employés" />
+          <TabButton name="absences" label="Absences" />
+          <TabButton name="contracts" label="Contrats" />
+          <TabButton name="training" label="Formations" />
+        </div>
 
-      <div className="p-6 bg-white rounded-lg shadow-lg">
-        {tabContent[activeTab]}
+        <div className="p-6 bg-white rounded-lg shadow-lg">
+          {tabContent[activeTab]}
+        </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 };
 
