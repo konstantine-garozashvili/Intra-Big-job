@@ -73,6 +73,9 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     #[ORM\OneToMany(mappedBy: 'user', targetEntity: UserRole::class, orphanRemoval: true)]
     private Collection $userRoles;
 
+    #[ORM\ManyToMany(targetEntity: Formation::class, mappedBy: 'students')]
+    private Collection $formations;
+
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
     #[Groups(['user:read'])]
@@ -86,6 +89,7 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
 
     public function __construct()
     {
+        $this->formations = new ArrayCollection();
         $this->createdAt = new \DateTimeImmutable();
         $this->userRoles = new ArrayCollection();
         $this->diplomas = new ArrayCollection();
