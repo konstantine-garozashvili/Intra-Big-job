@@ -1,7 +1,17 @@
 import axios from 'axios';
 
+// Créer une instance axios avec des configurations par défaut
+const axiosInstance = axios.create({
+  timeout: 15000, // Timeout de 15 secondes
+  headers: {
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+    'X-Requested-With': 'XMLHttpRequest'
+  }
+});
+
 // Configurer des intercepteurs pour les requêtes et réponses
-axios.interceptors.request.use(request => {
+axiosInstance.interceptors.request.use(request => {
   // Ajouter le token d'authentification à toutes les requêtes si disponible
   const token = localStorage.getItem('token');
   if (token) {
@@ -12,7 +22,18 @@ axios.interceptors.request.use(request => {
   return Promise.reject(error);
 });
 
-axios.interceptors.response.use(response => {
+// Ajouter un cache simple pour les requêtes GET
+const cache = new Map();
+
+axiosInstance.interceptors.response.use(response => {
+  // Mettre en cache les réponses GET
+  if (response.config.method === 'get' && response.config.url) {
+    const cacheKey = response.config.url + JSON.stringify(response.config.params || {});
+    cache.set(cacheKey, {
+      data: response.data,
+      timestamp: Date.now()
+    });
+  }
   return response;
 }, error => {
   return Promise.reject(error);
@@ -43,13 +64,26 @@ const apiService = {
    * Effectue une requête GET
    * @param {string} path - Chemin de l'API
    * @param {Object} options - Options de la requête (headers, params, etc.)
+   * @param {boolean} useCache - Utiliser le cache si disponible
+   * @param {number} cacheDuration - Durée de validité du cache en ms (défaut: 5 minutes)
    * @returns {Promise<Object>} - Réponse de l'API
    */
-  async get(path, options = {}) {
+  async get(path, options = {}, useCache = true, cacheDuration = 5 * 60 * 1000) {
     try {
       const url = normalizeApiUrl(path);
       const authOptions = this.withAuth(options);
-      const response = await axios.get(url, authOptions);
+      
+      // Vérifier si la réponse est en cache et toujours valide
+      if (useCache) {
+        const cacheKey = url + JSON.stringify(authOptions.params || {});
+        const cachedResponse = cache.get(cacheKey);
+        
+        if (cachedResponse && (Date.now() - cachedResponse.timestamp) < cacheDuration) {
+          return cachedResponse.data;
+        }
+      }
+      
+      const response = await axiosInstance.get(url, authOptions);
       return response.data;
     } catch (error) {
       throw error;
@@ -68,7 +102,7 @@ const apiService = {
       const url = normalizeApiUrl(path);
       // Add authentication to the request for protected routes
       const authOptions = path.includes('/login_check') || path.includes('/register') ? options : this.withAuth(options);
-      const response = await axios.post(url, data, authOptions);
+      const response = await axiosInstance.post(url, data, authOptions);
       return response.data;
     } catch (error) {
       throw error;
@@ -86,7 +120,7 @@ const apiService = {
     try {
       // Add authentication to the request
       const authOptions = this.withAuth(options);
-      const response = await axios.put(normalizeApiUrl(path), data, authOptions);
+      const response = await axiosInstance.put(normalizeApiUrl(path), data, authOptions);
       return response.data;
     } catch (error) {
       throw error;
@@ -103,7 +137,7 @@ const apiService = {
     try {
       // Add authentication to the request
       const authOptions = this.withAuth(options);
-      const response = await axios.delete(normalizeApiUrl(path), authOptions);
+      const response = await axiosInstance.delete(normalizeApiUrl(path), authOptions);
       return response.data;
     } catch (error) {
       throw error;
@@ -128,6 +162,24 @@ const apiService = {
         Authorization: `Bearer ${token}`
       }
     };
+  },
+  
+  /**
+   * Vide le cache
+   */
+  clearCache() {
+    cache.clear();
+  },
+  
+  /**
+   * Supprime une entrée spécifique du cache
+   * @param {string} path - Chemin de l'API
+   * @param {Object} params - Paramètres de la requête
+   */
+  invalidateCache(path, params = {}) {
+    const url = normalizeApiUrl(path);
+    const cacheKey = url + JSON.stringify(params);
+    cache.delete(cacheKey);
   }
 };
 

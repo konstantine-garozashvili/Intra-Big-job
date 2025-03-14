@@ -99,6 +99,32 @@ const useIntelligentPreload = () => {
 // Composant pour gérer les préchargements
 const PrefetchHandler = () => {
   useIntelligentPreload();
+  const location = useLocation();
+  
+  useEffect(() => {
+    // Précharger les données utilisateur dès que l'utilisateur est authentifié
+    if (localStorage.getItem('token')) {
+      import('./hooks/useDashboardQueries').then(module => {
+        const { useUserData } = module;
+        const queryClient = import('./lib/services/queryClient').then(qcModule => {
+          const { getQueryClient } = qcModule;
+          const qc = getQueryClient();
+          
+          // Précharger les données utilisateur
+          qc.prefetchQuery({
+            queryKey: ['user-data'],
+            queryFn: async () => {
+              const { default: apiService } = await import('./lib/services/apiService');
+              return await apiService.get('/me', {}, true, 30 * 60 * 1000);
+            },
+            staleTime: 30 * 60 * 1000,
+            cacheTime: 60 * 60 * 1000
+          });
+        });
+      });
+    }
+  }, [location.pathname]);
+  
   return null;
 };
 

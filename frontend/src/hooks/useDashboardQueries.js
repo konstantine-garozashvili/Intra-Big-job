@@ -2,6 +2,7 @@ import { useApiQuery } from './useReactQuery';
 import { authService } from '@/lib/services/authService';
 import { teacherService } from '@/lib/services/teacherService';
 import apiService from '@/lib/services/apiService';
+import { getQueryClient } from '@/lib/services/queryClient';
 
 /**
  * Hook pour récupérer les données utilisateur avec React Query
@@ -9,8 +10,11 @@ import apiService from '@/lib/services/apiService';
  */
 export const useUserData = () => {
   return useApiQuery('/me', 'user-data', {
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 30 * 60 * 1000, // 30 minutes (augmenté)
+    cacheTime: 60 * 60 * 1000, // 1 heure (augmenté)
     refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
     select: (data) => {
       // Extraire l'objet utilisateur si la réponse contient un objet "user"
       return data.user || data;
@@ -31,9 +35,24 @@ export const useTeacherDashboardData = () => {
     '/teacher/dashboard', 
     'teacher-dashboard', 
     {
-      staleTime: 5 * 60 * 1000, // 5 minutes
+      staleTime: 15 * 60 * 1000, // 15 minutes
+      cacheTime: 30 * 60 * 1000, // 30 minutes
       refetchOnWindowFocus: false,
-      enabled: !!userQuery.data, // Ne déclencher la requête que si les données utilisateur sont disponibles
+      refetchOnMount: false,
+      refetchOnReconnect: false,
+      // Utiliser initialData pour éviter l'affichage de chargement si possible
+      initialData: () => {
+        try {
+          // Vérifier si des données sont déjà en cache
+          const cachedData = getQueryClient().getQueryData(['teacher-dashboard']);
+          if (cachedData) return cachedData;
+          return undefined;
+        } catch (e) {
+          return undefined;
+        }
+      },
+      // Ne déclencher la requête que si les données utilisateur sont disponibles
+      enabled: !!userQuery.data,
       // Fonction personnalisée pour récupérer les données du dashboard
       queryFn: async () => {
         try {
@@ -72,8 +91,22 @@ export const useAdminDashboardData = () => {
     '/users', 
     'admin-users', 
     {
-      staleTime: 2 * 60 * 1000, // 2 minutes
+      staleTime: 10 * 60 * 1000, // 10 minutes (augmenté)
+      cacheTime: 30 * 60 * 1000, // 30 minutes (augmenté)
       refetchOnWindowFocus: false,
+      refetchOnMount: false,
+      refetchOnReconnect: false,
+      // Utiliser initialData pour éviter l'affichage de chargement si possible
+      initialData: () => {
+        try {
+          // Vérifier si des données sont déjà en cache
+          const cachedData = getQueryClient().getQueryData(['admin-users']);
+          if (cachedData) return cachedData;
+          return undefined;
+        } catch (e) {
+          return undefined;
+        }
+      },
       enabled: !!userQuery.data, // Ne déclencher la requête que si les données utilisateur sont disponibles
     }
   );
@@ -96,7 +129,7 @@ export const useAdminDashboardData = () => {
  * @returns {Object} - Données du dashboard étudiant et état de la requête
  */
 export const useStudentDashboardData = () => {
-  // Utiliser useApiQuery pour récupérer les données utilisateur
+  // Utiliser useApiQuery pour récupérer les données utilisateur avec des options optimisées
   const userQuery = useUserData();
   
   // Pour l'instant, nous n'avons pas de données spécifiques à récupérer pour le dashboard étudiant
@@ -118,7 +151,7 @@ export const useStudentDashboardData = () => {
  * @returns {Object} - Données du dashboard RH et état de la requête
  */
 export const useHRDashboardData = () => {
-  // Utiliser useApiQuery pour récupérer les données utilisateur
+  // Utiliser useApiQuery pour récupérer les données utilisateur avec des options optimisées
   const userQuery = useUserData();
   
   // Pour l'instant, nous n'avons pas de données spécifiques à récupérer pour le dashboard RH

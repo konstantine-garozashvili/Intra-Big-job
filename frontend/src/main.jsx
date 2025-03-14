@@ -5,16 +5,18 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import App from './App.jsx'
 import './index.css'
 import './lib/animations.css'
-import { setQueryClient } from './lib/utils/queryClientUtils'
+import { setQueryClient } from './lib/services/queryClient'
 
 // Configuration du client React Query
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      cacheTime: 10 * 60 * 1000, // 10 minutes
-      refetchOnWindowFocus: true, // Rafraîchir les données quand l'utilisateur revient sur l'onglet
+      staleTime: 10 * 60 * 1000, // 10 minutes (augmenté de 5 à 10 minutes)
+      cacheTime: 30 * 60 * 1000, // 30 minutes (augmenté de 10 à 30 minutes)
+      refetchOnWindowFocus: false, // Désactivé pour éviter les requêtes inutiles
       retry: 1, // Réessayer une fois en cas d'échec
+      refetchOnMount: false, // Ne pas refetch automatiquement au montage
+      refetchOnReconnect: false, // Ne pas refetch automatiquement à la reconnexion
     },
   },
 })

@@ -1,25 +1,10 @@
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
-import axios from 'axios';
+import apiService, { normalizeApiUrl } from '@/lib/services/apiService';
 
 /**
  * Configuration de base pour les requêtes API
  */
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-
-/**
- * Normalise une URL d'API
- * @param {string} path - Le chemin de l'API
- * @returns {string} - L'URL complète normalisée
- */
-const normalizeApiUrl = (path) => {
-  // Supprimer le "/api" à la fin de baseUrl si path commence par "/api"
-  if (path.startsWith('/api')) {
-    return `${API_URL.replace(/\/api$/, '')}${path}`;
-  } 
-  
-  // Ajouter un "/" si nécessaire
-  return `${API_URL}${API_URL.endsWith('/') || path.startsWith('/') ? '' : '/'}${path}`;
-};
 
 /**
  * Hook pour effectuer des requêtes GET avec mise en cache
@@ -35,11 +20,8 @@ export function useApiQuery(endpoint, queryKey, options = {}) {
     queryKey: finalQueryKey,
     queryFn: async () => {
       try {
-        const token = localStorage.getItem('token'); // Adapter selon votre gestion d'authentification
-        const response = await axios.get(normalizeApiUrl(endpoint), {
-          headers: token ? { Authorization: `Bearer ${token}` } : {}
-        });
-        return response.data;
+        // Utiliser le cache amélioré du service API
+        return await apiService.get(endpoint, {}, true, options.staleTime || 5 * 60 * 1000);
       } catch (error) {
         throw error;
       }
@@ -63,19 +45,6 @@ export function useApiMutation(endpoint, method = 'post', invalidateQueryKey, op
   return useMutation({
     mutationFn: async (data) => {
       try {
-        const token = localStorage.getItem('token'); // Adapter selon votre gestion d'authentification
-        const headers = {
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          'Accept': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest'
-        };
-        
-        // Pour les requêtes multipart/form-data, ne pas définir Content-Type
-        // car axios le fera automatiquement avec la boundary correcte
-        if (!(data instanceof FormData)) {
-          headers['Content-Type'] = 'application/json';
-        }
-        
         // Determine the actual endpoint URL
         let finalEndpoint = endpoint;
         
@@ -93,38 +62,22 @@ export function useApiMutation(endpoint, method = 'post', invalidateQueryKey, op
         let response;
         
         if (method.toLowerCase() === 'delete') {
-          // Pour les requêtes DELETE, ajouter des options supplémentaires
-          response = await axios.delete(
-            normalizeApiUrl(finalEndpoint),
-            { 
-              headers,
-              data: typeof data === 'object' ? data : {}, // Only pass data object if it's an object
-              timeout: 10000 // Timeout de 10 secondes
-            }
+          // Pour les requêtes DELETE
+          response = await apiService.delete(finalEndpoint, 
+            typeof data === 'object' ? data : {}
           );
         } else if (method.toLowerCase() === 'get') {
-          // Pour les requêtes GET, utiliser params au lieu du corps
-          response = await axios.get(
-            normalizeApiUrl(finalEndpoint),
-            { 
-              params: data,
-              headers,
-              timeout: 10000
-            }
-          );
+          // Pour les requêtes GET
+          response = await apiService.get(finalEndpoint, { params: data });
+        } else if (method.toLowerCase() === 'put') {
+          // Pour les requêtes PUT
+          response = await apiService.put(finalEndpoint, data);
         } else {
-          // Pour les requêtes POST, PUT, PATCH
-          response = await axios[method.toLowerCase()](
-            normalizeApiUrl(finalEndpoint),
-            data,
-            { 
-              headers,
-              timeout: 10000
-            }
-          );
+          // Pour les requêtes POST
+          response = await apiService.post(finalEndpoint, data);
         }
         
-        return response.data;
+        return response;
       } catch (error) {
         throw error;
       }
@@ -157,15 +110,11 @@ export function useApiInfiniteQuery(endpoint, queryKey, getNextPageParam, option
     queryKey: finalQueryKey,
     queryFn: async ({ pageParam }) => {
       try {
-        const token = localStorage.getItem('token'); // Adapter selon votre gestion d'authentification
         const url = normalizeApiUrl(endpoint);
         const separator = url.includes('?') ? '&' : '?';
-        const paginatedUrl = pageParam ? `${url}${separator}${pageParam}` : url;
+        const paginatedUrl = pageParam ? `${endpoint}${separator}${pageParam}` : endpoint;
         
-        const response = await axios.get(paginatedUrl, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {}
-        });
-        return response.data;
+        return await apiService.get(paginatedUrl);
       } catch (error) {
         throw error;
       }
@@ -189,11 +138,7 @@ export function usePrefetchQuery(endpoint, queryKey) {
       await queryClient.prefetchQuery({
         queryKey: finalQueryKey,
         queryFn: async () => {
-          const token = localStorage.getItem('token'); // Adapter selon votre gestion d'authentification
-          const response = await axios.get(normalizeApiUrl(endpoint), {
-            headers: token ? { Authorization: `Bearer ${token}` } : {}
-          });
-          return response.data;
+          return await apiService.get(endpoint);
         }
       });
     } catch (error) {
