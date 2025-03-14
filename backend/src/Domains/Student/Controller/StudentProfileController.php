@@ -5,6 +5,7 @@ namespace App\Domains\Student\Controller;
 use App\Domains\Student\Entity\StudentProfile;
 use App\Domains\Student\Repository\StudentProfileRepository;
 use App\Entity\User;
+use App\Service\ValidationService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -21,7 +22,8 @@ class StudentProfileController extends AbstractController
     public function __construct(
         private EntityManagerInterface $entityManager,
         private StudentProfileRepository $studentProfileRepository,
-        private SerializerInterface $serializer
+        private SerializerInterface $serializer,
+        private ValidationService $validationService
     ) {
     }
 
@@ -96,8 +98,11 @@ class StudentProfileController extends AbstractController
         }
         
         // Validate URL format if not empty
-        if (!empty($data['portfolioUrl']) && !filter_var($data['portfolioUrl'], FILTER_VALIDATE_URL)) {
-            return $this->json(['message' => 'Invalid URL format'], Response::HTTP_BAD_REQUEST);
+        if (!empty($data['portfolioUrl']) && !$this->validationService->isValidPortfolioUrl($data['portfolioUrl'])) {
+            return $this->json([
+                'success' => false,
+                'message' => 'L\'URL du portfolio doit commencer par https://'
+            ], Response::HTTP_BAD_REQUEST);
         }
         
         $profile->setPortfolioUrl($data['portfolioUrl']);

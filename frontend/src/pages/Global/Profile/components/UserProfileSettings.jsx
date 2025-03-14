@@ -8,6 +8,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { profileService } from '../services/profileService';
 import ProfilePicture from './settings/ProfilePicture';
 import { useProfilePicture } from '../hooks/useProfilePicture';
+import { isValidEmail, isValidPhone, isValidLinkedInUrl, isValidName, isValidUrl } from '@/lib/utils/validation';
 
 // Import our components using the barrel export
 import {
@@ -132,7 +133,7 @@ const UserProfileSettings = () => {
       
       return hasBirthdayOccurredThisYear ? age : age - 1;
     } catch (e) {
-      console.error('Error calculating age:', e);
+      // console.error('Error calculating age:', e);
       return null;
     }
   };
@@ -174,7 +175,7 @@ const UserProfileSettings = () => {
     try {
       const value = editedData.personal[field];
       
-      // Validate birthDate field to ensure user is at least 16 years old
+      // Validation spécifique selon le type de champ
       if (field === 'birthDate' && value) {
         const birthDate = new Date(value);
         const today = new Date();
@@ -183,6 +184,54 @@ const UserProfileSettings = () => {
         
         if (birthDate > minAgeDate) {
           toast.error("Vous devez avoir au moins 16 ans pour vous inscrire.");
+          return;
+        }
+      }
+      
+      // Validation de l'email
+      if (field === 'email' && value) {
+        if (!isValidEmail(value)) {
+          toast.error("Format d'email invalide");
+          return;
+        }
+      }
+      
+      // Validation du numéro de téléphone
+      if (field === 'phoneNumber' && value) {
+        if (!isValidPhone(value)) {
+          toast.error("Format de numéro de téléphone invalide");
+          return;
+        }
+      }
+      
+      // Validation de l'URL LinkedIn
+      if (field === 'linkedinUrl' && value) {
+        if (!isValidLinkedInUrl(value)) {
+          toast.error("Format d'URL LinkedIn invalide. L'URL doit être au format linkedin.com/in/username");
+          return;
+        }
+      }
+      
+      // Validation du nom et prénom
+      if ((field === 'firstName' || field === 'lastName') && value) {
+        if (!isValidName(value)) {
+          toast.error(`Format de ${field === 'firstName' ? 'prénom' : 'nom'} invalide. Utilisez uniquement des lettres, espaces, tirets et apostrophes.`);
+          return;
+        }
+      }
+
+      // Validate LinkedIn URL
+      if (field === 'linkedinUrl' && value) {
+        if (!isValidLinkedInUrl(value)) {
+          toast.error("L'URL LinkedIn doit commencer par 'https://www.linkedin.com/in/'");
+          return;
+        }
+      }
+
+      // Validate portfolio URL
+      if (field === 'portfolioUrl' && value) {
+        if (!isValidUrl(value)) {
+          toast.error("L'URL du portfolio doit commencer par 'https://'");
           return;
         }
       }
@@ -205,8 +254,10 @@ const UserProfileSettings = () => {
         userData.age = calculateAge(value);
       }
       
-      // Show success toast
-      toast.success('Mise à jour réussie');
+      // Show success toast only if no error was thrown
+      if (field !== 'portfolioUrl') {
+        toast.success('Mise à jour réussie');
+      }
       
     } catch (error) {
       // Revert optimistic update on error
@@ -214,10 +265,8 @@ const UserProfileSettings = () => {
         updateLocalState('portfolioUrl', profileData?.data?.studentProfile?.portfolioUrl || null);
       } else {
         updateLocalState(field, profileData?.data?.user?.[field] || null);
+        toast.error(`Erreur lors de la mise à jour de ${field}`);
       }
-      
-      console.error(`Error saving ${field}:`, error);
-      toast.error(`Erreur lors de la mise à jour de ${field}`);
     }
   };
 
@@ -241,38 +290,24 @@ const UserProfileSettings = () => {
         return;
       }
       
-      // Apply optimistic update immediately
-      const updatedUserData = {
-        ...userData,
-        addresses: [{
-          ...formattedAddress,
-          id: userData.addresses?.[0]?.id
-        }]
+      // Créer un objet d'adresse complet avec ID si disponible
+      const addressWithId = {
+        ...formattedAddress,
+        id: userData.addresses?.[0]?.id
       };
       
-      // Update the cache with the new data
-      queryClient.setQueryData(['userProfileData'], {
-        data: {
-          ...profileData?.data,
-          user: updatedUserData,
-          addresses: [formattedAddress]
-        }
-      });
-      
-      // Make the API call in the background
+      // Make the API call first
       await profileService.updateAddress(formattedAddress);
       
       toast.success('Adresse mise à jour avec succès');
       
-      // Refetch in the background to ensure sync
-      queryClient.invalidateQueries({ queryKey: ['userProfileData'] });
+      // Force refetch to get the latest data from the server
+      await queryClient.invalidateQueries({ queryKey: ['userProfileData'] });
+      await refetchProfile();
       
     } catch (error) {
       console.error('Error saving address:', error);
       toast.error('Erreur lors de la mise à jour de l\'adresse');
-      
-      // Refetch to revert to the server state on error
-      queryClient.invalidateQueries({ queryKey: ['userProfileData'] });
     }
   };
 
@@ -324,7 +359,7 @@ const UserProfileSettings = () => {
       onError: (err, variables, context) => {
         // Rollback on error
         queryClient.setQueryData(['userProfileData'], context.previousData);
-        toast.error('Une erreur est survenue lors de la mise à jour du portfolio');
+        toast.error(err.response?.data?.message || "L'URL du portfolio doit commencer par 'https://'");
       },
       onSettled: () => {
         // Refetch in the background to ensure sync

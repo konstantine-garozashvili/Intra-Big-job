@@ -32,7 +32,6 @@ export const RoleProvider = ({ children }) => {
         setUser(userData);
         return userData;
       } catch (error) {
-        console.error('Error fetching user data:', error);
         setUser(null);
         return null;
       }
@@ -49,7 +48,6 @@ export const RoleProvider = ({ children }) => {
     
     // Listen for authentication events
     const handleLoginSuccess = () => {
-      console.log('Login success event detected in RoleContext');
       fetchUser().then(() => {
         // Invalidate the userRoles query to force a refetch
         queryClient.invalidateQueries(['userRoles']);
@@ -57,7 +55,6 @@ export const RoleProvider = ({ children }) => {
     };
     
     const handleLogoutSuccess = () => {
-      console.log('Logout success event detected in RoleContext');
       setUser(null);
       // Clear the userRoles query data
       queryClient.setQueryData(['userRoles'], []);

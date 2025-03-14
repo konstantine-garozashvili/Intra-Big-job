@@ -2,7 +2,7 @@ import React from 'react';
 import { Mail, Phone, MapPin } from 'lucide-react';
 import EditableField from '../personal/EditableField';
 import { StaticField } from './StaticField';
-import { AddressField } from './AddressField';
+import { AddressAutocompleteField } from './AddressAutocompleteField';
 import { formatAddress } from './utils';
 
 export const ContactInfoSection = ({ 
@@ -44,15 +44,10 @@ export const ContactInfoSection = ({
     }));
   };
 
-  // Check if user is admin
-  const isAdmin = React.useMemo(() => {
-    const adminRoles = ['ROLE_ADMIN', 'ROLE_SUPER_ADMIN', 'ADMIN', 'SUPER_ADMIN', 'SUPERADMIN'];
-    return adminRoles.includes(userData?.role);
-  }, [userData?.role]);
-
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6">
-      <div className="sm:col-span-2">
+    <div className="space-y-5 sm:space-y-6">
+      {/* Email - Pleine largeur */}
+      <div className="w-full">
         {isFieldEditable('email') ? (
           <EditableField
             field="email"
@@ -77,49 +72,58 @@ export const ContactInfoSection = ({
         )}
       </div>
 
-      {isFieldEditable('phoneNumber') ? (
-        <EditableField
-          field="phoneNumber"
-          label="Téléphone"
-          icon={<Phone className="h-4 w-4 mr-2 text-gray-500" />}
-          value={userData.phoneNumber}
-          editedValue={editedData.personal.phoneNumber}
-          type="phone"
-          isEditing={editMode.phoneNumber}
-          isEditable={true}
-          onEdit={() => toggleFieldEdit('phoneNumber')}
-          onSave={onSave}
-          onCancel={() => handleCancelField('phoneNumber')}
-          onChange={(value) => handleInputChange('phoneNumber', value)}
-        />
-      ) : (
-        <StaticField 
-          label="Téléphone"
-          icon={<Phone className="h-4 w-4 mr-2 text-gray-500" />}
-          value={userData.phoneNumber || 'Non renseigné'}
-        />
-      )}
+      {/* Téléphone et Adresse en deux colonnes indépendantes */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6">
+        {/* Téléphone - Colonne 1 */}
+        <div className="w-full">
+          {isFieldEditable('phoneNumber') ? (
+            <EditableField
+              field="phoneNumber"
+              label="Téléphone"
+              icon={<Phone className="h-4 w-4 mr-2 text-gray-500" />}
+              value={userData.phoneNumber}
+              editedValue={editedData.personal.phoneNumber}
+              type="phone"
+              isEditing={editMode.phoneNumber}
+              isEditable={true}
+              onEdit={() => toggleFieldEdit('phoneNumber')}
+              onSave={onSave}
+              onCancel={() => handleCancelField('phoneNumber')}
+              onChange={(value) => handleInputChange('phoneNumber', value)}
+            />
+          ) : (
+            <StaticField 
+              label="Téléphone"
+              icon={<Phone className="h-4 w-4 mr-2 text-gray-500" />}
+              value={userData.phoneNumber || 'Non renseigné'}
+            />
+          )}
+        </div>
 
-      {isFieldEditable('address') ? (
-        <AddressField 
-          userData={userData}
-          editedData={editedData}
-          editMode={editMode}
-          setEditMode={setEditMode}
-          setEditedData={setEditedData}
-          onSaveAddress={onSaveAddress}
-          isAdmin={isAdmin}
-          handleCancelAddress={handleCancelAddress}
-        />
-      ) : (
-        <StaticField 
-          label="Adresse"
-          icon={<MapPin className="h-4 w-4 mr-2 text-blue-500 flex-shrink-0" />}
-          value={userData.addresses && Array.isArray(userData.addresses) && userData.addresses.length > 0
-            ? formatAddress(userData.addresses[0])
-            : 'Aucune adresse renseignée'}
-        />
-      )}
+        {/* Adresse - Colonne 2 */}
+        <div className="w-full">
+          {isFieldEditable('address') ? (
+            <AddressAutocompleteField 
+              userData={userData}
+              editedData={editedData}
+              editMode={editMode}
+              setEditMode={setEditMode}
+              setEditedData={setEditedData}
+              onSaveAddress={onSaveAddress}
+              isAdmin={true}
+              handleCancelAddress={handleCancelAddress}
+            />
+          ) : (
+            <StaticField 
+              label="Adresse"
+              icon={<MapPin className="h-4 w-4 mr-2 text-blue-500 flex-shrink-0" />}
+              value={userData.addresses && Array.isArray(userData.addresses) && userData.addresses.length > 0
+                ? formatAddress(userData.addresses[0])
+                : 'Aucune adresse renseignée'}
+            />
+          )}
+        </div>
+      </div>
     </div>
   );
 }; 

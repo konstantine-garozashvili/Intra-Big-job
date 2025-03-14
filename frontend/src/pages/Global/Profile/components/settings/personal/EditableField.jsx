@@ -2,10 +2,12 @@ import React, { memo, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PhoneInput } from '@/components/ui/phone-input';
+import { NameInput } from '@/components/ui/name-input';
 import { Label } from '@/components/ui/label';
 import { Pencil, Loader2 } from 'lucide-react';
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatFrenchPhoneNumber } from '@/lib/utils/formatting';
+import { toast } from 'sonner';
 
 const EditableField = memo(({
   field,
@@ -26,25 +28,35 @@ const EditableField = memo(({
 }) => {
   // Local state for optimistic updates
   const [localValue, setLocalValue] = useState(value);
+  const [error, setError] = useState(null);
   
   // Handle save with optimistic update
   const handleSave = React.useCallback(async () => {
-    // Update local value immediately for optimistic UI
-    setLocalValue(editedValue);
-    
-    // Exit edit mode immediately for better UX
-    if (onEdit) {
-      onEdit(); // This will toggle edit mode off
+    try {
+      // Update local value immediately for optimistic UI
+      setLocalValue(editedValue);
+      
+      // Exit edit mode immediately for better UX
+      if (onEdit) {
+        onEdit(); // This will toggle edit mode off
+      }
+      
+      // Call the save function in the background
+      await onSave(field);
+      setError(null);
+    } catch (err) {
+      // Revert optimistic update on error
+      setLocalValue(value);
+      setError(err.response?.data?.message || 'Une erreur est survenue');
+      toast.error(err.response?.data?.message || 'Une erreur est survenue');
     }
-    
-    // Call the save function in the background
-    await onSave(field);
-  }, [onSave, field, editedValue, onEdit]);
+  }, [onSave, field, editedValue, onEdit, value]);
 
   // Update local value when the actual value changes
   React.useEffect(() => {
     if (!isEditing) {
       setLocalValue(value);
+      setError(null);
     }
   }, [value, isEditing]);
 
@@ -82,53 +94,71 @@ const EditableField = memo(({
           </Button>
         )}
       </Label>
-      <div className="mt-1.5 sm:mt-2">
-        {isEditing ? (
-          <div className="space-y-2 sm:space-y-3">
-            {type === 'phone' ? (
-              <PhoneInput
-                value={editedValue || ''}
-                onChange={onChange}
-                placeholder={`Votre ${label.toLowerCase()}`}
-                className="w-full text-sm"
-              />
+
+      {isEditing ? (
+        <div className="mt-2 space-y-2">
+          {type === 'phone' ? (
+            <PhoneInput
+              value={editedValue}
+              onChange={onChange}
+              className="w-full"
+            />
+          ) : (
+            <Input
+              type={type}
+              value={editedValue}
+              onChange={(e) => onChange(e.target.value)}
+              className={`w-full ${error ? 'border-red-500' : ''}`}
+            />
+          )}
+          {error && (
+            <p className="text-sm text-red-500">{error}</p>
+          )}
+          <div className="flex justify-end space-x-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onCancel}
+              disabled={isSaving}
+            >
+              Annuler
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleSave}
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Enregistrement...
+                </>
+              ) : (
+                'Enregistrer'
+              )}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-1">
+          {displayValue ? (
+            type === 'url' ? (
+              <a
+                href={displayValue}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:text-blue-800 break-all"
+              >
+                {displayValue}
+              </a>
             ) : (
-              <Input
-                value={editedValue || ''}
-                onChange={(e) => onChange(e.target.value)}
-                type={type}
-                placeholder={`Votre ${label.toLowerCase()}`}
-                className="w-full text-sm"
-                autoFocus
-              />
-            )}
-            <div className="flex items-center space-x-2">
-              <Button
-                onClick={handleSave}
-                size="sm"
-                className="bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 min-w-[80px] sm:min-w-[100px] text-xs sm:text-sm h-8 sm:h-9"
-              >
-                Enregistrer
-              </Button>
-              <Button
-                onClick={onCancel}
-                variant="ghost"
-                size="sm"
-                className="text-gray-600 hover:text-gray-800 hover:bg-gray-100 text-xs sm:text-sm h-8 sm:h-9"
-              >
-                Annuler
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-center min-w-0">
-            {icon}
-            <span className="text-xs sm:text-sm truncate flex-1 text-gray-900">
-              {getFormattedDisplayValue() || <span className="text-gray-500 italic">Non renseigné</span>}
-            </span>
-          </div>
-        )}
-      </div>
+              <span className="text-gray-900">{getFormattedDisplayValue()}</span>
+            )
+          ) : (
+            <span className="text-gray-500">Non renseigné</span>
+          )}
+        </div>
+      )}
     </div>
   );
 }, (prevProps, nextProps) => {

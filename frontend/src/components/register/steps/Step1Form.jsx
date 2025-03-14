@@ -25,7 +25,6 @@ const Step1Form = ({ goToNextStep }) => {
 
   // Validation de l'étape 1
   const validateStep1 = () => {
-    console.log("Validation étape 1...");
     setStep1Tried(true);
     
     // Effacer les erreurs du contexte

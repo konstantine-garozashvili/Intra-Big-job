@@ -55,9 +55,9 @@ export const isStudent = (userRole) => {
  * @returns {boolean} - Whether the user is a guest
  */
 export const isGuest = (userRole) => {
-  console.log('isGuest called with:', userRole);
+  // console.log('isGuest called with:', userRole);
   const result = userRole === 'ROLE_GUEST' || userRole === 'GUEST';
-  console.log('isGuest result:', result);
+  // console.log('isGuest result:', result);
   return result;
 };
 
@@ -101,7 +101,7 @@ export const isFieldEditable = (userRole, fieldName) => {
  * @returns {boolean} - Whether the user can edit address information
  */
 export const canEditAddress = (userRole) => {
-  return isAdmin(userRole);
+  return isAdmin(userRole) || userRole === 'ROLE_SUPER_ADMIN' || userRole === 'SUPER_ADMIN' || userRole === 'SUPERADMIN';
 };
 
 /**

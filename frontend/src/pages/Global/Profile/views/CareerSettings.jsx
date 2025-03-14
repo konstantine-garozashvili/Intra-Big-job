@@ -8,7 +8,7 @@ import { diplomaService } from '../services/diplomaService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 // Import des composants liés à la carrière
-import { CVUpload, JobSeekingSettings, DiplomaManager } from '../components/settings';
+import { CVUpload, JobSeekingSettings, DiplomaManager, AvailabilityCalendar } from '../components/settings';
 
 const CareerSettings = () => {
   const queryClient = useQueryClient();
@@ -29,15 +29,13 @@ const CareerSettings = () => {
           throw new Error("Données utilisateur invalides");
         }
         return user;
-    } catch (error) {
-        console.error("Erreur de chargement utilisateur:", error);
+      } catch (error) {
         throw error;
       }
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 2,
     onError: (error) => {
-      console.error("Erreur dans la requête utilisateur:", error);
       setError('Impossible de charger vos informations. Veuillez rafraîchir la page.');
     }
   });
@@ -62,7 +60,6 @@ const CareerSettings = () => {
     staleTime: 5 * 60 * 1000,
     retry: 2,
     onError: () => {
-      console.error("Erreur de chargement du profil étudiant");
       // Ne pas définir d'erreur fatale ici pour permettre l'affichage de la page
     }
   });
@@ -79,7 +76,6 @@ const CareerSettings = () => {
     staleTime: 2 * 60 * 1000,
     retry: 1,
     onError: () => {
-      console.error("Erreur de chargement du CV");
       // Ne pas définir d'erreur fatale ici
     }
   });
@@ -111,7 +107,6 @@ const CareerSettings = () => {
       return [];
     },
     onError: () => {
-      console.error("Erreur de chargement des diplômes");
       // Ne pas définir d'erreur fatale ici
     }
   });
@@ -129,7 +124,6 @@ const CareerSettings = () => {
       toast.success('CV téléversé avec succès');
     },
     onError: (error) => {
-      console.error("Erreur d'upload:", error);
       toast.error('Erreur lors du téléversement du CV');
     }
   });
@@ -143,7 +137,6 @@ const CareerSettings = () => {
       toast.success('CV supprimé avec succès');
     },
     onError: (error) => {
-      console.error("Erreur de suppression:", error);
       toast.error('Erreur lors de la suppression du CV');
     }
   });
@@ -185,7 +178,6 @@ const CareerSettings = () => {
       if (context?.previousProfile) {
         queryClient.setQueryData(['studentProfile'], context.previousProfile);
       }
-      console.error("Erreur de mise à jour:", error);
       toast.error('Erreur lors de la mise à jour du profil');
     },
     onSuccess: (data) => {
@@ -230,7 +222,6 @@ const CareerSettings = () => {
       
       toast.success('Document téléchargé avec succès');
     } catch (error) {
-      console.error("Erreur de téléchargement:", error);
       toast.error('Erreur lors du téléchargement du document');
     }
   };
@@ -248,19 +239,6 @@ const CareerSettings = () => {
     isFetchingUser || 
     (isStudent && isFetchingProfile) ||
     (hasValidRole && (isFetchingCv || isFetchingDiplomas));
-
-  // Réduire les logs de débogage pour éviter la pollution de la console
-  React.useEffect(() => {
-    console.log('CareerSettings - État initial:', {
-      userRole,
-      isStudent,
-      isGuest,
-      hasValidRole,
-      userStatus,
-      isInitialLoading,
-      isRefreshing
-    });
-  }, []);
 
   // Chargement initial - Afficher un squelette
   if (isInitialLoading) {
@@ -341,6 +319,23 @@ const CareerSettings = () => {
             </p>
             
             <JobSeekingSettings 
+              profile={studentProfile}
+              onProfileUpdate={(updatedProfileData) => {
+                updateProfileMutation.mutate(updatedProfileData);
+              }}
+            />
+          </div>
+        )}
+
+        {/* Section Disponibilité - Visible uniquement pour les étudiants */}
+        {isStudent && (
+          <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
+            <h2 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-4">Disponibilité</h2>
+            <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
+              Indiquez votre date de disponibilité pour informer les recruteurs de votre calendrier.
+            </p>
+            
+            <AvailabilityCalendar 
               profile={studentProfile}
               onProfileUpdate={(updatedProfileData) => {
                 updateProfileMutation.mutate(updatedProfileData);

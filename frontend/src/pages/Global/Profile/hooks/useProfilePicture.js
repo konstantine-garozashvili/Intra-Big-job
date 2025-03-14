@@ -23,7 +23,7 @@ export function useProfilePicture() {
       cacheTime: 10 * 60 * 1000, // 10 minutes
       retry: 1, // Limiter les tentatives de nouvelle requête en cas d'échec
       onError: (error) => {
-        console.error('Erreur lors de la récupération de la photo de profil:', error);
+        // console.error('Erreur lors de la récupération de la photo de profil:', error);
         // Ne pas afficher de toast pour éviter de spammer l'utilisateur
       },
       // Désactiver le refetch automatique pendant les opérations
@@ -65,7 +65,7 @@ export function useProfilePicture() {
       },
       onError: (error) => {
         toast.error('Erreur lors de la mise à jour de la photo de profil');
-        console.error('Erreur détaillée:', error);
+        // console.error('Erreur détaillée:', error);
         setIsOperationPending(false);
       }
     }
@@ -107,7 +107,7 @@ export function useProfilePicture() {
           throw new Error(response?.message || 'Erreur lors de la suppression de la photo de profil');
         }
       } catch (error) {
-        console.error('Erreur lors de la suppression de la photo de profil:', error);
+        // console.error('Erreur lors de la suppression de la photo de profil:', error);
         setIsOperationPending(false);
         
         if (options.onError) {

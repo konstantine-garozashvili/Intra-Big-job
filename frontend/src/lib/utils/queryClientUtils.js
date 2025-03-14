@@ -52,6 +52,6 @@ export const clearQueryCache = () => {
     
     return true;
   }
-  console.warn('Impossible de vider le cache: queryClient non défini');
+  // console.warn('Impossible de vider le cache: queryClient non défini');
   return false;
 }; 

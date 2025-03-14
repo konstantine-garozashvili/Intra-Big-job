@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\User;
 use App\Repository\UserRepository;
 use App\Service\RegistrationService;
+use App\Service\ValidationService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -20,15 +21,18 @@ class UserController extends AbstractController
     private $security;
     private $serializer;
     private $userRepository;
+    private $validationService;
     
     public function __construct(
         Security $security,
         SerializerInterface $serializer,
-        UserRepository $userRepository
+        UserRepository $userRepository,
+        ValidationService $validationService
     ) {
         $this->security = $security;
         $this->serializer = $serializer;
         $this->userRepository = $userRepository;
+        $this->validationService = $validationService;
     }
     
     #[Route('/register', name: 'app_register', methods: ['POST'])]

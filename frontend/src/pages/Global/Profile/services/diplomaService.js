@@ -26,23 +26,23 @@ class DiplomaService {
    */
   async getAvailableDiplomas() {
     try {
-      console.log('Calling API for available diplomas');
+      // console.log('Calling API for available diplomas');
       const response = await apiService.get('/api/user-diplomas/available');
-      console.log('API response for available diplomas:', response);
-      console.log('API response type:', typeof response);
-      console.log('Is array?', Array.isArray(response));
+      // console.log('API response for available diplomas:', response);
+      // console.log('API response type:', typeof response);
+      // console.log('Is array?', Array.isArray(response));
       
       if (response && typeof response === 'object') {
-        console.log('Response keys:', Object.keys(response));
+        // console.log('Response keys:', Object.keys(response));
         if (response.data) {
-          console.log('Response.data type:', typeof response.data);
-          console.log('Response.data is array?', Array.isArray(response.data));
+          // console.log('Response.data type:', typeof response.data);
+          // console.log('Response.data is array?', Array.isArray(response.data));
         }
       }
       
       return response.data;
     } catch (error) {
-      console.error('Error in getAvailableDiplomas:', error);
+      // console.error('Error in getAvailableDiplomas:', error);
       throw error;
     }
   }

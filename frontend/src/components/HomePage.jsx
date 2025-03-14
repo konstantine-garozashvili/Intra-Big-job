@@ -25,7 +25,7 @@ const HomePage = () => {
           setDashboardPath(roleDashboardPath);
         }
       } catch (error) {
-        console.error('Erreur lors de la vérification de l\'authentification:', error);
+        // console.error('Erreur lors de la vérification de l\'authentification:', error);
       } finally {
         setIsChecking(false);
       }
