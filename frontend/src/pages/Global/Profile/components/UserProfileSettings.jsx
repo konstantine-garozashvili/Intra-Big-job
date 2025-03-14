@@ -8,7 +8,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { profileService } from '../services/profileService';
 import ProfilePicture from './settings/ProfilePicture';
 import { useProfilePicture } from '../hooks/useProfilePicture';
-import { isValidLinkedInUrl, isValidUrl } from '@/lib/utils/validation';
+import { isValidEmail, isValidPhone, isValidLinkedInUrl, isValidName, isValidUrl } from '@/lib/utils/validation';
 
 // Import our components using the barrel export
 import {
@@ -175,7 +175,7 @@ const UserProfileSettings = () => {
     try {
       const value = editedData.personal[field];
       
-      // Validate birthDate field to ensure user is at least 16 years old
+      // Validation spécifique selon le type de champ
       if (field === 'birthDate' && value) {
         const birthDate = new Date(value);
         const today = new Date();
@@ -184,6 +184,38 @@ const UserProfileSettings = () => {
         
         if (birthDate > minAgeDate) {
           toast.error("Vous devez avoir au moins 16 ans pour vous inscrire.");
+          return;
+        }
+      }
+      
+      // Validation de l'email
+      if (field === 'email' && value) {
+        if (!isValidEmail(value)) {
+          toast.error("Format d'email invalide");
+          return;
+        }
+      }
+      
+      // Validation du numéro de téléphone
+      if (field === 'phoneNumber' && value) {
+        if (!isValidPhone(value)) {
+          toast.error("Format de numéro de téléphone invalide");
+          return;
+        }
+      }
+      
+      // Validation de l'URL LinkedIn
+      if (field === 'linkedinUrl' && value) {
+        if (!isValidLinkedInUrl(value)) {
+          toast.error("Format d'URL LinkedIn invalide. L'URL doit être au format linkedin.com/in/username");
+          return;
+        }
+      }
+      
+      // Validation du nom et prénom
+      if ((field === 'firstName' || field === 'lastName') && value) {
+        if (!isValidName(value)) {
+          toast.error(`Format de ${field === 'firstName' ? 'prénom' : 'nom'} invalide. Utilisez uniquement des lettres, espaces, tirets et apostrophes.`);
           return;
         }
       }

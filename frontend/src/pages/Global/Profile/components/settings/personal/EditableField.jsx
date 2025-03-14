@@ -2,6 +2,7 @@ import React, { memo, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PhoneInput } from '@/components/ui/phone-input';
+import { NameInput } from '@/components/ui/name-input';
 import { Label } from '@/components/ui/label';
 import { Pencil, Loader2 } from 'lucide-react';
 import { Skeleton } from "@/components/ui/skeleton";
