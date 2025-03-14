@@ -204,14 +204,6 @@ const UserProfileSettings = () => {
         }
       }
       
-      // Validation de l'URL LinkedIn
-      if (field === 'linkedinUrl' && value) {
-        if (!isValidLinkedInUrl(value)) {
-          toast.error("Format d'URL LinkedIn invalide. L'URL doit être au format linkedin.com/in/username");
-          return;
-        }
-      }
-      
       // Validation du nom et prénom
       if ((field === 'firstName' || field === 'lastName') && value) {
         if (!isValidName(value)) {
@@ -220,7 +212,7 @@ const UserProfileSettings = () => {
         }
       }
 
-      // Validate LinkedIn URL
+      // Validation des URLs
       if (field === 'linkedinUrl' && value) {
         if (!isValidLinkedInUrl(value)) {
           toast.error("L'URL LinkedIn doit commencer par 'https://www.linkedin.com/in/'");
@@ -228,7 +220,6 @@ const UserProfileSettings = () => {
         }
       }
 
-      // Validate portfolio URL
       if (field === 'portfolioUrl' && value) {
         if (!isValidUrl(value)) {
           toast.error("L'URL du portfolio doit commencer par 'https://'");
@@ -254,16 +245,12 @@ const UserProfileSettings = () => {
         userData.age = calculateAge(value);
       }
       
-      // Show success toast
-      toast.success('Mise à jour réussie');
-      
     } catch (error) {
       // Revert optimistic update on error
       if (field === 'portfolioUrl' && isStudent) {
         updateLocalState('portfolioUrl', profileData?.data?.studentProfile?.portfolioUrl || null);
       } else {
         updateLocalState(field, profileData?.data?.user?.[field] || null);
-        toast.error(`Erreur lors de la mise à jour de ${field}`);
       }
     }
   };
@@ -330,24 +317,20 @@ const UserProfileSettings = () => {
     'userProfileData',
     {
       onMutate: async (variables) => {
-        // Cancel any outgoing refetches
         await queryClient.cancelQueries({ queryKey: ['userProfileData'] });
-        
-        // Snapshot the previous value
         const previousData = queryClient.getQueryData(['userProfileData']);
-        
         return { previousData };
       },
       onSuccess: (data, variables) => {
-        toast.success('Informations mises à jour avec succès');
+        toast.success('Mise à jour réussie');
+        setTimeout(() => {
+          toast.success('Informations mises à jour avec succès');
+        }, 100);
       },
       onError: (err, variables, context) => {
-        // Rollback on error
         queryClient.setQueryData(['userProfileData'], context.previousData);
-        toast.error('Une erreur est survenue lors de la mise à jour du profil');
       },
       onSettled: () => {
-        // Refetch in the background to ensure sync
         queryClient.invalidateQueries({ queryKey: ['userProfileData'] });
       }
     }
@@ -360,24 +343,20 @@ const UserProfileSettings = () => {
     'userProfileData',
     {
       onMutate: async (variables) => {
-        // Cancel any outgoing refetches
         await queryClient.cancelQueries({ queryKey: ['userProfileData'] });
-        
-        // Snapshot the previous value
         const previousData = queryClient.getQueryData(['userProfileData']);
-        
         return { previousData };
       },
       onSuccess: (data, variables) => {
-        toast.success('Informations mises à jour avec succès');
+        toast.success('Mise à jour réussie');
+        setTimeout(() => {
+          toast.success('Informations mises à jour avec succès');
+        }, 100);
       },
       onError: (err, variables, context) => {
-        // Rollback on error
         queryClient.setQueryData(['userProfileData'], context.previousData);
-        toast.error(err.response?.data?.message || "L'URL du portfolio doit commencer par 'https://'");
       },
       onSettled: () => {
-        // Refetch in the background to ensure sync
         queryClient.invalidateQueries({ queryKey: ['userProfileData'] });
       }
     }
