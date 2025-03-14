@@ -51,13 +51,9 @@ export const authService = {
    */
   async login(email, password) {
     try {
-      console.log('=== DÉBUT DU PROCESSUS DE CONNEXION ===');
-      console.log('Email utilisé:', email);
-      
       // Obtenir l'identifiant d'appareil et les infos
       const deviceId = getOrCreateDeviceId();
       const { deviceName, deviceType } = getDeviceInfo();
-      console.log('Informations appareil:', { deviceId, deviceName, deviceType });
       
       // Préparer les données pour la route standard JWT (/login_check)
       const loginData = {
@@ -80,69 +76,52 @@ export const authService = {
       // Vider COMPLÈTEMENT le cache React Query pour éviter les problèmes de données persistantes
       clearQueryCache();
       
-      console.log('Envoi de la requête de connexion...');
       // Utiliser directement la route standard JWT
       const response = await apiService.post('/login_check', loginData);
-      console.log('Réponse de connexion reçue:', { ...response, token: response.token ? 'TOKEN_PRÉSENT' : 'PAS_DE_TOKEN' });
       
       // Stocker le token JWT dans le localStorage
       if (response.token) {
         localStorage.setItem('token', response.token);
-        console.log('Token JWT stocké dans localStorage');
       }
       
       // Stocker le refresh token s'il est présent
       if (response.refresh_token) {
         localStorage.setItem('refresh_token', response.refresh_token);
-        console.log('Refresh token stocké dans localStorage');
       }
       
       // Stocker les informations de l'utilisateur si présentes
       if (response.user) {
-        console.log('Informations utilisateur reçues:', { ...response.user, roles: response.user.roles });
         localStorage.setItem('user', JSON.stringify(response.user));
-        console.log('Informations utilisateur stockées dans localStorage');
         
         // Déclencher un événement de mise à jour des rôles
-        console.log('Déclenchement de l\'événement de mise à jour des rôles');
         window.dispatchEvent(new Event('role-change'));
       } else {
-        console.log('Aucune information utilisateur reçue dans la réponse');
-        
         // Essayer d'extraire les informations du token JWT
         try {
           if (response.token) {
-            console.log('Tentative d\'extraction des informations du token JWT');
             const tokenParts = response.token.split('.');
             if (tokenParts.length === 3) {
               const payload = JSON.parse(atob(tokenParts[1]));
-              console.log('Payload du token JWT:', payload);
               
               if (payload.roles) {
-                console.log('Rôles trouvés dans le token JWT:', payload.roles);
-                
                 // Créer un objet utilisateur minimal avec les informations du token
                 const minimalUser = {
                   username: payload.username,
                   roles: payload.roles
                 };
                 
-                console.log('Création d\'un objet utilisateur minimal:', minimalUser);
                 localStorage.setItem('user', JSON.stringify(minimalUser));
-                console.log('Objet utilisateur minimal stocké dans localStorage');
                 
                 // Déclencher un événement de mise à jour des rôles
-                console.log('Déclenchement de l\'événement de mise à jour des rôles');
                 window.dispatchEvent(new Event('role-change'));
               }
             }
           }
         } catch (tokenError) {
-          console.error('Erreur lors de l\'extraction des informations du token JWT:', tokenError);
+          // Silently handle token parsing errors
         }
       }
       
-      console.log('=== FIN DU PROCESSUS DE CONNEXION ===');
       return response;
     } catch (error) {
       throw error;
@@ -226,7 +205,6 @@ export const authService = {
       
       // Solution radicale: forcer un rafraîchissement complet de la page
       // Cela garantit que toutes les données de l'ancien utilisateur sont effacées
-      console.log('Forçage du rafraîchissement de la page après déconnexion...');
       window.location.href = '/login';
     }
   },
@@ -293,22 +271,16 @@ export const authService = {
    * @returns {Promise<Object>} - Données complètes de l'utilisateur
    */
   async getCurrentUser() {
-    console.log('=== RÉCUPÉRATION DES INFORMATIONS UTILISATEUR ===');
     const token = this.getToken();
     if (!token) {
-      console.log('Aucun token d\'authentification trouvé');
       throw new Error('Aucun token d\'authentification trouvé');
     }
 
     try {
-      console.log('Envoi de la requête pour récupérer les informations utilisateur...');
       const response = await apiService.get('/me', apiService.withAuth());
-      console.log('Réponse reçue:', response);
       
       // Extraire l'objet utilisateur si la réponse contient un objet "user"
       const userData = response.user || response;
-      console.log('Données utilisateur extraites:', userData);
-      console.log('Rôles utilisateur:', userData.roles);
       
       return userData;
     } catch (error) {

@@ -84,40 +84,29 @@ export const useRolePermissions = () => {
      * @returns {string} The path to the appropriate dashboard
      */
     getRoleDashboardPath: () => {
-      console.log('=== DÉTERMINATION DU CHEMIN DU TABLEAU DE BORD ===');
-      console.log('Rôles disponibles:', roles);
-      
       if (hasRole(ROLES.SUPER_ADMIN)) {
-        console.log('Rôle détecté: SUPER_ADMIN');
         return '/superadmin/dashboard';
       }
       if (hasRole(ROLES.ADMIN)) {
-        console.log('Rôle détecté: ADMIN');
         return '/admin/dashboard';
       }
       if (hasRole(ROLES.HR)) {
-        console.log('Rôle détecté: HR');
         return '/hr/dashboard';
       }
       if (hasRole(ROLES.TEACHER)) {
-        console.log('Rôle détecté: TEACHER');
         return '/teacher/dashboard';
       }
       if (hasRole(ROLES.STUDENT)) {
-        console.log('Rôle détecté: STUDENT');
         return '/student/dashboard';
       }
       if (hasRole(ROLES.RECRUITER)) {
-        console.log('Rôle détecté: RECRUITER');
         return '/recruiter/dashboard';
       }
       if (hasRole(ROLES.GUEST)) {
-        console.log('Rôle détecté: GUEST');
         return '/guest/dashboard';
       }
       
       // Default fallback
-      console.log('Aucun rôle spécifique détecté, utilisation du fallback');
       return '/dashboard';
     },
   }), [hasRole]);

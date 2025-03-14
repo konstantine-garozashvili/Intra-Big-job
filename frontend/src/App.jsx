@@ -144,8 +144,6 @@ const PrefetchHandler = () => {
         const sessionId = getSessionId();
         
         if (qc) {
-          console.log('Invalidation des requêtes avec le nouvel identifiant de session:', sessionId);
-          
           // Invalider toutes les requêtes liées à l'utilisateur
           qc.invalidateQueries({ queryKey: ['user-data'] });
           
@@ -155,16 +153,12 @@ const PrefetchHandler = () => {
           qc.invalidateQueries({ queryKey: ['admin-dashboard'] });
           qc.invalidateQueries({ queryKey: ['student-dashboard'] });
           qc.invalidateQueries({ queryKey: ['hr-dashboard'] });
-          
-          console.log('Toutes les requêtes utilisateur ont été invalidées suite à un changement d\'utilisateur');
         }
       });
     };
     
     // Fonction pour gérer le nettoyage complet du cache
     const handleCacheCleared = () => {
-      console.log('Le cache a été complètement vidé, forçage du rafraîchissement des données...');
-      
       // Forcer un rafraîchissement complet des données
       // Cette approche est plus radicale mais garantit que les anciennes données ne persistent pas
       window.location.reload();

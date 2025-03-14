@@ -22,13 +22,9 @@ export const RoleProvider = ({ children }) => {
   
   // Function to fetch user data
   const fetchUser = async () => {
-    console.log('=== RÉCUPÉRATION DES DONNÉES UTILISATEUR DANS ROLECONTEXT ===');
     if (authService.isLoggedIn()) {
-      console.log('Utilisateur connecté, récupération des données...');
       try {
         const userData = await authService.getCurrentUser();
-        console.log('Données utilisateur récupérées:', userData);
-        console.log('Rôles utilisateur:', userData.roles);
         setUser(userData);
         return userData;
       } catch (error) {
@@ -36,7 +32,6 @@ export const RoleProvider = ({ children }) => {
         return null;
       }
     } else {
-      console.log('Utilisateur non connecté, aucune donnée à récupérer');
       setUser(null);
       return null;
     }
@@ -77,23 +72,19 @@ export const RoleProvider = ({ children }) => {
   const { data: userRoles, isLoading } = useQuery({
     queryKey: ['userRoles', user?.id],
     queryFn: async () => {
-      console.log('=== RÉCUPÉRATION DES RÔLES UTILISATEUR ===');
       // If no user, return empty array
       if (!user) {
-        console.log('Aucun utilisateur, retour d\'un tableau vide de rôles');
         return [];
       }
       
       // If user has roles already, use those
       if (user.roles) {
-        console.log('Rôles trouvés dans les données utilisateur:', user.roles);
         return user.roles;
       }
       
       // Otherwise, you could fetch roles from an API endpoint if needed
       // const response = await fetch(`/api/users/${user.id}/roles`);
       // return response.json();
-      console.log('Aucun rôle trouvé, retour d\'un tableau vide');
       return [];
     },
     enabled: !!user,
@@ -101,23 +92,17 @@ export const RoleProvider = ({ children }) => {
 
   // Create memoized value for the context
   const value = useMemo(() => {
-    console.log('=== MISE À JOUR DU CONTEXTE DE RÔLES ===');
-    console.log('Rôles disponibles:', userRoles || []);
-    
     return {
       roles: userRoles || [],
       isLoading,
       // Add role check functions
       hasRole: (role) => {
-        const hasRole = userRoles?.some(r => r === role);
-        console.log(`Vérification du rôle ${role}: ${hasRole}`);
-        return hasRole;
+        return userRoles?.some(r => r === role);
       },
       hasAnyRole: (roles) => roles.some(role => userRoles?.some(r => r === role)),
       hasAllRoles: (roles) => roles.every(role => userRoles?.some(r => r === role)),
       // Add a function to refresh roles
       refreshRoles: () => {
-        console.log('Rafraîchissement des rôles...');
         fetchUser().then(() => {
           queryClient.invalidateQueries(['userRoles']);
         });
