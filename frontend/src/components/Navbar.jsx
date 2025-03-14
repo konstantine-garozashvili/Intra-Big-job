@@ -247,7 +247,7 @@ const Navbar = memo(({ user }) => {
       </Button>
       
       {/* Dropdown menu */}
-      <DropdownMenu onOpenChange={setDropdownOpen}>
+      <DropdownMenu modal={true}>
         <DropdownMenuTrigger asChild>
           <Button 
             variant="outline" 
@@ -256,63 +256,63 @@ const Navbar = memo(({ user }) => {
             <UserRound className={`h-5 w-5 ${dropdownOpen ? 'text-white' : 'text-gray-200'}`} />
           </Button>
         </DropdownMenuTrigger>
-        {dropdownOpen && (
-          <DropdownMenuContent 
-            align="end" 
-            className="w-64 mt-2 p-0 overflow-hidden border border-gray-100 shadow-xl rounded-xl"
-            ref={dropdownMenuRef}
-          >
-            {/* En-tête du dropdown avec avatar et nom */}
-            <div className="bg-gradient-to-r from-[#02284f] to-[#03386b] p-4 text-white">
-              <div className="flex items-center">
-                <div className="bg-white/20 rounded-full p-2.5">
-                  <UserRound className="h-6 w-6" />
-                </div>
-                <div className="ml-3">
-                  <h3 className="font-medium text-sm">
-                    {userData?.firstName && userData?.lastName 
-                      ? `${userData.firstName} ${userData.lastName}`
-                      : userData?.user?.firstName && userData?.user?.lastName
-                        ? `${userData.user.firstName} ${userData.user.lastName}`
-                        : 'Utilisateur'}
-                  </h3>
-                  <p className="text-xs text-gray-300">
-                    {userData?.email || userData?.user?.email || 'utilisateur@example.com'}
-                  </p>
-                </div>
+        <DropdownMenuContent 
+          align="end" 
+          className="w-64 mt-2 p-0 overflow-hidden border border-gray-100 shadow-xl rounded-xl"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          sideOffset={5}
+          ref={dropdownMenuRef}
+        >
+          {/* En-tête du dropdown avec avatar et nom */}
+          <div className="bg-gradient-to-r from-[#02284f] to-[#03386b] p-4 text-white">
+            <div className="flex items-center">
+              <div className="bg-white/20 rounded-full p-2.5">
+                <UserRound className="h-6 w-6" />
+              </div>
+              <div className="ml-3">
+                <h3 className="font-medium text-sm">
+                  {userData?.firstName && userData?.lastName 
+                    ? `${userData.firstName} ${userData.lastName}`
+                    : userData?.user?.firstName && userData?.user?.lastName
+                      ? `${userData.user.firstName} ${userData.user.lastName}`
+                      : 'Utilisateur'}
+                </h3>
+                <p className="text-xs text-gray-300">
+                  {userData?.email || userData?.user?.email || 'utilisateur@example.com'}
+                </p>
               </div>
             </div>
+          </div>
+          
+          {/* Corps du dropdown avec les options */}
+          <div className="py-1 bg-white">
+            <DropdownMenuItem 
+              className="navbar-dropdown-item"
+              onClick={() => navigate('/profile')}
+            >
+              <User className="mr-2 h-4 w-4 text-[#528eb2]" />
+              <span>Mon profil</span>
+            </DropdownMenuItem>
             
-            {/* Corps du dropdown avec les options */}
-            <div className="py-1 bg-white">
-              <DropdownMenuItem 
-                className="navbar-dropdown-item"
-                onClick={() => navigate('/profile')}
-              >
-                <User className="mr-2 h-4 w-4 text-[#528eb2]" />
-                <span>Mon profil</span>
-              </DropdownMenuItem>
-              
-              <DropdownMenuItem 
-                className="navbar-dropdown-item"
-                onClick={() => navigate('/settings/profile')}
-              >
-                <Settings className="mr-2 h-4 w-4 text-[#528eb2]" />
-                <span>Paramètres</span>
-              </DropdownMenuItem>
-              
-              <DropdownMenuSeparator className="my-1 bg-gray-100" />
-              
-              <DropdownMenuItem 
-                className="navbar-dropdown-item danger"
-                onClick={() => setLogoutDialogOpen(true)}
-              >
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Déconnexion</span>
-              </DropdownMenuItem>
-            </div>
-          </DropdownMenuContent>
-        )}
+            <DropdownMenuItem 
+              className="navbar-dropdown-item"
+              onClick={() => navigate('/settings/profile')}
+            >
+              <Settings className="mr-2 h-4 w-4 text-[#528eb2]" />
+              <span>Paramètres</span>
+            </DropdownMenuItem>
+            
+            <DropdownMenuSeparator className="my-1 bg-gray-100" />
+            
+            <DropdownMenuItem 
+              className="navbar-dropdown-item danger"
+              onClick={() => setLogoutDialogOpen(true)}
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Déconnexion</span>
+            </DropdownMenuItem>
+          </div>
+        </DropdownMenuContent>
       </DropdownMenu>
     </div>
   );
