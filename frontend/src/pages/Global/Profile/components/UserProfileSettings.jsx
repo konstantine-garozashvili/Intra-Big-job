@@ -8,8 +8,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { profileService } from '../services/profileService';
 import ProfilePicture from './settings/ProfilePicture';
 import { useProfilePicture } from '../hooks/useProfilePicture';
-import { isValidEmail, isValidPhone, isValidLinkedInUrl, isValidName } from '@/lib/utils/validation';
-import { isValidLinkedInUrl, isValidUrl } from '@/lib/utils/validation';
+import { isValidEmail, isValidPhone, isValidLinkedInUrl, isValidName, isValidUrl } from '@/lib/utils/validation';
 
 // Import our components using the barrel export
 import {
