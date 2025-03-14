@@ -58,9 +58,9 @@ const JobSeekingSettings = memo(({ profile, onProfileUpdate }) => {
         
         // Message de succès approprié
         if (internship && apprenticeship) {
-          toast.success('Recherche de stage et d\'alternance activées');
+          toast.success('Recherche d\'emploi et d\'alternance activées');
         } else if (internship) {
-          toast.success('Recherche de stage ' + (internship ? 'activée' : 'désactivée'));
+          toast.success('Recherche d\'emploi ' + (internship ? 'activée' : 'désactivée'));
         } else if (apprenticeship) {
           toast.success('Recherche d\'alternance ' + (apprenticeship ? 'activée' : 'désactivée'));
         } else {
@@ -77,7 +77,7 @@ const JobSeekingSettings = memo(({ profile, onProfileUpdate }) => {
     }
   }, [loading, onProfileUpdate]);
 
-  // Gérer le changement de statut de recherche de stage
+  // Gérer le changement de statut de recherche d'emploi
   const handleToggleInternship = useCallback(async () => {
     // Inverser l'état actuel sans affecter l'autre option
     await updateBothStatuses(!isSeekingInternship, isSeekingApprenticeship);
@@ -92,12 +92,12 @@ const JobSeekingSettings = memo(({ profile, onProfileUpdate }) => {
   return (
     <div className="space-y-4 sm:space-y-6">
       <p className="text-sm sm:text-base text-gray-600">
-        Activez ces options pour indiquer que vous êtes à la recherche d'un stage et/ou d'une alternance.
+        Activez ces options pour indiquer que vous êtes à la recherche d'un emploi et/ou d'une alternance.
         <strong className="block mt-2 sm:mt-3">Vous pouvez activer les deux options simultanément si vous êtes ouvert aux deux types d'opportunités.</strong>
       </p>
       
       <div className="space-y-3 sm:space-y-4">
-        {/* Option de recherche de stage */}
+        {/* Option de recherche d'emploi */}
         <div className={`flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 rounded-lg ${isSeekingInternship ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50'}`}>
           <div className="flex items-start sm:items-center space-x-3 mb-3 sm:mb-0">
             <div className={`p-2 rounded-full ${isSeekingInternship ? 'bg-blue-100' : 'bg-gray-100'}`}>
@@ -105,10 +105,10 @@ const JobSeekingSettings = memo(({ profile, onProfileUpdate }) => {
             </div>
             <div>
               <Label htmlFor="seeking-internship" className="text-sm sm:text-base font-medium">
-                Recherche de stage
+                Recherche d'emploi
               </Label>
               <p className="text-xs sm:text-sm text-gray-500 mt-1">
-                Activez cette option si vous recherchez un stage
+                Activez cette option si vous recherchez un emploi
               </p>
             </div>
           </div>

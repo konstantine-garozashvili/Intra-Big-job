@@ -57,7 +57,9 @@ const CareerSettings = () => {
     queryKey: ['studentProfile'],
     queryFn: studentProfileService.getMyProfile,
     enabled: isStudent && userStatus === 'success',
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000, // Réduit à 30 secondes au lieu de 5 minutes
+    refetchOnMount: true, // Toujours refetch quand le composant est monté
+    refetchOnWindowFocus: true, // Refetch quand la fenêtre reprend le focus
     retry: 2,
     onError: () => {
       // Ne pas définir d'erreur fatale ici pour permettre l'affichage de la page
@@ -189,10 +191,11 @@ const CareerSettings = () => {
         return { ...oldData, ...data };
       });
       
-      // Rafraîchir silencieusement les données en arrière-plan
+      // Rafraîchir immédiatement les données pour tous les composants
       queryClient.invalidateQueries({ 
         queryKey: ['studentProfile'],
-        refetchActive: false // Ne pas déclencher de re-render immédiat
+        refetchActive: true, // Forcer le refetch immédiat
+        refetchInactive: true // Refetch même pour les requêtes inactives
       });
       
     }

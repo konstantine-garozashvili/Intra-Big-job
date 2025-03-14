@@ -3,6 +3,7 @@ import profilService from "../lib/services/profilService";
 import { authService } from "../lib/services/authService";
 import { studentProfileService } from "../lib/services";
 import { useNavigate } from "react-router-dom";
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Card,
   CardContent,
@@ -87,8 +88,18 @@ const Profil = () => {
   const [profilData, setProfilData] = useState(null);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [studentData, setStudentData] = useState(null);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  // Utiliser React Query pour le profil étudiant
+  const { data: studentData, refetch: refetchStudentProfile } = useQuery({
+    queryKey: ['studentProfile'],
+    queryFn: studentProfileService.getMyProfile,
+    enabled: false, // Désactivé par défaut, activé dans useEffect
+    staleTime: 30 * 1000, // 30 secondes
+    refetchOnMount: true,
+    refetchOnWindowFocus: true
+  });
 
   // Fonction de déconnexion
   const handleLogout = async () => {
@@ -115,15 +126,15 @@ const Profil = () => {
         const allData = await profilService.getAllProfilData();
         setProfilData(allData);
 
-        // Si l'utilisateur est un étudiant, charger les données du profil étudiant
+        // Si l'utilisateur est un étudiant, activer la requête React Query
         const user = await authService.getCurrentUser();
         if (user?.roles?.includes('ROLE_STUDENT')) {
-          try {
-            const studentProfile = await studentProfileService.getMyProfile();
-            setStudentData(studentProfile);
-          } catch (studentError) {
-            console.error("Erreur lors du chargement du profil étudiant:", studentError);
-          }
+          // Activer la requête en mettant à jour la configuration
+          queryClient.setQueryDefaults(['studentProfile'], {
+            enabled: true,
+          });
+          // Déclencher un rafraîchissement immédiat
+          refetchStudentProfile();
         }
 
         setLoading(false);
@@ -138,7 +149,7 @@ const Profil = () => {
     };
 
     fetchProfilData();
-  }, []);
+  }, [refetchStudentProfile, queryClient]);
 
   // Fonction de rendu conditionnel pour le contenu
   const renderContent = () => {
@@ -539,14 +550,14 @@ const Profil = () => {
                       <div className="flex items-center justify-between">
                         <h3 className="font-medium text-lg text-gray-700 dark:text-gray-200 flex items-center">
                           <Briefcase className="h-4 w-4 mr-2 text-blue-500" />
-                          Recherche de stage
+                          Recherche d'emploi
                         </h3>
                         <div className={`rounded-full w-3 h-3 ${studentData.isSeekingInternship ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                       </div>
                       <p className="mt-2 text-gray-600 dark:text-gray-300">
                         {studentData.isSeekingInternship 
-                          ? "Vous êtes actuellement à la recherche d'un stage." 
-                          : "Vous n'êtes pas à la recherche d'un stage pour le moment."}
+                          ? "Vous êtes actuellement à la recherche d'un emploi." 
+                          : "Vous n'êtes pas à la recherche d'un emploi pour le moment."}
                       </p>
                       {studentData.availableFromDate && studentData.isSeekingInternship && (
                         <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
