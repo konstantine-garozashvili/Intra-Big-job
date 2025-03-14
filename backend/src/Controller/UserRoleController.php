@@ -7,7 +7,6 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route('/api/user-roles')]
@@ -24,7 +23,7 @@ class UserRoleController extends AbstractController
      * Récupère tous les utilisateurs ayant un rôle spécifique
      */
     #[Route('/users/{roleName}', name: 'api_users_by_role', methods: ['GET'])]
-    #[IsGranted('ROLE_RECRUITER')]
+    #[IsGranted('ROLE_RECRUITER|ROLE_ADMIN|ROLE_SUPERADMIN')]
     public function getUsersByRole(string $roleName): JsonResponse
     {
         try {
@@ -51,7 +50,7 @@ class UserRoleController extends AbstractController
      * Change le rôle d'un utilisateur
      */
     #[Route('/change-role', name: 'api_change_user_role', methods: ['POST'])]
-    #[IsGranted('ROLE_RECRUITER')]
+    #[IsGranted('ROLE_RECRUITER|ROLE_ADMIN|ROLE_SUPERADMIN')]
     public function changeUserRole(Request $request): JsonResponse
     {
         try {
@@ -92,7 +91,7 @@ class UserRoleController extends AbstractController
      * Récupère tous les rôles disponibles
      */
     #[Route('/roles', name: 'api_all_roles', methods: ['GET'])]
-    #[IsGranted('ROLE_RECRUITER')]
+    #[IsGranted('ROLE_RECRUITER|ROLE_ADMIN|ROLE_SUPERADMIN')]
     public function getAllRoles(): JsonResponse
     {
         try {
