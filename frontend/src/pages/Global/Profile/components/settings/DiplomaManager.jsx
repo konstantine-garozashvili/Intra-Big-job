@@ -43,7 +43,6 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
     'availableDiplomas',
     {
       onError: (error) => {
-        console.error('Error fetching diplomas:', error);
         toast.error('Erreur lors du chargement des diplômes');
       }
     }
@@ -51,34 +50,23 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
 
   // Ensure availableDiplomas is always an array
   const availableDiplomas = React.useMemo(() => {
-    console.log('Processing availableDiplomasResponse:', availableDiplomasResponse);
-    
     if (!availableDiplomasResponse) {
-      console.log('No response data, returning empty array');
       return [];
     }
     
     // Check if response has a success property and data array
     if (availableDiplomasResponse.success && Array.isArray(availableDiplomasResponse.data)) {
-      console.log('Found success.data array structure:', availableDiplomasResponse.data);
       return availableDiplomasResponse.data;
     }
     
     // If response is already an array, use it directly
     if (Array.isArray(availableDiplomasResponse)) {
-      console.log('Response is already an array:', availableDiplomasResponse);
       return availableDiplomasResponse;
     }
     
     // Fallback to empty array if we can't determine the structure
-    console.warn('Unexpected availableDiplomas format:', availableDiplomasResponse);
     return [];
   }, [availableDiplomasResponse]);
-
-  // Log the final availableDiplomas for debugging
-  React.useEffect(() => {
-    console.log('Final availableDiplomas:', availableDiplomas);
-  }, [availableDiplomas]);
 
   // Setup mutations for adding and deleting diplomas
   const addDiplomaMutation = useApiMutation(
@@ -112,8 +100,6 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
         setIsAdding(false);
       },
       onError: (error) => {
-        console.error('Error adding diploma:', error);
-        
         // Check for specific error messages from the API
         if (error.response) {
           // Handle 400 Bad Request errors which might indicate validation issues
@@ -159,7 +145,6 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
         setDiplomaToDelete(null);
       },
       onError: (error) => {
-        console.error('Error deleting diploma:', error);
         toast.error('Erreur lors de la suppression du diplôme');
       }
     }

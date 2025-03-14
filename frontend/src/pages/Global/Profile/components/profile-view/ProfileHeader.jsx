@@ -181,7 +181,7 @@ const ProfileHeader = ({ userData, isPublicProfile = false, profilePictureUrl })
               <AnimatePresence>
                 {userData.user?.roles?.map((role, index) => (
                   <motion.div
-                    key={role.name}
+                    key={`${role.name}-${index}`}
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.8 }}
@@ -198,21 +198,35 @@ const ProfileHeader = ({ userData, isPublicProfile = false, profilePictureUrl })
                     </Badge>
                   </motion.div>
                 )) || (
-                  <Badge className={`bg-gradient-to-r ${getRoleBadgeColor("USER")} text-white px-2.5 py-0.5 text-xs rounded-full`}>
-                    {translateRoleName("USER")}
-                  </Badge>
+                  <motion.div key="default-user">
+                    <Badge className={`bg-gradient-to-r ${getRoleBadgeColor("USER")} text-white px-2.5 py-0.5 text-xs rounded-full`}>
+                      {translateRoleName("USER")}
+                    </Badge>
+                  </motion.div>
                 )}
 
                 {userData.studentProfile?.isSeekingInternship && (
-                  <Badge className="bg-gradient-to-r from-amber-500/90 to-amber-700/90 text-white px-2.5 py-0.5 text-xs rounded-full">
-                    Recherche Stage
-                  </Badge>
+                  <motion.div key="seeking-internship"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                  >
+                    <Badge className="bg-gradient-to-r from-amber-500/90 to-amber-700/90 text-white px-2.5 py-0.5 text-xs rounded-full">
+                      Recherche Stage
+                    </Badge>
+                  </motion.div>
                 )}
                 
                 {userData.studentProfile?.isSeekingApprenticeship && (
-                  <Badge className="bg-gradient-to-r from-green-500/90 to-green-700/90 text-white px-2.5 py-0.5 text-xs rounded-full">
-                    Recherche Alternance
-                  </Badge>
+                  <motion.div key="seeking-apprenticeship"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                  >
+                    <Badge className="bg-gradient-to-r from-green-500/90 to-green-700/90 text-white px-2.5 py-0.5 text-xs rounded-full">
+                      Recherche Alternance
+                    </Badge>
+                  </motion.div>
                 )}
               </AnimatePresence>
             </motion.div>

@@ -129,18 +129,14 @@ const MenuBurger = memo(() => {
       if (authService.isLoggedIn()) {
         const user = await authService.getCurrentUser();
         if (user) {
-          console.log('MenuBurger: User data updated', user);
           setUserData(user);
         } else {
-          console.log('MenuBurger: No user data found');
           setUserData(null);
         }
       } else {
-        console.log('MenuBurger: User not logged in');
         setUserData(null);
       }
     } catch (error) {
-      console.error('MenuBurger: Error checking authentication', error);
       setUserData(null);
     }
   }, []);
@@ -177,19 +173,16 @@ const MenuBurger = memo(() => {
   
     // Gestionnaires d'événements pour les changements d'authentification
     const handleLoginEvent = async () => {
-      console.log('MenuBurger: Login event detected');
       await checkAuthentication();
       refreshRoles(); // Rafraîchir les rôles après connexion
     };
   
     const handleLogoutEvent = async () => {
-      console.log('MenuBurger: Logout event detected');
       setUserData(null);
       // Les rôles seront automatiquement mis à jour par le contexte
     };
   
     const handleRoleChangeEvent = async () => {
-      console.log('MenuBurger: Role change event detected');
       await checkAuthentication();
       refreshRoles(); // Rafraîchir les rôles après changement de rôle
     };
@@ -348,7 +341,7 @@ const MenuBurger = memo(() => {
   ];
 
   return (
-    <div className="relative" key={roles.join('-')}>
+    <div className="relative">
       {/* Injection des styles personnalisés */}
       <style>{customStyles}</style>
       
@@ -373,10 +366,9 @@ const MenuBurger = memo(() => {
               type: "spring", 
               stiffness: 300, 
               damping: 30,
-              opacity: { duration: 0 } // Désactive l'animation de l'opacité
+              opacity: { duration: 0 }
             }}
             className="sidebar-menu"
-            key={`menu-${roles.join('-')}`}
           >
             <div className="flex flex-col h-full">
               {roles.length > 0 && (
@@ -425,7 +417,7 @@ const MenuBurger = memo(() => {
               <div className="scrollable-div overflow-y-auto flex-grow">
                 <ul className="py-2">
                   {hasAnyRole([ROLES.STUDENT, ROLES.TEACHER, ROLES.ADMIN, ROLES.SUPER_ADMIN]) && (
-                    <li className="menu-item">
+                    <li key="dashboard" className="menu-item">
                       <Link to="/dashboard" className="flex items-center px-4 py-2.5 w-full">
                         <LayoutDashboard className="w-5 h-5 mr-2 text-[#528eb2]" />
                         <span>Tableau de bord</span>
@@ -434,7 +426,7 @@ const MenuBurger = memo(() => {
                   )}
                   
                   {hasAnyRole([ROLES.STUDENT, ROLES.TEACHER, ROLES.ADMIN, ROLES.SUPER_ADMIN]) && (
-                    <li className="menu-item">
+                    <li key="messagerie" className="menu-item">
                       <Link to="/messagerie" className="flex items-center px-4 py-2.5 w-full">
                         <MessageCircle className="w-5 h-5 mr-2 text-[#528eb2]" />
                         <span>Ma Messagerie</span>
@@ -444,13 +436,13 @@ const MenuBurger = memo(() => {
 
                   {hasAnyRole([ROLES.STUDENT, ROLES.TEACHER]) && (
                     <>
-                      <li className="menu-item">
+                      <li key="cours" className="menu-item">
                         <Link to="/cours" className="flex items-center px-4 py-2.5 w-full">
                           <Clipboard className="w-5 h-5 mr-2 text-[#528eb2]" />
                           <span>Mes Cours</span>
                         </Link>
                       </li>
-                      <li className="menu-item">
+                      <li key="projet" className="menu-item">
                         <Link to="/projet" className="flex items-center px-4 py-2.5 w-full">
                           <Briefcase className="w-5 h-5 mr-2 text-[#528eb2]" />
                           <span>Mes Projets</span>
@@ -460,7 +452,7 @@ const MenuBurger = memo(() => {
                   )}
                   
                   {hasRole(ROLES.SUPER_ADMIN) && (
-                    <li className="menu-item">
+                    <li key="centres_formations" className="menu-item">
                       <Link to="/centres_formations" className="flex items-center px-4 py-2.5 w-full">
                         <School className="w-5 h-5 mr-2 text-[#528eb2]" />
                         <span>Centres de formations</span>
@@ -469,7 +461,7 @@ const MenuBurger = memo(() => {
                   )}
                   
                   {hasAnyRole([ROLES.HR, ROLES.RECRUITER]) && (
-                    <li className="menu-item">
+                    <li key="candidatures" className="menu-item">
                       <Link to="/candidatures" className="flex items-center px-4 py-2.5 w-full">
                         <Share2 className="w-5 h-5 mr-2 text-[#528eb2]" />
                         <span>Candidatures</span>
@@ -477,7 +469,7 @@ const MenuBurger = memo(() => {
                     </li>
                   )}
                   
-                  <li className="menu-item">
+                  <li key="formations" className="menu-item">
                     <Link to="/formations" className="flex items-center px-4 py-2.5 w-full">
                       <BookOpen className="w-5 h-5 mr-2 text-[#528eb2]" />
                       <span>Formations</span>
@@ -486,7 +478,7 @@ const MenuBurger = memo(() => {
                   
                   {menuItems.map(({ key, icon, label, roles: itemRoles, links }) =>
                     (!itemRoles || hasAnyRole(itemRoles)) ? (
-                      <React.Fragment key={key}>
+                      <React.Fragment key={`menu-${key}`}>
                         <li
                           className={`menu-item ${openSubMenus[key] ? 'active' : ''}`}
                           onClick={() => toggleSubMenu(key)}
@@ -516,7 +508,7 @@ const MenuBurger = memo(() => {
                               {links
                                 .filter(link => !link.roles || hasAnyRole(link.roles))
                                 .map((link, index) => (
-                                  <li key={index} className="submenu-item">
+                                  <li key={`${key}-${index}`} className="submenu-item">
                                     <Link to={link.to} className="flex items-center px-4 py-2 w-full text-sm text-gray-300 hover:text-white">
                                       <div className="w-1 h-1 bg-[#528eb2] rounded-full mr-2"></div>
                                       {link.name}
@@ -531,7 +523,7 @@ const MenuBurger = memo(() => {
                   )}
                   
                   {hasRole(ROLES.STUDENT) && (
-                    <li className="menu-item">
+                    <li key="justification-absence" className="menu-item">
                       <Link to="/justification-absence" className="flex items-center px-4 py-2.5 w-full">
                         <Clipboard className="w-5 h-5 mr-2 text-[#528eb2]" />
                         <span>Justifier une absence</span>
@@ -540,7 +532,7 @@ const MenuBurger = memo(() => {
                   )}
 
                   {hasAnyRole([ROLES.STUDENT, ROLES.TEACHER, ROLES.ADMIN, ROLES.SUPER_ADMIN]) && (
-                    <li className="menu-item">
+                    <li key="cagnottes" className="menu-item">
                       <Link to="/cagnottes" className="flex items-center px-4 py-2.5 w-full">
                         <PiggyBank className="w-5 h-5 mr-2 text-[#528eb2]" />
                         <span>Cagnottes</span>
@@ -549,7 +541,7 @@ const MenuBurger = memo(() => {
                   )}
                   
                   {hasAnyRole([ROLES.STUDENT, ROLES.TEACHER, ROLES.ADMIN, ROLES.SUPER_ADMIN]) && (
-                    <li className="menu-item">
+                    <li key="sponsors" className="menu-item">
                       <Link to="/sponsors" className="flex items-center px-4 py-2.5 w-full">
                         <Handshake className="w-5 h-5 mr-2 text-[#528eb2]" />
                         <span>Sponsors</span>
@@ -558,7 +550,7 @@ const MenuBurger = memo(() => {
                   )}
                   
                   {hasAnyRole([ROLES.STUDENT, ROLES.TEACHER, ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.RECRUITER]) && (
-                    <li className="menu-item">
+                    <li key="trombinoscope" className="menu-item">
                       <Link to="/Trombinoscope" className="flex items-center px-4 py-2.5 w-full">
                         <Camera className="w-5 h-5 mr-2 text-[#528eb2]" />
                         <span>Trombinoscope</span>

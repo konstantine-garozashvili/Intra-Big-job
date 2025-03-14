@@ -115,36 +115,26 @@ const Navbar = memo(({ user }) => {
         try {
           // Si un utilisateur est passé en props, l'utiliser
           if (user) {
-            console.log('Using user from props:', user);
             setUserData(user);
             
             // Déclencher un événement de changement de rôle si l'état d'authentification a changé
             if (!wasAuthenticated) {
-              console.log('Dispatching role-change event from Navbar (login)');
               window.dispatchEvent(new Event('role-change'));
             }
           } else {
             // Sinon, essayer de récupérer les données depuis l'API
             const userData = await authService.getCurrentUser();
-            console.log('User data from API:', userData);
             setUserData(userData);
             
             // Déclencher un événement de changement de rôle si l'état d'authentification a changé
             if (!wasAuthenticated) {
-              console.log('Dispatching role-change event from Navbar (login)');
               window.dispatchEvent(new Event('role-change'));
             }
           }
         } catch (userError) {
-          console.error(
-            "Erreur lors de la récupération des données utilisateur:",
-            userError
-          );
-          
           // Fallback: essayer de récupérer les données du profil
           try {
             const profileData = await profileService.getAllProfileData();
-            console.log('Profile data from API:', profileData);
             
             if (profileData?.user) {
               setUserData(profileData.user);
@@ -156,14 +146,10 @@ const Navbar = memo(({ user }) => {
             
             // Déclencher un événement de changement de rôle si l'état d'authentification a changé
             if (!wasAuthenticated) {
-              console.log('Dispatching role-change event from Navbar (login)');
               window.dispatchEvent(new Event('role-change'));
             }
           } catch (profileError) {
-            console.error(
-              "Erreur lors de la récupération des données du profil:",
-              profileError
-            );
+            // Gestion silencieuse de l'erreur
           }
         }
       } else {
@@ -171,15 +157,10 @@ const Navbar = memo(({ user }) => {
         
         // Déclencher un événement de changement de rôle si l'état d'authentification a changé
         if (wasAuthenticated) {
-          console.log('Dispatching role-change event from Navbar (logout)');
           window.dispatchEvent(new Event('role-change'));
         }
       }
     } catch (error) {
-      console.error(
-        "Erreur lors de la vérification du statut d'authentification:",
-        error
-      );
       setIsAuthenticated(false);
       setUserData(null);
     }
@@ -226,7 +207,6 @@ const Navbar = memo(({ user }) => {
       setIsLoggingOut(false);
       navigate("/login");
     } catch (error) {
-      console.error("Erreur lors de la déconnexion:", error);
       setIsLoggingOut(false);
     }
   };

@@ -10,7 +10,7 @@ use Doctrine\Migrations\AbstractMigration;
 /**
  * Auto-generated Migration: Please modify to your needs!
  */
-final class Version20250313172357 extends AbstractMigration
+final class Version20250314104025 extends AbstractMigration
 {
     public function getDescription(): string
     {
@@ -25,7 +25,6 @@ final class Version20250313172357 extends AbstractMigration
         $this->addSql('ALTER TABLE event_participant ADD CONSTRAINT FK_7C16B89171F7E88B FOREIGN KEY (event_id) REFERENCES schedule_event (id)');
         $this->addSql('ALTER TABLE event_participant ADD CONSTRAINT FK_7C16B891A76ED395 FOREIGN KEY (user_id) REFERENCES `user` (id) ON DELETE CASCADE');
         $this->addSql('ALTER TABLE schedule_event ADD CONSTRAINT FK_C7F7CAFBDE12AB56 FOREIGN KEY (created_by) REFERENCES `user` (id)');
-        $this->addSql('ALTER TABLE user CHANGE phone_number phone_number VARCHAR(20) NOT NULL');
     }
 
     public function down(Schema $schema): void
@@ -36,6 +35,5 @@ final class Version20250313172357 extends AbstractMigration
         $this->addSql('ALTER TABLE schedule_event DROP FOREIGN KEY FK_C7F7CAFBDE12AB56');
         $this->addSql('DROP TABLE event_participant');
         $this->addSql('DROP TABLE schedule_event');
-        $this->addSql('ALTER TABLE `user` CHANGE phone_number phone_number VARCHAR(20) DEFAULT NULL');
     }
 }
