@@ -156,7 +156,7 @@ export const SearchBar = () => {
               onMouseEnter={() => setActiveSuggestion(index)}
             >
               <div style={styles.suggestionName}>
-                {user.firstName} {user.lastName}
+                {user.firstName} {user.lastName}          - {user.role}
               </div>
             </div>
           ))}
