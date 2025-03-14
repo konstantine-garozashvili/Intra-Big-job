@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom"
 import { authService } from "@/lib/services/authService"
 import { toast } from "sonner"
 import { useRolePermissions } from "@/features/roles/useRolePermissions"
+import { useRoles } from "@/features/roles/roleContext"
 
 export function AuthForm() {
   const [email, setEmail] = React.useState("")
@@ -14,6 +15,7 @@ export function AuthForm() {
   const [errors, setErrors] = React.useState({})
   const navigate = useNavigate()
   const permissions = useRolePermissions()
+  const { refreshRoles } = useRoles()
 
   const quickLogin = (role) => {
     const credentials = {
@@ -87,7 +89,7 @@ export function AuthForm() {
         console.log('Rôles utilisateur:', userData.roles);
         
         // Forcer le rafraîchissement des rôles
-        permissions.refreshRoles();
+        refreshRoles();
         
         // Attendre un court instant pour que les rôles soient mis à jour dans le contexte
         setTimeout(() => {

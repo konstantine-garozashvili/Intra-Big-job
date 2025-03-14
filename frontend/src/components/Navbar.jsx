@@ -26,11 +26,11 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from './ui/dialog';
-import { motion, AnimatePresence } from 'framer-motion';
-import { MenuBurger } from './MenuBurger';
-import { SearchBar } from './SearchBar';
-import { useRolePermissions } from '../features/roles/useRolePermissions';
+} from "./ui/dialog";
+import { motion, AnimatePresence } from "framer-motion";
+import { MenuBurger } from "./MenuBurger";
+import { SearchBar } from "./SearchBar";
+import { useRolePermissions } from "../features/roles/useRolePermissions";
 
 // Style personnalisé pour le menu dropdown et le bouton burger
 const customStyles = `
@@ -132,54 +132,61 @@ const customStyles = `
 // Composant pour les boutons d'authentification
 const AuthButtons = () => (
   <>
-    <Link to="/login" className="px-4 py-2 text-gray-200 transition-colors rounded-md hover:text-white">
+    <Link
+      to="/login"
+      className="px-4 py-2 text-gray-200 transition-colors rounded-md hover:text-white"
+    >
       Connexion
     </Link>
-    <Link to="/register" className="ml-2 px-4 py-2 bg-[#528eb2] rounded-md text-white font-medium hover:bg-[#528eb2]/90 transition-all transform hover:scale-105">
+    <Link
+      to="/register"
+      className="ml-2 px-4 py-2 bg-[#528eb2] rounded-md text-white font-medium hover:bg-[#528eb2]/90 transition-all transform hover:scale-105"
+    >
       Inscription
     </Link>
   </>
 );
 
 // Composant pour le menu utilisateur
-const UserMenu = ({ onLogout, userData }) => {
+const UserMenu = ({ onLogout, userData, setLogoutDialogOpen }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const navigate = useNavigate();
-  
+  const dropdownMenuRef = useRef(null);
+
   // Style personnalisé pour le menu dropdown
   const dropdownMenuStyles = {
     enter: {
       opacity: 0,
       y: -10,
       scale: 0.95,
-      transition: { duration: 0.2, ease: "easeOut" }
+      transition: { duration: 0.2, ease: "easeOut" },
     },
     visible: {
       opacity: 1,
       y: 0,
       scale: 1,
-      transition: { duration: 0.2, ease: "easeOut" }
+      transition: { duration: 0.2, ease: "easeOut" },
     },
     exit: {
       opacity: 0,
       y: -10,
       scale: 0.95,
-      transition: { duration: 0.1, ease: "easeIn" }
-    }
+      transition: { duration: 0.1, ease: "easeIn" },
+    },
   };
-  
+
   return (
     <div className="flex items-center">
       {/* Notification icon (placeholder) */}
-      <Button 
-        variant="ghost" 
+      <Button
+        variant="ghost"
         className="rounded-full w-10 h-10 p-0 bg-transparent text-gray-200 hover:bg-[#02284f]/80 hover:text-white mr-2"
       >
         <Bell className="h-5 w-5" />
       </Button>
-      
+
       {/* Dropdown menu */}
-      <DropdownMenu onOpenChange={setDropdownOpen}>
+      <DropdownMenu modal={true}>
         <DropdownMenuTrigger asChild>
           <Button 
             variant="outline" 
@@ -188,64 +195,63 @@ const UserMenu = ({ onLogout, userData }) => {
             <UserRound className={`h-5 w-5 ${dropdownOpen ? 'text-white' : 'text-gray-200'}`} />
           </Button>
         </DropdownMenuTrigger>
-        <AnimatePresence>
-          {dropdownOpen && (
-            <DropdownMenuContent 
-              align="end" 
-              className="w-64 mt-2 p-0 overflow-hidden border border-gray-100 shadow-xl rounded-xl"
-              asChild
-              forceMount
+        <DropdownMenuContent 
+          align="end" 
+          className="w-64 mt-2 p-0 overflow-hidden border border-gray-100 shadow-xl rounded-xl"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          sideOffset={5}
+          ref={dropdownMenuRef}
+        >
+          {/* En-tête du dropdown avec avatar et nom */}
+          <div className="bg-gradient-to-r from-[#02284f] to-[#03386b] p-4 text-white">
+            <div className="flex items-center">
+              <div className="bg-white/20 rounded-full p-2.5">
+                <UserRound className="h-6 w-6" />
+              </div>
+              <div className="ml-3">
+                <h3 className="font-medium text-sm">
+                  {userData?.firstName && userData?.lastName 
+                    ? `${userData.firstName} ${userData.lastName}`
+                    : userData?.user?.firstName && userData?.user?.lastName
+                      ? `${userData.user.firstName} ${userData.user.lastName}`
+                      : 'Utilisateur'}
+                </h3>
+                <p className="text-xs text-gray-300">
+                  {userData?.email || userData?.user?.email || 'utilisateur@example.com'}
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          {/* Corps du dropdown avec les options */}
+          <div className="py-1 bg-white">
+            <DropdownMenuItem 
+              className="navbar-dropdown-item"
+              onClick={() => navigate('/profile')}
             >
-              <motion.div
-                initial="enter"
-                animate="visible"
-                exit="exit"
-                variants={dropdownMenuStyles}
-              >
-                {/* En-tête du dropdown avec avatar et nom */}
-                <div className="bg-gradient-to-r from-[#02284f] to-[#03386b] p-4 text-white">
-                  <div className="flex items-center">
-                    <div className="bg-white/20 rounded-full p-2.5">
-                      <UserRound className="h-6 w-6" />
-                    </div>
-                    <div className="ml-3">
-                      <h3 className="font-medium text-sm">{userData ? `${userData.firstName} ${userData.lastName}` : 'Utilisateur'}</h3>
-                      <p className="text-xs text-gray-300">{userData ? userData.email : 'utilisateur@example.com'}</p>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Corps du dropdown avec les options */}
-                <div className="py-1 bg-white">
-                  <DropdownMenuItem 
-                    className="flex items-center p-3" 
-                    onClick={() => navigate('/profil')}
-                  >
-                    <User className="mr-2 h-4 w-4 text-[#528eb2]" />
-                    <span>Mon profil</span>
-                  </DropdownMenuItem>
-                  
-                  <DropdownMenuItem 
-                    className="flex items-center p-3"
-                  >
-                    <Settings className="mr-2 h-4 w-4 text-[#528eb2]" />
-                    <span>Paramètres</span>
-                  </DropdownMenuItem>
-                  
-                  <DropdownMenuSeparator className="my-1 bg-gray-100" />
-                  
-                  <DropdownMenuItem 
-                    className="flex items-center p-3 text-red-600"
-                    onClick={onLogout}
-                  >
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Déconnexion</span>
-                  </DropdownMenuItem>
-                </div>
-              </motion.div>
-            </DropdownMenuContent>
-          )}
-        </AnimatePresence>
+              <User className="mr-2 h-4 w-4 text-[#528eb2]" />
+              <span>Mon profil</span>
+            </DropdownMenuItem>
+            
+            <DropdownMenuItem 
+              className="navbar-dropdown-item"
+              onClick={() => navigate('/settings/profile')}
+            >
+              <Settings className="mr-2 h-4 w-4 text-[#528eb2]" />
+              <span>Paramètres</span>
+            </DropdownMenuItem>
+            
+            <DropdownMenuSeparator className="my-1 bg-gray-100" />
+            
+            <DropdownMenuItem 
+              className="navbar-dropdown-item danger"
+              onClick={() => setLogoutDialogOpen(true)}
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Déconnexion</span>
+            </DropdownMenuItem>
+          </div>
+        </DropdownMenuContent>
       </DropdownMenu>
     </div>
   );
@@ -260,7 +266,6 @@ const Navbar = memo(({ user }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const permissions = useRolePermissions();
-  const dropdownMenuRef = useRef(null);
 
   // Vérifier l'état d'authentification
   const checkAuthStatus = async () => {
@@ -275,26 +280,26 @@ const Navbar = memo(({ user }) => {
           // Si un utilisateur est passé en props, l'utiliser
           if (user) {
             setUserData(user);
-            
+
             // Déclencher un événement de changement de rôle si l'état d'authentification a changé
             if (!wasAuthenticated) {
-              window.dispatchEvent(new Event('role-change'));
+              window.dispatchEvent(new Event("role-change"));
             }
           } else {
             // Sinon, essayer de récupérer les données depuis l'API
             const userData = await authService.getCurrentUser();
             setUserData(userData);
-            
+
             // Déclencher un événement de changement de rôle si l'état d'authentification a changé
             if (!wasAuthenticated) {
-              window.dispatchEvent(new Event('role-change'));
+              window.dispatchEvent(new Event("role-change"));
             }
           }
         } catch (userError) {
           // Fallback: essayer de récupérer les données du profil
           try {
             const profileData = await profileService.getAllProfileData();
-            
+
             if (profileData?.user) {
               setUserData(profileData.user);
             } else if (profileData?.data?.user) {
@@ -302,10 +307,10 @@ const Navbar = memo(({ user }) => {
             } else {
               setUserData(profileData);
             }
-            
+
             // Déclencher un événement de changement de rôle si l'état d'authentification a changé
             if (!wasAuthenticated) {
-              window.dispatchEvent(new Event('role-change'));
+              window.dispatchEvent(new Event("role-change"));
             }
           } catch (profileError) {
             // Gestion silencieuse de l'erreur
@@ -313,10 +318,10 @@ const Navbar = memo(({ user }) => {
         }
       } else {
         setUserData(null);
-        
+
         // Déclencher un événement de changement de rôle si l'état d'authentification a changé
         if (wasAuthenticated) {
-          window.dispatchEvent(new Event('role-change'));
+          window.dispatchEvent(new Event("role-change"));
         }
       }
     } catch (error) {
@@ -356,14 +361,14 @@ const Navbar = memo(({ user }) => {
       // Réinitialiser les données locales avant d'appeler le service de déconnexion
       setUserData(null);
       setIsAuthenticated(false);
-      
+
       // Fermer la boîte de dialogue de déconnexion
       setLogoutDialogOpen(false);
 
       // Appeler le service de déconnexion
       // Cette fonction va maintenant forcer un rafraîchissement complet de la page
       await authService.logout();
-      
+
       // Note: Le code ci-dessous ne sera pas exécuté car la page sera rafraîchie
       // mais nous le gardons au cas où le comportement du service changerait
       setIsLoggingOut(false);
@@ -376,15 +381,24 @@ const Navbar = memo(({ user }) => {
     <>
       {/* Injection des styles personnalisés */}
       <style>{customStyles}</style>
-      
+
       <nav className="bg-[#02284f] shadow-lg">
         <div className="container px-4 mx-auto">
           <div className="flex items-center justify-between h-16">
             {/* Partie gauche: Logo et burger menu */}
             <div className="flex items-center">
-              <MenuBurger />
+              <div className="menu-burger-wrapper">
+                <MenuBurger />
+              </div>
               <div className="flex-shrink-0">
-                <Link to={isAuthenticated ? "/dashboard" : "/login"} className="text-2xl font-black tracking-tight text-white">
+                <Link
+                  to={
+                    isAuthenticated
+                      ? permissions.getRoleDashboardPath()
+                      : "/login"
+                  }
+                  className="text-2xl font-black tracking-tight text-white"
+                >
                   Big<span className="text-[#528eb2]">Project</span>
                 </Link>
               </div>
@@ -393,7 +407,7 @@ const Navbar = memo(({ user }) => {
             {/* Partie centrale: Barre de recherche (visible uniquement sur desktop) */}
             {isAuthenticated && (
               <div className="hidden md:flex flex-1 justify-center mx-4">
-                <div className="search-container w-full max-w-md">
+                <div className="search-container w-full max-w-md flex justify-end">
                   <SearchBar />
                 </div>
               </div>
@@ -403,15 +417,7 @@ const Navbar = memo(({ user }) => {
             <div className="hidden md:block">
               <div className="flex items-center ml-10 space-x-1">
                 {/* Élements affichés uniquement pour les utilisateurs connectés */}
-                {isAuthenticated && (
-                  <Link 
-                    to="/dashboard" 
-                    className="px-3 py-2 rounded-md text-gray-200 hover:text-white hover:bg-[#02284f]/80 transition-colors flex items-center"
-                  >
-                    <LayoutDashboard className="h-4 w-4 mr-2" />
-                    Tableau de bord
-                  </Link>
-                )}
+                {/* Le bouton "Tableau de bord" a été supprimé */}
               </div>
             </div>
 
@@ -419,7 +425,11 @@ const Navbar = memo(({ user }) => {
             <div className="hidden md:block">
               <div className="flex items-center ml-4">
                 {isAuthenticated ? (
-                  <UserMenu onLogout={() => setLogoutDialogOpen(true)} userData={userData} />
+                  <UserMenu
+                    onLogout={() => setLogoutDialogOpen(true)}
+                    userData={userData}
+                    setLogoutDialogOpen={setLogoutDialogOpen}
+                  />
                 ) : (
                   <AuthButtons />
                 )}
@@ -430,7 +440,11 @@ const Navbar = memo(({ user }) => {
             <div className="md:hidden">
               <div className="flex items-center">
                 {isAuthenticated ? (
-                  <UserMenu onLogout={() => setLogoutDialogOpen(true)} userData={userData} />
+                  <UserMenu
+                    onLogout={() => setLogoutDialogOpen(true)}
+                    userData={userData}
+                    setLogoutDialogOpen={setLogoutDialogOpen}
+                  />
                 ) : (
                   <div className="mobile-auth-buttons">
                     <AuthButtons />
@@ -443,15 +457,19 @@ const Navbar = memo(({ user }) => {
 
         {/* Dialogue de confirmation de déconnexion */}
         {logoutDialogOpen && (
-          <Dialog open={logoutDialogOpen} onOpenChange={(open) => !isLoggingOut && setLogoutDialogOpen(open)}>
+          <Dialog
+            open={logoutDialogOpen}
+            onOpenChange={(open) => !isLoggingOut && setLogoutDialogOpen(open)}
+          >
             <DialogContent className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-hidden rounded-2xl border-0 shadow-xl">
-              <div
-                className="overflow-y-auto max-h-[70vh] fade-in-up"
-              >
+              <div className="overflow-y-auto max-h-[70vh] fade-in-up">
                 <DialogHeader>
-                  <DialogTitle className="text-xl font-semibold">Confirmation de déconnexion</DialogTitle>
+                  <DialogTitle className="text-xl font-semibold">
+                    Confirmation de déconnexion
+                  </DialogTitle>
                   <DialogDescription className="text-base mt-2">
-                    Êtes-vous sûr de vouloir vous déconnecter de votre compte ? Toutes vos sessions actives seront fermées.
+                    Êtes-vous sûr de vouloir vous déconnecter de votre compte ?
+                    Toutes vos sessions actives seront fermées.
                   </DialogDescription>
                 </DialogHeader>
               </div>
@@ -468,7 +486,9 @@ const Navbar = memo(({ user }) => {
                   variant="destructive"
                   onClick={handleLogout}
                   disabled={isLoggingOut}
-                  className={`rounded-full bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 transition-all duration-200 ${isLoggingOut ? 'opacity-80' : ''}`}
+                  className={`rounded-full bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 transition-all duration-200 ${
+                    isLoggingOut ? "opacity-80" : ""
+                  }`}
                 >
                   {isLoggingOut ? "Déconnexion..." : "Se déconnecter"}
                 </Button>
