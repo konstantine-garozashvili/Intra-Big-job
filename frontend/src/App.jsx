@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, useLocation, Navigate, Outlet, 
 import { lazy, Suspense, useState, useEffect } from 'react'
 import MainLayout from './components/MainLayout'
 import { RoleProvider, RoleDashboardRedirect } from './features/roles'
+import { LoadingAnimationNoText } from './components/ui/LoadingAnimation'
 
 // Import différé des pages pour améliorer les performances
 const Login = lazy(() => import('./pages/Login'))
@@ -40,6 +41,7 @@ import './index.css'
 import ProtectedRoute from './components/ProtectedRoute'
 import PublicRoute from './components/PublicRoute'
 import ProfileLayout from '@/layouts/ProfileLayout'
+import useLoadingIndicator from './hooks/useLoadingIndicator'
 
 // Fonction optimisée pour le préchargement intelligent des pages
 // Ne charge que les pages pertinentes en fonction du contexte et du chemin actuel
@@ -180,10 +182,72 @@ const PrefetchHandler = () => {
   return null;
 };
 
+// Fallback élégant pour Suspense
+const SuspenseFallback = () => (
+  <div className="flex items-center justify-center min-h-screen loading-animation-container initially-loading">
+    <div className="relative w-32 h-32">
+      {/* Subtle background glow */}
+      <div className="absolute inset-0 rounded-full bg-gradient-to-r from-[#f0f4f8] to-[#e6edf5] blur-xl opacity-70"></div>
+      
+      {/* Dashed circle */}
+      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100">
+        <circle
+          cx="50"
+          cy="50"
+          r="40"
+          fill="none"
+          stroke="#d0dbe6"
+          strokeWidth="1"
+          strokeDasharray="3,3"
+          strokeLinecap="round"
+        />
+      </svg>
+      
+      {/* Static dots around the circle */}
+      {Array.from({ length: 12 }).map((_, i) => {
+        const angle = (i / 12) * Math.PI * 2;
+        const radius = 40;
+        const x = 50 + Math.cos(angle) * radius;
+        const y = 50 + Math.sin(angle) * radius;
+        const size = i % 3 === 0 ? 3.5 : i % 3 === 1 ? 3 : 2.5;
+        const colors = ["#02284f", "#528eb2", "#7baac5", "#a0b4c3"];
+        
+        return (
+          <svg key={i} className="absolute inset-0 w-full h-full" viewBox="0 0 100 100">
+            <circle
+              cx={x}
+              cy={y}
+              r={size}
+              fill={colors[i % 4]}
+              opacity={i % 2 === 0 ? 0.9 : 0.7}
+            />
+          </svg>
+        );
+      })}
+      
+      {/* Center white dot with glow */}
+      <div 
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-white rounded-full" 
+        style={{ 
+          boxShadow: '0 0 15px 5px rgba(255, 255, 255, 0.6), 0 0 20px 10px rgba(255, 255, 255, 0.3)' 
+        }}
+      ></div>
+      
+      {/* Thin circle outline */}
+      <div
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-14 rounded-full border border-[#d0dbe6]/30"
+      ></div>
+    </div>
+  </div>
+);
+
 // Composant de contenu principal qui utilise les hooks de React Router
 const AppContent = () => {
   const [isNavigating, setIsNavigating] = useState(false);
   const navigate = useNavigate();
+  
+  // Use the loading indicator hook to hide the browser's default loading indicator
+  useLoadingIndicator();
 
   // Écouteur d'événement pour la navigation après déconnexion
   useEffect(() => {
@@ -200,13 +264,6 @@ const AppContent = () => {
       window.removeEventListener('auth-logout-success', handleLogoutNavigation);
     };
   }, [navigate]);
-
-  // Fallback élégant pour Suspense
-  const SuspenseFallback = () => (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-    </div>
-  );
 
   return (
     <div className="relative font-poppins">

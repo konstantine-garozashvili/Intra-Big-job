@@ -230,18 +230,6 @@ export const authService = {
       const refreshToken = localStorage.getItem('refresh_token');
       const deviceId = localStorage.getItem('device_id');
       
-      // Révoquer le refresh token côté serveur
-      if (refreshToken) {
-        const revokeData = {
-          refresh_token: refreshToken,
-          device_id: deviceId
-        };
-        
-        await apiService.post('/token/revoke', revokeData).catch((error) => {
-          // Ignorer les erreurs lors de la révocation
-        });
-      }
-    } finally {
       // Nettoyer le localStorage
       localStorage.removeItem('token');
       localStorage.removeItem('refresh_token');
@@ -250,18 +238,43 @@ export const authService = {
       // Réinitialiser la promesse de chargement des données utilisateur
       userDataPromise = null;
       
+      // Invalider le cache des requêtes
+      clearQueryCache();
+      
+      // Déclencher un événement pour informer l'application de la déconnexion
+      const event = new CustomEvent('auth-logout-success', {
+        detail: { redirectTo: '/' }
+      });
+      window.dispatchEvent(event);
+      
+      // Vider complètement le cache de l'API
+      try {
+        const { default: apiService } = await import('./apiService');
+        apiService.clearCache();
+      } catch (cacheError) {
+        console.error('Error clearing API cache:', cacheError);
+      }
+      
+      // Révoquer le refresh token côté serveur (en arrière-plan)
+      if (refreshToken) {
+        const revokeData = {
+          refresh_token: refreshToken,
+          device_id: deviceId
+        };
+        
+        apiService.post('/token/revoke', revokeData).catch((error) => {
+          // Ignorer les erreurs lors de la révocation
+        });
+      }
+      
       // Générer un nouvel identifiant de session pour la prochaine connexion
       currentSessionId = generateSessionId();
       localStorage.setItem('session_id', currentSessionId);
       
-      // Ne pas supprimer device_id pour maintenir l'identification de l'appareil
-      
-      // Vider COMPLÈTEMENT le cache React Query
-      clearQueryCache();
-      
-      // Solution radicale: forcer un rafraîchissement complet de la page
-      // Cela garantit que toutes les données de l'ancien utilisateur sont effacées
-      window.location.href = '/login';
+      return { success: true };
+    } catch (error) {
+      console.error('Logout error:', error);
+      return { success: false, error };
     }
   },
   

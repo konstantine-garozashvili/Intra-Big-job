@@ -1,8 +1,42 @@
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
 
 const Footer = () => {
+  const [extraPadding, setExtraPadding] = useState(0);
+
+  // Effect to add extra padding when content is minimal
+  useEffect(() => {
+    const checkContentHeight = () => {
+      const viewportHeight = window.innerHeight;
+      const bodyHeight = document.body.offsetHeight;
+      const mainContent = document.querySelector('main');
+      
+      if (mainContent && bodyHeight < viewportHeight) {
+        // If body height is less than viewport, add extra padding to push footer down
+        setExtraPadding(viewportHeight - bodyHeight + 100); // Add 100px buffer
+      } else {
+        setExtraPadding(0);
+      }
+    };
+
+    // Check on mount and window resize
+    checkContentHeight();
+    window.addEventListener('resize', checkContentHeight);
+    
+    // Also check after a short delay to account for dynamic content loading
+    const timer = setTimeout(checkContentHeight, 500);
+    
+    return () => {
+      window.removeEventListener('resize', checkContentHeight);
+      clearTimeout(timer);
+    };
+  }, []);
+
   return (
-    <footer className="bg-[#02284f] pt-12 pb-6 mt-16">
+    <footer 
+      className="bg-[#02284f] pt-12 pb-6 mt-auto"
+      style={{ marginTop: extraPadding ? `${extraPadding}px` : 'auto' }}
+    >
       <div className="container px-4 mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 mb-8">
           {/* Informations de l'entreprise */}

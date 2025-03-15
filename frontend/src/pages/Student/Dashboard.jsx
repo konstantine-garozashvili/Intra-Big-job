@@ -53,7 +53,11 @@ const StudentDashboard = () => {
   ];
 
   return (
-    <DashboardLayout loading={isLoading} error={error?.message} className="p-0">
+    <DashboardLayout 
+      loading={isLoading} 
+      error={isError ? error?.message || 'Une erreur est survenue lors du chargement des données' : null}
+      className="p-0"
+    >
       <div className="p-8">
         {/* En-tête du dashboard */}
         <div className="p-6 bg-white rounded-lg shadow-lg mb-8">

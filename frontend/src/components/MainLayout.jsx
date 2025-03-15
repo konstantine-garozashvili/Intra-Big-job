@@ -23,10 +23,56 @@ const MainLayout = () => {
   const location = useLocation();
   const [isAuthenticated, setIsAuthenticated] = useState(authService.isLoggedIn());
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [minContentHeight, setMinContentHeight] = useState('100vh');
+  const [initialRender, setInitialRender] = useState(true);
 
   // Pages qui doivent être affichées en plein écran sans marges internes
   const fullScreenPages = ['/register', '/login'];
   const isFullScreenPage = fullScreenPages.includes(location.pathname);
+
+  // Function to calculate and set the minimum content height
+  const calculateMinHeight = useCallback(() => {
+    // Get viewport height
+    const viewportHeight = window.innerHeight;
+    // Set minimum content height to be viewport height minus navbar height (64px)
+    // Add a buffer of 100px to ensure the footer is well below the viewport
+    setMinContentHeight(`${viewportHeight - 64 + 200}px`);
+  }, []);
+
+  // Effect to calculate the minimum content height
+  useEffect(() => {
+    // Calculate on mount and window resize
+    calculateMinHeight();
+    window.addEventListener('resize', calculateMinHeight);
+    
+    return () => {
+      window.removeEventListener('resize', calculateMinHeight);
+    };
+  }, [calculateMinHeight]);
+
+  // Recalculate height when route changes
+  useEffect(() => {
+    calculateMinHeight();
+    
+    // Scroll to top when route changes
+    window.scrollTo(0, 0);
+  }, [location.pathname, calculateMinHeight]);
+
+  // Effect to handle initial render and ensure footer is positioned correctly
+  useEffect(() => {
+    if (initialRender) {
+      // Set a higher initial height to ensure footer is below viewport during initial load
+      setMinContentHeight('150vh');
+      
+      // After a short delay, calculate the actual height needed
+      const timer = setTimeout(() => {
+        calculateMinHeight();
+        setInitialRender(false);
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [initialRender, calculateMinHeight]);
 
   // Create a memoized refresh function that can be called from child components
   const refreshProfileData = useCallback(async () => {
@@ -54,6 +100,8 @@ const MainLayout = () => {
       setIsAuthenticated(true);
       // Rafraîchir les données utilisateur
       fetchUserData();
+      // Recalculate height when authentication state changes
+      calculateMinHeight();
     };
 
     const handleLogoutSuccess = () => {
@@ -61,6 +109,11 @@ const MainLayout = () => {
       // Réinitialiser les données utilisateur
       setUserData(null);
       setProfileData(null);
+      // Recalculate height when authentication state changes
+      calculateMinHeight();
+      // Set a higher height temporarily to ensure footer is below viewport
+      setMinContentHeight('150vh');
+      setTimeout(() => calculateMinHeight(), 300);
     };
     
     // Fonction pour récupérer les données utilisateur
@@ -76,6 +129,8 @@ const MainLayout = () => {
           setIsLoading(false);
           // Attendre un court instant avant d'afficher le composant de progression
           setTimeout(() => setShowProgress(true), 100);
+          // Recalculate height after data is loaded
+          calculateMinHeight();
         } catch (error) {
           console.error('Error fetching data:', error);
           setIsLoading(false);
@@ -104,7 +159,7 @@ const MainLayout = () => {
       window.removeEventListener('auth-logout-success', handleLogoutSuccess);
       window.removeEventListener('query-cache-cleared', handleLogoutSuccess);
     };
-  }, []);
+  }, [calculateMinHeight]);
 
   // Create a memoized context value to prevent unnecessary re-renders
   const profileContextValue = useMemo(() => ({
@@ -119,16 +174,17 @@ const MainLayout = () => {
         {/* Navbar sans transition */}
         <Navbar user={userData} />
         
-        <main className={`flex-grow ${isFullScreenPage ? '' : 'container mx-auto px-4 py-8'}`}>
+        {/* Main content with minimum height to ensure footer is below viewport */}
+        <main 
+          className={`flex-grow ${isFullScreenPage ? '' : 'container mx-auto px-4 py-8'}`}
+          style={{ minHeight: isFullScreenPage ? 'auto' : minContentHeight }}
+        >
           <Outlet />
         </main>
 
         {showProgress && profileData && hasRole(ROLES.GUEST) && (
           <ProfileProgress userData={profileData} />
         )}
-        
-        {/* Spacer div to add more space above footer */}
-        <div className="h-8"></div>
         
         {/* Footer sans transition */}
         <Footer />

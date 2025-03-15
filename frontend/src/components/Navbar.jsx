@@ -100,6 +100,14 @@ const customStyles = `
     box-shadow: 0 0 0 2px rgba(82, 142, 178, 0.25) !important;
   }
   
+  /* Fixed navbar styles */
+  .navbar-fixed {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    width: 100%;
+  }
+  
   @media (max-width: 1024px) {
     .search-container {
       max-width: 300px;
@@ -359,21 +367,21 @@ const Navbar = memo(({ user }) => {
     try {
       setIsLoggingOut(true);
 
-      // Réinitialiser les données locales avant d'appeler le service de déconnexion
-      setUserData(null);
-      setIsAuthenticated(false);
-
       // Fermer la boîte de dialogue de déconnexion
       setLogoutDialogOpen(false);
 
       // Appeler le service de déconnexion
-      // Cette fonction va maintenant forcer un rafraîchissement complet de la page
       await authService.logout();
-
-      // Note: Le code ci-dessous ne sera pas exécuté car la page sera rafraîchie
-      // mais nous le gardons au cas où le comportement du service changerait
+      
+      // Mettre à jour l'état local après la déconnexion
+      setUserData(null);
+      setIsAuthenticated(false);
       setIsLoggingOut(false);
+      
+      // Naviguer vers la page d'accueil
+      navigate('/');
     } catch (error) {
+      console.error('Error during logout:', error);
       setIsLoggingOut(false);
     }
   };
@@ -383,7 +391,7 @@ const Navbar = memo(({ user }) => {
       {/* Injection des styles personnalisés */}
       <style>{customStyles}</style>
 
-      <nav className="bg-[#02284f] shadow-lg">
+      <nav className="bg-[#02284f] shadow-lg navbar-fixed">
         <div className="container px-4 mx-auto">
           <div className="flex items-center justify-between h-16">
             {/* Partie gauche: Logo et burger menu */}
