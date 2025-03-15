@@ -252,15 +252,15 @@ const MenuBurger = memo(() => {
     },
     
     {
-      key: 'enseignants',
-      label: 'Enseignants',
+      key: 'formateurs',
+      label: 'Formateurs',
       icon: <User className="mr-2" />,
       roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.HR, ROLES.RECRUITER],
       links: [
-        { name: 'Liste des enseignants', to: '/enseignants', roles: [ROLES.ADMIN, ROLES.HR, ROLES.TEACHER, ROLES.SUPER_ADMIN] },
-        { name: 'Statistiques et Rapports', to: '/enseignants/statistiques', roles: [ROLES.ADMIN, ROLES.HR, ROLES.TEACHER, ROLES.SUPER_ADMIN] },
-        { name: 'Gestion des Projets', to: '/enseignants/projets', roles: [ROLES.ADMIN, ROLES.TEACHER] },
-        { name: 'Commentaire', to: '/enseignants/commentaire', roles: [ROLES.ADMIN, ROLES.HR, ROLES.TEACHER, ROLES.SUPER_ADMIN] },
+        { name: 'Liste des formateurs', to: '/formateurs', roles: [ROLES.ADMIN, ROLES.HR, ROLES.TEACHER, ROLES.SUPER_ADMIN] },
+        { name: 'Statistiques et Rapports', to: '/formateurs/statistiques', roles: [ROLES.ADMIN, ROLES.HR, ROLES.TEACHER, ROLES.SUPER_ADMIN] },
+        { name: 'Gestion des Projets', to: '/formateurs/projets', roles: [ROLES.ADMIN, ROLES.TEACHER] },
+        { name: 'Commentaire', to: '/formateurs/commentaire', roles: [ROLES.ADMIN, ROLES.HR, ROLES.TEACHER, ROLES.SUPER_ADMIN] },
       ],
     },
     {

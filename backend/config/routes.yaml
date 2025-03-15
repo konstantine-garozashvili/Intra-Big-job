@@ -7,11 +7,6 @@ controllers:
 api_login_check:
     path: /api/login_check
 
-api_user_autocomplete:
-    path: /api/user-autocomplete
-    methods: ['GET']
-    controller: App\Controller\SearchController::autocomplete
-
 api_token_refresh:
     path: /api/token/refresh
     methods: ['POST']

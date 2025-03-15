@@ -42,15 +42,15 @@ export const useUserData = () => {
 };
 
 /**
- * Hook pour récupérer les données du dashboard enseignant avec React Query
- * @returns {Object} - Données du dashboard enseignant et état de la requête
+ * Hook pour récupérer les données du dashboard formateur avec React Query
+ * @returns {Object} - Données du dashboard formateur et état de la requête
  */
 export const useTeacherDashboardData = () => {
   // Utiliser useApiQuery pour récupérer les données utilisateur
   const userQuery = useUserData();
   const sessionId = getSessionId();
   
-  // Utiliser useApiQuery pour récupérer les données du dashboard enseignant
+  // Utiliser useApiQuery pour récupérer les données du dashboard formateur
   const dashboardQuery = useApiQuery(
     '/teacher/dashboard', 
     ['teacher-dashboard', sessionId], 

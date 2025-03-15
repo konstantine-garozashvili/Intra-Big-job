@@ -137,7 +137,8 @@ export const useRoleUI = () => {
         case ROLES.TEACHER: return "from-emerald-500/90 to-emerald-700/90";
         case ROLES.HR: return "from-purple-500/90 to-purple-700/90";
         case ROLES.ADMIN: return "from-amber-500/90 to-amber-700/90";
-        case ROLES.SUPER_ADMIN: return "from-red-500/90 to-red-700/90";
+        case ROLES.SUPER_ADMIN: 
+        case 'ROLE_SUPERADMIN': return "from-red-500/90 to-red-700/90";
         case ROLES.RECRUITER: return "from-pink-500/90 to-pink-700/90";
         case ROLES.GUEST: return "from-teal-500/90 to-teal-700/90";
         default: return "from-gray-500/90 to-gray-700/90";
@@ -151,7 +152,8 @@ export const useRoleUI = () => {
         case ROLES.TEACHER: return "Professeur";
         case ROLES.HR: return "Ressources Humaines";
         case ROLES.ADMIN: return "Administrateur";
-        case ROLES.SUPER_ADMIN: return "Super Administrateur";
+        case ROLES.SUPER_ADMIN: 
+        case 'ROLE_SUPERADMIN': return "Super Administrateur";
         case ROLES.RECRUITER: return "Recruteur";
         case ROLES.GUEST: return "Invité";
         default: return roleName;

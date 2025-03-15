@@ -141,7 +141,7 @@ const AdminDashboard = () => {
                   <SelectContent>
                     <SelectItem value="ALL">Tous les rôles</SelectItem>
                     <SelectItem value="ADMIN">Administrateurs</SelectItem>
-                    <SelectItem value="TEACHER">Enseignants</SelectItem>
+                    <SelectItem value="TEACHER">Formateurs</SelectItem>
                     <SelectItem value="STUDENT">Étudiants</SelectItem>
                     <SelectItem value="HR">RH</SelectItem>
                     <SelectItem value="SUPERADMIN">Super Administrateurs</SelectItem>

@@ -34,21 +34,173 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
     }
     public function findAutocompleteResults(string $searchTerm, ?array $allowedRoles = null): array
     {
-        // Create the query builder
+        // Normalize search term for role name matching
+        $normalizedSearchTerm = strtolower(trim($searchTerm));
+        
+        // Get role alias from centralized function
+        $roleSearchTerm = $this->matchRoleFromSearchTerm($normalizedSearchTerm);
+        
+        // Create the base query builder - using the simplest approach
         $qb = $this->createQueryBuilder('u')
-            ->where('u.lastName LIKE :term OR u.firstName LIKE :term')
-            ->setParameter('term', '%' . $searchTerm . '%')
-            ->orderBy('u.lastName', 'ASC')
-            ->setMaxResults(10);
+            ->select('u')
+            ->leftJoin('u.userRoles', 'ur')
+            ->leftJoin('ur.role', 'r');
+        
+        // Build the query based on whether we have a role alias match
+        if ($roleSearchTerm) {
+            // If we have a role alias match, search for users with that role
+            $qb->where('r.name = :roleName')
+               ->orWhere('u.lastName LIKE :term OR u.firstName LIKE :term')
+               ->setParameter('roleName', $roleSearchTerm)
+               ->setParameter('term', '%' . $searchTerm . '%');
+        } else {
+            // Standard search for names or role names
+            $qb->where('u.lastName LIKE :term OR u.firstName LIKE :term OR LOWER(r.name) LIKE :roleTerm')
+               ->setParameter('term', '%' . $searchTerm . '%')
+               ->setParameter('roleTerm', '%' . $normalizedSearchTerm . '%');
+        }
+        
+        // Apply role filtering if specified
+        if ($allowedRoles !== null && count($allowedRoles) > 0) {
+            // Add a role filter condition
+            $qb->andWhere('r.name IN (:roleNames)')
+               ->setParameter('roleNames', $allowedRoles);
+        }
+        
+        // Finalize and execute the query
+        $qb->orderBy('u.lastName', 'ASC')
+           ->setMaxResults(20); // Increase max results for better chances of finding matches
+           
+        // Execute the query and handle duplicates manually
+        $results = $qb->getQuery()->getResult();
+        
+        // Remove duplicates manually
+        $uniqueUsers = [];
+        $uniqueIds = [];
+        
+        foreach ($results as $user) {
+            if (!in_array($user->getId(), $uniqueIds)) {
+                $uniqueIds[] = $user->getId();
+                $uniqueUsers[] = $user;
+                
+                // If we're doing a role search, prioritize users with that role
+                if ($roleSearchTerm) {
+                    $hasRole = false;
+                    foreach ($user->getUserRoles() as $userRole) {
+                        if ($userRole->getRole()->getName() === $roleSearchTerm) {
+                            $hasRole = true;
+                            break;
+                        }
+                    }
+                    
+                    // Move users with the role to the beginning of the array
+                    if ($hasRole && count($uniqueUsers) > 1) {
+                        $userWithRole = array_pop($uniqueUsers);
+                        array_unshift($uniqueUsers, $userWithRole);
+                    }
+                }
+            }
+        }
+        
+        return $uniqueUsers;
+    }
     
-        // // If roles are defined, filter users based on allowed roles
-        // if ($allowedRoles !== null && count($allowedRoles) > 0) {
-        //     $qb->join('u.userRoles', 'ur')
-        //         ->andWhere('u.id = ur.user')
-        //         ->andWhere('ur.role IN (:allowedRoles)') // Match role from user_role
-        //         ->setParameter('allowedRoles', $allowedRoles);
-        // }
-        return $qb->getQuery()->getResult();
+    /**
+     * Match a search term to a role name using various matching strategies
+     * @param string $searchTerm - The search term to check
+     * @return string|null - The matched role name or null if no match
+     */
+    private function matchRoleFromSearchTerm(string $searchTerm): ?string
+    {
+        // Role alias mapping (for translation and common terms)
+        $roleAliases = [
+            // Super Admin aliases
+            'superadmin' => 'SUPER_ADMIN',
+            'super admin' => 'SUPER_ADMIN',
+            'super' => 'SUPER_ADMIN',
+            
+            // Student aliases
+            'etudiant' => 'STUDENT',
+            'étudiant' => 'STUDENT',
+            'etud' => 'STUDENT',
+            'étud' => 'STUDENT',
+            'student' => 'STUDENT', // Keep English for compatibility
+            
+            // Admin aliases
+            'admin' => 'ADMIN',
+            'adm' => 'ADMIN',
+            
+            // Teacher aliases
+            'formateur' => 'TEACHER',
+            'forma' => 'TEACHER',
+            'form' => 'TEACHER',
+            
+            // HR aliases
+            'ressources humaines' => 'HR',
+            'ressources' => 'HR',
+            'rh' => 'HR',
+            
+            // Guest aliases
+            'invité' => 'GUEST',
+            'invite' => 'GUEST',
+            'inv' => 'GUEST',
+            
+            // Recruiter aliases
+            'recruteur' => 'RECRUITER',
+            'recru' => 'RECRUITER',
+            'rec' => 'RECRUITER'
+        ];
+        
+        // Check if the search term matches any role alias - improved detection with more lenient matching
+        $roleSearchTerm = null;
+        
+        // First try exact match
+        if (isset($roleAliases[$searchTerm])) {
+            $roleSearchTerm = $roleAliases[$searchTerm];
+        } else {
+            // Then try word boundary match
+            foreach ($roleAliases as $alias => $roleName) {
+                if (preg_match('/\b' . preg_quote($alias, '/') . '\b/i', $searchTerm)) {
+                    $roleSearchTerm = $roleName;
+                    break;
+                }
+            }
+            
+            // If still no match, try partial match (starts with)
+            if (!$roleSearchTerm) {
+                foreach ($roleAliases as $alias => $roleName) {
+                    if (strpos($alias, $searchTerm) === 0 || strpos($searchTerm, $alias) === 0) {
+                        $roleSearchTerm = $roleName;
+                        break;
+                    }
+                }
+            }
+            
+            // If still no match, try contains match
+            if (!$roleSearchTerm) {
+                foreach ($roleAliases as $alias => $roleName) {
+                    if (strpos($alias, $searchTerm) !== false || strpos($searchTerm, $alias) !== false) {
+                        $roleSearchTerm = $roleName;
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // Map standardized role names to database role names
+        if ($roleSearchTerm) {
+            // Map from standardized format to database format
+            $roleNameMapping = [
+                'SUPER_ADMIN' => 'SUPERADMIN',
+                // Add other mappings if needed
+            ];
+            
+            if (isset($roleNameMapping[$roleSearchTerm])) {
+                $roleSearchTerm = $roleNameMapping[$roleSearchTerm];
+            }
+        }
+        
+        return $roleSearchTerm;
     }
     
 

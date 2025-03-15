@@ -58,7 +58,8 @@ const ProfileHeader = ({ userData, isPublicProfile = false, profilePictureUrl })
       case "TEACHER": return "from-emerald-500/90 to-emerald-700/90";
       case "HR": return "from-purple-500/90 to-purple-700/90";
       case "ADMIN": return "from-amber-500/90 to-amber-700/90";
-      case "SUPER_ADMIN": return "from-red-500/90 to-red-700/90";
+      case "SUPER_ADMIN": 
+      case "SUPERADMIN": return "from-red-500/90 to-red-700/90";
       case "RECRUITER": return "from-pink-500/90 to-pink-700/90";
       case "GUEST": return "from-teal-500/90 to-teal-700/90";
       case "USER": return "from-gray-500/90 to-gray-700/90";
@@ -72,7 +73,8 @@ const ProfileHeader = ({ userData, isPublicProfile = false, profilePictureUrl })
       case "TEACHER": return "Professeur";
       case "HR": return "Ressources Humaines";
       case "ADMIN": return "Administrateur";
-      case "SUPER_ADMIN": return "Super Administrateur";
+      case "SUPER_ADMIN": 
+      case "SUPERADMIN": return "Super Administrateur";
       case "RECRUITER": return "Recruteur";
       case "GUEST": return "Invité";
       case "USER": return "Utilisateur";

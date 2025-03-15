@@ -53,84 +53,43 @@ export function AuthForm() {
     setIsLoading(true)
     
     try {
-      // Afficher le device_id actuel s'il existe
-      const currentDeviceId = localStorage.getItem('device_id')
-      
       const response = await authService.login(email, password)
       
-      // Si rememberMe est activé, stocker l'email dans localStorage
       if (rememberMe) {
         localStorage.setItem('rememberedEmail', email)
       } else {
         localStorage.removeItem('rememberedEmail')
       }
       
-      console.log('=== CONNEXION RÉUSSIE ===')
-      console.log('Réponse de login:', response)
-      console.log('Token JWT:', localStorage.getItem('token'))
-      
       toast.success("Connexion réussie", {
         description: "Vous êtes maintenant connecté."
       })
 
-      // Déclencher un événement personnalisé pour informer la navbar de la connexion
       window.dispatchEvent(new Event('login-success'));
       
-      // Vérifier s'il y a une page de redirection stockée
       const returnTo = sessionStorage.getItem('returnTo')
-      console.log('Page de redirection stockée:', returnTo)
       
-      // Attendre que les rôles soient chargés avant de rediriger
       try {
-        console.log('Récupération des données utilisateur pour obtenir les rôles...')
-        // Récupérer explicitement les données utilisateur pour s'assurer que les rôles sont disponibles
         const userData = await authService.getCurrentUser();
-        console.log('Données utilisateur récupérées:', userData);
-        console.log('Rôles utilisateur:', userData.roles);
-        
-        // Forcer le rafraîchissement des rôles
         refreshRoles();
         
-        // Attendre un court instant pour que les rôles soient mis à jour dans le contexte
-        setTimeout(() => {
-          // Rediriger vers la page stockée ou le dashboard basé sur le rôle
-          if (returnTo) {
-            console.log('Redirection vers la page stockée:', returnTo)
-            sessionStorage.removeItem('returnTo') // Nettoyer après utilisation
-            navigate(returnTo)
-          } else {
-            // Récupérer les informations de rôle
-            console.log('Récupération du dashboard basé sur le rôle...')
-            const dashboardPath = permissions.getRoleDashboardPath();
-            console.log('Chemin du dashboard obtenu:', dashboardPath)
-            console.log('Redirection vers:', dashboardPath)
-            navigate(dashboardPath);
-          }
-        }, 300);
+        if (returnTo) {
+          sessionStorage.removeItem('returnTo')
+          navigate(returnTo)
+        } else {
+          const dashboardPath = permissions.getRoleDashboardPath();
+          navigate(dashboardPath);
+        }
       } catch (userError) {
-        console.error('Erreur lors de la récupération des données utilisateur:', userError);
-        // En cas d'erreur, rediriger vers le dashboard par défaut
         navigate('/dashboard');
       }
     } catch (error) {
-      // console.error('=== ERREUR DE CONNEXION ===')
-      // console.error('Type d\'erreur:', error.name)
-      // console.error('Message d\'erreur:', error.message)
-      
-      // if (error.response) {
-      //  console.error('Statut HTTP:', error.response.status)
-      //  console.error('Données de réponse:', error.response.data)
-      // }
-      
-      // Gérer les erreurs de l'API
       if (error.response) {
         const { data } = error.response
         
-        // Vérifier si c'est une erreur d'email non vérifié
         if (data.code === 'EMAIL_NOT_VERIFIED') {
           setErrors({ email: 'Email non vérifié' })
           
-          // Afficher une notification d'erreur avec un bouton pour renvoyer l'email
           toast.error("Email non vérifié", {
             description: "Veuillez vérifier votre email avant de vous connecter.",
             action: {

@@ -6,4 +6,3 @@ export { default as CVUpload } from './CVUpload';
 export { default as AdministrativeInformation } from './AdministrativeInformation';
 export { default as JobSeekingSettings } from './JobSeekingSettings';
 export { default as DiplomaManager } from './DiplomaManager';
-export { default as AvailabilityCalendar } from './AvailabilityCalendar'; 

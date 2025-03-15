@@ -1,8 +1,26 @@
 import React, { useState, useRef, useEffect } from 'react';
 import userAutocompleteService from '../lib/services/autocompleteService';
+import authService from '../lib/services/authService';
+import { useRoles, ROLES } from '../features/roles/roleContext';
+import { getPrimaryRole, matchRoleFromSearchTerm, getFrenchRoleDisplayName, ROLE_ALIASES } from '../lib/utils/roleUtils';
 import { Search, User, X, UserCircle2, Briefcase } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../lib/utils';
+
+// Convert role constants to display format for allowed search roles
+const getRoleDisplayFormat = (roleConstant) => {
+  switch (roleConstant) {
+    case 'ADMIN': return 'Admin';
+    case 'SUPER_ADMIN': return 'Super Admin';
+    case 'SUPERADMIN': return 'Super Admin';
+    case 'TEACHER': return 'Formateur';
+    case 'STUDENT': return 'Étudiant';
+    case 'RECRUITER': return 'Recruteur';
+    case 'HR': return 'Ressources Humaines';
+    case 'GUEST': return 'Invité';
+    default: return roleConstant;
+  }
+};
 
 export const SearchBar = () => {
   const [query, setQuery] = useState('');
@@ -10,9 +28,51 @@ export const SearchBar = () => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [activeSuggestion, setActiveSuggestion] = useState(-1);
   const [isFocused, setIsFocused] = useState(false);
+  const [isRoleSearch, setIsRoleSearch] = useState(false);
+  const [allowedSearchRoles, setAllowedSearchRoles] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { roles: userRoles, hasRole, hasAnyRole } = useRoles();
   const wrapperRef = useRef(null);
   const inputRef = useRef(null);
   const suggestionsRef = useRef(null);
+  const searchTimeoutRef = useRef(null);
+
+  // Vérifier si l'utilisateur est connecté
+  useEffect(() => {
+    const loggedIn = authService.isLoggedIn();
+    setIsLoggedIn(loggedIn);
+  }, []);
+
+  // Determine allowed search roles based on user roles
+  useEffect(() => {
+    let searchableRoles = [];
+    
+    // Check if user is logged in
+    if (isLoggedIn) {
+      // All roles except students and guests can search everyone
+      if (hasAnyRole([ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.HR, ROLES.RECRUITER])) {
+        searchableRoles = ['ADMIN', 'SUPER_ADMIN', 'TEACHER', 'STUDENT', 'RECRUITER', 'HR', 'GUEST'];
+      } 
+      // Students can search for students, teachers, recruiters, and HR
+      else if (hasRole(ROLES.STUDENT)) {
+        searchableRoles = ['TEACHER', 'STUDENT', 'RECRUITER', 'HR'];
+      } 
+      // Guests can only search recruiters
+      else if (hasRole(ROLES.GUEST)) {
+        searchableRoles = ['RECRUITER'];
+      }
+      // Default fallback (should not happen, but just in case)
+      else {
+        searchableRoles = ['RECRUITER'];
+      }
+    } else {
+      // Not logged in users cannot search
+      searchableRoles = [];
+    }
+    
+    setAllowedSearchRoles(searchableRoles);
+  }, [userRoles, hasRole, hasAnyRole, isLoggedIn]);
 
   // Handle clicks outside the component to close suggestions
   useEffect(() => {
@@ -39,20 +99,41 @@ export const SearchBar = () => {
     }
   }, [activeSuggestion]);
 
-  const handleInputChange = (e) => {
-    const value = e.target.value;
-    setQuery(value);
+  // Clean up timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
 
-    // Reset active suggestion when input changes
-    setActiveSuggestion(-1);
+  const checkForRoleSearch = (value) => {
+    // Use the centralized function to check for role matches
+    const matchResult = matchRoleFromSearchTerm(value, allowedSearchRoles);
+    
+    if (matchResult) {
+      return true;
+    }
+    
+    return false;
+  };
 
-    // Only fetch when query is 2 or more characters
-    if (value.length < 2) {
+  const fetchSuggestions = (value) => {
+    // Ne pas effectuer de recherche si l'utilisateur n'est pas connecté
+    if (!isLoggedIn) {
+      return;
+    }
+    
+    // Only fetch when query is 1 or more characters
+    if (value.length < 1) {
       setSuggestions([]);
       setShowSuggestions(false);
+      setIsLoading(false);
       return;
     }
 
+    setIsLoading(true);
     userAutocompleteService.getSuggestions(value)
       .then((data) => {
         if (Array.isArray(data)) {
@@ -62,11 +143,36 @@ export const SearchBar = () => {
           setSuggestions([]);
           setShowSuggestions(false);
         }
+        setIsLoading(false);
       })
-      .catch(() => {
+      .catch((error) => {
+        console.error('Error fetching suggestions:', error);
         setSuggestions([]);
         setShowSuggestions(false);
+        setIsLoading(false);
       });
+  };
+
+  const handleInputChange = (e) => {
+    const value = e.target.value;
+    setQuery(value);
+
+    // Check if this is a role-based search
+    const isRoleBasedSearch = checkForRoleSearch(value);
+    setIsRoleSearch(isRoleBasedSearch);
+
+    // Reset active suggestion when input changes
+    setActiveSuggestion(-1);
+
+    // Clear any existing timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    // Debounce the search to avoid too many requests
+    searchTimeoutRef.current = setTimeout(() => {
+      fetchSuggestions(value);
+    }, 300);
   };
 
   const handleSuggestionClick = (suggestion) => {
@@ -104,19 +210,21 @@ export const SearchBar = () => {
 
   // Get role icon based on user role
   const getRoleIcon = (role) => {
-    switch (role?.toLowerCase()) {
+    // Normalize role name (remove ROLE_ prefix if present)
+    const normalizedRole = role?.toLowerCase().replace('role_', '');
+    
+    switch (normalizedRole) {
       case 'admin':
-      case 'administrator':
-      case 'super admin':
-      case 'superadmin':
+      case 'super_admin':
         return <Briefcase className="w-3 h-3 mr-1 text-blue-600" />;
       case 'teacher':
-      case 'professor':
-      case 'enseignant':
         return <Briefcase className="w-3 h-3 mr-1 text-green-600" />;
       case 'student':
-      case 'étudiant':
         return <UserCircle2 className="w-3 h-3 mr-1 text-amber-600" />;
+      case 'hr':
+        return <Briefcase className="w-3 h-3 mr-1 text-purple-600" />;
+      case 'recruiter':
+        return <Briefcase className="w-3 h-3 mr-1 text-indigo-600" />;
       default:
         return <UserCircle2 className="w-3 h-3 mr-1 text-gray-600" />;
     }
@@ -124,22 +232,33 @@ export const SearchBar = () => {
 
   // Get role color based on user role
   const getRoleColor = (role) => {
-    switch (role?.toLowerCase()) {
+    // Normalize role name (remove ROLE_ prefix if present)
+    const normalizedRole = role?.toLowerCase().replace('role_', '');
+    
+    switch (normalizedRole) {
       case 'admin':
-      case 'administrator':
-      case 'super admin':
-      case 'superadmin':
         return 'bg-blue-50 text-blue-700';
+      case 'super_admin':
+      case 'superadmin':
+        return 'bg-red-50 text-red-700';
       case 'teacher':
-      case 'professor':
-      case 'enseignant':
         return 'bg-green-50 text-green-700';
       case 'student':
-      case 'étudiant':
         return 'bg-amber-50 text-amber-700';
+      case 'hr':
+        return 'bg-purple-50 text-purple-700';
+      case 'recruiter':
+        return 'bg-indigo-50 text-indigo-700';
+      case 'guest':
+        return 'bg-gray-50 text-gray-700';
       default:
         return 'bg-gray-50 text-gray-700';
     }
+  };
+
+  // Get display name for role using the centralized function
+  const getRoleDisplayName = (role) => {
+    return getFrenchRoleDisplayName(role);
   };
 
   return (
@@ -149,10 +268,17 @@ export const SearchBar = () => {
     >
       <div className={cn(
         "relative flex items-center transition-all duration-300 rounded-full overflow-hidden",
-        isFocused ? "ring-2 ring-[#528eb2]/50" : ""
+        "w-full",
+        isFocused ? "ring-2 ring-[#528eb2]/50" : "",
+        isRoleSearch ? "ring-2 ring-purple-500/50" : "",
+        !isLoggedIn ? "opacity-50" : ""
       )}>
         <div className="absolute left-3 text-white/60 z-10">
-          <Search className="w-4 h-4" />
+          {isRoleSearch ? (
+            <Briefcase className="w-4 h-4 text-purple-400" />
+          ) : (
+            <Search className="w-4 h-4" />
+          )}
         </div>
         
         <input
@@ -161,17 +287,26 @@ export const SearchBar = () => {
             "w-full py-2 pl-10 pr-10 text-sm text-white bg-[#02284f]/80 border border-white/20",
             "rounded-full transition-all duration-300",
             "placeholder:text-white/50 focus:outline-none",
-            isFocused ? "bg-[#02284f]/90 border-[#528eb2]" : "hover:bg-[#02284f]/90"
+            "md:placeholder:text-sm placeholder:text-xs",
+            isFocused ? "bg-[#02284f]/90 border-[#528eb2]" : "hover:bg-[#02284f]/90",
+            isRoleSearch ? "border-purple-500/30" : ""
           )}
           type="text"
-          placeholder="Rechercher un utilisateur..."
+          placeholder={isLoggedIn ? "Rechercher par nom ou rôle..." : "Connectez-vous pour effectuer une recherche"}
           value={query}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           onFocus={() => {
+            if (!isLoggedIn) {
+              inputRef.current.blur();
+              return;
+            }
             setIsFocused(true);
-            if (query.length >= 2) setShowSuggestions(true);
+            if (query.length >= 1) {
+              fetchSuggestions(query);
+            }
           }}
+          disabled={!isLoggedIn}
         />
         
         <AnimatePresence>
@@ -188,7 +323,36 @@ export const SearchBar = () => {
             </motion.button>
           )}
         </AnimatePresence>
+        
+        {/* Loading indicator */}
+        {isLoading && (
+          <div className="absolute right-10 z-10">
+            <div className="w-3 h-3 border-2 border-t-transparent border-white/30 rounded-full animate-spin"></div>
+          </div>
+        )}
       </div>
+      
+      {isFocused && query.length === 0 && isLoggedIn && (
+        <div className="absolute top-full left-0 w-full mt-2 px-3 py-2 text-xs text-white/70 bg-[#02284f]/90 rounded-md">
+          <p>
+            {allowedSearchRoles.length > 0 ? (
+              allowedSearchRoles.length === 1 ? (
+                <>Vous pouvez rechercher des <strong>{getRoleDisplayFormat(allowedSearchRoles[0]).toLowerCase()}</strong> par nom</>
+              ) : (
+                <>Vous pouvez rechercher par nom ou par rôle ({allowedSearchRoles.map(role => getRoleDisplayFormat(role).toLowerCase()).join(', ')})</>
+              )
+            ) : (
+              <>Vous pouvez rechercher par nom</>
+            )}
+          </p>
+        </div>
+      )}
+      
+      {!isLoggedIn && isFocused && (
+        <div className="absolute top-full left-0 w-full mt-2 px-3 py-2 text-xs text-white/70 bg-[#02284f]/90 rounded-md">
+          <p>Vous devez être connecté pour effectuer une recherche.</p>
+        </div>
+      )}
       
       <AnimatePresence>
         {showSuggestions && (
@@ -197,7 +361,10 @@ export const SearchBar = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
             transition={{ duration: 0.2, type: "spring", stiffness: 500, damping: 30 }}
-            className="absolute top-full left-0 w-full mt-2 overflow-hidden bg-white rounded-xl shadow-xl border border-gray-100 z-50"
+            className={cn(
+              "absolute top-full left-0 w-full mt-2 overflow-hidden bg-white rounded-xl shadow-xl border border-gray-100 z-50",
+              "max-h-[60vh] md:max-h-[70vh]"
+            )}
             style={{ 
               boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)"
             }}
@@ -210,9 +377,39 @@ export const SearchBar = () => {
                 className="p-6 text-center"
               >
                 <div className="flex flex-col items-center justify-center">
-                  <Search className="w-10 h-10 text-gray-300 mb-2" />
-                  <p className="text-gray-500 font-medium">Aucun utilisateur trouvé</p>
-                  <p className="text-gray-400 text-sm mt-1">Essayez avec un autre terme de recherche</p>
+                  {isRoleSearch ? (
+                    <>
+                      <Briefcase className="w-10 h-10 text-purple-300 mb-2" />
+                      <p className="text-gray-500 font-medium">Aucun utilisateur trouvé avec ce rôle</p>
+                      <p className="text-gray-400 text-sm mt-1">
+                        {allowedSearchRoles.length > 0 ? (
+                          allowedSearchRoles.length === 1 ? (
+                            <>Vous pouvez uniquement rechercher des <strong>{getRoleDisplayFormat(allowedSearchRoles[0]).toLowerCase()}</strong></>
+                          ) : (
+                            <>Essayez avec un autre rôle : {allowedSearchRoles.map(role => getRoleDisplayFormat(role).toLowerCase()).join(', ')}</>
+                          )
+                        ) : (
+                          <>Essayez avec un autre terme de recherche</>
+                        )}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <Search className="w-10 h-10 text-gray-300 mb-2" />
+                      <p className="text-gray-500 font-medium">Aucun utilisateur trouvé</p>
+                      <p className="text-gray-400 text-sm mt-1">
+                        {allowedSearchRoles.length > 0 ? (
+                          allowedSearchRoles.length === 1 ? (
+                            <>Essayez avec un autre terme ou recherchez par le rôle <strong>{getRoleDisplayFormat(allowedSearchRoles[0]).toLowerCase()}</strong></>
+                          ) : (
+                            <>Essayez avec un autre terme ou recherchez par rôle : {allowedSearchRoles.map(role => getRoleDisplayFormat(role).toLowerCase()).join(', ')}</>
+                          )
+                        ) : (
+                          <>Essayez avec un autre terme de recherche</>
+                        )}
+                      </p>
+                    </>
+                  )}
                 </div>
               </motion.div>
             ) : (
@@ -220,6 +417,12 @@ export const SearchBar = () => {
                 <div className="px-3 py-2 bg-gray-50 border-b border-gray-100">
                   <p className="text-xs font-medium text-gray-500">
                     {suggestions.length} résultat{suggestions.length > 1 ? 's' : ''} trouvé{suggestions.length > 1 ? 's' : ''}
+                    {isRoleSearch && (
+                      <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700">
+                        <Briefcase className="w-3 h-3 mr-1" />
+                        Recherche par rôle
+                      </span>
+                    )}
                   </p>
                 </div>
                 <div 
@@ -255,13 +458,20 @@ export const SearchBar = () => {
                           {user.firstName} {user.lastName}
                         </div>
                         <div className="flex items-center mt-1">
-                          <span className={cn(
-                            "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium",
-                            getRoleColor(user.role)
-                          )}>
-                            {getRoleIcon(user.role)}
-                            {user.role}
-                          </span>
+                          {user.roles && user.roles.length > 0 ? (
+                            <span className={cn(
+                              "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium",
+                              getRoleColor(user.roles[0])
+                            )}>
+                              {getRoleIcon(user.roles[0])}
+                              {getRoleDisplayName(user.roles[0])}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-700">
+                              <UserCircle2 className="w-3 h-3 mr-1 text-gray-600" />
+                              Utilisateur
+                            </span>
+                          )}
                         </div>
                       </div>
                       <motion.div 

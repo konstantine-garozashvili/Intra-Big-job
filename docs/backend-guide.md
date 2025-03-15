@@ -112,6 +112,11 @@ docker exec -it infra-backend-1 composer dump-autoload
 ```bash
 docker exec -it infra-backend-1 php bin/console cache:clear
 ```
+Ou bien :
+
+```bash
+docker exec -it infra-backend-1 php bin/console cache:pool:clear cache.global_clearer
+```
 
 ### Erreur d'annotation/attribut
 

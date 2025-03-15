@@ -48,7 +48,7 @@ const ProfileTabs = ({ userData, isPublicProfile = false }) => {
   // Vérifier si l'utilisateur a des diplômes
   const hasDiplomas = userData.diplomas && userData.diplomas.length > 0;
   
-  // Si l'utilisateur est un enseignant, toujours afficher l'onglet "Expérience et Cours"
+  // Si l'utilisateur est un formateur, toujours afficher l'onglet "Expérience et Cours"
   const shouldShowExperienceTab = mainRole === "TEACHER" || hasDiplomas;
 
   return (

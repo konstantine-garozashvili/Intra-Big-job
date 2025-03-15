@@ -266,6 +266,7 @@ const Navbar = memo(({ user }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const permissions = useRolePermissions();
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   // Vérifier l'état d'authentification
   const checkAuthStatus = async () => {
@@ -404,7 +405,7 @@ const Navbar = memo(({ user }) => {
               </div>
             </div>
 
-            {/* Partie centrale: Barre de recherche (visible uniquement sur desktop) */}
+            {/* Partie centrale: Barre de recherche */}
             {isAuthenticated && (
               <div className="hidden md:flex flex-1 justify-center mx-4">
                 <div className="search-container w-full max-w-md flex justify-end">
@@ -413,46 +414,43 @@ const Navbar = memo(({ user }) => {
               </div>
             )}
 
-            {/* Partie centrale: Navigation (visible uniquement sur desktop) */}
-            <div className="hidden md:block">
-              <div className="flex items-center ml-10 space-x-1">
-                {/* Élements affichés uniquement pour les utilisateurs connectés */}
-                {/* Le bouton "Tableau de bord" a été supprimé */}
-              </div>
-            </div>
-
-            {/* Partie droite: Authentification (desktop) */}
-            <div className="hidden md:block">
-              <div className="flex items-center ml-4">
-                {isAuthenticated ? (
-                  <UserMenu
-                    onLogout={() => setLogoutDialogOpen(true)}
-                    userData={userData}
-                    setLogoutDialogOpen={setLogoutDialogOpen}
-                  />
-                ) : (
+            {/* Partie droite: Authentification */}
+            <div className="flex items-center">
+              {/* Barre de recherche mobile */}
+              {isAuthenticated && (
+                <div className="md:hidden mr-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-full w-10 h-10 p-0 bg-transparent text-gray-200 hover:bg-[#02284f]/80 hover:text-white"
+                    onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
+                  >
+                    <Search className="h-5 w-5" />
+                  </Button>
+                </div>
+              )}
+              
+              {/* Menu utilisateur */}
+              {isAuthenticated ? (
+                <UserMenu
+                  onLogout={() => setLogoutDialogOpen(true)}
+                  userData={userData}
+                  setLogoutDialogOpen={setLogoutDialogOpen}
+                />
+              ) : (
+                <div className="mobile-auth-buttons">
                   <AuthButtons />
-                )}
-              </div>
-            </div>
-
-            {/* Partie droite: Authentification (mobile) */}
-            <div className="md:hidden">
-              <div className="flex items-center">
-                {isAuthenticated ? (
-                  <UserMenu
-                    onLogout={() => setLogoutDialogOpen(true)}
-                    userData={userData}
-                    setLogoutDialogOpen={setLogoutDialogOpen}
-                  />
-                ) : (
-                  <div className="mobile-auth-buttons">
-                    <AuthButtons />
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
+
+          {/* Barre de recherche mobile */}
+          {isAuthenticated && mobileSearchOpen && (
+            <div className="md:hidden px-4 pb-4">
+              <SearchBar />
+            </div>
+          )}
         </div>
 
         {/* Dialogue de confirmation de déconnexion */}

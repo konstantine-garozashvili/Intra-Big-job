@@ -86,7 +86,7 @@ const ExperienceTab = ({ userData, isPublicProfile = false }) => {
         </motion.div>
       )}
       
-      {/* Cours - Pour les enseignants */}
+      {/* Cours - Pour les formateurs */}
       {mainRole === "TEACHER" && (
         <motion.div
           variants={cardVariants}
