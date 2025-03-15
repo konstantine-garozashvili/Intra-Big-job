@@ -54,6 +54,7 @@ const UserProfileSettings = () => {
     refetchOnWindowFocus: false,
     staleTime: 0, // Ensure we always get fresh data
     cacheTime: 0, // Disable caching to prevent stale data
+    timeout: 4000, // Ajouter un timeout de 4 secondes
     onError: (error) => {
       toast.error('Failed to load profile data: ' + (error.response?.data?.message || error.message));
     }

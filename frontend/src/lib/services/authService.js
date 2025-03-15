@@ -15,6 +15,9 @@ let currentSessionId = localStorage.getItem('session_id') || generateSessionId()
 // Exposer l'identifiant de session pour l'utiliser dans les clés de requête
 export const getSessionId = () => currentSessionId;
 
+// Lazy loading des informations utilisateur
+let userDataPromise = null;
+
 /**
  * Service pour l'authentification et la gestion des utilisateurs
  */
@@ -67,14 +70,10 @@ export const authService = {
       // Nettoyer les données de l'utilisateur précédent
       localStorage.removeItem('token');
       localStorage.removeItem('refresh_token');
-      localStorage.removeItem('user');
       
       // Générer un nouvel identifiant de session
       currentSessionId = generateSessionId();
       localStorage.setItem('session_id', currentSessionId);
-      
-      // Vider COMPLÈTEMENT le cache React Query pour éviter les problèmes de données persistantes
-      clearQueryCache();
       
       // Utiliser directement la route standard JWT
       const response = await apiService.post('/login_check', loginData);
@@ -89,32 +88,24 @@ export const authService = {
         localStorage.setItem('refresh_token', response.refresh_token);
       }
       
-      // Stocker les informations de l'utilisateur si présentes
-      if (response.user) {
-        localStorage.setItem('user', JSON.stringify(response.user));
-        
-        // Déclencher un événement de mise à jour des rôles
-        window.dispatchEvent(new Event('role-change'));
-      } else {
-        // Essayer d'extraire les informations du token JWT
+      // Extraire les informations de base du token JWT pour un accès rapide
+      if (response.token) {
         try {
-          if (response.token) {
-            const tokenParts = response.token.split('.');
-            if (tokenParts.length === 3) {
-              const payload = JSON.parse(atob(tokenParts[1]));
+          const tokenParts = response.token.split('.');
+          if (tokenParts.length === 3) {
+            const payload = JSON.parse(atob(tokenParts[1]));
+            
+            if (payload.roles) {
+              // Créer un objet utilisateur minimal avec les informations du token
+              const minimalUser = {
+                username: payload.username,
+                roles: payload.roles
+              };
               
-              if (payload.roles) {
-                // Créer un objet utilisateur minimal avec les informations du token
-                const minimalUser = {
-                  username: payload.username,
-                  roles: payload.roles
-                };
-                
-                localStorage.setItem('user', JSON.stringify(minimalUser));
-                
-                // Déclencher un événement de mise à jour des rôles
-                window.dispatchEvent(new Event('role-change'));
-              }
+              localStorage.setItem('user', JSON.stringify(minimalUser));
+              
+              // Déclencher un événement de mise à jour des rôles
+              window.dispatchEvent(new Event('role-change'));
             }
           }
         } catch (tokenError) {
@@ -122,10 +113,72 @@ export const authService = {
         }
       }
       
+      // Initialiser le chargement des données utilisateur en arrière-plan
+      // mais ne pas attendre sa résolution
+      this.lazyLoadUserData();
+      
       return response;
     } catch (error) {
       throw error;
     }
+  },
+
+  /**
+   * Charge les données utilisateur en arrière-plan
+   * @returns {Promise<Object>} - Données de l'utilisateur
+   */
+  lazyLoadUserData() {
+    // Si une promesse existe déjà, la retourner
+    if (userDataPromise) return userDataPromise;
+    
+    // Créer une promesse avec timeout
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => {
+        reject(new Error('User data fetch timeout'));
+      }, 3000); // Réduit de 8000ms à 3000ms pour accélérer le chargement
+    });
+    
+    // Sinon, créer une nouvelle promesse
+    const fetchPromise = this.getCurrentUser()
+      .then(userData => {
+        localStorage.setItem('user', JSON.stringify(userData));
+        window.dispatchEvent(new Event('user-data-loaded'));
+        return userData;
+      });
+    
+    // Race between fetch and timeout
+    userDataPromise = Promise.race([fetchPromise, timeoutPromise])
+      .catch(error => {
+        console.warn('Error loading user data:', error.message);
+        userDataPromise = null; // Réinitialiser en cas d'erreur
+        
+        // Even if we timeout, dispatch the event to unblock UI
+        window.dispatchEvent(new Event('user-data-loaded'));
+        
+        // Try to extract minimal user data from token as fallback
+        try {
+          const token = localStorage.getItem('token');
+          if (token) {
+            const tokenParts = token.split('.');
+            if (tokenParts.length === 3) {
+              const payload = JSON.parse(atob(tokenParts[1]));
+              if (payload.username) {
+                const minimalUser = {
+                  username: payload.username,
+                  roles: payload.roles || []
+                };
+                return minimalUser;
+              }
+            }
+          }
+        } catch (tokenError) {
+          // Silent fail for token parsing
+        }
+        
+        throw error;
+      });
+    
+    return userDataPromise;
   },
 
   /**
@@ -194,6 +247,9 @@ export const authService = {
       localStorage.removeItem('refresh_token');
       localStorage.removeItem('user');
       
+      // Réinitialiser la promesse de chargement des données utilisateur
+      userDataPromise = null;
+      
       // Générer un nouvel identifiant de session pour la prochaine connexion
       currentSessionId = generateSessionId();
       localStorage.setItem('session_id', currentSessionId);
@@ -220,7 +276,9 @@ export const authService = {
       localStorage.removeItem('token');
       localStorage.removeItem('refresh_token');
       localStorage.removeItem('user');
-      // Ne pas supprimer device_id pour maintenir l'identification de l'appareil
+      
+      // Réinitialiser la promesse de chargement des données utilisateur
+      userDataPromise = null;
       
       // Vider le cache React Query
       clearQueryCache();

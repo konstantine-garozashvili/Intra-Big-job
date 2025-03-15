@@ -149,7 +149,7 @@ export const useRoleUI = () => {
     translateRoleName: (roleName) => {
       switch(roleName) {
         case ROLES.STUDENT: return "Étudiant";
-        case ROLES.TEACHER: return "Professeur";
+        case ROLES.TEACHER: return "Formateur";
         case ROLES.HR: return "Ressources Humaines";
         case ROLES.ADMIN: return "Administrateur";
         case ROLES.SUPER_ADMIN: 

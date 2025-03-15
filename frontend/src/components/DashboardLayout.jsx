@@ -3,17 +3,19 @@ import PropTypes from 'prop-types';
 import { motion } from 'framer-motion';
 import { AlertCircle } from 'lucide-react';
 
-// Composant de chargement optimisé
-const LoadingIndicator = memo(() => (
-  <div className="flex flex-col items-center justify-center min-h-[50vh]">
-    <motion.div
-      className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full"
-      animate={{ rotate: 360 }}
-      transition={{ repeat: Infinity, ease: "linear", duration: 1 }}
-    />
-    <p className="mt-4 text-sm font-medium text-gray-600">Chargement du tableau de bord...</p>
-  </div>
-));
+// Simplified loading indicator with minimal visual elements
+const LoadingIndicator = memo(() => {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[50vh]">
+      <motion.div
+        className="w-10 h-10 border-3 border-blue-200 border-t-blue-600 rounded-full"
+        animate={{ rotate: 360 }}
+        transition={{ repeat: Infinity, ease: "linear", duration: 1 }}
+      />
+      <p className="mt-3 text-sm font-medium text-gray-600">Chargement...</p>
+    </div>
+  );
+});
 
 LoadingIndicator.displayName = 'LoadingIndicator';
 
@@ -53,7 +55,7 @@ ErrorDisplay.propTypes = {
  * Gère l'affichage des états de chargement et d'erreur
  */
 const DashboardLayout = ({ loading, error, children, className = "" }) => {
-  // Affichage du loader simple
+  // Affichage du loader simplifié
   if (loading) {
     return (
       <div className={`container mx-auto p-8 ${className}`}>

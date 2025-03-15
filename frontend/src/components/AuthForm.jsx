@@ -6,33 +6,177 @@ import { toast } from "sonner"
 import { useRolePermissions } from "@/features/roles/useRolePermissions"
 import { useRoles } from "@/features/roles/roleContext"
 
-export function AuthForm() {
-  const [email, setEmail] = React.useState("")
-  const [password, setPassword] = React.useState("")
-  const [rememberMe, setRememberMe] = React.useState(false)
+// Separate input component to prevent re-renders of the entire form
+const FormInput = React.memo(({ 
+  id, 
+  label, 
+  type = "text", 
+  value, 
+  onChange, 
+  error, 
+  onBlur,
+  ...props 
+}) => {
   const [showPassword, setShowPassword] = React.useState(false)
+  const actualType = type === "password" ? (showPassword ? "text" : "password") : type
+
+  return (
+    <div>
+      <label htmlFor={id} className="block text-sm font-medium text-gray-700 mb-1">
+        {label}
+      </label>
+      <div className="mt-1 relative">
+        <input
+          id={id}
+          name={id}
+          type={actualType}
+          value={value}
+          onChange={onChange}
+          onBlur={onBlur}
+          className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#528eb2] focus:border-[#528eb2] sm:text-sm"
+          {...props}
+        />
+        {type === "password" && (
+          <button
+            type="button"
+            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-500"
+            onClick={() => setShowPassword(!showPassword)}
+          >
+            {showPassword ? (
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+              </svg>
+            ) : (
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+            )}
+          </button>
+        )}
+        {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      </div>
+    </div>
+  )
+})
+
+FormInput.displayName = "FormInput"
+
+// Quick login buttons component (memoized to prevent re-renders)
+const QuickLoginSection = React.memo(({ onQuickLogin }) => {
+  return (
+    <div className="mb-6">
+      <p className="text-sm text-gray-600 mb-2 text-center">Connexion rapide (Dev only)</p>
+      <div className="grid grid-cols-3 gap-2 mb-4">
+        <button
+          type="button"
+          onClick={() => onQuickLogin('admin')}
+          className="px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+        >
+          Admin
+        </button>
+        <button
+          type="button"
+          onClick={() => onQuickLogin('superadmin')}
+          className="px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
+        >
+          Superadmin
+        </button>
+        <button
+          type="button"
+          onClick={() => onQuickLogin('teacher')}
+          className="px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700"
+        >
+          Teacher
+        </button>
+        <button
+          type="button"
+          onClick={() => onQuickLogin('student')}
+          className="px-3 py-2 text-sm font-medium text-white bg-yellow-600 rounded-md hover:bg-yellow-700"
+        >
+          Student
+        </button>
+        <button
+          type="button"
+          onClick={() => onQuickLogin('hr')}
+          className="px-3 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700"
+        >
+          HR
+        </button>
+        <button
+          type="button"
+          onClick={() => onQuickLogin('guest')}
+          className="px-3 py-2 text-sm font-medium text-white bg-gray-600 rounded-md hover:bg-gray-700"
+        >
+          Guest
+        </button>
+        <button
+          type="button"
+          onClick={() => onQuickLogin('recruiter')}
+          className="px-3 py-2 text-sm font-medium text-white bg-pink-600 rounded-md hover:bg-pink-700"
+        >
+          Recruiter
+        </button>
+      </div>
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-gray-300"></div>
+        </div>
+        <div className="relative flex justify-center text-sm">
+          <span className="px-2 text-gray-500 bg-white">
+            Ou connectez-vous manuellement
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+QuickLoginSection.displayName = "QuickLoginSection";
+
+export function AuthForm() {
+  // Use a single form state object to reduce re-renders
+  const [formState, setFormState] = React.useState({
+    email: "",
+    password: "",
+    rememberMe: false
+  })
+  
   const [isLoading, setIsLoading] = React.useState(false)
   const [errors, setErrors] = React.useState({})
   const navigate = useNavigate()
   const permissions = useRolePermissions()
   const { refreshRoles } = useRoles()
 
-  const quickLogin = (role) => {
-    const credentials = {
-      admin: { email: 'admin@bigproject.com', password: 'Password123@' },
-      superadmin: { email: 'superadmin@bigproject.com', password: 'Password123@' },
-      teacher: { email: 'teacher@bigproject.com', password: 'Password123@' },
-      student: { email: 'student@bigproject.com', password: 'Password123@' },
-      hr: { email: 'hr@bigproject.com', password: 'Password123@' },
-      guest: { email: 'guest@bigproject.com', password: 'Password123@' },
-      recruiter: { email: 'recruiter@bigproject.com', password: 'Password123@' }
-    }
+  // Memoize the credentials object to prevent recreation on each render
+  const credentials = React.useMemo(() => ({
+    admin: { email: 'admin@bigproject.com', password: 'Password123@' },
+    superadmin: { email: 'superadmin@bigproject.com', password: 'Password123@' },
+    teacher: { email: 'teacher@bigproject.com', password: 'Password123@' },
+    student: { email: 'student@bigproject.com', password: 'Password123@' },
+    hr: { email: 'hr@bigproject.com', password: 'Password123@' },
+    guest: { email: 'guest@bigproject.com', password: 'Password123@' },
+    recruiter: { email: 'recruiter@bigproject.com', password: 'Password123@' }
+  }), [])
 
+  const quickLogin = React.useCallback((role) => {
     if (credentials[role]) {
-      setEmail(credentials[role].email)
-      setPassword(credentials[role].password)
+      setFormState(prev => ({
+        ...prev,
+        email: credentials[role].email,
+        password: credentials[role].password
+      }))
     }
-  }
+  }, [credentials])
+
+  // Handle input changes with a single handler
+  const handleInputChange = React.useCallback((e) => {
+    const { name, value, type, checked } = e.target
+    setFormState(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }))
+  }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -41,9 +185,9 @@ export function AuthForm() {
     
     // Validation basique
     const newErrors = {}
-    if (!email) newErrors.email = "L'email est requis"
-    else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = "Format d'email invalide"
-    if (!password) newErrors.password = "Le mot de passe est requis"
+    if (!formState.email) newErrors.email = "L'email est requis"
+    else if (!/\S+@\S+\.\S+/.test(formState.email)) newErrors.email = "Format d'email invalide"
+    if (!formState.password) newErrors.password = "Le mot de passe est requis"
     
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors)
@@ -53,37 +197,58 @@ export function AuthForm() {
     setIsLoading(true)
     
     try {
-      const response = await authService.login(email, password)
+      // Simple loading toast
+      toast.loading("Connexion en cours...", {
+        id: "login-toast",
+        duration: 10000 // 10 seconds max
+      })
       
-      if (rememberMe) {
-        localStorage.setItem('rememberedEmail', email)
+      const response = await authService.login(formState.email, formState.password)
+      
+      if (formState.rememberMe) {
+        localStorage.setItem('rememberedEmail', formState.email)
       } else {
         localStorage.removeItem('rememberedEmail')
       }
       
-      toast.success("Connexion réussie", {
-        description: "Vous êtes maintenant connecté."
-      })
-
+      // Dispatch login success event
       window.dispatchEvent(new Event('login-success'));
       
+      // Get the return URL if it exists
       const returnTo = sessionStorage.getItem('returnTo')
       
-      try {
-        const userData = await authService.getCurrentUser();
-        refreshRoles();
-        
-        if (returnTo) {
-          sessionStorage.removeItem('returnTo')
-          navigate(returnTo)
-        } else {
-          const dashboardPath = permissions.getRoleDashboardPath();
+      // Navigate immediately without waiting for user data
+      if (returnTo) {
+        sessionStorage.removeItem('returnTo')
+        navigate(returnTo)
+      } else {
+        // Try to get a dashboard path from minimal user data in token
+        // If not available, use a default path
+        try {
+          const dashboardPath = permissions.getRoleDashboardPath() || '/dashboard';
           navigate(dashboardPath);
+        } catch (error) {
+          navigate('/dashboard');
         }
-      } catch (userError) {
-        navigate('/dashboard');
       }
+      
+      // Show success toast after navigation
+      toast.success("Connexion réussie", {
+        id: "login-toast"
+      })
+      
+      // Listen for when full user data is loaded
+      const handleUserDataLoaded = () => {
+        refreshRoles();
+        window.removeEventListener('user-data-loaded', handleUserDataLoaded);
+      };
+      
+      window.addEventListener('user-data-loaded', handleUserDataLoaded);
+      
     } catch (error) {
+      // Dismiss loading toast
+      toast.dismiss("login-toast")
+      
       if (error.response) {
         const { data } = error.response
         
@@ -124,8 +289,11 @@ export function AuthForm() {
   React.useEffect(() => {
     const rememberedEmail = localStorage.getItem('rememberedEmail')
     if (rememberedEmail) {
-      setEmail(rememberedEmail)
-      setRememberMe(true)
+      setFormState(prev => ({
+        ...prev,
+        email: rememberedEmail,
+        rememberMe: true
+      }))
     }
   }, [])
 
@@ -140,71 +308,8 @@ export function AuthForm() {
         </p>
       </div>
 
-      {/* Quick Login Buttons */}
-      <div className="mb-6">
-        <p className="text-sm text-gray-600 mb-2 text-center">Connexion rapide (Dev only)</p>
-        <div className="grid grid-cols-3 gap-2 mb-4">
-          <button
-            type="button"
-            onClick={() => quickLogin('admin')}
-            className="px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
-          >
-            Admin
-          </button>
-          <button
-            type="button"
-            onClick={() => quickLogin('superadmin')}
-            className="px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
-          >
-            Superadmin
-          </button>
-          <button
-            type="button"
-            onClick={() => quickLogin('teacher')}
-            className="px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700"
-          >
-            Teacher
-          </button>
-          <button
-            type="button"
-            onClick={() => quickLogin('student')}
-            className="px-3 py-2 text-sm font-medium text-white bg-yellow-600 rounded-md hover:bg-yellow-700"
-          >
-            Student
-          </button>
-          <button
-            type="button"
-            onClick={() => quickLogin('hr')}
-            className="px-3 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700"
-          >
-            HR
-          </button>
-          <button
-            type="button"
-            onClick={() => quickLogin('guest')}
-            className="px-3 py-2 text-sm font-medium text-white bg-gray-600 rounded-md hover:bg-gray-700"
-          >
-            Guest
-          </button>
-          <button
-            type="button"
-            onClick={() => quickLogin('recruiter')}
-            className="px-3 py-2 text-sm font-medium text-white bg-pink-600 rounded-md hover:bg-pink-700"
-          >
-            Recruiter
-          </button>
-        </div>
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-300"></div>
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-2 text-gray-500 bg-white">
-              Ou connectez-vous manuellement
-            </span>
-          </div>
-        </div>
-      </div>
+      {/* Quick Login Buttons - Now directly in the form */}
+      <QuickLoginSection onQuickLogin={quickLogin} />
 
       {errors.auth && (
         <div className="p-3 mb-5 text-red-700 bg-red-100 border border-red-400 rounded">
@@ -213,59 +318,29 @@ export function AuthForm() {
       )}
 
       <form className="space-y-6" onSubmit={handleSubmit}>
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-            Adresse email
-          </label>
-          <div className="mt-1">
-            <input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#528eb2] focus:border-[#528eb2] sm:text-sm"
-            />
-            {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email}</p>}
-          </div>
-        </div>
+        <FormInput
+          id="email"
+          name="email"
+          label="Adresse email"
+          type="email"
+          autoComplete="email"
+          required
+          value={formState.email}
+          onChange={handleInputChange}
+          error={errors.email}
+        />
 
-        <div>
-          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-            Mot de passe
-          </label>
-          <div className="mt-1 relative">
-            <input
-              id="password"
-              name="password"
-              type={showPassword ? "text" : "password"}
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#528eb2] focus:border-[#528eb2] sm:text-sm"
-            />
-            <button
-              type="button"
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-500"
-              onClick={() => setShowPassword(!showPassword)}
-            >
-              {showPassword ? (
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                </svg>
-              ) : (
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-              )}
-            </button>
-            {errors.password && <p className="mt-1 text-xs text-red-600">{errors.password}</p>}
-          </div>
-        </div>
+        <FormInput
+          id="password"
+          name="password"
+          label="Mot de passe"
+          type="password"
+          autoComplete="current-password"
+          required
+          value={formState.password}
+          onChange={handleInputChange}
+          error={errors.password}
+        />
 
         <div className="flex items-center justify-between">
           <div className="flex items-center">
@@ -273,8 +348,8 @@ export function AuthForm() {
               id="rememberMe"
               name="rememberMe"
               type="checkbox"
-              checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
+              checked={formState.rememberMe}
+              onChange={handleInputChange}
               className="h-4 w-4 text-[#528eb2] focus:ring-[#528eb2] border-gray-300 rounded"
             />
             <label htmlFor="rememberMe" className="block ml-2 text-sm text-gray-700">

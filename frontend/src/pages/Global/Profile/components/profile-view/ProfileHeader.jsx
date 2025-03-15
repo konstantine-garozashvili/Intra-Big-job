@@ -70,7 +70,7 @@ const ProfileHeader = ({ userData, isPublicProfile = false, profilePictureUrl })
   const translateRoleName = (roleName) => {
     switch(roleName) {
       case "STUDENT": return "Étudiant";
-      case "TEACHER": return "Professeur";
+      case "TEACHER": return "Formateur";
       case "HR": return "Ressources Humaines";
       case "ADMIN": return "Administrateur";
       case "SUPER_ADMIN": 

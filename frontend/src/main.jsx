@@ -17,7 +17,14 @@ const queryClient = new QueryClient({
       retry: 1, // Réessayer une fois en cas d'échec
       refetchOnMount: false, // Ne pas refetch automatiquement au montage
       refetchOnReconnect: false, // Ne pas refetch automatiquement à la reconnexion
+      retryDelay: 1000, // Attendre 1 seconde avant de réessayer
+      timeout: 5000, // Réduit de 10000ms à 5000ms pour accélérer les requêtes
     },
+    mutations: {
+      retry: 1,
+      retryDelay: 1000,
+      timeout: 5000, // Réduit de 10000ms à 5000ms pour accélérer les mutations
+    }
   },
 })
 

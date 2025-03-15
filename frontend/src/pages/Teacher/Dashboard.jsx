@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/table";
 
 /**
- * Tableau de bord spécifique pour les professeurs
+ * Tableau de bord spécifique pour les formateurs
  */
 const TeacherDashboard = () => {
   const { user, dashboardData, isLoading, isError, error, refetch } = useTeacherDashboardData();

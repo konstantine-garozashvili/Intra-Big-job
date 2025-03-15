@@ -43,7 +43,7 @@ const ProfileProgress = ({ userData }) => {
   useEffect(() => {
     let timeoutId;
     if (isRefreshing) {
-      // Après 5 secondes, forcer la fin du rafraîchissement si toujours en cours
+      // Après 3 secondes, forcer la fin du rafraîchissement si toujours en cours
       timeoutId = setTimeout(() => {
         console.log("Timeout de sécurité pour le rafraîchissement");
         setIsRefreshing(false);
@@ -51,7 +51,7 @@ const ProfileProgress = ({ userData }) => {
         if (profileData) {
           setLocalUserData(profileData);
         }
-      }, 5000);
+      }, 3000);
     }
     
     return () => {

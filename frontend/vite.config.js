@@ -31,7 +31,7 @@ export default defineConfig({
     port: 5173,
     watch: {
       usePolling: true,
-      interval: 1000,
+      interval: 500,
       ignored: [
         '**/node_modules/**',
         '**/dist/**',
@@ -57,12 +57,25 @@ export default defineConfig({
         manualChunks: {
           react: ['react', 'react-dom'],
           router: ['react-router-dom'],
-          ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-navigation-menu']
+          ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-navigation-menu'],
+          query: ['@tanstack/react-query'],
+          forms: ['react-hook-form', 'zod'],
+          charts: ['recharts']
         }
       }
     }
   },
   optimizeDeps: {
-    include: ['react', 'react-dom', 'react-router-dom']
+    include: [
+      'react', 
+      'react-dom', 
+      'react-router-dom',
+      '@tanstack/react-query',
+      'axios',
+      'react-hook-form',
+      'zod',
+      'framer-motion'
+    ],
+    force: true
   }
 })

@@ -1,9 +1,31 @@
 import apiService from '@/lib/services/apiService';
 
+// Cache local pour les données fréquemment utilisées
+const profileCache = {
+  userData: null,
+  userDataTimestamp: 0,
+  consolidatedData: null,
+  consolidatedDataTimestamp: 0,
+  // Durée de validité du cache en ms (2 minutes)
+  cacheDuration: 2 * 60 * 1000
+};
+
 class ProfileService {
   async getUserProfile() {
     try {
+      // Vérifier si les données sont en cache et toujours valides
+      const now = Date.now();
+      if (profileCache.userData && 
+          (now - profileCache.userDataTimestamp) < profileCache.cacheDuration) {
+        return profileCache.userData;
+      }
+      
       const response = await apiService.get('/api/profil/user-data');
+      
+      // Mettre en cache les données
+      profileCache.userData = response.data;
+      profileCache.userDataTimestamp = now;
+      
       return response.data;
     } catch (error) {
       throw error;
@@ -17,11 +39,19 @@ class ProfileService {
         const response = await apiService.put('/api/student/profile/portfolio-url', {
           portfolioUrl: profileData.portfolioUrl
         });
+        
+        // Invalider le cache après une mise à jour
+        this.invalidateCache();
+        
         return response.data;
       }
       
       // Otherwise use the regular profile update endpoint
       const response = await apiService.put('/api/profile', profileData);
+      
+      // Invalider le cache après une mise à jour
+      this.invalidateCache();
+      
       return response.data;
     } catch (error) {
       throw error;
@@ -57,7 +87,19 @@ class ProfileService {
 
   async getAllProfileData() {
     try {
+      // Vérifier si les données sont en cache et toujours valides
+      const now = Date.now();
+      if (profileCache.consolidatedData && 
+          (now - profileCache.consolidatedDataTimestamp) < profileCache.cacheDuration) {
+        return profileCache.consolidatedData;
+      }
+      
       const response = await apiService.get('/api/profil/consolidated');
+      
+      // Mettre en cache les données
+      profileCache.consolidatedData = response.data;
+      profileCache.consolidatedDataTimestamp = now;
+      
       return response.data;
     } catch (error) {
       throw error;
@@ -99,6 +141,9 @@ class ProfileService {
         },
       });
       
+      // Invalider le cache après une mise à jour
+      this.invalidateCache();
+      
       return response;
     } catch (error) {
       throw error;
@@ -110,6 +155,10 @@ class ProfileService {
       // Ajouter un timestamp pour éviter les problèmes de cache
       const timestamp = new Date().getTime();
       const response = await apiService.delete(`/api/profile/picture?t=${timestamp}`);
+      
+      // Invalider le cache après une mise à jour
+      this.invalidateCache();
+      
       return response;
     } catch (error) {
       throw error;
@@ -119,10 +168,22 @@ class ProfileService {
   async updateAddress(addressData) {
     try {
       const response = await apiService.put('/api/profil/address', addressData);
+      
+      // Invalider le cache après une mise à jour
+      this.invalidateCache();
+      
       return response.data;
     } catch (error) {
       throw error;
     }
+  }
+  
+  // Méthode pour invalider le cache
+  invalidateCache() {
+    profileCache.userData = null;
+    profileCache.userDataTimestamp = 0;
+    profileCache.consolidatedData = null;
+    profileCache.consolidatedDataTimestamp = 0;
   }
 }
 

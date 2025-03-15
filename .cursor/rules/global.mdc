@@ -1,6 +1,11 @@
 ---
 description: 
 globs: 
+alwaysApply: false
+---
+---
+description: 
+globs: 
 alwaysApply: true
 ---
 
@@ -14,3 +19,4 @@ docker exec -it infra-frontend-1
 Linters on php files are normal its cause vendor is not on local 
 
 The website need to be in french
+

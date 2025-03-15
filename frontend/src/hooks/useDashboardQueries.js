@@ -103,8 +103,6 @@ export const useTeacherDashboardData = () => {
  * @returns {Object} - Données du dashboard administrateur et état de la requête
  */
 export const useAdminDashboardData = () => {
-  // Utiliser useApiQuery pour récupérer les données utilisateur
-  const userQuery = useUserData();
   const sessionId = getSessionId();
   
   // Utiliser useApiQuery pour récupérer la liste des utilisateurs
@@ -128,14 +126,51 @@ export const useAdminDashboardData = () => {
           return undefined;
         }
       },
-      enabled: !!userQuery.data, // Ne déclencher la requête que si les données utilisateur sont disponibles
+      // Always enabled to load immediately
+      enabled: true,
+      // Add a timeout to prevent hanging
+      retry: 1,
+      retryDelay: 1000,
+      timeout: 4000, // Réduit de 8000ms à 4000ms
     }
   );
   
+  // Get minimal user data from token if available
+  const getMinimalUserData = () => {
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        return JSON.parse(userStr);
+      }
+    } catch (e) {
+      console.error('Error parsing user data from localStorage:', e);
+    }
+    return null;
+  };
+  
+  // Use minimal user data from token while full data loads
+  const minimalUserData = getMinimalUserData();
+  
+  // Load full user data in parallel
+  const userQuery = useApiQuery('/me', ['user-data', sessionId], {
+    staleTime: 30 * 60 * 1000, // 30 minutes
+    cacheTime: 60 * 60 * 1000, // 1 hour
+    refetchOnWindowFocus: false,
+    refetchOnMount: true,
+    refetchOnReconnect: false,
+    retry: 1,
+    retryDelay: 1000,
+    timeout: 4000, // Réduit de 8000ms à 4000ms
+    select: (data) => {
+      return data.user || data;
+    }
+  });
+  
   return {
-    user: userQuery.data,
+    // Use minimal user data as fallback if full data is still loading
+    user: userQuery.data || minimalUserData,
     users: usersQuery.data?.data || [],
-    isLoading: userQuery.isLoading || usersQuery.isLoading,
+    isLoading: (userQuery.isLoading && !minimalUserData) || usersQuery.isLoading,
     isError: userQuery.isError || usersQuery.isError,
     error: userQuery.error || usersQuery.error,
     refetch: () => {
