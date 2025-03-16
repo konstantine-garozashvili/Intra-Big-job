@@ -2,7 +2,7 @@ import { BrowserRouter as Router, Routes, Route, useLocation, Navigate, Outlet, 
 import { lazy, Suspense, useState, useEffect } from 'react'
 import MainLayout from './components/MainLayout'
 import { RoleProvider, RoleDashboardRedirect } from './features/roles'
-import DotSpinner from './components/ui/DotSpinner'
+import { Spinner } from './components/ui/spinner'
 
 // Import différé des pages pour améliorer les performances
 const Login = lazy(() => import('./pages/Login'))
@@ -182,12 +182,12 @@ const PrefetchHandler = () => {
   return null;
 };
 
-// Fallback élégant pour Suspense
-const SuspenseFallback = () => (
+// Composant de chargement optimisé pour Suspense
+const SuspenseLoader = () => (
   <div className="flex items-center justify-center min-h-screen">
-    <DotSpinner />
+    <Spinner type="dots" size="lg" className="text-primary" />
   </div>
-);
+)
 
 // Composant de contenu principal qui utilise les hooks de React Router
 const AppContent = () => {
@@ -266,7 +266,7 @@ const AppContent = () => {
       <PrefetchHandler />
       {/* Wrapper pour le contenu principal avec z-index positif */}
       <div className={`relative z-10 transition-opacity duration-200 ${isNavigating ? 'opacity-0' : 'opacity-100'}`}>
-        <Suspense fallback={<SuspenseFallback />}>
+        <Suspense fallback={<SuspenseLoader />}>
           <RoleProvider>
             <div>
               <Routes>
@@ -282,8 +282,6 @@ const AppContent = () => {
                     <Route path="/registration-success" element={<RegistrationSuccess />} />
                     <Route path="/verification-success" element={<VerificationSuccess />} />
                     <Route path="/verification-error" element={<VerificationError />} />
-                    {/* Route de test pour le dashboard SuperAdmin - À SUPPRIMER EN PRODUCTION */}
-                    <Route path="/test-superadmin" element={<SuperAdminDashboard />} />
                   </Route>
                   
                   <Route element={<ProtectedRoute />}>

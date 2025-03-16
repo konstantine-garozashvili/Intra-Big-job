@@ -3,7 +3,7 @@ import { useRolePermissions } from './useRolePermissions';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { authService } from '../../lib/services/authService';
-import DotSpinner from '../../components/ui/DotSpinner';
+import { Spinner } from '../../components/ui/spinner';
 
 /**
  * Component that conditionally renders content based on user roles
@@ -68,11 +68,11 @@ export const RoleDashboardRedirect = () => {
     refreshUserRoles();
   }, [refreshRoles]);
   
-  // Show the dot spinner while loading
+  // Show the spinner while loading
   if (isLoading || isRefreshing) {
     return (
       <div className="flex justify-center items-center min-h-[70vh]">
-        <DotSpinner />
+        <Spinner type="dots" size="lg" />
       </div>
     );
   }

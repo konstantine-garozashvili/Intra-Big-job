@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { authService } from '@/lib/services/authService';
 import { useRolePermissions } from '@/features/roles/useRolePermissions';
-import DotSpinner from './ui/DotSpinner';
+import { Spinner } from './ui/spinner';
 
 /**
  * Composant pour la page d'accueil qui redirige vers la page appropriée 
@@ -35,11 +35,11 @@ const HomePage = () => {
     checkAuth();
   }, [permissions]);
 
-  // Show the dot spinner while checking
+  // Show spinner while checking
   if (isChecking) {
     return (
       <div className="flex justify-center items-center min-h-[70vh]">
-        <DotSpinner />
+        <Spinner type="dots" size="lg" />
       </div>
     );
   }
