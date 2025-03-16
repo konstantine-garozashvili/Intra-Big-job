@@ -5,6 +5,7 @@ import { authService } from "@/lib/services/authService"
 import { toast } from "sonner"
 import { useRolePermissions } from "@/features/roles/useRolePermissions"
 import { useRoles } from "@/features/roles/roleContext"
+import QuickLoginButtons from './QuickLoginButtons'
 
 // Separate input component to prevent re-renders of the entire form
 const FormInput = React.memo(({ 
@@ -61,78 +62,6 @@ const FormInput = React.memo(({
 })
 
 FormInput.displayName = "FormInput"
-
-// Quick login buttons component (memoized to prevent re-renders)
-const QuickLoginSection = React.memo(({ onQuickLogin }) => {
-  return (
-    <div className="mb-6">
-      <p className="text-sm text-gray-600 mb-2 text-center">Connexion rapide (Dev only)</p>
-      <div className="grid grid-cols-3 gap-2 mb-4">
-        <button
-          type="button"
-          onClick={() => onQuickLogin('admin')}
-          className="px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
-        >
-          Admin
-        </button>
-        <button
-          type="button"
-          onClick={() => onQuickLogin('superadmin')}
-          className="px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
-        >
-          Superadmin
-        </button>
-        <button
-          type="button"
-          onClick={() => onQuickLogin('teacher')}
-          className="px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700"
-        >
-          Teacher
-        </button>
-        <button
-          type="button"
-          onClick={() => onQuickLogin('student')}
-          className="px-3 py-2 text-sm font-medium text-white bg-yellow-600 rounded-md hover:bg-yellow-700"
-        >
-          Student
-        </button>
-        <button
-          type="button"
-          onClick={() => onQuickLogin('hr')}
-          className="px-3 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700"
-        >
-          HR
-        </button>
-        <button
-          type="button"
-          onClick={() => onQuickLogin('guest')}
-          className="px-3 py-2 text-sm font-medium text-white bg-gray-600 rounded-md hover:bg-gray-700"
-        >
-          Guest
-        </button>
-        <button
-          type="button"
-          onClick={() => onQuickLogin('recruiter')}
-          className="px-3 py-2 text-sm font-medium text-white bg-pink-600 rounded-md hover:bg-pink-700"
-        >
-          Recruiter
-        </button>
-      </div>
-      <div className="relative">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-gray-300"></div>
-        </div>
-        <div className="relative flex justify-center text-sm">
-          <span className="px-2 text-gray-500 bg-white">
-            Ou connectez-vous manuellement
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-});
-
-QuickLoginSection.displayName = "QuickLoginSection";
 
 export function AuthForm() {
   // Use a single form state object to reduce re-renders
@@ -197,13 +126,7 @@ export function AuthForm() {
     setIsLoading(true)
     
     try {
-      // Simple loading toast
-      toast.loading("Connexion en cours...", {
-        id: "login-toast",
-        duration: 10000 // 10 seconds max
-      })
-      
-      const response = await authService.login(formState.email, formState.password)
+      await authService.login(formState.email, formState.password)
       
       if (formState.rememberMe) {
         localStorage.setItem('rememberedEmail', formState.email)
@@ -233,9 +156,7 @@ export function AuthForm() {
       }
       
       // Show success toast after navigation
-      toast.success("Connexion réussie", {
-        id: "login-toast"
-      })
+      toast.success("Connexion réussie")
       
       // Listen for when full user data is loaded
       const handleUserDataLoaded = () => {
@@ -246,9 +167,6 @@ export function AuthForm() {
       window.addEventListener('user-data-loaded', handleUserDataLoaded);
       
     } catch (error) {
-      // Dismiss loading toast
-      toast.dismiss("login-toast")
-      
       if (error.response) {
         const { data } = error.response
         
@@ -308,8 +226,8 @@ export function AuthForm() {
         </p>
       </div>
 
-      {/* Quick Login Buttons - Now directly in the form */}
-      <QuickLoginSection onQuickLogin={quickLogin} />
+      {/* Use QuickLoginButtons component */}
+      <QuickLoginButtons onQuickLogin={quickLogin} />
 
       {errors.auth && (
         <div className="p-3 mb-5 text-red-700 bg-red-100 border border-red-400 rounded">

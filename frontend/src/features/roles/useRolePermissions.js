@@ -11,7 +11,7 @@ export const useRolePermissions = () => {
 
   const permissions = useMemo(() => ({
     // Role check functions
-    isAdmin: () => hasRole(ROLES.ADMIN) || hasRole(ROLES.SUPER_ADMIN),
+    isAdmin: () => hasRole(ROLES.ADMIN) || hasRole(ROLES.SUPERADMIN),
     isRecruiter: () => hasRole(ROLES.RECRUITER),
     isHR: () => hasRole(ROLES.HR),
     isTeacher: () => hasRole(ROLES.TEACHER),
@@ -84,7 +84,7 @@ export const useRolePermissions = () => {
      * @returns {string} The path to the appropriate dashboard
      */
     getRoleDashboardPath: () => {
-      if (hasRole(ROLES.SUPER_ADMIN)) {
+      if (hasRole(ROLES.SUPERADMIN)) {
         return '/superadmin/dashboard';
       }
       if (hasRole(ROLES.ADMIN)) {

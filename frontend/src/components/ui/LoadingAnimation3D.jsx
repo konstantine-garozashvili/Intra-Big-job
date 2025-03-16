@@ -133,7 +133,7 @@ const LoadingAnimation3D = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[50vh] overflow-hidden">
+    <div className="flex flex-col items-center justify-center min-h-[70vh] overflow-hidden">
       {/* Main container with perspective for 3D effect */}
       <div className="relative perspective-[1200px] w-64 h-64 flex items-center justify-center">
         {/* Background gradient pulse */}

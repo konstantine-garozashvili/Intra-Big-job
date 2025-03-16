@@ -1,10 +1,7 @@
-import React, { memo, lazy, Suspense } from 'react';
+import React, { memo } from 'react';
 import PropTypes from 'prop-types';
 import { motion } from 'framer-motion';
 import { AlertCircle } from 'lucide-react';
-
-// Import both loading animations
-import LoadingAnimation, { LoadingAnimationNoText } from './ui/LoadingAnimation';
 
 // Composant d'erreur optimisé
 const ErrorDisplay = memo(({ errorMessage }) => (
@@ -39,20 +36,9 @@ ErrorDisplay.propTypes = {
 
 /**
  * Composant de base pour tous les dashboards
- * Gère l'affichage des états de chargement et d'erreur
+ * Gère l'affichage des états d'erreur
  */
-const DashboardLayout = ({ loading, error, children, className = "" }) => {
-  // Affichage du loader avancé
-  if (loading) {
-    return (
-      <div className={`container mx-auto p-8 ${className} loading-animation-container`}>
-        <Suspense fallback={<LoadingAnimationNoText />}>
-          <LoadingAnimation />
-        </Suspense>
-      </div>
-    );
-  }
-
+const DashboardLayout = ({ error, children, className = "" }) => {
   if (error) {
     return (
       <div className={`container mx-auto p-8 ${className}`}>
@@ -74,7 +60,6 @@ const DashboardLayout = ({ loading, error, children, className = "" }) => {
 };
 
 DashboardLayout.propTypes = {
-  loading: PropTypes.bool.isRequired,
   error: PropTypes.string,
   children: PropTypes.node.isRequired,
   className: PropTypes.string

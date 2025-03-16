@@ -446,13 +446,7 @@ const Calendar = () => {
     const renderContent = () => {
         if (loading) {
             return (
-                <div className="container p-6 mx-auto">
-                    <div className="flex items-center justify-between mb-8">
-                        <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">
-                            Emploi du temps
-                        </h1>
-                    </div>
-
+                <div className="w-full">
                     <Card className="overflow-hidden border-0 shadow-lg min-h-[550px]">
                         <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950">
                             <div className="flex items-center justify-between w-full">
@@ -482,7 +476,7 @@ const Calendar = () => {
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="container p-6 mx-auto"
+                    className="w-full"
                 >
                     <div
                         className="px-6 py-4 text-red-700 bg-red-100 border border-red-400 rounded-lg shadow-md"
@@ -523,40 +517,29 @@ const Calendar = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.5 }}
-                className="container p-6 mx-auto"
+                className="w-full"
             >
-                <motion.div
-                    className="flex items-center justify-between mb-8"
-                    initial={{ y: -20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ duration: 0.5 }}
-                >
-                    <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">
-                        Emploi du temps
-                    </h1>
-                </motion.div>
-
-                <div className="grid grid-cols-1 gap-6 mb-8">
+                <div className="grid grid-cols-1 gap-4">
                     <motion.div
                         custom={0}
                         variants={cardVariants}
                         initial="hidden"
                         animate="visible"
                     >
-                        <Card className="overflow-hidden transition-shadow duration-300 border-0 shadow-lg hover:shadow-xl">
-                            <CardHeader className="pb-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950">
+                        <Card className="overflow-hidden transition-shadow duration-300 border-0 shadow-none hover:shadow-sm">
+                            <CardHeader className="py-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950">
                                 <div className="flex items-center justify-between w-full">
                                     <div className="flex items-center">
-                                        <CalendarIcon className="w-6 h-6 mr-2 text-blue-600 dark:text-blue-400" />
-                                        <CardTitle className="text-xl">Calendrier</CardTitle>
+                                        <CalendarIcon className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
+                                        <CardTitle className="text-lg">Calendrier</CardTitle>
                                     </div>
-                                    <div className="flex items-center space-x-4">
+                                    <div className="flex items-center space-x-3">
                                         <div className="inline-flex rounded-md shadow-sm">
                                             <motion.button
                                                 whileHover={{ scale: 1.03 }}
                                                 whileTap={{ scale: 0.97 }}
                                                 onClick={() => handleViewChange('timeGridDay')}
-                                                className={`view-button relative inline-flex items-center rounded-l-md px-3 py-2 text-sm font-semibold ring-1 ring-inset ring-gray-300 ${currentView === 'timeGridDay'
+                                                className={`view-button relative inline-flex items-center rounded-l-md px-3 py-1 text-sm font-semibold ring-1 ring-inset ring-gray-300 ${currentView === 'timeGridDay'
                                                     ? 'bg-blue-600 text-white'
                                                     : 'bg-white text-gray-900 hover:bg-gray-50'
                                                     }`}
@@ -567,7 +550,7 @@ const Calendar = () => {
                                                 whileHover={{ scale: 1.03 }}
                                                 whileTap={{ scale: 0.97 }}
                                                 onClick={() => handleViewChange('timeGridWeek')}
-                                                className={`view-button relative -ml-px inline-flex items-center px-3 py-2 text-sm font-semibold ring-1 ring-inset ring-gray-300 ${currentView === 'timeGridWeek'
+                                                className={`view-button relative -ml-px inline-flex items-center px-3 py-1 text-sm font-semibold ring-1 ring-inset ring-gray-300 ${currentView === 'timeGridWeek'
                                                     ? 'bg-blue-600 text-white'
                                                     : 'bg-white text-gray-900 hover:bg-gray-50'
                                                     }`}
@@ -578,7 +561,7 @@ const Calendar = () => {
                                                 whileHover={{ scale: 1.03 }}
                                                 whileTap={{ scale: 0.97 }}
                                                 onClick={() => handleViewChange('dayGridMonth')}
-                                                className={`view-button relative -ml-px inline-flex items-center rounded-r-md px-3 py-2 text-sm font-semibold ring-1 ring-inset ring-gray-300 ${currentView === 'dayGridMonth'
+                                                className={`view-button relative -ml-px inline-flex items-center rounded-r-md px-3 py-1 text-sm font-semibold ring-1 ring-inset ring-gray-300 ${currentView === 'dayGridMonth'
                                                     ? 'bg-blue-600 text-white'
                                                     : 'bg-white text-gray-900 hover:bg-gray-50'
                                                     }`}
@@ -587,14 +570,14 @@ const Calendar = () => {
                                             </motion.button>
                                         </div>
 
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-1">
                                             <motion.button
                                                 whileHover={{ scale: 1.1 }}
                                                 whileTap={{ scale: 0.9 }}
                                                 onClick={() => handleNavigate('prev')}
-                                                className="p-2 transition-colors rounded-full hover:bg-gray-100"
+                                                className="p-1 transition-colors rounded-full hover:bg-gray-100"
                                             >
-                                                <ChevronLeft className="w-5 h-5" />
+                                                <ChevronLeft className="w-4 h-4" />
                                             </motion.button>
 
                                             <motion.button
@@ -604,7 +587,7 @@ const Calendar = () => {
                                                     const calendarApi = calendarRef.current.getApi();
                                                     calendarApi.today();
                                                 }}
-                                                className="px-3 py-1 text-sm font-medium border border-gray-300 rounded-md hover:bg-gray-50"
+                                                className="px-2 py-1 text-xs font-medium border border-gray-300 rounded-md hover:bg-gray-50"
                                             >
                                                 Aujourd'hui
                                             </motion.button>
@@ -613,9 +596,9 @@ const Calendar = () => {
                                                 whileHover={{ scale: 1.1 }}
                                                 whileTap={{ scale: 0.9 }}
                                                 onClick={() => handleNavigate('next')}
-                                                className="p-2 transition-colors rounded-full hover:bg-gray-100"
+                                                className="p-1 transition-colors rounded-full hover:bg-gray-100"
                                             >
-                                                <ChevronRight className="w-5 h-5" />
+                                                <ChevronRight className="w-4 h-4" />
                                             </motion.button>
                                         </div>
 
@@ -635,9 +618,10 @@ const Calendar = () => {
                                                     setEditMode(false);
                                                     setShowAddModal(true);
                                                 }}
-                                                className="flex items-center transition-all duration-200 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700"
+                                                className="flex items-center text-xs transition-all duration-200 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700"
+                                                size="sm"
                                             >
-                                                <Plus className="mr-1.5 h-4 w-4" />
+                                                <Plus className="mr-1 h-3.5 w-3.5" />
                                                 Ajouter un événement
                                             </Button>
                                         </motion.div>
@@ -650,7 +634,8 @@ const Calendar = () => {
                                         allDaySlot={false}
                                         slotMinTime="07:00:00"
                                         slotMaxTime="20:00:00"
-                                        slotDuration="00:30:00"
+                                        slotDuration="01:00:00"
+                                        slotLabelInterval="01:00"
                                         ref={calendarRef}
                                         plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
                                         initialView="timeGridDay"
@@ -668,11 +653,11 @@ const Calendar = () => {
                                             hour: '2-digit',
                                             minute: '2-digit',
                                             hour12: false,
-                                            omitZeroMinute: currentView === 'timeGridDay'
+                                            omitZeroMinute: true
                                         }}
-                                        slotLabelInterval={currentView === 'timeGridDay' ? "01:00" : null}
                                         dateClick={handleDayClick}
                                         dayCellContent={dayCellContent}
+                                        nowIndicator={true}
                                     />
                                 </div>
                             </CardContent>
@@ -685,11 +670,9 @@ const Calendar = () => {
 
     return (
         <>
-            <PageTransition>
-                <div className="min-h-screen py-8 bg-gray-50 dark:bg-gray-900">
-                    {renderContent()}
-                </div>
-            </PageTransition>
+            <div className="bg-white">
+                {renderContent()}
+            </div>
 
             <AnimatePresence>
                 {showAddModal && (

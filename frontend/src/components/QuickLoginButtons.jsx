@@ -4,7 +4,7 @@ const QuickLoginButtons = ({ onQuickLogin }) => {
   return (
     <div className="mb-6">
       <p className="text-sm text-gray-600 mb-2 text-center">Connexion rapide (Dev only)</p>
-      <div className="grid grid-cols-3 gap-2 mb-4">
+      <div className="grid grid-cols-3 gap-2 mb-4 max-w-[500px] mx-auto">
         <button
           type="button"
           onClick={() => onQuickLogin('admin')}
@@ -18,6 +18,13 @@ const QuickLoginButtons = ({ onQuickLogin }) => {
           className="px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
         >
           Superadmin
+        </button>
+        <button
+          type="button"
+          onClick={() => onQuickLogin('recruiter')}
+          className="px-3 py-2 text-sm font-medium text-white bg-pink-600 rounded-md hover:bg-pink-700"
+        >
+          Recruiter
         </button>
         <button
           type="button"
@@ -43,16 +50,9 @@ const QuickLoginButtons = ({ onQuickLogin }) => {
         <button
           type="button"
           onClick={() => onQuickLogin('guest')}
-          className="px-3 py-2 text-sm font-medium text-white bg-gray-600 rounded-md hover:bg-gray-700"
+          className="col-start-2 px-3 py-2 text-sm font-medium text-white bg-gray-600 rounded-md hover:bg-gray-700"
         >
           Guest
-        </button>
-        <button
-          type="button"
-          onClick={() => onQuickLogin('recruiter')}
-          className="px-3 py-2 text-sm font-medium text-white bg-pink-600 rounded-md hover:bg-pink-700"
-        >
-          Recruiter
         </button>
       </div>
       <div className="relative">

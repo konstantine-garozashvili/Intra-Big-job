@@ -4,7 +4,7 @@ globs:
 alwaysApply: false
 ---
 ---
-description: 
+description: Its a global rule that you have to follow.
 globs: 
 alwaysApply: true
 ---
@@ -18,5 +18,7 @@ docker exec -it infra-frontend-1
 
 Linters on php files are normal its cause vendor is not on local 
 
-The website need to be in french
+The website that you coding need to be in french.
+
+If you need to know the dependence im using, you can check composer file and package file.
 

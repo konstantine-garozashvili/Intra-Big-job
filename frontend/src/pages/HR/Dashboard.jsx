@@ -3,6 +3,26 @@ import { useHRDashboardData } from '@/hooks/useDashboardQueries';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Chart as ChartJS, ArcElement, CategoryScale, LinearScale, BarElement, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
 import { Pie, Bar, Line } from 'react-chartjs-2';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardFooter, 
+  CardHeader, 
+  CardTitle 
+} from '@/components/ui/card';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { 
+  Users, 
+  Calendar, 
+  FileText, 
+  BookOpen, 
+  BarChart3, 
+  PlusCircle, 
+  FileDown, 
+  FileSpreadsheet
+} from 'lucide-react';
 
 // Enregistrer les composants ChartJS nécessaires
 ChartJS.register(ArcElement, CategoryScale, LinearScale, BarElement, PointElement, LineElement, Title, Tooltip, Legend);
@@ -25,8 +45,8 @@ const mockData = {
     labels: ['CDI', 'CDD', 'Intérim', 'Stage', 'Apprentissage'],
     datasets: [{
       data: [78, 22, 10, 12, 5],
-      backgroundColor: ['rgba(54, 162, 235, 0.7)', 'rgba(255, 206, 86, 0.7)', 'rgba(255, 99, 132, 0.7)', 'rgba(75, 192, 192, 0.7)', 'rgba(153, 102, 255, 0.7)'],
-      borderColor: ['rgba(54, 162, 235, 1)', 'rgba(255, 206, 86, 1)', 'rgba(255, 99, 132, 1)', 'rgba(75, 192, 192, 1)', 'rgba(153, 102, 255, 1)'],
+      backgroundColor: ['#3b82f6', '#f59e0b', '#ef4444', '#10b981', '#8b5cf6'],
+      borderColor: ['#2563eb', '#d97706', '#dc2626', '#059669', '#7c3aed'],
       borderWidth: 1
     }]
   },
@@ -35,11 +55,117 @@ const mockData = {
     datasets: [{
       label: 'Heures de formation par catégorie',
       data: [120, 85, 65, 45, 35, 50],
-      backgroundColor: ['rgba(255, 99, 132, 0.7)', 'rgba(54, 162, 235, 0.7)', 'rgba(255, 206, 86, 0.7)', 'rgba(75, 192, 192, 0.7)', 'rgba(153, 102, 255, 0.7)', 'rgba(255, 159, 64, 0.7)'],
+      backgroundColor: ['#ef4444', '#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#f97316'],
       borderWidth: 1
     }]
   }
 };
+
+// Animation variants
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: { 
+    opacity: 1,
+    transition: { 
+      staggerChildren: 0.1
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: { 
+    y: 0, 
+    opacity: 1,
+    transition: { type: 'spring', stiffness: 300, damping: 24 }
+  }
+};
+
+const chartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: { 
+    legend: { 
+      position: 'top',
+      labels: {
+        font: {
+          family: 'Inter, sans-serif',
+          size: 12
+        },
+        usePointStyle: true,
+        padding: 20
+      }
+    },
+    tooltip: {
+      backgroundColor: 'rgba(17, 24, 39, 0.8)',
+      titleFont: {
+        family: 'Inter, sans-serif',
+        size: 14
+      },
+      bodyFont: {
+        family: 'Inter, sans-serif',
+        size: 13
+      },
+      padding: 12,
+      cornerRadius: 8
+    }
+  },
+  scales: {
+    x: {
+      grid: {
+        display: false
+      },
+      ticks: {
+        font: {
+          family: 'Inter, sans-serif',
+          size: 12
+        }
+      }
+    },
+    y: {
+      grid: {
+        color: 'rgba(156, 163, 175, 0.1)'
+      },
+      ticks: {
+        font: {
+          family: 'Inter, sans-serif',
+          size: 12
+        }
+      }
+    }
+  }
+};
+
+// Composant pour les statistiques
+const StatCard = ({ title, value, icon: Icon, color }) => (
+  <motion.div variants={itemVariants}>
+    <Card className="overflow-hidden border-none shadow-md hover:shadow-lg transition-shadow duration-300">
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-gray-500">{title}</p>
+            <h3 className={`mt-2 text-3xl font-bold text-${color}-600`}>{value}</h3>
+          </div>
+          <div className={`p-3 rounded-full bg-${color}-100`}>
+            <Icon className={`h-6 w-6 text-${color}-600`} />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  </motion.div>
+);
+
+// Composant pour les boutons d'action
+const ActionButton = ({ text, icon: Icon, color }) => (
+  <motion.button 
+    whileHover={{ scale: 1.03 }}
+    whileTap={{ scale: 0.97 }}
+    className={`flex items-center justify-center w-full px-4 py-3 text-white bg-${color}-600 rounded-lg hover:bg-${color}-700 transition-colors duration-200`}
+  >
+    <Icon className="w-5 h-5 mr-2" />
+    <span>{text}</span>
+  </motion.button>
+);
 
 /**
  * Tableau de bord spécifique pour les RH
@@ -48,121 +174,378 @@ const HRDashboard = () => {
   const { user, isLoading, isError, error } = useHRDashboardData();
   const [activeTab, setActiveTab] = useState('overview');
 
-  // Options chart communes
-  const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: { legend: { position: 'top' } }
-  };
-
-  // Composant TabButton réutilisable
-  const TabButton = ({ name, label }) => (
-    <button
-      className={`px-4 py-2 mr-2 font-medium rounded-t-lg ${activeTab === name
-        ? 'bg-white text-blue-600 border-b-2 border-blue-600'
-        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-      onClick={() => setActiveTab(name)}
-    >
-      {label}
-    </button>
-  );
-
-  // Définition de contenu des onglets
-  const tabContent = {
-    overview: (
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
-        {[
-          { title: 'Effectif total', value: mockData.employee.total, color: 'blue' },
-          { title: 'Employés actifs', value: mockData.employee.active, color: 'green' },
-          { title: 'En congé', value: mockData.employee.onLeave, color: 'yellow' },
-          { title: 'Taux d\'occupation', value: `${Math.round((mockData.employee.active / mockData.employee.total) * 100)}%`, color: 'purple' }
-        ].map((item, i) => (
-          <div key={i} className="p-6 bg-white rounded-lg shadow">
-            <h3 className="mb-2 text-lg font-semibold text-gray-700">{item.title}</h3>
-            <p className={`text-3xl font-bold text-${item.color}-600`}>{item.value}</p>
-          </div>
-        ))}
-      </div>
-    ),
-    employees: (
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <div className="p-6 bg-white rounded-lg shadow">
-          <h3 className="mb-4 text-xl font-semibold text-gray-700">Répartition par département</h3>
-          <div className="h-64">
-            <Bar
-              data={{
-                labels: mockData.employee.departments.labels,
-                datasets: [{
-                  label: 'Nombre d\'employés',
-                  data: mockData.employee.departments.data,
-                  backgroundColor: 'rgba(54, 162, 235, 0.7)',
-                  borderColor: 'rgba(54, 162, 235, 1)',
-                  borderWidth: 1
-                }]
-              }}
-              options={chartOptions}
-            />
-          </div>
-        </div>
-
-        <div className="p-6 bg-white rounded-lg shadow">
-          <h3 className="mb-4 text-xl font-semibold text-gray-700">Actions rapides</h3>
-          <div className="flex flex-col space-y-2">
-            {[
-              { text: 'Ajouter un nouvel employé', color: 'blue' },
-              { text: 'Générer rapport d\'effectifs', color: 'green' },
-              { text: 'Exporter liste des employés', color: 'purple' }
-            ].map((btn, i) => (
-              <button key={i} className={`px-4 py-2 text-white bg-${btn.color}-600 rounded hover:bg-${btn.color}-700`}>
-                {btn.text}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-    ),
-    absences: (
-      <div className="p-6 bg-white rounded-lg shadow">
-        <h3 className="mb-4 text-xl font-semibold text-gray-700">Suivi des absences et congés</h3>
-        <div className="h-80">
-          <Line data={mockData.absence} options={chartOptions} />
-        </div>
-      </div>
-    ),
-    contracts: (
-      <div className="p-6 bg-white rounded-lg shadow">
-        <h3 className="mb-4 text-xl font-semibold text-gray-700">Types de contrats</h3>
-        <div className="h-64">
-          <Pie data={mockData.contract} options={chartOptions} />
-        </div>
-      </div>
-    ),
-    training: (
-      <div className="p-6 bg-white rounded-lg shadow">
-        <h3 className="mb-4 text-xl font-semibold text-gray-700">Formations par catégorie</h3>
-        <div className="h-64">
-          <Bar data={mockData.training} options={chartOptions} />
-        </div>
-      </div>
-    )
-  };
-
   return (
     <DashboardLayout loading={isLoading} error={error?.message} className="p-0">
-      <div className="p-8">
-        <h2 className="mb-6 text-2xl font-bold text-gray-800">Tableau de bord RH</h2>
+      <div className="p-6 md:p-8 bg-gray-50 min-h-screen">
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="flex flex-col md:flex-row md:items-center md:justify-between mb-8"
+        >
+          <div>
+            <h2 className="text-3xl font-bold text-gray-900 tracking-tight">Tableau de bord RH</h2>
+            <p className="mt-1 text-gray-500">Visualisez et gérez les données RH en temps réel</p>
+          </div>
+          <div className="mt-4 md:mt-0">
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+              {new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            </span>
+          </div>
+        </motion.div>
 
-        <div className="mb-6 border-b border-gray-200">
-          <TabButton name="overview" label="Aperçu" />
-          <TabButton name="employees" label="Employés" />
-          <TabButton name="absences" label="Absences" />
-          <TabButton name="contracts" label="Contrats" />
-          <TabButton name="training" label="Formations" />
-        </div>
+        <Tabs 
+          value={activeTab} 
+          onValueChange={setActiveTab}
+          className="space-y-6"
+        >
+          <TabsList className="w-full md:w-auto bg-white p-1 rounded-lg shadow-sm border border-gray-100 mb-6">
+            <TabsTrigger 
+              value="overview" 
+              className="flex items-center gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700"
+            >
+              <BarChart3 className="h-4 w-4" />
+              <span>Aperçu</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="employees" 
+              className="flex items-center gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700"
+            >
+              <Users className="h-4 w-4" />
+              <span>Employés</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="absences" 
+              className="flex items-center gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700"
+            >
+              <Calendar className="h-4 w-4" />
+              <span>Absences</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="contracts" 
+              className="flex items-center gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700"
+            >
+              <FileText className="h-4 w-4" />
+              <span>Contrats</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="training" 
+              className="flex items-center gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700"
+            >
+              <BookOpen className="h-4 w-4" />
+              <span>Formations</span>
+            </TabsTrigger>
+          </TabsList>
 
-        <div className="p-6 bg-white rounded-lg shadow-lg">
-          {tabContent[activeTab]}
-        </div>
+          <AnimatePresence mode="wait">
+            <TabsContent value="overview" className="mt-0">
+              <motion.div
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                exit={{ opacity: 0 }}
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
+              >
+                <StatCard 
+                  title="Effectif total" 
+                  value={mockData.employee.total} 
+                  icon={Users} 
+                  color="blue" 
+                />
+                <StatCard 
+                  title="Employés actifs" 
+                  value={mockData.employee.active} 
+                  icon={Users} 
+                  color="green" 
+                />
+                <StatCard 
+                  title="En congé" 
+                  value={mockData.employee.onLeave} 
+                  icon={Calendar} 
+                  color="yellow" 
+                />
+                <StatCard 
+                  title="Taux d'occupation" 
+                  value={`${Math.round((mockData.employee.active / mockData.employee.total) * 100)}%`} 
+                  icon={BarChart3} 
+                  color="purple" 
+                />
+              </motion.div>
+            </TabsContent>
+
+            <TabsContent value="employees" className="mt-0">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="lg:col-span-2"
+                >
+                  <Card className="border-none shadow-md h-full">
+                    <CardHeader className="pb-2">
+                      <CardTitle>Répartition par département</CardTitle>
+                      <CardDescription>Distribution des employés par service</CardDescription>
+                    </CardHeader>
+                    <CardContent className="h-[350px]">
+                      <Bar
+                        data={{
+                          labels: mockData.employee.departments.labels,
+                          datasets: [{
+                            label: 'Nombre d\'employés',
+                            data: mockData.employee.departments.data,
+                            backgroundColor: [
+                              '#3b82f6', '#f59e0b', '#ef4444', 
+                              '#10b981', '#8b5cf6', '#f97316'
+                            ],
+                            borderRadius: 6
+                          }]
+                        }}
+                        options={chartOptions}
+                      />
+                    </CardContent>
+                  </Card>
+                </motion.div>
+
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.3, delay: 0.1 }}
+                >
+                  <Card className="border-none shadow-md h-full">
+                    <CardHeader>
+                      <CardTitle>Actions rapides</CardTitle>
+                      <CardDescription>Gérez efficacement vos ressources</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <ActionButton 
+                        text="Générer rapport d'effectifs" 
+                        icon={FileSpreadsheet} 
+                        color="green" 
+                      />
+                      <ActionButton 
+                        text="Exporter liste des employés" 
+                        icon={FileDown} 
+                        color="purple" 
+                      />
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="absences" className="mt-0">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Card className="border-none shadow-md">
+                  <CardHeader className="pb-2">
+                    <CardTitle>Suivi des absences et congés</CardTitle>
+                    <CardDescription>Évolution mensuelle par type d'absence</CardDescription>
+                  </CardHeader>
+                  <CardContent className="h-[400px]">
+                    <Line 
+                      data={mockData.absence} 
+                      options={{
+                        ...chartOptions,
+                        elements: {
+                          line: {
+                            tension: 0.3
+                          },
+                          point: {
+                            radius: 3,
+                            hoverRadius: 5
+                          }
+                        }
+                      }} 
+                    />
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </TabsContent>
+
+            <TabsContent value="contracts" className="mt-0">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+              >
+                <Card className="border-none shadow-md">
+                  <CardHeader className="pb-2">
+                    <CardTitle>Types de contrats</CardTitle>
+                    <CardDescription>Répartition des employés par type de contrat</CardDescription>
+                  </CardHeader>
+                  <CardContent className="h-[350px] flex items-center justify-center">
+                    <div className="h-full w-full">
+                      <Pie 
+                        data={mockData.contract} 
+                        options={{
+                          ...chartOptions,
+                          plugins: {
+                            ...chartOptions.plugins,
+                            legend: {
+                              ...chartOptions.plugins.legend,
+                              position: 'bottom',
+                              labels: {
+                                ...chartOptions.plugins.legend.labels,
+                                boxWidth: 15,
+                                padding: 15
+                              }
+                            },
+                            tooltip: {
+                              ...chartOptions.plugins.tooltip,
+                              callbacks: {
+                                label: function(context) {
+                                  const label = context.label || '';
+                                  const value = context.raw || 0;
+                                  const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                  const percentage = Math.round((value / total) * 100);
+                                  return `${label}: ${value} (${percentage}%)`;
+                                }
+                              }
+                            }
+                          }
+                        }} 
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-none shadow-md">
+                  <CardHeader className="pb-2">
+                    <CardTitle>Détails des contrats</CardTitle>
+                    <CardDescription>Informations détaillées par type de contrat</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {[
+                        { type: 'CDI', count: 78, color: 'blue', details: 'Contrat à durée indéterminée', percentage: '61%' },
+                        { type: 'CDD', count: 22, color: 'amber', details: 'Contrat à durée déterminée', percentage: '17%' },
+                        { type: 'Intérim', count: 10, color: 'red', details: 'Contrat temporaire', percentage: '8%' },
+                        { type: 'Stage', count: 12, color: 'emerald', details: 'Période de formation pratique', percentage: '9%' },
+                        { type: 'Apprentissage', count: 5, color: 'purple', details: 'Formation en alternance', percentage: '4%' }
+                      ].map((contract, index) => (
+                        <motion.div 
+                          key={contract.type}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                          className="flex items-center p-3 rounded-lg hover:bg-gray-50 transition-colors"
+                        >
+                          <div className={`w-3 h-10 rounded-full bg-${contract.color}-500 mr-4`}></div>
+                          <div className="flex-1">
+                            <div className="flex justify-between items-center mb-1">
+                              <h4 className="font-medium text-gray-900">{contract.type}</h4>
+                              <span className="text-sm font-semibold text-gray-700">{contract.percentage}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <p className="text-sm text-gray-500">{contract.details}</p>
+                              <span className="text-sm font-medium text-gray-600">{contract.count} employés</span>
+                            </div>
+                            <div className="w-full bg-gray-100 rounded-full h-1.5 mt-2">
+                              <div 
+                                className={`bg-${contract.color}-500 h-1.5 rounded-full`} 
+                                style={{ width: contract.percentage }}
+                              ></div>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-none shadow-md lg:col-span-2">
+                  <CardHeader className="pb-2">
+                    <CardTitle>Évolution des types de contrats</CardTitle>
+                    <CardDescription>Tendance sur les 12 derniers mois</CardDescription>
+                  </CardHeader>
+                  <CardContent className="h-[250px]">
+                    <Line
+                      data={{
+                        labels: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'],
+                        datasets: [
+                          {
+                            label: 'CDI',
+                            data: [75, 76, 76, 77, 77, 78, 78, 78, 79, 79, 78, 78],
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            tension: 0.3,
+                            fill: false
+                          },
+                          {
+                            label: 'CDD',
+                            data: [25, 24, 24, 23, 23, 22, 22, 22, 21, 21, 22, 22],
+                            borderColor: '#f59e0b',
+                            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                            tension: 0.3,
+                            fill: false
+                          },
+                          {
+                            label: 'Autres',
+                            data: [28, 28, 27, 27, 27, 26, 26, 27, 27, 28, 27, 27],
+                            borderColor: '#8b5cf6',
+                            backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                            tension: 0.3,
+                            fill: false
+                          }
+                        ]
+                      }}
+                      options={{
+                        ...chartOptions,
+                        elements: {
+                          line: {
+                            tension: 0.3
+                          },
+                          point: {
+                            radius: 2,
+                            hoverRadius: 4
+                          }
+                        }
+                      }}
+                    />
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </TabsContent>
+
+            <TabsContent value="training" className="mt-0">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Card className="border-none shadow-md">
+                  <CardHeader className="pb-2">
+                    <CardTitle>Formations par catégorie</CardTitle>
+                    <CardDescription>Heures de formation dispensées par type</CardDescription>
+                  </CardHeader>
+                  <CardContent className="h-[350px]">
+                    <Bar 
+                      data={mockData.training} 
+                      options={{
+                        ...chartOptions,
+                        indexAxis: 'y',
+                        elements: {
+                          bar: {
+                            borderRadius: 6
+                          }
+                        }
+                      }} 
+                    />
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </TabsContent>
+          </AnimatePresence>
+        </Tabs>
       </div>
     </DashboardLayout>
   );

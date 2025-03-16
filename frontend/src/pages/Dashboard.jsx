@@ -7,7 +7,7 @@ import { useUserData } from '../hooks/useDashboardQueries';
  * avec un message de bienvenue personnalisé selon le rôle
  */
 const Dashboard = () => {
-  const { data: user, isLoading, error } = useUserData();
+  const { data: user, error } = useUserData();
   
   // Utiliser useMemo pour éviter les re-rendus inutiles
   const welcomeMessage = useMemo(() => {
@@ -17,7 +17,7 @@ const Dashboard = () => {
   }, [user]);
 
   return (
-    <DashboardLayout loading={isLoading} error={error?.message}>
+    <DashboardLayout error={error?.message}>
       <div className="bg-white rounded-lg shadow-lg p-6">
         <h1 className="text-3xl font-bold text-gray-800 mb-8">
           {welcomeMessage}

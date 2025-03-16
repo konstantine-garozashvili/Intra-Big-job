@@ -28,14 +28,29 @@ export const useUserData = () => {
   // lors d'un changement de session (connexion/déconnexion)
   const sessionId = getSessionId();
 
+  // Get minimal user data from token if available
+  const getMinimalUserData = () => {
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        return JSON.parse(userStr);
+      }
+    } catch (e) {
+      console.error('Error parsing user data from localStorage:', e);
+    }
+    return null;
+  };
+
+  const minimalUserData = getMinimalUserData();
+
   return useApiQuery('/me', ['user-data', getUserKey(), sessionId], {
-    staleTime: 30 * 60 * 1000, // 30 minutes (augmenté)
-    cacheTime: 60 * 60 * 1000, // 1 heure (augmenté)
+    staleTime: 30 * 60 * 1000, // 30 minutes
+    cacheTime: 60 * 60 * 1000, // 1 heure
     refetchOnWindowFocus: false,
-    refetchOnMount: true, // Toujours refetch au montage pour garantir des données fraîches
+    refetchOnMount: true,
     refetchOnReconnect: false,
+    initialData: minimalUserData, // Use minimal data from token while loading
     select: (data) => {
-      // Extraire l'objet utilisateur si la réponse contient un objet "user"
       return data.user || data;
     }
   });

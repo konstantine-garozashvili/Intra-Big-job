@@ -1,6 +1,9 @@
 import { useRoles } from './roleContext';
 import { useRolePermissions } from './useRolePermissions';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { authService } from '../../lib/services/authService';
+import DotSpinner from '../../components/ui/DotSpinner';
 
 /**
  * Component that conditionally renders content based on user roles
@@ -40,19 +43,46 @@ const RoleGuard = ({
  * @returns {React.ReactNode} A Navigate component to the appropriate dashboard
  */
 export const RoleDashboardRedirect = () => {
-  const { roles, isLoading } = useRoles();
+  const { roles, isLoading, refreshRoles } = useRoles();
   const permissions = useRolePermissions();
+  const navigate = useNavigate();
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
-  // Show loading indicator while roles are loading
-  if (isLoading) {
+  // Force a refresh of roles when this component mounts to ensure we have the latest data
+  useEffect(() => {
+    const refreshUserRoles = async () => {
+      if (authService.isLoggedIn() && !isRefreshing) {
+        setIsRefreshing(true);
+        try {
+          // Force refresh user data and roles
+          await authService.getCurrentUser(true);
+          refreshRoles();
+        } catch (error) {
+          console.error('Error refreshing user roles:', error);
+        } finally {
+          setIsRefreshing(false);
+        }
+      }
+    };
+    
+    refreshUserRoles();
+  }, [refreshRoles]);
+  
+  // Show the dot spinner while loading
+  if (isLoading || isRefreshing) {
     return (
-      <div className="flex justify-center items-center min-h-[50vh]">
-        <div className="w-8 h-8 border-4 border-[#528eb2] border-t-transparent rounded-full animate-spin"></div>
+      <div className="flex justify-center items-center min-h-[70vh]">
+        <DotSpinner />
       </div>
     );
   }
   
   const dashboardPath = permissions.getRoleDashboardPath();
+  
+  // Store the current dashboard path in localStorage for debugging
+  if (dashboardPath) {
+    localStorage.setItem('dashboard_path', dashboardPath);
+  }
   
   return <Navigate to={dashboardPath} replace />;
 };

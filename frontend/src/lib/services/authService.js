@@ -230,10 +230,12 @@ export const authService = {
       const refreshToken = localStorage.getItem('refresh_token');
       const deviceId = localStorage.getItem('device_id');
       
-      // Nettoyer le localStorage
+      // Nettoyer le localStorage - remove ALL auth-related items
       localStorage.removeItem('token');
       localStorage.removeItem('refresh_token');
       localStorage.removeItem('user');
+      localStorage.removeItem('last_role');
+      localStorage.removeItem('dashboard_path');
       
       // Réinitialiser la promesse de chargement des données utilisateur
       userDataPromise = null;
@@ -247,12 +249,37 @@ export const authService = {
       });
       window.dispatchEvent(event);
       
+      // Trigger additional logout events to ensure all components update
+      window.dispatchEvent(new Event('logout-success'));
+      window.dispatchEvent(new Event('role-change'));
+      
       // Vider complètement le cache de l'API
       try {
         const { default: apiService } = await import('./apiService');
         apiService.clearCache();
       } catch (cacheError) {
         console.error('Error clearing API cache:', cacheError);
+      }
+      
+      // Force clear specific role-related queries
+      try {
+        const { getQueryClient } = await import('../utils/queryClientUtils');
+        const queryClient = getQueryClient();
+        if (queryClient) {
+          // Clear role-specific queries
+          queryClient.removeQueries(['userRoles']);
+          queryClient.removeQueries(['admin-users']);
+          queryClient.removeQueries(['admin-dashboard']);
+          queryClient.removeQueries(['student-dashboard']);
+          queryClient.removeQueries(['teacher-dashboard']);
+          queryClient.removeQueries(['hr-dashboard']);
+          queryClient.removeQueries(['currentUser']);
+          
+          // Reset the query cache to ensure fresh data on next login
+          queryClient.resetQueries();
+        }
+      } catch (queryError) {
+        console.error('Error clearing specific queries:', queryError);
       }
       
       // Révoquer le refresh token côté serveur (en arrière-plan)
@@ -270,6 +297,9 @@ export const authService = {
       // Générer un nouvel identifiant de session pour la prochaine connexion
       currentSessionId = generateSessionId();
       localStorage.setItem('session_id', currentSessionId);
+      
+      // Add a small delay to ensure all cleanup is complete
+      await new Promise(resolve => setTimeout(resolve, 100));
       
       return { success: true };
     } catch (error) {
@@ -339,24 +369,46 @@ export const authService = {
 
   /**
    * Récupère les informations complètes de l'utilisateur connecté depuis l'API
+   * @param {boolean} [forceRefresh=false] - Force le rafraîchissement des données depuis l'API
    * @returns {Promise<Object>} - Données complètes de l'utilisateur
    */
-  async getCurrentUser() {
+  async getCurrentUser(forceRefresh = false) {
     const token = this.getToken();
     if (!token) {
       throw new Error('Aucun token d\'authentification trouvé');
     }
 
-    try {
-      const response = await apiService.get('/me', apiService.withAuth());
-      
-      // Extraire l'objet utilisateur si la réponse contient un objet "user"
-      const userData = response.user || response;
-      
-      return userData;
-    } catch (error) {
-      throw error;
+    // Si une promesse est déjà en cours et qu'on ne force pas le rafraîchissement, on la retourne
+    if (userDataPromise && !forceRefresh) {
+      return userDataPromise;
     }
+
+    // Créer une nouvelle promesse pour charger les données utilisateur
+    userDataPromise = new Promise(async (resolve, reject) => {
+      try {
+        // Utiliser le cache sauf si on force le rafraîchissement
+        const options = forceRefresh ? { cache: 'no-store' } : {};
+        const response = await apiService.get('/me', { ...apiService.withAuth(), ...options });
+        
+        // Extraire l'objet utilisateur si la réponse contient un objet "user"
+        const userData = response.user || response;
+        
+        // Stocker les données utilisateur dans le localStorage
+        localStorage.setItem('user', JSON.stringify(userData));
+        
+        // Stocker le rôle principal pour référence
+        if (userData.roles && userData.roles.length > 0) {
+          localStorage.setItem('last_role', userData.roles[0]);
+        }
+        
+        resolve(userData);
+      } catch (error) {
+        userDataPromise = null; // Réinitialiser la promesse en cas d'erreur
+        reject(error);
+      }
+    });
+
+    return userDataPromise;
   },
   
   /**
