@@ -163,14 +163,29 @@ const DocumentSignature = () => {
           console.error('Error getting location:', error);
           setIsLocating(false);
           
+          let errorMessage = "Impossible d'obtenir votre position.";
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage = "L'accès à la géolocalisation a été refusé. Veuillez autoriser l'accès dans les paramètres de votre navigateur.";
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMessage = "Les informations de localisation ne sont pas disponibles.";
+              break;
+            case error.TIMEOUT:
+              errorMessage = "La requête de localisation a expiré. Veuillez réessayer.";
+              break;
+            default:
+              errorMessage = `Une erreur est survenue: ${error.message}`;
+          }
+          
           toast.error("Erreur de localisation", {
-            description: `Impossible d'obtenir votre position: ${error.message}. Veuillez autoriser l'accès à votre position.`
+            description: errorMessage
           });
         },
         { 
-          enableHighAccuracy: true, 
-          timeout: 10000, 
-          maximumAge: 0 
+          enableHighAccuracy: false, // Changed to false for better reliability
+          timeout: 30000,           // Increased timeout to 30 seconds
+          maximumAge: 300000        // Allow cached positions up to 5 minutes old
         }
       );
     } else {
