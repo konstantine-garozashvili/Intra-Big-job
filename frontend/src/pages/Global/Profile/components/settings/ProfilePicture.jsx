@@ -158,18 +158,19 @@ const ProfilePicture = ({ userData, onProfilePictureChange, isLoading: externalL
           
           // Forcer le rafraîchissement après un court délai
           setTimeout(() => {
-            forceRefresh();
-          }, 300);
+            refetch();
+          }, 1000);
           
           setIsUploading(false);
         },
         onError: (error) => {
-          // En cas d'erreur, revenir à l'URL précédente
-          setLocalProfilePictureUrl(previousUrl);
-          URL.revokeObjectURL(tempUrl);
+          // Restaurer l'URL précédente en cas d'erreur
+          if (previousUrl) {
+            setLocalProfilePictureUrl(previousUrl);
+          } else {
+            setLocalProfilePictureUrl(null);
+          }
           
-          toast.error('Erreur lors de la mise à jour de la photo de profil');
-          // console.error('Error uploading profile picture:', error);
           setIsUploading(false);
         }
       });

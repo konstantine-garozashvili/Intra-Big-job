@@ -79,14 +79,31 @@ class S3StorageService
      */
     public function getPresignedUrl(string $key, int $expiration = 600): string
     {
-        $cmd = $this->s3Client->getCommand('GetObject', [
-            'Bucket' => $this->bucketName,
-            'Key' => $key
-        ]);
+        error_log('[S3Storage] Generating presigned URL for key: ' . $key . ', Bucket: ' . $this->bucketName);
         
-        $request = $this->s3Client->createPresignedRequest($cmd, "+{$expiration} seconds");
-        
-        return (string) $request->getUri();
+        try {
+            $cmd = $this->s3Client->getCommand('GetObject', [
+                'Bucket' => $this->bucketName,
+                'Key' => $key
+            ]);
+            
+            // Log AWS client configuration for debugging
+            $config = $this->s3Client->getConfig();
+            error_log('[S3Storage] AWS Region: ' . ($config['region'] ?? 'not set'));
+            error_log('[S3Storage] AWS Endpoint: ' . ($config['endpoint'] ?? 'not set'));
+            
+            $request = $this->s3Client->createPresignedRequest($cmd, "+{$expiration} seconds");
+            $url = (string) $request->getUri();
+            
+            error_log('[S3Storage] Generated presigned URL: ' . $url);
+            return $url;
+        } catch (\Exception $e) {
+            error_log('[S3Storage] Error generating presigned URL: ' . $e->getMessage());
+            error_log('[S3Storage] Error code: ' . ($e->getAwsErrorCode() ?? 'N/A'));
+            error_log('[S3Storage] Error type: ' . ($e->getAwsErrorType() ?? 'N/A'));
+            error_log('[S3Storage] Stack trace: ' . $e->getTraceAsString());
+            throw $e;
+        }
     }
 
     /**

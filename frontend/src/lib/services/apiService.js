@@ -5,8 +5,8 @@ const axiosInstance = axios.create({
   timeout: 8000, // Réduit de 15000ms à 8000ms
   headers: {
     'Accept': 'application/json',
-    'Content-Type': 'application/json',
     'X-Requested-With': 'XMLHttpRequest'
+    // Remove default Content-Type header to allow axios to set it correctly for FormData
   }
 });
 
@@ -17,6 +17,12 @@ axiosInstance.interceptors.request.use(request => {
   if (token) {
     request.headers.Authorization = `Bearer ${token}`;
   }
+  
+  // Set Content-Type only for non-FormData requests
+  if (request.data && !(request.data instanceof FormData)) {
+    request.headers['Content-Type'] = 'application/json';
+  }
+  
   return request;
 }, error => {
   return Promise.reject(error);
@@ -100,10 +106,37 @@ const apiService = {
   async post(path, data = {}, options = {}) {
     try {
       const url = normalizeApiUrl(path);
-      // Add authentication to the request for protected routes
-      const authOptions = path.includes('/login_check') || path.includes('/register') ? options : this.withAuth(options);
-      const response = await axiosInstance.post(url, data, authOptions);
-      return response.data;
+      
+      // Check if data is FormData
+      const isFormData = data instanceof FormData;
+      
+      if (isFormData) {
+        // Create a new options object without modifying the original
+        const formDataOptions = { ...options };
+        
+        // Ensure headers exist
+        formDataOptions.headers = formDataOptions.headers || {};
+        
+        // For FormData, we must NOT set Content-Type so browser can set it with boundary
+        delete formDataOptions.headers['Content-Type'];
+        
+        // Add authentication to the request for protected routes
+        const authOptions = path.includes('/login_check') || path.includes('/register') 
+          ? formDataOptions 
+          : this.withAuth(formDataOptions);
+        
+        const response = await axiosInstance.post(url, data, authOptions);
+        return response.data;
+      } else {
+        // For regular JSON data
+        // Add authentication to the request for protected routes
+        const authOptions = path.includes('/login_check') || path.includes('/register') 
+          ? options 
+          : this.withAuth(options);
+        
+        const response = await axiosInstance.post(url, data, authOptions);
+        return response.data;
+      }
     } catch (error) {
       throw error;
     }
@@ -155,13 +188,16 @@ const apiService = {
       return options;
     }
     
-    return {
-      ...options,
-      headers: {
-        ...options.headers,
-        Authorization: `Bearer ${token}`
-      }
-    };
+    // Create a new options object to avoid modifying the original
+    const newOptions = { ...options };
+    
+    // Ensure headers exist
+    newOptions.headers = { ...options.headers };
+    
+    // Add Authorization header
+    newOptions.headers.Authorization = `Bearer ${token}`;
+    
+    return newOptions;
   },
   
   /**

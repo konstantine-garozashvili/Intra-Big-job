@@ -65,7 +65,6 @@ export function useProfilePicture() {
       },
       onError: (error) => {
         toast.error('Erreur lors de la mise à jour de la photo de profil');
-        // console.error('Erreur détaillée:', error);
         setIsOperationPending(false);
       }
     }

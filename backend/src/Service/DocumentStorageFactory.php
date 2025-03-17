@@ -51,10 +51,22 @@ class DocumentStorageFactory
      */
     public function getDocumentUrl(string $key): string
     {
+        error_log('[DocumentStorage] Getting URL for key: ' . $key . ', Using S3: ' . ($this->useS3 ? 'true' : 'false'));
+        
         if ($this->useS3) {
-            return $this->s3Service->getPresignedUrl($key);
+            try {
+                $url = $this->s3Service->getPresignedUrl($key);
+                error_log('[DocumentStorage] Generated S3 presigned URL: ' . $url);
+                return $url;
+            } catch (\Exception $e) {
+                error_log('[DocumentStorage] S3 Error: ' . $e->getMessage());
+                error_log('[DocumentStorage] S3 Stack trace: ' . $e->getTraceAsString());
+                throw $e;
+            }
         } else {
-            return $this->documentDirectory . '/' . $key;
+            $path = $this->documentDirectory . '/' . $key;
+            error_log('[DocumentStorage] Local file path: ' . $path . ', Exists: ' . (file_exists($path) ? 'true' : 'false'));
+            return $path;
         }
     }
     
