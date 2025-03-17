@@ -238,6 +238,11 @@ class SignatureController extends AbstractController
             $signature->setDate($currentTime);
             $signature->setPeriod($period);
             
+            // Set the drawing if provided
+            if (isset($data['drawing'])) {
+                $signature->setDrawing($data['drawing']);
+            }
+            
             // Save to database
             $this->entityManager->persist($signature);
             $this->entityManager->flush();
@@ -248,7 +253,8 @@ class SignatureController extends AbstractController
                 'message' => 'Signature created successfully',
                 'id' => $signature->getId(),
                 'date' => $signature->getDate()->format('Y-m-d H:i:s'),
-                'period' => $signature->getPeriod()
+                'period' => $signature->getPeriod(),
+                'drawing' => $signature->getDrawing()
             ], Response::HTTP_CREATED);
             
         } catch (\Exception $e) {

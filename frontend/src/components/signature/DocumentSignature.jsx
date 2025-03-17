@@ -300,6 +300,7 @@ const DocumentSignature = () => {
       // Prepare the request data
       const requestData = {
         location,
+        drawing: signatureData
       };
       
       console.log('Sending signature request with data:', requestData);

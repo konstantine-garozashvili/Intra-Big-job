@@ -36,6 +36,10 @@ class Signature
     #[Groups(['signature:read'])]
     private ?string $period = null;
 
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    #[Groups(['signature:read'])]
+    private ?string $drawing = null;
+
     public function __construct()
     {
         $this->date = new \DateTimeImmutable();
@@ -93,6 +97,17 @@ class Signature
             throw new \InvalidArgumentException('Invalid period');
         }
         $this->period = $period;
+        return $this;
+    }
+
+    public function getDrawing(): ?string
+    {
+        return $this->drawing;
+    }
+
+    public function setDrawing(?string $drawing): static
+    {
+        $this->drawing = $drawing;
         return $this;
     }
 
