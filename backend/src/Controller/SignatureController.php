@@ -88,13 +88,7 @@ class SignatureController extends AbstractController
         }
 
         // Check if user has ROLE_TEACHER to see all signatures
-        $isTeacher = false;
-        foreach ($user->getUserRoles() as $userRole) {
-            if ($userRole->getRole()->getName() === 'ROLE_TEACHER') {
-                $isTeacher = true;
-                break;
-            }
-        }
+        $isTeacher = in_array('ROLE_TEACHER', $user->getRoles());
 
         if ($isTeacher) {
             // Teachers see all recent signatures
@@ -105,7 +99,7 @@ class SignatureController extends AbstractController
         }
 
         return $this->json([
-            'signatures' => $this->serializer->normalize($signatures, null, ['groups' => 'signature:read'])
+            'signatures' => $this->serializer->serialize($signatures, 'json', ['groups' => 'signature:read'])
         ]);
     }
 
@@ -123,20 +117,14 @@ class SignatureController extends AbstractController
         }
 
         // Check if user is the owner or a teacher
-        $isTeacher = false;
-        foreach ($user->getUserRoles() as $userRole) {
-            if ($userRole->getRole()->getName() === 'ROLE_TEACHER') {
-                $isTeacher = true;
-                break;
-            }
-        }
+        $isTeacher = in_array('ROLE_TEACHER', $user->getRoles());
 
         if ($signature->getUser() !== $user && !$isTeacher) {
             return $this->json(['message' => 'Access denied'], Response::HTTP_FORBIDDEN);
         }
 
         return $this->json([
-            'signature' => $this->serializer->normalize($signature, null, ['groups' => 'signature:read'])
+            'signature' => $this->serializer->serialize($signature, 'json', ['groups' => 'signature:read'])
         ]);
     }
 
@@ -166,7 +154,7 @@ class SignatureController extends AbstractController
 
             return $this->json([
                 'hasSignedToday' => $signature !== null,
-                'signature' => $signature ? $this->serializer->normalize($signature, null, ['groups' => 'signature:read']) : null
+                'signature' => $signature ? json_decode($this->serializer->serialize($signature, 'json', ['groups' => 'signature:read']), true) : null
             ]);
         } catch (\Exception $e) {
             error_log('Error in checkTodaySignature: ' . $e->getMessage());
