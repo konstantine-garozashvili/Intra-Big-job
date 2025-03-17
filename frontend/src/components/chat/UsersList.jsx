@@ -7,13 +7,29 @@ const UsersList = ({ users, loading, onStartPrivateChat }) => {
 
   // Filter users whenever search term or users list changes
   useEffect(() => {
+    // First filter to only include teachers and students
+    const teachersAndStudents = users.filter(user => {
+      if (!user.userRoles || user.userRoles.length === 0) return false;
+      
+      // Check if the user has a teacher or student role
+      return user.userRoles.some(userRole => 
+        userRole.role.name.toLowerCase() === 'teacher' || 
+        userRole.role.name.toLowerCase() === 'student' ||
+        userRole.role.name.toLowerCase() === 'enseignant' || 
+        userRole.role.name.toLowerCase() === 'étudiant' ||
+        userRole.role.name.toLowerCase() === 'professeur' ||
+        userRole.role.name.toLowerCase() === 'élève'
+      );
+    });
+
+    // Then apply search filter if there is a search term
     if (!searchTerm.trim()) {
-      setFilteredUsers(users);
+      setFilteredUsers(teachersAndStudents);
       return;
     }
 
     const lowerCaseSearch = searchTerm.toLowerCase();
-    const filtered = users.filter(user => 
+    const filtered = teachersAndStudents.filter(user => 
       user.firstName?.toLowerCase().includes(lowerCaseSearch) || 
       user.lastName?.toLowerCase().includes(lowerCaseSearch) ||
       `${user.firstName} ${user.lastName}`.toLowerCase().includes(lowerCaseSearch) ||
@@ -70,34 +86,36 @@ const UsersList = ({ users, loading, onStartPrivateChat }) => {
 
       {/* Users list */}
       <div className="mt-3">
-        {filteredUsers.map(user => (
-          <div key={user.id} className="flex items-center p-2 hover:bg-gray-100 rounded-lg">
-            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-semibold mr-3">
-              {user.firstName?.charAt(0)}{user.lastName?.charAt(0)}
+        {filteredUsers.length > 0 ? (
+          filteredUsers.map(user => (
+            <div key={user.id} className="flex items-center p-2 hover:bg-gray-100 rounded-lg">
+              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-semibold mr-3">
+                {user.firstName?.charAt(0)}{user.lastName?.charAt(0)}
+              </div>
+              <div className="flex-grow">
+                <div className="font-medium">{user.firstName} {user.lastName}</div>
+                {user.userRoles && user.userRoles.length > 0 && (
+                  <div className="text-xs text-gray-500">
+                    {user.userRoles.map(userRole => userRole.role.name).join(', ')}
+                  </div>
+                )}
+              </div>
+              <button 
+                onClick={() => onStartPrivateChat(user)}
+                className="text-blue-600 hover:text-blue-800 p-2"
+                title="Démarrer une conversation privée"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
+                </svg>
+              </button>
             </div>
-            <div className="flex-grow">
-              <div className="font-medium">{user.firstName} {user.lastName}</div>
-              {user.userRoles && user.userRoles.length > 0 && (
-                <div className="text-xs text-gray-500">
-                  {user.userRoles.map(userRole => userRole.role.name).join(', ')}
-                </div>
-              )}
-            </div>
-            <button 
-              onClick={() => onStartPrivateChat(user)}
-              className="text-blue-600 hover:text-blue-800 p-2"
-              title="Démarrer une conversation privée"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
-              </svg>
-            </button>
-          </div>
-        ))}
-        
-        {filteredUsers.length === 0 && searchTerm && (
+          ))
+        ) : (
           <div className="text-center p-4 text-gray-500">
-            Aucun utilisateur ne correspond à votre recherche
+            {searchTerm 
+              ? "Aucun enseignant ou étudiant ne correspond à votre recherche" 
+              : "Aucun enseignant ou étudiant disponible pour le chat"}
           </div>
         )}
       </div>
