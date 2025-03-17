@@ -16,7 +16,6 @@ export const profilePictureEvents = {
   
   // Notifier tous les abonnés des mises à jour
   notify() {
-    console.log('🔔 Notification envoyée à', this.listeners.size, 'abonnés');
     this.listeners.forEach(callback => callback());
   }
 };
@@ -139,7 +138,7 @@ export function useProfilePicture() {
           // Force refresh to ensure consistency
           await forceRefresh();
         } catch (error) {
-          console.error('Error updating after upload:', error);
+          // Error handled silently
         }
       },
       onError: (error, variables, context) => {
@@ -189,7 +188,7 @@ export function useProfilePicture() {
           // Force refresh to ensure consistency
           await forceRefresh();
         } catch (error) {
-          console.error('Error updating after delete:', error);
+          // Error handled silently
         }
       },
       onError: (error, variables, context) => {

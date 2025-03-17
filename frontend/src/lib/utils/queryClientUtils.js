@@ -28,8 +28,6 @@ export const getQueryClient = () => {
  */
 export const clearQueryCache = () => {
   if (queryClientInstance) {
-    console.log('Vidage complet du cache React Query...');
-    
     // Annuler toutes les requêtes en cours
     queryClientInstance.cancelQueries();
     
@@ -44,8 +42,6 @@ export const clearQueryCache = () => {
     
     // Forcer un garbage collection pour libérer la mémoire
     setTimeout(() => {
-      console.log('Cache React Query vidé avec succès');
-      
       // Forcer un rafraîchissement des données après la déconnexion
       window.dispatchEvent(new CustomEvent('query-cache-cleared'));
     }, 0);

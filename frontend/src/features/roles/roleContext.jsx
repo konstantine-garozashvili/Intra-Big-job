@@ -31,7 +31,6 @@ export const RoleProvider = ({ children }) => {
         // Check if role has changed
         const currentRole = userData?.roles?.[0];
         if (currentRole && lastRole && currentRole !== lastRole) {
-          console.log('Role changed from', lastRole, 'to', currentRole);
           // Clear role-specific caches
           queryClient.removeQueries(['admin-users']);
           queryClient.removeQueries(['admin-dashboard']);

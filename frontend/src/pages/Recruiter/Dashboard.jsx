@@ -32,9 +32,8 @@ const RecruiterDashboard = () => {
     const refreshUserData = async () => {
       try {
         await authService.getCurrentUser(true);
-        console.log('User data refreshed');
       } catch (error) {
-        console.error('Error refreshing user data:', error);
+        // Error handled silently
       }
     };
     

@@ -108,7 +108,7 @@ export function useCV() {
           // Force refresh to ensure consistency
           await forceRefresh();
         } catch (error) {
-          console.error('Error updating after CV upload:', error);
+          // Error handled silently
         }
       },
       onError: (error, variables, context) => {
@@ -148,7 +148,7 @@ export function useCV() {
           // Force refresh to ensure consistency
           await forceRefresh();
         } catch (error) {
-          console.error('Error updating after CV delete:', error);
+          // Error handled silently
         }
       },
       onError: (error, variables, context) => {

@@ -197,7 +197,6 @@ export const RegisterProvider = ({ children }) => {
         }
       };
       
-      console.log('[RegisterContext] Données d\'inscription:', { ...userData, password: '***' });
       const response = await authService.register(userData);
       
       if (response && response.status === 201) {
@@ -216,7 +215,6 @@ export const RegisterProvider = ({ children }) => {
         });
       }
     } catch (error) {
-      console.error("Erreur lors de l'inscription:", error);
       toast.error(error?.response?.data?.message || "Erreur lors de l'inscription. Veuillez réessayer.");
     } finally {
       setIsSubmitting(false);

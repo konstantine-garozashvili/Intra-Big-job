@@ -149,7 +149,6 @@ export const authService = {
     // Race between fetch and timeout
     userDataPromise = Promise.race([fetchPromise, timeoutPromise])
       .catch(error => {
-        console.warn('Error loading user data:', error.message);
         userDataPromise = null; // Réinitialiser en cas d'erreur
         
         // Even if we timeout, dispatch the event to unblock UI
@@ -227,84 +226,56 @@ export const authService = {
    */
   async logout() {
     try {
-      const refreshToken = localStorage.getItem('refresh_token');
-      const deviceId = localStorage.getItem('device_id');
-      
-      // Nettoyer le localStorage - remove ALL auth-related items
-      localStorage.removeItem('token');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('user');
-      localStorage.removeItem('last_role');
-      localStorage.removeItem('dashboard_path');
-      
-      // Réinitialiser la promesse de chargement des données utilisateur
-      userDataPromise = null;
-      
-      // Invalider le cache des requêtes
-      clearQueryCache();
-      
-      // Déclencher un événement pour informer l'application de la déconnexion
-      const event = new CustomEvent('auth-logout-success', {
-        detail: { redirectTo: '/' }
-      });
-      window.dispatchEvent(event);
-      
-      // Trigger additional logout events to ensure all components update
-      window.dispatchEvent(new Event('logout-success'));
-      window.dispatchEvent(new Event('role-change'));
-      
-      // Vider complètement le cache de l'API
-      try {
-        const { default: apiService } = await import('./apiService');
-        apiService.clearCache();
-      } catch (cacheError) {
-        console.error('Error clearing API cache:', cacheError);
+      // Tenter de faire un appel API pour invalider le token
+      if (this.isLoggedIn()) {
+        try {
+          await this.apiClient.post('/api/auth/logout');
+        } catch (logoutApiError) {
+          // Ignorer les erreurs d'API lors de la déconnexion
+        }
       }
       
-      // Force clear specific role-related queries
+      // Vider le cache React Query
       try {
-        const { getQueryClient } = await import('../utils/queryClientUtils');
+        clearQueryCache();
+      } catch (cacheError) {
+        // Ignorer les erreurs de vidage du cache
+      }
+      
+      // Vider les requêtes spécifiques
+      try {
         const queryClient = getQueryClient();
         if (queryClient) {
-          // Clear role-specific queries
+          queryClient.removeQueries(['userProfile']);
           queryClient.removeQueries(['userRoles']);
-          queryClient.removeQueries(['admin-users']);
-          queryClient.removeQueries(['admin-dashboard']);
-          queryClient.removeQueries(['student-dashboard']);
-          queryClient.removeQueries(['teacher-dashboard']);
-          queryClient.removeQueries(['hr-dashboard']);
-          queryClient.removeQueries(['currentUser']);
-          
-          // Reset the query cache to ensure fresh data on next login
-          queryClient.resetQueries();
+          queryClient.removeQueries(['profilePicture']);
         }
       } catch (queryError) {
-        console.error('Error clearing specific queries:', queryError);
+        // Ignorer les erreurs de suppression de requêtes
       }
       
-      // Révoquer le refresh token côté serveur (en arrière-plan)
-      if (refreshToken) {
-        const revokeData = {
-          refresh_token: refreshToken,
-          device_id: deviceId
-        };
-        
-        apiService.post('/token/revoke', revokeData).catch((error) => {
-          // Ignorer les erreurs lors de la révocation
-        });
-      }
+      // Supprimer les données d'authentification du localStorage
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
+      localStorage.removeItem('tokenExpiration');
       
-      // Générer un nouvel identifiant de session pour la prochaine connexion
-      currentSessionId = generateSessionId();
-      localStorage.setItem('session_id', currentSessionId);
+      // Déclencher un événement pour informer l'application de la déconnexion
+      window.dispatchEvent(new Event('logout-success'));
+      window.dispatchEvent(new Event('auth-logout-success'));
       
-      // Add a small delay to ensure all cleanup is complete
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      return { success: true };
+      return true;
     } catch (error) {
-      console.error('Logout error:', error);
-      return { success: false, error };
+      // Même en cas d'erreur, on force la déconnexion côté client
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
+      localStorage.removeItem('tokenExpiration');
+      
+      window.dispatchEvent(new Event('logout-success'));
+      window.dispatchEvent(new Event('auth-logout-success'));
+      
+      return false;
     }
   },
   

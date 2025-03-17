@@ -32,78 +32,91 @@ export function useDocuments(type = 'CV') {
       setDocuments(filteredDocs);
     } catch (err) {
       setError(err);
-      console.error('Erreur lors du chargement des documents:', err);
     } finally {
       setIsLoading(false);
     }
   }, [type]);
 
   // Fonction pour télécharger un document
-  const downloadDocument = useCallback(async (documentId, fileName) => {
+  const downloadDocument = useCallback(async (documentId, filename) => {
+    setIsDownloading(true);
     try {
-      const blob = await documentService.downloadDocument(documentId);
+      const response = await fetch(`/api/documents/${documentId}/download`);
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`);
+      }
       
-      // Créer un lien de téléchargement
+      const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', fileName || `document-${documentId}.pdf`);
-      
-      // Ajouter le lien au DOM, cliquer dessus, puis le supprimer
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      // Libérer l'URL
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename || 'document.pdf';
+      document.body.appendChild(a);
+      a.click();
       window.URL.revokeObjectURL(url);
-      
-      return true;
+      document.body.removeChild(a);
     } catch (err) {
-      console.error('Erreur lors du téléchargement du document:', err);
-      toast.error('Erreur lors du téléchargement du document');
-      return false;
+      setError(err);
+    } finally {
+      setIsDownloading(false);
     }
   }, []);
 
   // Fonction pour supprimer un document
   const deleteDocument = useCallback(async (documentId) => {
+    setIsDeleting(true);
     try {
-      await documentService.deleteDocument(documentId);
+      const response = await fetch(`/api/documents/${documentId}`, {
+        method: 'DELETE',
+      });
       
-      // Mise à jour optimiste de l'état local
-      setDocuments(prevDocs => prevDocs.filter(doc => doc.id !== documentId));
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`);
+      }
       
-      toast.success('Document supprimé avec succès');
+      // Mettre à jour la liste des documents après suppression
+      setDocuments(prev => prev.filter(doc => doc.id !== documentId));
+      
       return true;
     } catch (err) {
-      console.error('Erreur lors de la suppression du document:', err);
-      toast.error('Erreur lors de la suppression du document');
-      
-      // Recharger les documents en cas d'erreur
-      loadDocuments(true);
+      setError(err);
       return false;
+    } finally {
+      setIsDeleting(false);
     }
-  }, [loadDocuments]);
+  }, []);
 
   // Fonction pour uploader un CV
   const uploadCV = useCallback(async (file) => {
+    setIsUploading(true);
     try {
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('document', file);
       
-      await documentService.uploadCV(formData);
+      const response = await fetch('/api/documents/cv', {
+        method: 'POST',
+        body: formData,
+      });
       
-      toast.success('CV uploadé avec succès');
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`);
+      }
       
-      // Recharger les documents après l'upload
-      loadDocuments(true);
-      return true;
+      const result = await response.json();
+      
+      // Ajouter le nouveau document à la liste
+      if (result.success && result.data) {
+        setDocuments(prev => [...prev, result.data]);
+      }
+      
+      return result;
     } catch (err) {
-      console.error('Erreur lors de l\'upload du CV:', err);
-      toast.error('Erreur lors de l\'upload du CV');
-      return false;
+      setError(err);
+      return { success: false, error: err.message };
+    } finally {
+      setIsUploading(false);
     }
-  }, [loadDocuments]);
+  }, []);
 
   // Écouter les événements de mise à jour des documents
   useEffect(() => {
