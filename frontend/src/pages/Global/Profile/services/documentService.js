@@ -1,5 +1,6 @@
 import axios from 'axios';
 import authService from '@services/authService';
+import apiService from '@/lib/services/apiService';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
@@ -34,6 +35,9 @@ const documentCache = {
     this.documents = null;
     this.documentsByType = {};
     this.lastFetch = null;
+    
+    // Also invalidate the API service cache
+    apiService.invalidateDocumentCache();
   },
   
   // Mettre à jour le cache avec des données optimistes

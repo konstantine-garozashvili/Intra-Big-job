@@ -35,11 +35,14 @@ const cache = new Map();
 const CACHE_CONFIG = {
   // Never cache these endpoints (always fetch fresh data)
   neverCache: [
-    '/api/profile/picture'
+    '/api/profile/picture',
+    '/api/documents/type/CV',
+    '/api/documents/type'
   ],
   // Short TTL for these endpoints (10 seconds)
   shortTtl: [
-    '/api/profile'
+    '/api/profile',
+    '/api/documents'
   ]
 };
 
@@ -307,6 +310,23 @@ const apiService = {
     
     // Delete all profile-related cache entries
     profileKeys.forEach(key => cache.delete(key));
+  },
+  
+  /**
+   * Invalide toutes les entrées du cache liées aux documents
+   */
+  invalidateDocumentCache() {
+    // Get all cache keys
+    const keys = Array.from(cache.keys());
+    
+    // Filter keys related to documents
+    const documentKeys = keys.filter(key => 
+      key.includes('/documents') || 
+      key.includes('/document')
+    );
+    
+    // Delete all document-related cache entries
+    documentKeys.forEach(key => cache.delete(key));
   }
 };
 

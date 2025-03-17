@@ -3,7 +3,7 @@ import { Download, Upload, FileText, Trash2, AlertCircle, File, CheckCircle2 } f
 import { Button } from "@/components/ui/button";
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import { useApiQuery, useApiMutation } from '@/hooks/useReactQuery';
+import { useCV } from '../../hooks/useCV';
 import {
   Dialog,
   DialogContent,
@@ -13,66 +13,23 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-// Importer le service documentService directement dans le composant
-import documentService from '../../services/documentService';
-
 const CVUpload = memo(({ userData, onUpdate }) => {
   const [cvFile, setCvFile] = useState(null);
   const [dragActive, setDragActive] = useState(false);
   const [fileError, setFileError] = useState(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-  // Fetch CV document using React Query
-  const { 
-    data: cvDocuments, 
-    isLoading: isLoadingCV,
-    refetch: refetchCV
-  } = useApiQuery('/api/documents/type/CV', 'userCVDocument', {
-    refetchOnWindowFocus: false,
-    onError: (error) => {
-      console.error("Error fetching CV document:", error);
-    }
-  });
-
-  // Get the first CV document if available
-  const cvDocument = cvDocuments?.data?.[0] || null;
-
-  // Mutation for uploading CV
-  const { 
-    mutate: uploadCV,
-    isPending: isUploading
-  } = useApiMutation('/api/documents/upload/cv', 'post', 'userCVDocument', {
-    onSuccess: () => {
-      toast.success('CV uploaded successfully');
-      setCvFile(null);
-      refetchCV();
-      
-      if (onUpdate) onUpdate();
-      
-      // Reset file input
-      const fileInput = document.getElementById('cv-upload');
-      if (fileInput) fileInput.value = '';
-    },
-    onError: (error) => {
-      toast.error('Failed to upload CV: ' + (error.response?.data?.message || error.message));
-    }
-  });
-
-  // Mutation for deleting CV
-  const { 
-    mutate: deleteCV,
-    isPending: isDeleting
-  } = useApiMutation((id) => `/api/documents/${id}`, 'delete', 'userCVDocument', {
-    onSuccess: () => {
-      toast.success('CV deleted successfully');
-      refetchCV();
-      
-      if (onUpdate) onUpdate();
-    },
-    onError: (error) => {
-      toast.error('Failed to delete CV: ' + (error.response?.data?.message || error.message));
-    }
-  });
+  // Use our custom CV hook
+  const {
+    cvDocument,
+    isLoading,
+    isFetching,
+    uploadCV,
+    deleteCV,
+    downloadCV,
+    uploadStatus,
+    deleteStatus
+  } = useCV();
 
   // Handle file selection
   const handleCvFileChange = useCallback((event) => {
@@ -106,8 +63,24 @@ const CVUpload = memo(({ userData, onUpdate }) => {
     
     const formData = new FormData();
     formData.append('file', cvFile);
-    uploadCV(formData);
-  }, [cvFile, uploadCV]);
+    
+    uploadCV(formData, {
+      onSuccess: () => {
+        toast.success('CV uploaded successfully');
+        setCvFile(null);
+        
+        // Reset file input
+        const fileInput = document.getElementById('cv-upload');
+        if (fileInput) fileInput.value = '';
+        
+        // Notify parent component if needed
+        if (onUpdate) onUpdate();
+      },
+      onError: (error) => {
+        toast.error('Failed to upload CV: ' + (error.response?.data?.message || error.message));
+      }
+    });
+  }, [cvFile, uploadCV, onUpdate]);
 
   // Handle document deletion
   const handleDeleteDocument = useCallback(() => {
@@ -126,9 +99,19 @@ const CVUpload = memo(({ userData, onUpdate }) => {
       return;
     }
     
-    deleteCV(cvDocument.id);
-    setDeleteDialogOpen(false);
-  }, [cvDocument, deleteCV]);
+    deleteCV(cvDocument.id, {
+      onSuccess: () => {
+        toast.success('CV deleted successfully');
+        setDeleteDialogOpen(false);
+        
+        // Notify parent component if needed
+        if (onUpdate) onUpdate();
+      },
+      onError: (error) => {
+        toast.error('Failed to delete CV: ' + (error.response?.data?.message || error.message));
+      }
+    });
+  }, [cvDocument, deleteCV, onUpdate]);
 
   // Handle document download
   const handleDownloadDocument = useCallback(async () => {
@@ -138,35 +121,13 @@ const CVUpload = memo(({ userData, onUpdate }) => {
     }
     
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/documents/${cvDocument.id}/download`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to download document');
-      }
-      
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = url;
-      a.download = cvDocument.name || 'cv.pdf';
-      document.body.appendChild(a);
-      a.click();
-      
-      // Clean up
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      
-      toast.success('Document téléchargé avec succès');
+      await downloadCV();
+      toast.success('Document downloaded successfully');
     } catch (error) {
-      console.error('Erreur lors du téléchargement du CV:', error);
-      toast.error('Erreur lors du téléchargement du CV');
+      console.error('Error downloading CV:', error);
+      toast.error('Error downloading CV');
     }
-  }, [cvDocument]);
+  }, [cvDocument, downloadCV]);
 
   // Handle drag events
   const handleDrag = useCallback((e) => {
@@ -207,73 +168,60 @@ const CVUpload = memo(({ userData, onUpdate }) => {
     }
   }, []);
 
+  // Determine if component is loading
+  const componentIsLoading = isLoading || isFetching || uploadStatus.isPending || deleteStatus.isPending;
+
   return (
-    <div className="space-y-4">
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirmer la suppression</DialogTitle>
-            <DialogDescription>
-              Êtes-vous sûr de vouloir supprimer votre CV ? Cette action est irréversible.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex justify-end space-x-2">
+    <div className="p-4 sm:p-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6">
+        <div>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">CV / Curriculum Vitae</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Téléversez votre CV au format PDF, DOC ou DOCX</p>
+        </div>
+        {/* CV Actions */}
+        {cvDocument && (
+          <div className="flex mt-2 sm:mt-0 space-x-2">
             <Button
               variant="outline"
-              onClick={() => setDeleteDialogOpen(false)}
+              size="sm"
+              onClick={handleDownloadDocument}
+              className="text-xs sm:text-sm h-8 sm:h-9"
             >
-              Annuler
+              <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5" />
+              Download
             </Button>
             <Button
-              variant="destructive"
-              onClick={confirmDeleteDocument}
-              disabled={isDeleting}
+              variant="outline"
+              size="sm"
+              onClick={handleDeleteDocument}
+              disabled={deleteStatus.isPending}
+              className="text-xs sm:text-sm h-8 sm:h-9 text-red-600 hover:text-red-700 hover:bg-red-50"
             >
-              {isDeleting ? 'Suppression...' : 'Supprimer'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* CV Document Display */}
-      {cvDocument && (
-        <div className="bg-gray-50 p-3 sm:p-4 rounded-lg border border-gray-200">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
-            <div className="flex items-center space-x-3 min-w-0">
-              <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-blue-500 flex-shrink-0" />
-              <div className="min-w-0">
-                <h3 className="font-medium text-sm sm:text-base truncate">{cvDocument.name}</h3>
-                <p className="text-xs sm:text-sm text-gray-500">
-                  Ajouté le {new Date(cvDocument.createdAt).toLocaleDateString('fr-FR', {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric'
-                  })}
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-2 sm:gap-3">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleDownloadDocument}
-                disabled={isDeleting}
-                className="w-full sm:w-auto text-xs sm:text-sm h-8 sm:h-9 justify-center"
-              >
-                <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5" />
-                Télécharger
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleDeleteDocument}
-                disabled={isDeleting}
-                className="w-full sm:w-auto text-xs sm:text-sm h-8 sm:h-9 justify-center text-red-500 hover:text-red-700"
-              >
+              {deleteStatus.isPending ? (
+                <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-b-2 border-red-600 mr-1.5"></div>
+              ) : (
                 <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5" />
-                Supprimer
-              </Button>
+              )}
+              Delete
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* CV Display */}
+      {cvDocument && !cvFile && (
+        <div className="bg-gray-50 dark:bg-gray-700 p-3 sm:p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+          <div className="flex items-center space-x-3 sm:space-x-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+              <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h4 className="font-medium text-sm sm:text-base text-gray-900 dark:text-gray-100 truncate">
+                {cvDocument.name}
+              </h4>
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                Uploaded on {new Date(cvDocument.created_at).toLocaleDateString()}
+              </p>
             </div>
           </div>
         </div>
@@ -343,11 +291,11 @@ const CVUpload = memo(({ userData, onUpdate }) => {
             </div>
             <Button
               onClick={handleCvUpload}
-              disabled={isUploading}
+              disabled={uploadStatus.isPending}
               size="sm"
               className="w-full sm:w-auto text-xs sm:text-sm h-8 sm:h-9 justify-center"
             >
-              {isUploading ? (
+              {uploadStatus.isPending ? (
                 <div className="flex items-center justify-center">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                   <span>Envoi en cours...</span>
@@ -372,7 +320,7 @@ const CVUpload = memo(({ userData, onUpdate }) => {
       )}
 
       {/* Loading State */}
-      {isLoadingCV && !cvDocument && !cvFile && (
+      {componentIsLoading && !cvDocument && !cvFile && (
         <div className="text-center py-4 sm:py-6">
           <div className="animate-pulse flex flex-col items-center space-y-2 sm:space-y-3">
             <div className="rounded-full bg-gray-200 h-8 w-8 sm:h-10 sm:w-10"></div>
@@ -381,6 +329,38 @@ const CVUpload = memo(({ userData, onUpdate }) => {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={(open) => !deleteStatus.isPending && setDeleteDialogOpen(open)}>
+        <DialogContent className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-hidden rounded-2xl border-0 shadow-xl">
+          <div className="overflow-y-auto max-h-[70vh] fade-in-up">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-semibold">Confirmation de suppression</DialogTitle>
+              <DialogDescription className="text-base mt-2">
+                Êtes-vous sûr de vouloir supprimer votre CV ? Cette action est irréversible.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          <DialogFooter className="mt-6 flex justify-end space-x-2">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={deleteStatus.isPending}
+              className="rounded-full border-2 hover:bg-gray-100 transition-all duration-200"
+            >
+              Annuler
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDeleteDocument}
+              disabled={deleteStatus.isPending}
+              className={`rounded-full bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 transition-all duration-200 ${deleteStatus.isPending ? 'opacity-80' : ''}`}
+            >
+              {deleteStatus.isPending ? "Suppression..." : "Supprimer"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 });

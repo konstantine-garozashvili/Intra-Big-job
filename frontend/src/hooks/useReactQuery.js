@@ -8,7 +8,10 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 // Special endpoints that need custom handling
 const SPECIAL_ENDPOINTS = {
-  profilePicture: '/api/profile/picture'
+  profilePicture: '/api/profile/picture',
+  documents: '/api/documents',
+  documentsByType: '/api/documents/type',
+  documentUpload: '/api/documents/upload'
 };
 
 /**
@@ -23,9 +26,12 @@ export function useApiQuery(endpoint, queryKey, options = {}) {
   
   // Determine if this is a special endpoint that needs custom handling
   const isProfilePicture = endpoint === SPECIAL_ENDPOINTS.profilePicture;
+  const isDocumentEndpoint = 
+    endpoint.startsWith(SPECIAL_ENDPOINTS.documents) || 
+    endpoint.startsWith(SPECIAL_ENDPOINTS.documentsByType);
   
-  // Set appropriate options for profile picture queries
-  if (isProfilePicture) {
+  // Set appropriate options for special endpoints
+  if (isProfilePicture || isDocumentEndpoint) {
     options.staleTime = 0; // Always consider stale
     options.refetchOnMount = true;
     options.refetchOnWindowFocus = true;
@@ -35,8 +41,8 @@ export function useApiQuery(endpoint, queryKey, options = {}) {
     queryKey: finalQueryKey,
     queryFn: async () => {
       try {
-        // Add timestamp for profile picture to prevent browser caching
-        const queryParams = isProfilePicture ? { _t: Date.now() } : {};
+        // Add timestamp for special endpoints to prevent browser caching
+        const queryParams = (isProfilePicture || isDocumentEndpoint) ? { _t: Date.now() } : {};
         
         // Use the enhanced cache system from apiService
         return await apiService.get(endpoint, { params: queryParams }, true, options.staleTime || 5 * 60 * 1000);
@@ -60,8 +66,14 @@ export function useApiMutation(endpoint, method = 'post', invalidateQueryKey, op
   const queryClient = useQueryClient();
   const finalInvalidateKey = Array.isArray(invalidateQueryKey) ? invalidateQueryKey : invalidateQueryKey ? [invalidateQueryKey] : null;
   
-  // Determine if this is a profile picture mutation
-  const isProfilePicture = endpoint === SPECIAL_ENDPOINTS.profilePicture;
+  // Determine if this is a special endpoint
+  const isProfilePicture = typeof endpoint === 'string' && endpoint === SPECIAL_ENDPOINTS.profilePicture;
+  const isDocumentUpload = 
+    (typeof endpoint === 'string' && endpoint.includes('/documents/upload')) || 
+    (typeof endpoint === 'string' && endpoint.startsWith(SPECIAL_ENDPOINTS.documentUpload));
+  const isDocumentDelete = 
+    (typeof endpoint === 'function' && endpoint().includes('/documents/')) || 
+    (typeof endpoint === 'string' && endpoint.includes('/documents/') && method.toLowerCase() === 'delete');
   
   return useMutation({
     mutationFn: async (data) => {
@@ -79,11 +91,11 @@ export function useApiMutation(endpoint, method = 'post', invalidateQueryKey, op
           finalEndpoint = `${finalEndpoint}/${data}`;
         }
         
-        // Add timestamp for profile picture operations to prevent caching issues
-        if (isProfilePicture) {
+        // Add timestamp for special operations to prevent caching issues
+        if (isProfilePicture || isDocumentUpload || isDocumentDelete) {
           const timestamp = Date.now();
-          if (method.toLowerCase() === 'delete') {
-            finalEndpoint = `${finalEndpoint}?_t=${timestamp}`;
+          if (method.toLowerCase() === 'delete' || method.toLowerCase() === 'get') {
+            finalEndpoint = `${finalEndpoint}${finalEndpoint.includes('?') ? '&' : '?'}_t=${timestamp}`;
           }
         }
         
@@ -115,7 +127,7 @@ export function useApiMutation(endpoint, method = 'post', invalidateQueryKey, op
     onSuccess: (data, variables, context) => {
       // Invalider les requêtes associées pour forcer un rafraîchissement
       if (finalInvalidateKey) {
-        // For profile picture operations, use a more aggressive invalidation strategy
+        // For special operations, use a more aggressive invalidation strategy
         if (isProfilePicture) {
           // Invalidate all profile-related queries
           apiService.invalidateProfileCache();
@@ -134,6 +146,27 @@ export function useApiMutation(endpoint, method = 'post', invalidateQueryKey, op
                 (key.includes('profile') || 
                  key.includes('profilePicture') || 
                  key.includes('currentProfile'));
+            },
+            refetchType: 'all'
+          });
+        } else if (isDocumentUpload || isDocumentDelete) {
+          // Invalidate document cache
+          apiService.invalidateDocumentCache();
+          
+          // Invalidate specific keys with immediate refetch
+          queryClient.invalidateQueries({ 
+            queryKey: finalInvalidateKey,
+            refetchType: 'all'
+          });
+          
+          // Also invalidate any document-related queries
+          queryClient.invalidateQueries({
+            predicate: (query) => {
+              const key = query.queryKey;
+              return Array.isArray(key) && 
+                (key.includes('document') || 
+                 key.includes('userCVDocument') || 
+                 key.includes('documents'));
             },
             refetchType: 'all'
           });
