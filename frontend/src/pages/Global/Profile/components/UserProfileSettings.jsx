@@ -205,14 +205,6 @@ const UserProfileSettings = () => {
         }
       }
       
-      // Validation de l'URL LinkedIn
-      if (field === 'linkedinUrl' && value) {
-        if (!isValidLinkedInUrl(value)) {
-          toast.error("Format d'URL LinkedIn invalide. L'URL doit être au format linkedin.com/in/username");
-          return;
-        }
-      }
-      
       // Validation du nom et prénom
       if ((field === 'firstName' || field === 'lastName') && value) {
         if (!isValidName(value)) {
@@ -246,18 +238,15 @@ const UserProfileSettings = () => {
       // Make the API call in the background
       if (field === 'portfolioUrl' && isStudent) {
         await updatePortfolioUrl({ portfolioUrl: value });
+        toast.success('Mise à jour réussie');
       } else {
         await updatePersonalInfo(dataToSave);
+        toast.success('Mise à jour réussie');
       }
       
       // If we're updating birthDate, calculate and update the age
       if (field === 'birthDate' && value) {
         userData.age = calculateAge(value);
-      }
-      
-      // Show success toast only if no error was thrown
-      if (field !== 'portfolioUrl') {
-        toast.success('Mise à jour réussie');
       }
       
     } catch (error) {
@@ -356,6 +345,9 @@ const UserProfileSettings = () => {
         const previousData = queryClient.getQueryData(['userProfileData']);
         
         return { previousData };
+      },
+      onSuccess: (data, variables) => {
+        toast.success('Informations mises à jour avec succès');
       },
       onError: (err, variables, context) => {
         // Rollback on error
