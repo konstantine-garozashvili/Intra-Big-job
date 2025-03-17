@@ -6,6 +6,11 @@ import apiService, { normalizeApiUrl } from '@/lib/services/apiService';
  */
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
+// Special endpoints that need custom handling
+const SPECIAL_ENDPOINTS = {
+  profilePicture: '/api/profile/picture'
+};
+
 /**
  * Hook pour effectuer des requêtes GET avec mise en cache
  * @param {string} endpoint - Endpoint de l'API
@@ -16,12 +21,25 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 export function useApiQuery(endpoint, queryKey, options = {}) {
   const finalQueryKey = Array.isArray(queryKey) ? queryKey : [queryKey];
   
+  // Determine if this is a special endpoint that needs custom handling
+  const isProfilePicture = endpoint === SPECIAL_ENDPOINTS.profilePicture;
+  
+  // Set appropriate options for profile picture queries
+  if (isProfilePicture) {
+    options.staleTime = 0; // Always consider stale
+    options.refetchOnMount = true;
+    options.refetchOnWindowFocus = true;
+  }
+  
   return useQuery({
     queryKey: finalQueryKey,
     queryFn: async () => {
       try {
-        // Utiliser le cache amélioré du service API
-        return await apiService.get(endpoint, {}, true, options.staleTime || 5 * 60 * 1000);
+        // Add timestamp for profile picture to prevent browser caching
+        const queryParams = isProfilePicture ? { _t: Date.now() } : {};
+        
+        // Use the enhanced cache system from apiService
+        return await apiService.get(endpoint, { params: queryParams }, true, options.staleTime || 5 * 60 * 1000);
       } catch (error) {
         throw error;
       }
@@ -40,7 +58,10 @@ export function useApiQuery(endpoint, queryKey, options = {}) {
  */
 export function useApiMutation(endpoint, method = 'post', invalidateQueryKey, options = {}) {
   const queryClient = useQueryClient();
-  const finalInvalidateKey = Array.isArray(invalidateQueryKey) ? invalidateQueryKey : [invalidateQueryKey];
+  const finalInvalidateKey = Array.isArray(invalidateQueryKey) ? invalidateQueryKey : invalidateQueryKey ? [invalidateQueryKey] : null;
+  
+  // Determine if this is a profile picture mutation
+  const isProfilePicture = endpoint === SPECIAL_ENDPOINTS.profilePicture;
   
   return useMutation({
     mutationFn: async (data) => {
@@ -58,14 +79,22 @@ export function useApiMutation(endpoint, method = 'post', invalidateQueryKey, op
           finalEndpoint = `${finalEndpoint}/${data}`;
         }
         
+        // Add timestamp for profile picture operations to prevent caching issues
+        if (isProfilePicture) {
+          const timestamp = Date.now();
+          if (method.toLowerCase() === 'delete') {
+            finalEndpoint = `${finalEndpoint}?_t=${timestamp}`;
+          }
+        }
+        
         // Handle different HTTP methods appropriately
         let response;
         
         if (method.toLowerCase() === 'delete') {
           // Pour les requêtes DELETE
-          response = await apiService.delete(finalEndpoint, 
-            typeof data === 'object' ? data : {}
-          );
+          response = await apiService.delete(finalEndpoint, {
+            data: typeof data === 'object' ? data : {}
+          });
         } else if (method.toLowerCase() === 'get') {
           // Pour les requêtes GET
           response = await apiService.get(finalEndpoint, { params: data });
@@ -79,12 +108,43 @@ export function useApiMutation(endpoint, method = 'post', invalidateQueryKey, op
         
         return response;
       } catch (error) {
+        console.error(`Erreur lors de la requête ${method.toUpperCase()} vers ${endpoint}:`, error);
         throw error;
       }
     },
     onSuccess: (data, variables, context) => {
       // Invalider les requêtes associées pour forcer un rafraîchissement
-      queryClient.invalidateQueries({ queryKey: finalInvalidateKey });
+      if (finalInvalidateKey) {
+        // For profile picture operations, use a more aggressive invalidation strategy
+        if (isProfilePicture) {
+          // Invalidate all profile-related queries
+          apiService.invalidateProfileCache();
+          
+          // Invalidate specific keys with immediate refetch
+          queryClient.invalidateQueries({ 
+            queryKey: finalInvalidateKey,
+            refetchType: 'all' // Force refetch even for inactive queries
+          });
+          
+          // Also invalidate any profile-related queries
+          queryClient.invalidateQueries({
+            predicate: (query) => {
+              const key = query.queryKey;
+              return Array.isArray(key) && 
+                (key.includes('profile') || 
+                 key.includes('profilePicture') || 
+                 key.includes('currentProfile'));
+            },
+            refetchType: 'all'
+          });
+        } else {
+          // Standard invalidation for other endpoints
+          queryClient.invalidateQueries({ 
+            queryKey: finalInvalidateKey,
+            refetchType: 'all'
+          });
+        }
+      }
       
       // Appeler onSuccess des options si défini
       if (options.onSuccess) {

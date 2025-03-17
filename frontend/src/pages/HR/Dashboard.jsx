@@ -21,8 +21,10 @@ import {
   BarChart3, 
   PlusCircle, 
   FileDown, 
-  FileSpreadsheet
+  FileSpreadsheet,
+  Briefcase
 } from 'lucide-react';
+import DashboardHeader from '@/components/shared/DashboardHeader';
 
 // Enregistrer les composants ChartJS nécessaires
 ChartJS.register(ArcElement, CategoryScale, LinearScale, BarElement, PointElement, LineElement, Title, Tooltip, Legend);
@@ -175,8 +177,17 @@ const HRDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
 
   return (
-    <DashboardLayout loading={isLoading} error={error?.message} className="p-0">
-      <div className="p-6 md:p-8 bg-gray-50 min-h-screen">
+    <DashboardLayout 
+      loading={isLoading} 
+      error={error?.message || null}
+    >
+      <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8">
+        <DashboardHeader 
+          user={user}
+          icon={Briefcase}
+          roleTitle="Tableau de bord ressources humaines"
+        />
+        
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}

@@ -31,14 +31,32 @@ axiosInstance.interceptors.request.use(request => {
 // Ajouter un cache simple pour les requêtes GET
 const cache = new Map();
 
+// Define cache keys that should never be cached or have short TTL
+const CACHE_CONFIG = {
+  // Never cache these endpoints (always fetch fresh data)
+  neverCache: [
+    '/api/profile/picture'
+  ],
+  // Short TTL for these endpoints (10 seconds)
+  shortTtl: [
+    '/api/profile'
+  ]
+};
+
 axiosInstance.interceptors.response.use(response => {
   // Mettre en cache les réponses GET
   if (response.config.method === 'get' && response.config.url) {
-    const cacheKey = response.config.url + JSON.stringify(response.config.params || {});
-    cache.set(cacheKey, {
-      data: response.data,
-      timestamp: Date.now()
-    });
+    const url = response.config.url;
+    const cacheKey = url + JSON.stringify(response.config.params || {});
+    
+    // Skip caching for endpoints that should never be cached
+    const shouldNeverCache = CACHE_CONFIG.neverCache.some(endpoint => url.includes(endpoint));
+    if (!shouldNeverCache) {
+      cache.set(cacheKey, {
+        data: response.data,
+        timestamp: Date.now()
+      });
+    }
   }
   return response;
 }, error => {
@@ -78,6 +96,24 @@ const apiService = {
     try {
       const url = normalizeApiUrl(path);
       const authOptions = this.withAuth(options);
+      
+      // Check if this endpoint should never be cached
+      const shouldNeverCache = CACHE_CONFIG.neverCache.some(endpoint => path.includes(endpoint));
+      if (shouldNeverCache) {
+        useCache = false;
+      }
+      
+      // Check if this endpoint should have a short TTL
+      const shouldHaveShortTtl = CACHE_CONFIG.shortTtl.some(endpoint => path.includes(endpoint));
+      if (shouldHaveShortTtl) {
+        cacheDuration = 10 * 1000; // 10 seconds
+      }
+      
+      // Add cache busting for profile picture requests
+      if (path.includes('/profile/picture')) {
+        const timestamp = Date.now();
+        authOptions.params = { ...authOptions.params, _t: timestamp };
+      }
       
       // Vérifier si la réponse est en cache et toujours valide
       if (useCache) {
@@ -126,6 +162,12 @@ const apiService = {
           : this.withAuth(formDataOptions);
         
         const response = await axiosInstance.post(url, data, authOptions);
+        
+        // Invalidate related caches for profile picture operations
+        if (path.includes('/profile/picture')) {
+          this.invalidateProfileCache();
+        }
+        
         return response.data;
       } else {
         // For regular JSON data
@@ -135,6 +177,12 @@ const apiService = {
           : this.withAuth(options);
         
         const response = await axiosInstance.post(url, data, authOptions);
+        
+        // Invalidate related caches for profile operations
+        if (path.includes('/profile')) {
+          this.invalidateProfileCache();
+        }
+        
         return response.data;
       }
     } catch (error) {
@@ -154,6 +202,12 @@ const apiService = {
       // Add authentication to the request
       const authOptions = this.withAuth(options);
       const response = await axiosInstance.put(normalizeApiUrl(path), data, authOptions);
+      
+      // Invalidate related caches for profile operations
+      if (path.includes('/profile')) {
+        this.invalidateProfileCache();
+      }
+      
       return response.data;
     } catch (error) {
       throw error;
@@ -170,7 +224,27 @@ const apiService = {
     try {
       // Add authentication to the request
       const authOptions = this.withAuth(options);
-      const response = await axiosInstance.delete(normalizeApiUrl(path), authOptions);
+      
+      // Add cache busting for profile picture requests
+      if (path.includes('/profile/picture')) {
+        const timestamp = Date.now();
+        if (!options.params) options.params = {};
+        options.params._t = timestamp;
+      }
+      
+      // Pour Axios delete, le second paramètre doit être un objet de configuration
+      // avec une propriété 'headers'
+      const response = await axiosInstance.delete(normalizeApiUrl(path), {
+        headers: authOptions.headers,
+        params: options.params,
+        data: options.data // Si vous avez besoin d'envoyer des données dans le corps
+      });
+      
+      // Invalidate related caches for profile picture operations
+      if (path.includes('/profile/picture')) {
+        this.invalidateProfileCache();
+      }
+      
       return response.data;
     } catch (error) {
       throw error;
@@ -191,8 +265,8 @@ const apiService = {
     // Create a new options object to avoid modifying the original
     const newOptions = { ...options };
     
-    // Ensure headers exist
-    newOptions.headers = { ...options.headers };
+    // Ensure headers exist (avec vérification)
+    newOptions.headers = { ...(options.headers || {}) };
     
     // Add Authorization header
     newOptions.headers.Authorization = `Bearer ${token}`;
@@ -216,6 +290,23 @@ const apiService = {
     const url = normalizeApiUrl(path);
     const cacheKey = url + JSON.stringify(params);
     cache.delete(cacheKey);
+  },
+  
+  /**
+   * Invalide toutes les entrées du cache liées au profil
+   */
+  invalidateProfileCache() {
+    // Get all cache keys
+    const keys = Array.from(cache.keys());
+    
+    // Filter keys related to profile
+    const profileKeys = keys.filter(key => 
+      key.includes('/profile') || 
+      key.includes('/profil')
+    );
+    
+    // Delete all profile-related cache entries
+    profileKeys.forEach(key => cache.delete(key));
   }
 };
 

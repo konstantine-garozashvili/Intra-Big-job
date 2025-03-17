@@ -2,7 +2,7 @@ import { useApiQuery, useApiMutation } from '@/hooks/useReactQuery';
 import { profileService } from '../services/profileService';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 // Créer un système d'événements pour les mises à jour de photo de profil
 export const profilePictureEvents = {
@@ -16,111 +16,141 @@ export const profilePictureEvents = {
   
   // Notifier tous les abonnés des mises à jour
   notify() {
+    console.log('🔔 Notification envoyée à', this.listeners.size, 'abonnés');
     this.listeners.forEach(callback => callback());
   }
 };
 
+// Define constant query keys at module level
+export const PROFILE_QUERY_KEYS = {
+  profilePicture: ['profilePicture'],
+  currentProfile: ['currentProfile'],
+  publicProfile: ['publicProfile']
+};
+
+/**
+ * Extract profile picture URL from API response data
+ * @param {Object} data - Data received from API
+ * @returns {string|null} Profile picture URL or null
+ */
+function getProfilePictureUrl(data) {
+  if (!data) return null;
+  if (data.success === false) return null;
+  if (!data.data) return null;
+  
+  const { has_profile_picture, profile_picture_url } = data.data;
+  return has_profile_picture ? profile_picture_url : null;
+}
+
 /**
  * Custom hook for managing profile picture operations with React Query
+ * @returns {Object} Profile picture data and operations
  */
 export function useProfilePicture() {
-  // Accès direct au client de requête pour forcer l'invalidation
   const queryClient = useQueryClient();
+  const isMountedRef = useRef(true);
   
-  // État local pour suivre les opérations en cours
-  const [isOperationPending, setIsOperationPending] = useState(false);
+  // Reset isMountedRef on component mount/unmount
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
-  // Query for fetching profile picture
+  // Query for profile picture
   const profilePictureQuery = useApiQuery(
     '/api/profile/picture',
-    ['profilePicture'],
+    PROFILE_QUERY_KEYS.profilePicture,
     {
-      staleTime: 0, // Toujours considérer les données comme périmées pour forcer le rafraîchissement
-      cacheTime: 10 * 60 * 1000, // 10 minutes
-      retry: 1, // Limiter les tentatives de nouvelle requête en cas d'échec
-      onError: (error) => {
-        // console.error('Erreur lors de la récupération de la photo de profil:', error);
-        // Ne pas afficher de toast pour éviter de spammer l'utilisateur
-      },
-      // Désactiver le refetch automatique pendant les opérations
-      enabled: !isOperationPending
+      staleTime: 0, // Always consider data stale to ensure fresh data
+      cacheTime: 10 * 60 * 1000, // Cache for 10 minutes
+      retry: 1,
+      refetchOnWindowFocus: true,
+      refetchOnMount: true
     }
   );
 
-  // Fonction pour invalider toutes les requêtes liées au profil
-  const invalidateProfileQueries = () => {
-    // Invalider la requête de photo de profil
-    queryClient.invalidateQueries({ queryKey: ['profilePicture'] });
+  // Force refresh function
+  const forceRefresh = useCallback(async () => {
+    // Invalidate all related queries
+    await Promise.all([
+      queryClient.invalidateQueries({ 
+        queryKey: PROFILE_QUERY_KEYS.profilePicture,
+        refetchType: 'all'
+      }),
+      queryClient.invalidateQueries({ 
+        queryKey: PROFILE_QUERY_KEYS.currentProfile,
+        refetchType: 'all'
+      }),
+      queryClient.invalidateQueries({ 
+        queryKey: PROFILE_QUERY_KEYS.publicProfile,
+        refetchType: 'all'
+      })
+    ]);
     
-    // Invalider également les requêtes de profil public et profil courant
-    queryClient.invalidateQueries({ queryKey: ['currentProfile'] });
-    queryClient.invalidateQueries({ queryKey: ['publicProfile'] });
-    
-    // Forcer le rafraîchissement des requêtes actives
-    queryClient.refetchQueries({ queryKey: ['profilePicture'], type: 'active' });
-    queryClient.refetchQueries({ queryKey: ['currentProfile'], type: 'active' });
-    queryClient.refetchQueries({ queryKey: ['publicProfile'], type: 'active' });
-    
-    // Notifier tous les composants abonnés
-    profilePictureEvents.notify();
-  };
+    // Force immediate refetch
+    return await profilePictureQuery.refetch();
+  }, [queryClient, profilePictureQuery]);
 
-  // Mutation for uploading profile picture
+  // Upload profile picture mutation
   const uploadProfilePictureMutation = useApiMutation(
     '/api/profile/picture',
     'post',
-    ['profilePicture'],
+    PROFILE_QUERY_KEYS.profilePicture,
     {
       onMutate: async (formData) => {
-        setIsOperationPending(true);
+        // Cancel any outgoing refetches
+        await queryClient.cancelQueries({ queryKey: PROFILE_QUERY_KEYS.profilePicture });
         
-        // Annuler les requêtes en cours
-        await queryClient.cancelQueries({ queryKey: ['profilePicture'] });
+        // Save previous state
+        const previousData = queryClient.getQueryData(PROFILE_QUERY_KEYS.profilePicture);
         
-        // Sauvegarder l'état précédent
-        const previousData = queryClient.getQueryData(['profilePicture']);
-        
-        // Extraire le fichier du FormData pour l'aperçu
+        // Create temporary URL for optimistic update
         const file = formData.get('profile_picture');
-        if (file && file instanceof File) {
-          // Créer une URL temporaire pour l'aperçu
+        if (file instanceof File) {
           const tempUrl = URL.createObjectURL(file);
           
-          // Mettre à jour le cache avec l'URL temporaire
-          queryClient.setQueryData(['profilePicture'], {
+          // Update cache immediately with optimistic data
+          queryClient.setQueryData(PROFILE_QUERY_KEYS.profilePicture, {
             success: true,
             data: {
               has_profile_picture: true,
               profile_picture_url: tempUrl,
-              is_temp_url: true // Marquer comme URL temporaire
+              is_temp_url: true
             }
           });
         }
         
         return { previousData };
       },
-      onSuccess: (data) => {
-        toast.success('Photo de profil mise à jour avec succès');
+      onSuccess: async (data) => {
+        if (!isMountedRef.current) return;
         
-        // Forcer l'invalidation et le rafraîchissement immédiat
-        setTimeout(() => {
-          invalidateProfileQueries();
-          setIsOperationPending(false);
-        }, 300);
+        try {
+          // Verify data is valid
+          if (!data || !data.success) {
+            throw new Error('Invalid data received from server');
+          }
+          
+          // Update cache with server data
+          queryClient.setQueryData(PROFILE_QUERY_KEYS.profilePicture, data);
+          
+          // Force refresh to ensure consistency
+          await forceRefresh();
+        } catch (error) {
+          console.error('Error updating after upload:', error);
+        }
       },
       onError: (error, variables, context) => {
-        toast.error('Erreur lors de la mise à jour de la photo de profil');
-        
-        // Restaurer l'état précédent en cas d'erreur
+        // Restore previous state on error
         if (context?.previousData) {
-          queryClient.setQueryData(['profilePicture'], context.previousData);
+          queryClient.setQueryData(PROFILE_QUERY_KEYS.profilePicture, context.previousData);
         }
-        
-        setIsOperationPending(false);
       },
       onSettled: () => {
-        // Libérer les URL temporaires
-        const data = queryClient.getQueryData(['profilePicture']);
+        // Clean up temporary URLs
+        const data = queryClient.getQueryData(PROFILE_QUERY_KEYS.profilePicture);
         if (data?.data?.is_temp_url && data?.data?.profile_picture_url) {
           URL.revokeObjectURL(data.data.profile_picture_url);
         }
@@ -128,20 +158,21 @@ export function useProfilePicture() {
     }
   );
 
-  // Mutation for deleting profile picture - Utiliser le service direct pour contourner les problèmes CORS
-  const deleteProfilePictureMutation = {
-    mutate: async (_, options = {}) => {
-      try {
-        setIsOperationPending(true);
+  // Delete profile picture mutation
+  const deleteProfilePictureMutation = useApiMutation(
+    '/api/profile/picture',
+    'delete',
+    PROFILE_QUERY_KEYS.profilePicture,
+    {
+      onMutate: async () => {
+        // Cancel any outgoing refetches
+        await queryClient.cancelQueries({ queryKey: PROFILE_QUERY_KEYS.profilePicture });
         
-        // Annuler les requêtes en cours
-        await queryClient.cancelQueries({ queryKey: ['profilePicture'] });
+        // Save previous state
+        const previousData = queryClient.getQueryData(PROFILE_QUERY_KEYS.profilePicture);
         
-        // Sauvegarder l'état précédent
-        const previousData = queryClient.getQueryData(['profilePicture']);
-        
-        // Mettre à jour le cache immédiatement (optimistic update)
-        queryClient.setQueryData(['profilePicture'], {
+        // Update cache immediately with optimistic data
+        queryClient.setQueryData(PROFILE_QUERY_KEYS.profilePicture, {
           success: true,
           data: {
             has_profile_picture: false,
@@ -149,95 +180,52 @@ export function useProfilePicture() {
           }
         });
         
-        // Utiliser directement le service profileService au lieu de useApiMutation
-        // pour avoir plus de contrôle sur la requête
-        const response = await profileService.deleteProfilePicture();
+        return { previousData };
+      },
+      onSuccess: async () => {
+        if (!isMountedRef.current) return;
         
-        if (response && response.success) {
-          // Forcer l'invalidation et le rafraîchissement immédiat après un délai
-          setTimeout(() => {
-            invalidateProfileQueries();
-            setIsOperationPending(false);
-            
-            if (options.onSuccess) {
-              options.onSuccess(response);
-            }
-            
-            toast.success('Photo de profil supprimée avec succès');
-          }, 300);
-        } else {
-          // Restaurer l'état précédent en cas d'erreur
-          queryClient.setQueryData(['profilePicture'], previousData);
-          setIsOperationPending(false);
-          throw new Error(response?.message || 'Erreur lors de la suppression de la photo de profil');
+        try {
+          // Force refresh to ensure consistency
+          await forceRefresh();
+        } catch (error) {
+          console.error('Error updating after delete:', error);
         }
-      } catch (error) {
-        // Restaurer l'état précédent en cas d'erreur
-        const previousData = queryClient.getQueryData(['profilePicture']);
-        if (previousData) {
-          queryClient.setQueryData(['profilePicture'], previousData);
+      },
+      onError: (error, variables, context) => {
+        // Restore previous state on error
+        if (context?.previousData) {
+          queryClient.setQueryData(PROFILE_QUERY_KEYS.profilePicture, context.previousData);
         }
-        
-        setIsOperationPending(false);
-        
-        if (options.onError) {
-          options.onError(error);
-        }
-        
-        toast.error('Erreur lors de la suppression de la photo de profil');
-      }
-    },
-    isPending: isOperationPending
-  };
-
-  // Helper function to get profile picture URL
-  const getProfilePictureUrl = () => {
-    const data = profilePictureQuery.data;
-    
-    if (!data) return null;
-    
-    // Check if the response has success property, otherwise assume it's the direct data
-    if (data.success !== undefined) {
-      // Response follows the {success: true, data: {...}} structure
-      if (data.success && data.data && data.data.has_profile_picture) {
-        return data.data.profile_picture_url;
-      }
-    } else {
-      // Response is the direct data object
-      if (data.has_profile_picture) {
-        return data.profile_picture_url;
       }
     }
-    
-    return null;
-  };
-
-  // Fonction pour forcer un rafraîchissement manuel
-  const forceRefresh = () => {
-    if (!isOperationPending) {
-      return profilePictureQuery.refetch();
-    }
-    return Promise.resolve();
-  };
-  
-  // Écouter les événements de mise à jour
-  useEffect(() => {
-    // S'abonner aux événements de mise à jour
-    const unsubscribe = profilePictureEvents.subscribe(() => {
-      forceRefresh();
-    });
-    
-    // Se désabonner lors du démontage du composant
-    return () => unsubscribe();
-  }, []);
+  );
 
   return {
-    profilePictureUrl: getProfilePictureUrl(),
-    isLoading: profilePictureQuery.isLoading || uploadProfilePictureMutation.isPending || isOperationPending,
+    // Profile picture data
+    profilePictureUrl: getProfilePictureUrl(profilePictureQuery.data),
+    isLoading: profilePictureQuery.isLoading,
+    isFetching: profilePictureQuery.isFetching,
     isError: profilePictureQuery.isError,
     error: profilePictureQuery.error,
+    
+    // Operations
     refetch: forceRefresh,
     uploadProfilePicture: uploadProfilePictureMutation.mutate,
     deleteProfilePicture: deleteProfilePictureMutation.mutate,
+    
+    // Mutation states
+    uploadStatus: {
+      isPending: uploadProfilePictureMutation.isPending,
+      isSuccess: uploadProfilePictureMutation.isSuccess,
+      isError: uploadProfilePictureMutation.isError,
+      error: uploadProfilePictureMutation.error
+    },
+    deleteStatus: {
+      isPending: deleteProfilePictureMutation.isPending,
+      isSuccess: deleteProfilePictureMutation.isSuccess,
+      isError: deleteProfilePictureMutation.isError,
+      error: deleteProfilePictureMutation.error
+    }
   };
 } 
