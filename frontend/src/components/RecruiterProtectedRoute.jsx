@@ -69,11 +69,19 @@ const RecruiterProtectedRoute = () => {
               checkRoles(userData);
             } else {
               console.log('Aucune donnée utilisateur récupérée via API');
-              setHasAccess(true); // Autoriser temporairement
+              setHasAccess(false); // Ne pas autoriser sans données utilisateur
+              toast.error('Impossible de vérifier vos droits d\'accès', {
+                duration: 3000,
+                position: 'top-center',
+              });
             }
           } catch (apiError) {
             console.error('Erreur lors de la récupération des données utilisateur via API:', apiError);
-            setHasAccess(true); // Autoriser temporairement
+            setHasAccess(false); // Ne pas autoriser en cas d'erreur
+            toast.error('Erreur lors de la vérification de vos droits d\'accès', {
+              duration: 3000,
+              position: 'top-center',
+            });
           }
         } else {
           // Vérifier les rôles avec les données existantes
@@ -82,8 +90,12 @@ const RecruiterProtectedRoute = () => {
       } catch (error) {
         console.error('Erreur lors de la vérification des droits:', error);
         
-        // En cas d'erreur, autoriser temporairement l'accès
-        setHasAccess(true);
+        // En cas d'erreur, ne pas autoriser l'accès
+        setHasAccess(false);
+        toast.error('Erreur lors de la vérification de vos droits d\'accès', {
+          duration: 3000,
+          position: 'top-center',
+        });
       } finally {
         setIsChecking(false);
       }
@@ -106,7 +118,7 @@ const RecruiterProtectedRoute = () => {
       
       console.log('Rôles extraits:', userRoles);
       
-      // Vérifier si l'utilisateur a le rôle de recruteur ou d'administrateur
+      // Vérifier si l'utilisateur a le rôle de recruteur, d'administrateur ou de super-administrateur
       const hasRequiredRole = userRoles.some(role => {
         let roleName = '';
         
@@ -124,7 +136,8 @@ const RecruiterProtectedRoute = () => {
         return roleName.includes('recruiter') || 
                roleName.includes('admin') || 
                roleName === 'role_recruiter' || 
-               roleName === 'role_admin';
+               roleName === 'role_admin' ||
+               roleName === 'role_superadmin';
       });
       
       console.log('A les droits requis:', hasRequiredRole);
@@ -159,28 +172,25 @@ const RecruiterProtectedRoute = () => {
 
   // Si l'utilisateur n'est pas authentifié ou n'a pas les droits nécessaires
   if (!hasAccess) {
-    // Éviter les redirections multiples
-    if (redirectedRef.current) {
-      return null;
-    }
-    
-    redirectedRef.current = true;
+    console.log('Accès refusé, redirection en cours...');
     
     // Redirection vers la page de connexion si non connecté
     if (!localStorage.getItem('token')) {
+      console.log('Redirection vers /login');
       toast.error('Veuillez vous connecter pour accéder à cette page', {
         duration: 3000,
         position: 'top-center',
       });
-      return <Navigate to="/login" replace />;
+      return <Navigate to="/login" replace state={{ from: location }} />;
     }
     
     // Redirection vers le dashboard si connecté mais sans les droits nécessaires
+    console.log('Redirection vers /dashboard');
     toast.error('Vous n\'avez pas les droits nécessaires pour accéder à cette page', {
       duration: 3000,
       position: 'top-center',
     });
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/dashboard" replace state={{ from: location }} />;
   }
 
   // Si l'utilisateur est authentifié et a les droits nécessaires, on affiche le contenu de la route
