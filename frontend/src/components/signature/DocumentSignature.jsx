@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, forwardRef } from 'react';
 import { toast } from 'sonner';
 import { Button } from '../ui/button';
-import { Loader2, MapPin } from 'lucide-react';
+import { Loader2, MapPin, CheckCircle } from 'lucide-react';
+import { Alert, AlertTitle, AlertDescription } from '../ui/alert';
 
 // Custom fallback implementation for SignatureCanvas
 const FallbackSignatureCanvas = forwardRef((props, ref) => {
@@ -173,14 +174,6 @@ const DocumentSignature = () => {
         setCurrentPeriod(data.currentPeriod);
         setSignedPeriods(data.signedPeriods);
         setAvailablePeriods(data.availablePeriods);
-
-        // If user has already signed for the current period, show a message
-        if (data.signedPeriods.includes(data.currentPeriod)) {
-          toast.info("Information", {
-            description: `Vous avez déjà signé pour la période ${data.availablePeriods[data.currentPeriod]} aujourd'hui.`,
-            duration: 5000,
-          });
-        }
       } catch (error) {
         console.error('Error checking today\'s signatures:', error);
         toast.error("Erreur", {
@@ -356,9 +349,8 @@ const DocumentSignature = () => {
   };
 
   const isButtonDisabled = () => {
+    // Only disable during submission or if already signed for this period
     if (isSubmitting) return true;
-    if (!location) return true;
-    if (!signatureRef.current || signatureRef.current.isEmpty()) return true;
     if (signedPeriods.includes(currentPeriod)) return true;
     return false;
   };
@@ -371,6 +363,29 @@ const DocumentSignature = () => {
     if (!currentPeriod) return "Hors période";
     return "Signer";
   };
+
+  // If user has already signed for the current period, show the alert
+  if (currentPeriod && signedPeriods.includes(currentPeriod)) {
+    return (
+      <div className="space-y-4">
+        <Alert className="bg-green-50 border-green-200">
+          <CheckCircle className="h-4 w-4 text-green-600" />
+          <AlertTitle className="text-green-800">Présence déjà enregistrée</AlertTitle>
+          <AlertDescription className="text-green-700">
+            Vous avez déjà signé pour la période {availablePeriods[currentPeriod]} aujourd'hui.
+          </AlertDescription>
+        </Alert>
+        
+        <div className="text-sm text-gray-500 dark:text-gray-400">
+          <p>Les signatures sont autorisées aux périodes suivantes :</p>
+          <ul className="list-disc list-inside mt-2">
+            <li>Matin : 9h - 12h</li>
+            <li>Après-midi : 13h - 17h</li>
+          </ul>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
