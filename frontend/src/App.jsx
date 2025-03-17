@@ -22,6 +22,7 @@ import { Toaster } from './components/ui/sonner'
 import './index.css'
 import ProtectedRoute from './components/ProtectedRoute'
 import PublicRoute from './components/PublicRoute'
+import RecruiterProtectedRoute from './components/RecruiterProtectedRoute'
 
 // Fonction pour précharger les pages au survol des liens
 const preloadPages = () => {
@@ -101,8 +102,10 @@ const App = () => {
                 <Route element={<ProtectedRoute />}>
                   <Route path="/profil" element={<Profil />} />
                   <Route path="/dashboard" element={<Dashboard />} />
-                  
-                  {/* Routes pour les recruteurs */}
+                </Route>
+                
+                {/* Routes pour les recruteurs et administrateurs */}
+                <Route element={<RecruiterProtectedRoute />}>
                   <Route path="/recruiter">
                     <Route path="guest-student-roles" element={<GuestStudentRoleManager />} />
                   </Route>

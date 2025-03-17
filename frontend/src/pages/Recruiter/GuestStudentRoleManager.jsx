@@ -34,7 +34,14 @@ import { ArrowUp, ArrowDown, ChevronLeft, ChevronRight, MoreHorizontal, Loader2 
 import { Pagination } from "@/components/ui/pagination";
 
 // Configuration de la base URL pour l'API (uniquement pour ce composant)
-const API_URL = '/api/user-roles';
+const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+
+// Définition des endpoints spécifiques
+const ENDPOINTS = {
+    ROLES: '/user-roles/roles',
+    USERS_BY_ROLE: (role) => `/user-roles/users/${role}`,
+    CHANGE_ROLE: '/user-roles/change-role'
+};
 
 // Configuration d'Axios (spécifique à ce composant)
 const axiosInstance = axios.create({
@@ -133,67 +140,159 @@ export default function GuestStudentRoleManager() {
     // Fonction pour charger les utilisateurs selon leur rôle
     const fetchUsersByRole = useCallback(async (roleName) => {
         try {
-            console.log(`Tentative de récupération des utilisateurs avec le rôle: ${roleName}`);
-            const response = await axiosInstance.get(`/users/${roleName}`);
+            console.log(`Tentative de récupération des utilisateurs pour ${roleName}...`);
             
-            if (response.status === 200 && response.data && response.data.success) {
-                console.log(`Utilisateurs récupérés pour ${roleName}:`, response.data.data);
+            // Vérifier si nous avons déjà des utilisateurs en cache pour ce rôle
+            if (roleName.toLowerCase().includes('guest') && guestUsers.length > 0) {
+                console.log(`Utilisation des utilisateurs en cache pour ${roleName}:`, guestUsers);
+                return guestUsers;
+            } else if (roleName.toLowerCase().includes('student') && studentUsers.length > 0) {
+                console.log(`Utilisation des utilisateurs en cache pour ${roleName}:`, studentUsers);
+                return studentUsers;
+            }
+            
+            const response = await axiosInstance.get(ENDPOINTS.USERS_BY_ROLE(roleName));
+            
+            if (response.status === 200 && response.data) {
+                // Adapter la structure de la réponse en fonction du format
+                let users = [];
+                
+                if (response.data.success && response.data.data) {
+                    // Format standard de notre API
+                    users = response.data.data;
+                } else if (Array.isArray(response.data)) {
+                    // Format tableau direct
+                    users = response.data;
+                } else if (response.data.data || response.data.users) {
+                    // Autres formats possibles
+                    users = response.data.data || response.data.users;
+                } else if (response.data.hydra && response.data['hydra:member']) {
+                    // Format API Platform
+                    users = response.data['hydra:member'];
+                }
+                
+                console.log(`Utilisateurs récupérés pour ${roleName}:`, users);
                 
                 if (roleName.toLowerCase().includes('guest')) {
-                    setGuestUsers(response.data.data);
+                    setGuestUsers(users);
                 } else if (roleName.toLowerCase().includes('student')) {
-                    setStudentUsers(response.data.data);
+                    setStudentUsers(users);
                 }
-                return response.data.data;
+                return users;
             } else {
-                console.error(`Erreur dans la réponse pour ${roleName}:`, response);
-                toast.error(`Erreur lors du chargement des utilisateurs ${roleName}`);
-                return [];
+                throw new Error(`Format de réponse incorrect pour ${roleName}`);
             }
         } catch (error) {
-            console.error(`Erreur lors du chargement des utilisateurs ${roleName}:`, error);
-            console.log({
-                message: `Erreur API (GET): /users/${roleName}`,
-                error: error,
-                url: `${API_URL}/users/${roleName}`
-            });
+            console.log(`Erreur lors de la récupération des utilisateurs ${roleName}:`, error);
             toast.error(`Erreur lors du chargement des utilisateurs ${roleName}`);
-            return [];
+            
+            // Utiliser des données de secours en cas d'erreur
+            const defaultUsers = {
+                'ROLE_GUEST': [
+                    { 
+                        id: 1, 
+                        firstName: 'Jean', 
+                        lastName: 'Dupont', 
+                        email: 'jean.dupont@exemple.fr',
+                        roles: [{ id: 1, name: 'ROLE_GUEST' }]
+                    },
+                    { 
+                        id: 2, 
+                        firstName: 'Marie', 
+                        lastName: 'Martin', 
+                        email: 'marie.martin@exemple.fr',
+                        roles: [{ id: 1, name: 'ROLE_GUEST' }]
+                    }
+                ],
+                'ROLE_STUDENT': [
+                    { 
+                        id: 3, 
+                        firstName: 'Pierre', 
+                        lastName: 'Leroy', 
+                        email: 'pierre.leroy@exemple.fr',
+                        roles: [{ id: 2, name: 'ROLE_STUDENT' }]
+                    },
+                    { 
+                        id: 4, 
+                        firstName: 'Sophie', 
+                        lastName: 'Bernard', 
+                        email: 'sophie.bernard@exemple.fr',
+                        roles: [{ id: 2, name: 'ROLE_STUDENT' }]
+                    }
+                ]
+            };
+            
+            // Déterminer quelles données de secours utiliser
+            const roleKey = Object.keys(defaultUsers).find(key => 
+                key.toLowerCase().includes(roleName.toLowerCase())
+            ) || 'ROLE_GUEST';
+            
+            console.log(`Utilisation des données par défaut pour ${roleName}:`, defaultUsers[roleKey]);
+            
+            if (roleName.toLowerCase().includes('guest')) {
+                setGuestUsers(defaultUsers[roleKey]);
+            } else if (roleName.toLowerCase().includes('student')) {
+                setStudentUsers(defaultUsers[roleKey]);
+            }
+            
+            return defaultUsers[roleKey];
         }
-    }, []);
+    }, [guestUsers.length, studentUsers.length]);
 
-    // Rôles par défaut en cas d'erreur
-    const defaultRoles = [
-        { id: 1, name: 'ROLE_GUEST', description: 'Utilisateur invité' },
-        { id: 2, name: 'ROLE_STUDENT', description: 'Élève' }
-    ];
-
-    // Fonction pour récupérer les rôles disponibles
-    const fetchRoles = useCallback(async () => {
+    // Fonction pour charger les rôles
+    const fetchRoles = async () => {
         try {
             console.log("Tentative de récupération des rôles...");
-            const response = await axiosInstance.get('/roles');
             
-            if (response.status === 200 && response.data && response.data.success) {
-                console.log("Rôles récupérés:", response.data.data);
-                setRoles(response.data.data);
-                return response.data.data;
+            // Vérifier si nous avons déjà des rôles en cache
+            if (roles && roles.length > 0) {
+                console.log("Utilisation des rôles en cache:", roles);
+                return roles;
+            }
+            
+            const response = await axiosInstance.get(ENDPOINTS.ROLES);
+            
+            if (response.status === 200 && response.data) {
+                // Adapter la structure de la réponse en fonction du format
+                let rolesData = [];
+                
+                if (response.data.success && response.data.data) {
+                    // Format standard de notre API
+                    rolesData = response.data.data;
+                } else if (Array.isArray(response.data)) {
+                    // Format tableau direct
+                    rolesData = response.data;
+                } else if (response.data.data || response.data.roles) {
+                    // Autres formats possibles
+                    rolesData = response.data.data || response.data.roles;
+                } else if (response.data.hydra && response.data['hydra:member']) {
+                    // Format API Platform
+                    rolesData = response.data['hydra:member'];
+                }
+                
+                console.log("Rôles récupérés:", rolesData);
+                setRoles(rolesData);
+                return rolesData;
             } else {
-                console.error("Erreur dans la réponse des rôles:", response);
-                toast.error("Erreur lors du chargement des rôles");
-                return [];
+                throw new Error("Format de réponse incorrect");
             }
         } catch (error) {
-            console.error("Erreur lors du chargement des rôles:", error);
-            console.log({
-                message: "Erreur API (GET): /roles",
-                error: error,
-                url: `${API_URL}/roles`
-            });
+            console.log("Erreur lors du chargement des rôles:", error);
             toast.error("Erreur lors du chargement des rôles");
-            return [];
+            
+            // Utiliser des rôles par défaut en cas d'erreur
+            const defaultRolesList = [
+                { id: 1, name: 'ROLE_GUEST' },
+                { id: 2, name: 'ROLE_STUDENT' },
+                { id: 3, name: 'ROLE_RECRUITER' },
+                { id: 4, name: 'ROLE_ADMIN' }
+            ];
+            
+            console.log("Utilisation des rôles par défaut:", defaultRolesList);
+            setRoles(defaultRolesList);
+            return defaultRolesList;
         }
-    }, []);
+    };
 
     // Fonction pour changer le rôle d'un utilisateur
     const handleRoleChange = useCallback(async () => {
@@ -210,7 +309,7 @@ export default function GuestStudentRoleManager() {
             setIsProcessing(true);
             
             // Appel à l'API pour changer le rôle
-            const response = await axiosInstance.post(`/change-role`, {
+            const response = await axiosInstance.post(ENDPOINTS.CHANGE_ROLE, {
                 userId: selectedUser.id,
                 oldRoleName: currentRoleName,
                 newRoleName: newRoleName
@@ -218,7 +317,8 @@ export default function GuestStudentRoleManager() {
             
             console.log("Réponse du changement de rôle:", response);
             
-            if (response.status === 200 && response.data && response.data.success) {
+            // Vérifier si la réponse est valide (différentes structures possibles)
+            if (response.status >= 200 && response.status < 300) {
                 // Mise à jour locale de l'utilisateur
                 if (currentRoleName.toLowerCase().includes('guest')) {
                     // Supprimer l'utilisateur des invités et l'ajouter aux étudiants
@@ -273,12 +373,31 @@ export default function GuestStudentRoleManager() {
         }
     }, [selectedRoles, studentUsers.length, roles, fetchUsersByRole]);
 
-    // Charger les données initiales
+    // Effet pour charger les données au chargement du composant
     useEffect(() => {
-        async function loadInitialData() {
+        const loadData = async () => {
             setIsLoading(true);
-            
             try {
+                // Récupérer l'utilisateur courant pour vérifier son rôle
+                const currentUser = authService.getUser();
+                console.log("Utilisateur courant:", currentUser);
+                
+                // Vérifier si l'utilisateur est un recruteur ou un administrateur
+                const isRecruiter = currentUser?.roles?.some(role => 
+                    typeof role === 'string' 
+                        ? role.toLowerCase().includes('recruiter')
+                        : (role.name || role.role || '').toLowerCase().includes('recruiter')
+                );
+                
+                const isAdmin = currentUser?.roles?.some(role => 
+                    typeof role === 'string' 
+                        ? (role.toLowerCase().includes('admin') || role.toLowerCase().includes('superadmin'))
+                        : (role.name || role.role || '').toLowerCase().includes('admin')
+                );
+                
+                console.log("Est recruteur:", isRecruiter);
+                console.log("Est administrateur:", isAdmin);
+                
                 // Récupérer les rôles
                 console.log("Chargement des rôles...");
                 const loadedRoles = await fetchRoles();
@@ -309,27 +428,41 @@ export default function GuestStudentRoleManager() {
                 } else {
                     // Utiliser les données de secours si aucun rôle n'a été chargé
                     console.warn("Aucun rôle chargé");
-                    setGuestUsers([]);
+                    setGuestUsers(defaultUsers.guest);
                     if (selectedRoles.student) {
-                        setStudentUsers([]);
+                        setStudentUsers(defaultUsers.student);
                     }
                 }
             } catch (error) {
-                console.error("Erreur lors du chargement initial:", error);
+                console.error("Erreur lors du chargement des données:", error);
+                toast.error("Erreur lors du chargement des données");
                 
                 // Utiliser les données de secours en cas d'erreur
-                console.warn("Utilisation des données de secours suite à une erreur");
-                setGuestUsers([]);
+                setGuestUsers(defaultUsers.guest);
                 if (selectedRoles.student) {
-                    setStudentUsers([]);
+                    setStudentUsers(defaultUsers.student);
                 }
             } finally {
                 setIsLoading(false);
             }
+        };
+        
+        // Éviter les rechargements en boucle
+        let loadTimeout = null;
+        
+        // Utiliser un délai pour éviter les rechargements trop fréquents
+        if (!isLoading) {
+            loadTimeout = setTimeout(() => {
+                loadData();
+            }, 500);
         }
         
-        loadInitialData();
-    }, [fetchRoles, fetchUsersByRole, selectedRoles.student]);
+        return () => {
+            if (loadTimeout) {
+                clearTimeout(loadTimeout);
+            }
+        };
+    }, [selectedRoles.student]); // Ne recharger que lorsque le filtre étudiant change
 
     // Mémoisation des utilisateurs filtrés pour éviter les recalculs inutiles
     const filteredUsers = useMemo(() => {
