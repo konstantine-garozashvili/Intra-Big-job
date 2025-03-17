@@ -24,36 +24,44 @@ const ChatMessages = ({ messages, user, loading, error, messagesEndRef }) => {
   }
 
   return (
-    <div className="space-y-3">
-      {messages.map((message) => (
-        <div 
-          key={message.id} 
-          className={`mb-3 ${message.sender.id === user?.id ? 'text-right' : ''}`}
-        >
+    <div className="space-y-3 px-2">
+      {messages.map((message) => {
+        const isCurrentUser = message.sender.id === user?.id;
+        return (
           <div 
-            className={`inline-block rounded-lg px-4 py-2 max-w-[80%] ${
-              message.sender.id === user?.id 
-                ? 'bg-blue-600 text-white' 
-                : 'bg-gray-200 text-gray-800'
-            }`}
+            key={message.id} 
+            className={`flex mb-3 ${isCurrentUser ? 'justify-start' : 'justify-end'}`}
           >
-            {message.sender.id !== user?.id && (
-              <div className="font-semibold text-xs text-gray-600">
-                {message.sender.firstName} {message.sender.lastName}
-                {message.sender.userRoles && message.sender.userRoles.length > 0 && (
-                  <span className="ml-1 text-xs font-normal text-gray-500">
-                    ({message.sender.userRoles.map(userRole => userRole.role.name).join(', ')})
-                  </span>
-                )}
+            <div 
+              className={`rounded-lg px-4 py-2 max-w-[70%] ${
+                isCurrentUser 
+                  ? 'bg-gray-200 text-gray-800' 
+                  : 'bg-blue-500 text-white'
+              }`}
+            >
+              {/* Sender name for messages from others (now on the right) */}
+              {!isCurrentUser && (
+                <div className="font-semibold text-xs text-blue-100 mb-1">
+                  {message.sender.firstName} {message.sender.lastName}
+                  {message.sender.userRoles && message.sender.userRoles.length > 0 && (
+                    <span className="ml-1 text-xs font-normal text-blue-100">
+                      ({message.sender.userRoles.map(userRole => userRole.role.name).join(', ')})
+                    </span>
+                  )}
+                </div>
+              )}
+              
+              {/* Message content */}
+              <div className="break-words">{message.content}</div>
+              
+              {/* Timestamp */}
+              <div className={`text-xs mt-1 ${isCurrentUser ? 'text-gray-500' : 'text-blue-100'}`}>
+                {formatTime(message.createdAt)}
               </div>
-            )}
-            <div>{message.content}</div>
-            <div className={`text-xs mt-1 ${message.sender.id === user?.id ? 'text-blue-100' : 'text-gray-500'}`}>
-              {formatTime(message.createdAt)}
             </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
       <div ref={messagesEndRef} />
     </div>
   );
