@@ -1,4 +1,5 @@
 import apiService from '@/lib/services/apiService';
+import { profilePictureEvents } from '../hooks/useProfilePicture';
 
 // Cache local pour les données fréquemment utilisées
 const profileCache = {
@@ -144,6 +145,9 @@ class ProfileService {
       // Invalider le cache après une mise à jour
       this.invalidateCache();
       
+      // Notifier tous les composants abonnés
+      profilePictureEvents.notify();
+      
       return response;
     } catch (error) {
       throw error;
@@ -158,6 +162,9 @@ class ProfileService {
       
       // Invalider le cache après une mise à jour
       this.invalidateCache();
+      
+      // Notifier tous les composants abonnés
+      profilePictureEvents.notify();
       
       return response;
     } catch (error) {
