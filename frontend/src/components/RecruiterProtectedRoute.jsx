@@ -14,11 +14,14 @@ const RecruiterProtectedRoute = () => {
   const location = useLocation();
   const [isChecking, setIsChecking] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
-  const redirectedRef = useRef(false);
   const renderedOutletRef = useRef(false);
   const checkedRolesRef = useRef(false);
+  const notificationShownRef = useRef(false);
 
   useEffect(() => {
+    // Réinitialiser la notification à chaque changement de chemin
+    notificationShownRef.current = false;
+    
     const checkAuth = async () => {
       // Réinitialiser le statut de vérification
       setIsChecking(true);
@@ -32,10 +35,13 @@ const RecruiterProtectedRoute = () => {
       console.log('Données utilisateur dans localStorage:', userStr);
       
       if (!token) {
-        toast.error('Veuillez vous connecter pour accéder à cette page', {
-          duration: 3000,
-          position: 'top-center',
-        });
+        if (!notificationShownRef.current) {
+          toast.error('Veuillez vous connecter pour accéder à cette page', {
+            duration: 3000,
+            position: 'top-center',
+          });
+          notificationShownRef.current = true;
+        }
         setHasAccess(false);
         setIsChecking(false);
         return;
@@ -70,18 +76,24 @@ const RecruiterProtectedRoute = () => {
             } else {
               console.log('Aucune donnée utilisateur récupérée via API');
               setHasAccess(false); // Ne pas autoriser sans données utilisateur
-              toast.error('Impossible de vérifier vos droits d\'accès', {
-                duration: 3000,
-                position: 'top-center',
-              });
+              if (!notificationShownRef.current) {
+                toast.error('Impossible de vérifier vos droits d\'accès', {
+                  duration: 3000,
+                  position: 'top-center',
+                });
+                notificationShownRef.current = true;
+              }
             }
           } catch (apiError) {
             console.error('Erreur lors de la récupération des données utilisateur via API:', apiError);
             setHasAccess(false); // Ne pas autoriser en cas d'erreur
-            toast.error('Erreur lors de la vérification de vos droits d\'accès', {
-              duration: 3000,
-              position: 'top-center',
-            });
+            if (!notificationShownRef.current) {
+              toast.error('Erreur lors de la vérification de vos droits d\'accès', {
+                duration: 3000,
+                position: 'top-center',
+              });
+              notificationShownRef.current = true;
+            }
           }
         } else {
           // Vérifier les rôles avec les données existantes
@@ -92,10 +104,13 @@ const RecruiterProtectedRoute = () => {
         
         // En cas d'erreur, ne pas autoriser l'accès
         setHasAccess(false);
-        toast.error('Erreur lors de la vérification de vos droits d\'accès', {
-          duration: 3000,
-          position: 'top-center',
-        });
+        if (!notificationShownRef.current) {
+          toast.error('Erreur lors de la vérification de vos droits d\'accès', {
+            duration: 3000,
+            position: 'top-center',
+          });
+          notificationShownRef.current = true;
+        }
       } finally {
         setIsChecking(false);
       }
@@ -146,11 +161,12 @@ const RecruiterProtectedRoute = () => {
       checkedRolesRef.current = true;
       
       // Si l'utilisateur n'a pas les droits requis, afficher un message d'erreur
-      if (!hasRequiredRole) {
+      if (!hasRequiredRole && !notificationShownRef.current) {
         toast.error('Vous n\'avez pas les droits nécessaires pour accéder à cette page', {
           duration: 3000,
           position: 'top-center',
         });
+        notificationShownRef.current = true;
       }
       
       setHasAccess(hasRequiredRole);
@@ -177,19 +193,11 @@ const RecruiterProtectedRoute = () => {
     // Redirection vers la page de connexion si non connecté
     if (!localStorage.getItem('token')) {
       console.log('Redirection vers /login');
-      toast.error('Veuillez vous connecter pour accéder à cette page', {
-        duration: 3000,
-        position: 'top-center',
-      });
       return <Navigate to="/login" replace state={{ from: location }} />;
     }
     
     // Redirection vers le dashboard si connecté mais sans les droits nécessaires
     console.log('Redirection vers /dashboard');
-    toast.error('Vous n\'avez pas les droits nécessaires pour accéder à cette page', {
-      duration: 3000,
-      position: 'top-center',
-    });
     return <Navigate to="/dashboard" replace state={{ from: location }} />;
   }
 
