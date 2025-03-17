@@ -42,6 +42,9 @@ import ProtectedRoute from './components/ProtectedRoute'
 import PublicRoute from './components/PublicRoute'
 import ProfileLayout from '@/layouts/ProfileLayout'
 import useLoadingIndicator from './hooks/useLoadingIndicator'
+import AdminRoute from './components/AdminRoute'
+import RoleRoute from './components/RoleRoute'
+import { ROLES } from './features/roles/roleContext'
 
 // Fonction optimisée pour le préchargement intelligent des pages
 // Ne charge que les pages pertinentes en fonction du contexte et du chemin actuel
@@ -301,23 +304,48 @@ const AppContent = () => {
                       <Route path="/settings/notifications" element={<NotificationSettings />} />
                     </Route>
                     
-                    {/* Dashboards spécifiques par rôle */}
-                    <Route path="/admin/dashboard" element={<AdminDashboard />} />
-                    
-                    {/* Routes étudiantes */}
-                    <Route path="/student">
-                      <Route path="dashboard" element={<StudentDashboard />} />
-                      <Route path="schedule" element={<StudentSchedule />} />
-                      <Route path="grades" element={<StudentGrades />} />
-                      <Route path="absences" element={<StudentAbsences />} />
-                      <Route path="projects" element={<StudentProjects />} />
+                    {/* Routes étudiantes protégées */}
+                    <Route element={<RoleRoute allowedRoles={[ROLES.STUDENT]} />}>
+                      <Route path="/student">
+                        <Route path="dashboard" element={<StudentDashboard />} />
+                        <Route path="schedule" element={<StudentSchedule />} />
+                        <Route path="grades" element={<StudentGrades />} />
+                        <Route path="absences" element={<StudentAbsences />} />
+                        <Route path="projects" element={<StudentProjects />} />
+                      </Route>
                     </Route>
                     
-                    <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
-                    <Route path="/hr/dashboard" element={<HRDashboard />} />
-                    <Route path="/superadmin/dashboard" element={<SuperAdminDashboard />} />
-                    <Route path="/guest/dashboard" element={<GuestDashboard />} />
-                    <Route path="/recruiter/dashboard" element={<RecruiterDashboard />} />
+                    {/* Routes formateurs protégées */}
+                    <Route element={<RoleRoute allowedRoles={[ROLES.TEACHER]} />}>
+                      <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
+                      <Route path="/teacher/*" element={<TeacherDashboard />} />
+                    </Route>
+                    
+                    {/* Routes RH protégées */}
+                    <Route element={<RoleRoute allowedRoles={[ROLES.HR]} />}>
+                      <Route path="/hr/dashboard" element={<HRDashboard />} />
+                      <Route path="/hr/*" element={<HRDashboard />} />
+                    </Route>
+                    
+                    {/* Routes invités protégées */}
+                    <Route element={<RoleRoute allowedRoles={[ROLES.GUEST]} />}>
+                      <Route path="/guest/dashboard" element={<GuestDashboard />} />
+                      <Route path="/guest/*" element={<GuestDashboard />} />
+                    </Route>
+                    
+                    {/* Routes recruteurs protégées */}
+                    <Route element={<RoleRoute allowedRoles={[ROLES.RECRUITER]} />}>
+                      <Route path="/recruiter/dashboard" element={<RecruiterDashboard />} />
+                      <Route path="/recruiter/*" element={<RecruiterDashboard />} />
+                    </Route>
+                    
+                    {/* Routes d'administration protégées par rôle */}
+                    <Route element={<AdminRoute />}>
+                      <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                      <Route path="/admin/*" element={<AdminDashboard />} />
+                      <Route path="/superadmin/dashboard" element={<SuperAdminDashboard />} />
+                      <Route path="/superadmin/*" element={<SuperAdminDashboard />} />
+                    </Route>
                   </Route>
                   
                   {/* Redirection des routes inconnues vers la page d'accueil */}
