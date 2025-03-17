@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Edit, Trash2, Calendar as CalendarIcon, Users } from 'lucide-react';
 import Calendar from './Calendar';
 import apiService from '@/lib/services/apiService';
@@ -14,6 +14,11 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import "./Calendar.css";
+import { useRoles } from '@/features/roles/roleContext';
+import { useRolePermissions } from '@/features/roles/useRolePermissions';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { ROLES } from '@/features/roles/roleContext';
 
 const ROLE_COLORS = {
   'ADMIN': 'bg-blue-100 text-blue-800',
@@ -25,6 +30,28 @@ const ROLE_COLORS = {
 };
 
 const AdminDashboard = () => {
+  // Vérification de sécurité supplémentaire
+  const { hasRole } = useRoles();
+  const permissions = useRolePermissions();
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    // Vérifier si l'utilisateur a un rôle d'administrateur
+    const isAdmin = hasRole(ROLES.ADMIN) || hasRole(ROLES.SUPERADMIN);
+    
+    if (!isAdmin) {
+      // Afficher une notification d'erreur
+      toast.error("Vous n'avez pas les droits d'accès à cette page", {
+        duration: 3000,
+        position: 'top-center',
+      });
+      
+      // Rediriger vers le dashboard approprié
+      const dashboardPath = permissions.getRoleDashboardPath();
+      navigate(dashboardPath, { replace: true });
+    }
+  }, [hasRole, permissions, navigate]);
+  
   // Utiliser le hook personnalisé pour les données utilisateur et la liste des utilisateurs
   const { user, users, isLoading, isError, error, refetch } = useAdminDashboardData();
   

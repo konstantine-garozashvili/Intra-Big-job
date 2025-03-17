@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useMemo, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useStudentDashboardData } from '@/hooks/useDashboardQueries';
 import DashboardLayout from '@/components/DashboardLayout';
 import { motion } from 'framer-motion';
@@ -31,6 +31,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { useRoles } from '@/features/roles/roleContext';
+import { useRolePermissions } from '@/features/roles/useRolePermissions';
+import { toast } from 'sonner';
+import { ROLES } from '@/features/roles/roleContext';
 
 // Variants d'animation
 const containerVariants = {
@@ -63,6 +67,23 @@ const fadeInVariants = {
 
 const StudentDashboard = () => {
   const { user, isLoading, isError, error } = useStudentDashboardData();
+  const { hasRole } = useRoles();
+  const permissions = useRolePermissions();
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    const isStudent = hasRole(ROLES.STUDENT);
+    
+    if (!isStudent) {
+      toast.error("Vous n'avez pas les droits d'accès à cette page", {
+        duration: 3000,
+        position: 'top-center',
+      });
+      
+      const dashboardPath = permissions.getRoleDashboardPath();
+      navigate(dashboardPath, { replace: true });
+    }
+  }, [hasRole, permissions, navigate]);
 
   // Données du graphique radar des compétences
   const competencesData = [
