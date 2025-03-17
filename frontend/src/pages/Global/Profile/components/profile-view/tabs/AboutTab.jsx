@@ -125,12 +125,14 @@ const AboutTab = ({ userData, isPublicProfile = false }) => {
               value={cityName}
             />
 
-            <InfoCard
+            {userData.user.linkedinUrl && (
+              <InfoCard
               icon={LinkedinIcon}
               title="LinkedIn"
               value="Voir le profil LinkedIn"
               link={userData.user.linkedinUrl}
-            />
+              />
+            )}
 
             {isStudent && hasCV && (
               <div 
