@@ -30,6 +30,8 @@ const ProfilePictureSkeleton = () => {
 const ProfilePicture = ({ userData, onProfilePictureChange, isLoading: externalLoading = false }) => {
   const fileInputRef = useRef(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [previousUrl, setPreviousUrl] = useState(null);
   
   // Use the custom hook for profile picture operations
   const {
@@ -111,21 +113,38 @@ const ProfilePicture = ({ userData, onProfilePictureChange, isLoading: externalL
     }
   };
   
-  const handleDeleteConfirmation = async () => {
+  const confirmDeleteProfilePicture = async () => {
     try {
+      // Close dialog immediately for fluid interaction
+      setDeleteDialogOpen(false);
+      
+      setIsDeleting(true);
+      
+      // Optimistic update - supprimer immédiatement l'image dans l'UI
+      setPreviousUrl(profilePictureUrl);
+      refetch();
+      
       // Use the mutation from the hook
-      deleteProfilePicture(null, {
+      await deleteProfilePicture(null, {
         onSuccess: () => {
-          toast.success('Photo de profil supprimée avec succès');
-          setDeleteDialogOpen(false);
+          // Forcer le rafraîchissement après un court délai
+          setTimeout(() => {
+            refetch();
+          }, 300);
         },
-        onError: () => {
+        onError: (error) => {
+          // En cas d'erreur, restaurer l'URL précédente
+          refetch();
+          
           toast.error('Erreur lors de la suppression de la photo de profil');
+          // console.error('Error deleting profile picture:', error);
         }
       });
     } catch (error) {
-      console.error("Erreur non gérée lors de la suppression:", error);
       toast.error('Erreur lors de la suppression de la photo de profil');
+      // console.error('Error deleting profile picture:', error);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -224,7 +243,7 @@ const ProfilePicture = ({ userData, onProfilePictureChange, isLoading: externalL
             </Button>
             <Button
               variant="destructive"
-              onClick={handleDeleteConfirmation}
+              onClick={confirmDeleteProfilePicture}
               disabled={deleteStatus.isPending}
               className={`rounded-full bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 transition-all duration-200 ${deleteStatus.isPending ? 'opacity-80' : ''}`}
             >
