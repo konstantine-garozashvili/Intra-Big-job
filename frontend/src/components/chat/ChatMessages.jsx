@@ -6,7 +6,8 @@ const ChatMessages = ({ messages, user, loading, error, messagesEndRef }) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  if (loading) {
+  // Only show loading indicator if there are no messages yet
+  if (loading && messages.length === 0) {
     return (
       <div className="flex justify-center items-center h-full">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>

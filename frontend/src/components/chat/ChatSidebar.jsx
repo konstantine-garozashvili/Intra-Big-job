@@ -9,6 +9,7 @@ const ChatSidebar = ({ isOpen, onClose }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [error, setError] = useState(null);
   const [user, setUser] = useState(null);
   const [users, setUsers] = useState([]);
@@ -28,15 +29,20 @@ const ChatSidebar = ({ isOpen, onClose }) => {
   useEffect(() => {
     if (isOpen) {
       if (activeTab === 'global' && activeChat === 'global') {
+        // Initial fetch with loading indicator
         fetchMessages();
+        
         // Set up polling to check for new messages every 5 seconds for global chat only
-        const interval = setInterval(fetchMessages, 5000);
+        // Use silent refresh for polling
+        const interval = setInterval(silentRefreshGlobalMessages, 5000);
         return () => clearInterval(interval);
       } else if (activeTab === 'global' && activeChat !== 'global' && selectedUser) {
         // For private chats, fetch and set up polling
         fetchPrivateMessages(selectedUser.id);
+        
         // Set up polling for private messages too
-        const interval = setInterval(() => fetchPrivateMessages(selectedUser.id), 5000);
+        // Use silent refresh for polling
+        const interval = setInterval(() => silentRefreshPrivateMessages(selectedUser.id), 5000);
         return () => clearInterval(interval);
       }
     }
@@ -59,11 +65,15 @@ const ChatSidebar = ({ isOpen, onClose }) => {
   };
 
   const fetchMessages = async () => {
+    if (isInitialLoad) {
+      setLoading(true);
+    }
     try {
       // Use the get method with withAuth to ensure the request is authenticated
       const response = await apiService.get('/messages/recent', apiService.withAuth());
       setMessages(response.messages);
       setLoading(false);
+      setIsInitialLoad(false);
     } catch (err) {
       console.error('Error fetching messages:', err);
       setError('Failed to load messages');
@@ -71,9 +81,21 @@ const ChatSidebar = ({ isOpen, onClose }) => {
     }
   };
 
-  const fetchPrivateMessages = async (userId) => {
+  const silentRefreshGlobalMessages = async () => {
     try {
+      // Use the get method with withAuth to ensure the request is authenticated
+      const response = await apiService.get('/messages/recent', apiService.withAuth());
+      setMessages(response.messages);
+    } catch (err) {
+      console.error('Error silently refreshing global messages:', err);
+    }
+  };
+
+  const fetchPrivateMessages = async (userId) => {
+    if (isInitialLoad) {
       setLoading(true);
+    }
+    try {
       // This endpoint will need to be implemented in the backend
       const response = await apiService.get(`/messages/private/${userId}`, apiService.withAuth());
       
@@ -92,10 +114,34 @@ const ChatSidebar = ({ isOpen, onClose }) => {
       }
       
       setLoading(false);
+      setIsInitialLoad(false);
     } catch (err) {
       console.error(`Error fetching private messages with user ${userId}:`, err);
       setError('Failed to load private messages');
       setLoading(false);
+    }
+  };
+
+  const silentRefreshPrivateMessages = async (userId) => {
+    try {
+      // This endpoint will need to be implemented in the backend
+      const response = await apiService.get(`/messages/private/${userId}`, apiService.withAuth());
+      
+      // Make sure we have a valid response with messages
+      const messages = response.messages || [];
+      
+      // Update the private chat messages for this user
+      setPrivateChats(prev => ({
+        ...prev,
+        [userId]: messages
+      }));
+      
+      // Update the current messages display if this is the active chat
+      if (activeChat === userId) {
+        setMessages(messages);
+      }
+    } catch (err) {
+      console.error(`Error silently refreshing private messages with user ${userId}:`, err);
     }
   };
 
@@ -169,6 +215,7 @@ const ChatSidebar = ({ isOpen, onClose }) => {
     if (tab === 'global') {
       setActiveChat('global');
       setSelectedUser(null);
+      setIsInitialLoad(true); // Reset initial load state
       fetchMessages();
     }
     
@@ -183,10 +230,12 @@ const ChatSidebar = ({ isOpen, onClose }) => {
     setActiveTab('global'); // Switch to chat tab
     setActiveChat(user.id); // Set active chat to this user's ID
     setSelectedUser(user); // Store the selected user
+    setIsInitialLoad(true); // Reset initial load state
     
     // Check if we already have messages for this user
     if (privateChats[user.id]) {
       setMessages(privateChats[user.id]);
+      setIsInitialLoad(false); // If we already have messages, it's not an initial load
     } else {
       // Only fetch if we don't have messages yet
       fetchPrivateMessages(user.id);
@@ -197,6 +246,7 @@ const ChatSidebar = ({ isOpen, onClose }) => {
   const handleReturnToGlobalChat = () => {
     setActiveChat('global');
     setSelectedUser(null);
+    setIsInitialLoad(true); // Reset initial load state
     fetchMessages();
   };
 
