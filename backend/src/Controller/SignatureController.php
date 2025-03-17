@@ -3,9 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Signature;
-use App\Entity\Validation;
 use App\Repository\SignatureRepository;
-use App\Repository\ValidationRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -20,18 +18,15 @@ class SignatureController extends AbstractController
     private EntityManagerInterface $entityManager;
     private SerializerInterface $serializer;
     private SignatureRepository $signatureRepository;
-    private ValidationRepository $validationRepository;
 
     public function __construct(
         EntityManagerInterface $entityManager,
         SerializerInterface $serializer,
-        SignatureRepository $signatureRepository,
-        ValidationRepository $validationRepository
+        SignatureRepository $signatureRepository
     ) {
         $this->entityManager = $entityManager;
         $this->serializer = $serializer;
         $this->signatureRepository = $signatureRepository;
-        $this->validationRepository = $validationRepository;
     }
 
     #[Route('', methods: ['POST'])]
@@ -60,7 +55,6 @@ class SignatureController extends AbstractController
             $signature->setUser($user);
             $signature->setLocation($data['location']);
             $signature->setDate(new \DateTimeImmutable());
-            $signature->setValidated(false);
             
             // Save to database
             $this->entityManager->persist($signature);
@@ -115,78 +109,6 @@ class SignatureController extends AbstractController
         ]);
     }
 
-    #[Route('/unvalidated', methods: ['GET'])]
-    public function listUnvalidated(): JsonResponse
-    {
-        $user = $this->getUser();
-        if (!$user) {
-            return $this->json(['message' => 'User not authenticated'], Response::HTTP_UNAUTHORIZED);
-        }
-
-        // Check if user has ROLE_TEACHER
-        $isTeacher = false;
-        foreach ($user->getUserRoles() as $userRole) {
-            if ($userRole->getRole()->getName() === 'ROLE_TEACHER') {
-                $isTeacher = true;
-                break;
-            }
-        }
-
-        if (!$isTeacher) {
-            return $this->json(['message' => 'Access denied'], Response::HTTP_FORBIDDEN);
-        }
-
-        $signatures = $this->signatureRepository->findUnvalidated();
-
-        return $this->json([
-            'signatures' => $this->serializer->normalize($signatures, null, ['groups' => 'signature:read'])
-        ]);
-    }
-
-    #[Route('/{id}/validate', methods: ['POST'])]
-    public function validate(int $id): JsonResponse
-    {
-        $user = $this->getUser();
-        if (!$user) {
-            return $this->json(['message' => 'User not authenticated'], Response::HTTP_UNAUTHORIZED);
-        }
-
-        // Check if user has ROLE_TEACHER
-        $isTeacher = false;
-        foreach ($user->getUserRoles() as $userRole) {
-            if ($userRole->getRole()->getName() === 'ROLE_TEACHER') {
-                $isTeacher = true;
-                break;
-            }
-        }
-
-        if (!$isTeacher) {
-            return $this->json(['message' => 'Access denied'], Response::HTTP_FORBIDDEN);
-        }
-
-        $signature = $this->signatureRepository->find($id);
-        if (!$signature) {
-            return $this->json(['message' => 'Signature not found'], Response::HTTP_NOT_FOUND);
-        }
-
-        // Create validation record
-        $validation = new Validation();
-        $validation->setSignature($signature);
-        $validation->setValidator($user);
-        
-        // Update signature status
-        $signature->setValidated(true);
-        
-        $this->entityManager->persist($validation);
-        $this->entityManager->flush();
-
-        return $this->json([
-            'message' => 'Signature validated successfully',
-            'signature' => $this->serializer->normalize($signature, null, ['groups' => 'signature:read']),
-            'validation' => $this->serializer->normalize($validation, null, ['groups' => 'validation:read'])
-        ]);
-    }
-
     #[Route('/{id}', methods: ['GET'])]
     public function show(int $id): JsonResponse
     {
@@ -214,12 +136,7 @@ class SignatureController extends AbstractController
         }
 
         return $this->json([
-            'signature' => $this->serializer->normalize($signature, null, ['groups' => 'signature:read']),
-            'validations' => $this->serializer->normalize(
-                $this->validationRepository->findBySignature($signature),
-                null,
-                ['groups' => 'validation:read']
-            )
+            'signature' => $this->serializer->normalize($signature, null, ['groups' => 'signature:read'])
         ]);
     }
 
@@ -248,63 +165,12 @@ class SignatureController extends AbstractController
                 ->getOneOrNullResult();
 
             return $this->json([
-                'hasSigned' => $signature !== null,
-                'date' => $signature ? $signature->getDate()->format('Y-m-d H:i:s') : null
+                'hasSignedToday' => $signature !== null,
+                'signature' => $signature ? $this->serializer->normalize($signature, null, ['groups' => 'signature:read']) : null
             ]);
         } catch (\Exception $e) {
-            return $this->json([
-                'message' => 'Error checking today\'s signature: ' . $e->getMessage()
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    #[Route('/test', methods: ['GET'])]
-    public function testSignatureEndpoint(): JsonResponse
-    {
-        try {
-            $user = $this->getUser();
-            if (!$user) {
-                return $this->json(['message' => 'User not authenticated'], Response::HTTP_UNAUTHORIZED);
-            }
-
-            // Get database connection
-            $conn = $this->entityManager->getConnection();
-            
-            // Test the connection
-            $connectionStatus = $conn->isConnected() ? 'Connected' : 'Not connected';
-            
-            // Get table structure
-            $tableStructure = [];
-            try {
-                $stmt = $conn->prepare("DESCRIBE signature");
-                $resultSet = $stmt->executeQuery();
-                $tableStructure = $resultSet->fetchAllAssociative();
-            } catch (\Exception $e) {
-                $tableStructure = ['error' => $e->getMessage()];
-            }
-            
-            // Get a count of signatures
-            $signatureCount = $this->signatureRepository->count([]);
-            
-            // Return test information
-            return $this->json([
-                'status' => 'success',
-                'database' => [
-                    'connection' => $connectionStatus,
-                    'table_structure' => $tableStructure,
-                    'signature_count' => $signatureCount
-                ],
-                'user' => [
-                    'id' => $user->getId(),
-                    'email' => $user->getEmail()
-                ]
-            ]);
-        } catch (\Exception $e) {
-            return $this->json([
-                'status' => 'error',
-                'message' => 'Test failed: ' . $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+            error_log('Error in checkTodaySignature: ' . $e->getMessage());
+            return $this->json(['message' => 'Error checking today\'s signature'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 }

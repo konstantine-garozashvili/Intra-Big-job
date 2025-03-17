@@ -36,7 +36,7 @@ class SignatureRepository extends ServiceEntityRepository
     }
 
     /**
-     * Find recent signatures (for a teacher to validate)
+     * Find recent signatures
      */
     public function findRecent(\DateTimeImmutable $since = null)
     {
@@ -48,19 +48,6 @@ class SignatureRepository extends ServiceEntityRepository
         return $this->createQueryBuilder('s')
             ->andWhere('s.date >= :since')
             ->setParameter('since', $since)
-            ->orderBy('s.date', 'DESC')
-            ->getQuery()
-            ->getResult();
-    }
-
-    /**
-     * Find unvalidated signatures
-     */
-    public function findUnvalidated()
-    {
-        return $this->createQueryBuilder('s')
-            ->andWhere('s.validated = :validated')
-            ->setParameter('validated', false)
             ->orderBy('s.date', 'DESC')
             ->getQuery()
             ->getResult();
