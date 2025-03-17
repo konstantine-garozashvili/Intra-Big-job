@@ -173,6 +173,14 @@ const DocumentSignature = () => {
         setCurrentPeriod(data.currentPeriod);
         setSignedPeriods(data.signedPeriods);
         setAvailablePeriods(data.availablePeriods);
+
+        // If user has already signed for the current period, show a message
+        if (data.signedPeriods.includes(data.currentPeriod)) {
+          toast.info("Information", {
+            description: `Vous avez déjà signé pour la période ${data.availablePeriods[data.currentPeriod]} aujourd'hui.`,
+            duration: 5000,
+          });
+        }
       } catch (error) {
         console.error('Error checking today\'s signatures:', error);
         toast.error("Erreur", {
@@ -225,9 +233,9 @@ const DocumentSignature = () => {
           });
         },
         { 
-          enableHighAccuracy: false, // Changed to false for better reliability
-          timeout: 30000,           // Increased timeout to 30 seconds
-          maximumAge: 300000        // Allow cached positions up to 5 minutes old
+          enableHighAccuracy: false,
+          timeout: 30000,
+          maximumAge: 300000
         }
       );
     } else {
@@ -278,7 +286,7 @@ const DocumentSignature = () => {
     try {
       setIsSubmitting(true);
       
-      // Get signature data URL (but don't send it to the backend for now)
+      // Get signature data URL
       const signatureData = signatureRef.current.toDataURL();
       console.log(`Signature data size: ${signatureData.length} characters`);
       
@@ -299,7 +307,6 @@ const DocumentSignature = () => {
       console.log('Sending actual API request to backend');
       
       try {
-        // Use the direct backend URL
         const response = await fetch('http://localhost:8000/api/signatures', {
           method: 'POST',
           headers: {
@@ -331,13 +338,6 @@ const DocumentSignature = () => {
         toast.success("Succès", {
           description: `Signature enregistrée pour la période ${availablePeriods[currentPeriod]}.`
         });
-        
-        // Close the popup after a delay
-        setTimeout(() => {
-          if (window.closeAttendancePopup) {
-            window.closeAttendancePopup();
-          }
-        }, 2000);
         
       } catch (error) {
         console.error('API request failed:', error);
@@ -383,14 +383,13 @@ const DocumentSignature = () => {
           )}
         </p>
         
-        {/* Use our fallback canvas implementation with proper ref forwarding */}
         <FallbackSignatureCanvas ref={signatureRef} onEnd={() => console.log("Signature completed")} />
         
         <div className="flex justify-between mt-4">
           <Button 
             variant="outline" 
             onClick={clearSignature}
-            disabled={isButtonDisabled()}
+            disabled={isSubmitting}  // Only disable during submission
           >
             Effacer
           </Button>

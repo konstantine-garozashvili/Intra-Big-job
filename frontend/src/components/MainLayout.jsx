@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import Navbar from './Navbar';
-import AttendancePopup from './signature/AttendancePopup';
 import { Toaster } from './ui/sonner';
 import ChatButton from './chat/ChatButton';
 import { authService } from '../lib/services/authService';
@@ -20,7 +19,6 @@ const MainLayout = () => {
       <main className="flex-grow relative z-10">
         <Outlet />
       </main>
-      <AttendancePopup />
       {isAuthenticated && <ChatButton />}
       <Toaster />
     </div>
