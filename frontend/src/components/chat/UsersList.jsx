@@ -3,7 +3,6 @@ import React, { useState, useEffect, useRef } from 'react';
 const UsersList = ({ users, loading, onStartPrivateChat }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredUsers, setFilteredUsers] = useState([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
   const searchInputRef = useRef(null);
 
   // Filter users whenever search term or users list changes
@@ -25,33 +24,10 @@ const UsersList = ({ users, loading, onStartPrivateChat }) => {
     );
     
     setFilteredUsers(filtered);
-    setShowSuggestions(filtered.length > 0 && searchTerm.length > 0);
   }, [searchTerm, users]);
-
-  // Handle click outside to close suggestions
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (searchInputRef.current && !searchInputRef.current.contains(event.target)) {
-        setShowSuggestions(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
 
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
-    setShowSuggestions(true);
-  };
-
-  const handleSelectUser = (user) => {
-    setSearchTerm(`${user.firstName} ${user.lastName}`);
-    setShowSuggestions(false);
-    // Optionally, you could also immediately start a chat with this user
-    // onStartPrivateChat(user);
   };
 
   if (loading) {
@@ -78,7 +54,6 @@ const UsersList = ({ users, loading, onStartPrivateChat }) => {
             placeholder="Rechercher un utilisateur..."
             value={searchTerm}
             onChange={handleSearchChange}
-            onFocus={() => setShowSuggestions(searchTerm.length > 0)}
           />
           {searchTerm && (
             <button 
@@ -91,35 +66,6 @@ const UsersList = ({ users, loading, onStartPrivateChat }) => {
             </button>
           )}
         </div>
-        
-        {/* Autocomplete suggestions */}
-        {showSuggestions && (
-          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
-            {filteredUsers.length > 0 ? (
-              filteredUsers.slice(0, 5).map(user => (
-                <div 
-                  key={user.id}
-                  className="flex items-center p-2 hover:bg-gray-100 cursor-pointer"
-                  onClick={() => handleSelectUser(user)}
-                >
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-semibold mr-2 text-xs">
-                    {user.firstName?.charAt(0)}{user.lastName?.charAt(0)}
-                  </div>
-                  <div>
-                    <div className="font-medium text-sm">{user.firstName} {user.lastName}</div>
-                    {user.userRoles && user.userRoles.length > 0 && (
-                      <div className="text-xs text-gray-500">
-                        {user.userRoles.map(userRole => userRole.role.name).join(', ')}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="p-2 text-sm text-gray-500">Aucun utilisateur trouvé</div>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Users list */}

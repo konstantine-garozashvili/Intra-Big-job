@@ -33,8 +33,11 @@ const ChatSidebar = ({ isOpen, onClose }) => {
         const interval = setInterval(fetchMessages, 5000);
         return () => clearInterval(interval);
       } else if (activeTab === 'global' && activeChat !== 'global' && selectedUser) {
-        // For private chats, just fetch once without polling
+        // For private chats, fetch and set up polling
         fetchPrivateMessages(selectedUser.id);
+        // Set up polling for private messages too
+        const interval = setInterval(() => fetchPrivateMessages(selectedUser.id), 5000);
+        return () => clearInterval(interval);
       }
     }
   }, [isOpen, activeTab, activeChat, selectedUser]);
@@ -74,15 +77,18 @@ const ChatSidebar = ({ isOpen, onClose }) => {
       // This endpoint will need to be implemented in the backend
       const response = await apiService.get(`/messages/private/${userId}`, apiService.withAuth());
       
+      // Make sure we have a valid response with messages
+      const messages = response.messages || [];
+      
       // Update the private chat messages for this user
       setPrivateChats(prev => ({
         ...prev,
-        [userId]: response.messages || []
+        [userId]: messages
       }));
       
-      // Update the current messages display
+      // Update the current messages display if this is the active chat
       if (activeChat === userId) {
-        setMessages(response.messages || []);
+        setMessages(messages);
       }
       
       setLoading(false);
@@ -112,8 +118,15 @@ const ChatSidebar = ({ isOpen, onClose }) => {
     try {
       if (activeChat === 'global') {
         // Send global message
-        await apiService.post('/messages', { content: newMessage }, apiService.withAuth());
-        fetchMessages(); // Refresh messages after sending
+        const response = await apiService.post('/messages', { content: newMessage }, apiService.withAuth());
+        
+        // Instead of refreshing, just add the new message to the existing messages
+        if (response && response.data) {
+          const newMessageObj = response.data;
+          
+          // Update the current display
+          setMessages(prevMessages => [...prevMessages, newMessageObj]);
+        }
       } else if (selectedUser) {
         // Send private message
         const response = await apiService.post('/messages/private', { 
@@ -125,11 +138,18 @@ const ChatSidebar = ({ isOpen, onClose }) => {
         if (response && response.data) {
           const newMessageObj = response.data;
           
+          // Create a temporary message object with the current user as sender if the response doesn't include it
+          const messageToAdd = {
+            ...newMessageObj,
+            sender: newMessageObj.sender || user,
+            createdAt: newMessageObj.createdAt || new Date().toISOString()
+          };
+          
           // Update both the current display and the stored private chats
-          setMessages(prevMessages => [...prevMessages, newMessageObj]);
+          setMessages(prevMessages => [...prevMessages, messageToAdd]);
           setPrivateChats(prev => ({
             ...prev,
-            [selectedUser.id]: [...(prev[selectedUser.id] || []), newMessageObj]
+            [selectedUser.id]: [...(prev[selectedUser.id] || []), messageToAdd]
           }));
         }
       }
