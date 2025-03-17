@@ -20,6 +20,7 @@ import { Toaster } from './components/ui/sonner'
 import './index.css'
 import ProtectedRoute from './components/ProtectedRoute'
 import PublicRoute from './components/PublicRoute'
+import StudentRoute from './components/StudentRoute'
 
 // Fonction pour précharger les pages au survol des liens
 const preloadPages = () => {
@@ -92,8 +93,13 @@ const App = () => {
                   <Route element={<ProtectedRoute />}>
                     <Route path="/profil" element={<Profil />} />
                     <Route path="/dashboard" element={<Dashboard />} />
-                    {/* Routes pour la signature électronique */}
-                    <Route path="/attendance" element={<StudentAttendance />} />
+                    
+                    {/* Route de présence protégée pour les étudiants uniquement */}
+                    <Route element={<StudentRoute />}>
+                      <Route path="/attendance" element={<StudentAttendance />} />
+                    </Route>
+                    
+                    {/* Route de suivi des signatures pour les enseignants */}
                     <Route path="/signature-monitoring" element={<TeacherSignatureMonitoring />} />
                   </Route>
                   

@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, forwardRef } from 'react';
 import { toast } from 'sonner';
 import { Button } from '../ui/button';
-import { Loader2, MapPin, CheckCircle } from 'lucide-react';
+import { Loader2, MapPin, CheckCircle, AlertCircle } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '../ui/alert';
+import { useNavigate } from 'react-router-dom';
 
 // Custom fallback implementation for SignatureCanvas
 const FallbackSignatureCanvas = forwardRef((props, ref) => {
@@ -138,6 +139,7 @@ const FallbackSignatureCanvas = forwardRef((props, ref) => {
 
 // Main component
 const DocumentSignature = () => {
+  const navigate = useNavigate();
   const [location, setLocation] = useState(null);
   const [isLocating, setIsLocating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -146,6 +148,18 @@ const DocumentSignature = () => {
   const [signedPeriods, setSignedPeriods] = useState([]);
   const [availablePeriods, setAvailablePeriods] = useState({});
   const signatureRef = useRef(null);
+  
+  // Check if user is a student
+  useEffect(() => {
+    const userRoles = JSON.parse(localStorage.getItem('userRoles') || '[]');
+    if (!userRoles.includes('ROLE_STUDENT')) {
+      toast.error("Accès non autorisé", {
+        description: "Seuls les étudiants peuvent accéder à cette page."
+      });
+      navigate('/');
+      return;
+    }
+  }, [navigate]);
   
   // Check today's signatures when component mounts
   useEffect(() => {

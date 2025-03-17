@@ -155,6 +155,17 @@ const Navbar = memo(() => {
     }
   };
 
+  // Add a function to check if user has a specific role
+  const hasRole = (role) => {
+    // First check userData.roles
+    if (userData && userData.roles && userData.roles.includes(role)) {
+      return true;
+    }
+    // Fallback to localStorage
+    const userRoles = JSON.parse(localStorage.getItem('userRoles') || '[]');
+    return userRoles.includes(role);
+  };
+
   return (
     <>
       {/* Injection des styles personnalisés */}
@@ -171,7 +182,6 @@ const Navbar = memo(() => {
 
             <div className="hidden md:block">
               <div className="flex items-center ml-10 space-x-1">
-                
                 {/* Élements affichés uniquement pour les utilisateurs connectés */}
                 {isAuthenticated && (
                   <>
@@ -183,17 +193,19 @@ const Navbar = memo(() => {
                       Tableau de bord
                     </Link>
                     
-                    {/* Lien pour l'enregistrement de présence (pour les étudiants) */}
-                    <Link 
-                      to="/attendance" 
-                      className="px-3 py-2 rounded-md text-gray-200 hover:text-white hover:bg-[#02284f]/80 transition-colors flex items-center"
-                    >
-                      <Clipboard className="h-4 w-4 mr-2" />
-                      Présence
-                    </Link>
+                    {/* Lien pour l'enregistrement de présence (pour les étudiants uniquement) */}
+                    {hasRole('ROLE_STUDENT') && (
+                      <Link 
+                        to="/attendance" 
+                        className="px-3 py-2 rounded-md text-gray-200 hover:text-white hover:bg-[#02284f]/80 transition-colors flex items-center"
+                      >
+                        <Clipboard className="h-4 w-4 mr-2" />
+                        Présence
+                      </Link>
+                    )}
                     
-                    {/* Lien pour le suivi des signatures (pour les enseignants) */}
-                    {userData && userData.roles && userData.roles.includes('ROLE_TEACHER') && (
+                    {/* Lien pour le suivi des signatures (pour les enseignants uniquement) */}
+                    {hasRole('ROLE_TEACHER') && (
                       <Link 
                         to="/signature-monitoring" 
                         className="px-3 py-2 rounded-md text-gray-200 hover:text-white hover:bg-[#02284f]/80 transition-colors flex items-center"
