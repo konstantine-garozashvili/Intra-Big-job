@@ -138,10 +138,52 @@ const FallbackSignatureCanvas = forwardRef((props, ref) => {
 // Main component
 const DocumentSignature = () => {
   const [location, setLocation] = useState(null);
+  const [isLocating, setIsLocating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
-  const [isLocating, setIsLocating] = useState(true);
+  const [currentPeriod, setCurrentPeriod] = useState(null);
+  const [signedPeriods, setSignedPeriods] = useState([]);
+  const [availablePeriods, setAvailablePeriods] = useState({});
   const signatureRef = useRef(null);
+  
+  // Check today's signatures when component mounts
+  useEffect(() => {
+    const checkTodaySignatures = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const response = await fetch('http://localhost:8000/api/signatures/today', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error('Error response:', errorData);
+          toast.error("Erreur", {
+            description: errorData.message || "Une erreur est survenue lors de la vérification des signatures."
+          });
+          return;
+        }
+
+        const data = await response.json();
+        console.log('Signature data:', data); // Debug log
+        setCurrentPeriod(data.currentPeriod);
+        setSignedPeriods(data.signedPeriods);
+        setAvailablePeriods(data.availablePeriods);
+      } catch (error) {
+        console.error('Error checking today\'s signatures:', error);
+        toast.error("Erreur", {
+          description: "Impossible de vérifier les signatures. Veuillez réessayer."
+        });
+      }
+    };
+
+    checkTodaySignatures();
+    getLocation();
+  }, []);
   
   // Get user's location
   const getLocation = () => {
@@ -196,11 +238,6 @@ const DocumentSignature = () => {
     }
   };
   
-  // Get location when component mounts
-  useEffect(() => {
-    getLocation();
-  }, []);
-  
   // Clear signature
   const clearSignature = () => {
     if (signatureRef.current) {
@@ -224,6 +261,20 @@ const DocumentSignature = () => {
       return;
     }
 
+    if (!currentPeriod) {
+      toast.error("Erreur", {
+        description: "Les signatures ne sont autorisées qu'entre 9h-12h (matin) et 13h-17h (après-midi)."
+      });
+      return;
+    }
+
+    if (signedPeriods.includes(currentPeriod)) {
+      toast.error("Erreur", {
+        description: `Vous avez déjà signé pour la période ${availablePeriods[currentPeriod]} aujourd'hui.`
+      });
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       
@@ -231,7 +282,7 @@ const DocumentSignature = () => {
       const signatureData = signatureRef.current.toDataURL();
       console.log(`Signature data size: ${signatureData.length} characters`);
       
-      // Prepare the request data - only send location for now
+      // Prepare the request data
       const requestData = {
         location,
       };
@@ -262,72 +313,74 @@ const DocumentSignature = () => {
         console.log('API Response status:', response.status);
         
         if (!response.ok) {
-          // If we get an error response, fall back to simulation
-          console.log('API request failed, falling back to simulation');
-          
-          // Wait a moment to simulate network request
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          // Mock successful response
-          const mockResponse = {
-            message: 'Signature created successfully (simulated)',
-            id: Math.floor(Math.random() * 1000),
-            date: new Date().toISOString()
-          };
-          
-          console.log('Simulated successful response:', mockResponse);
-          
-          // Continue with the success flow
-        } else {
-          // Parse the successful response
-          const data = await response.json();
-          console.log('Real API response:', data);
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to create signature');
         }
-      } catch (apiError) {
-        console.error('API request error:', apiError);
-        console.log('Falling back to simulation due to API error');
         
-        // Wait a moment to simulate network request
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        const data = await response.json();
+        console.log('Signature created successfully:', data);
         
-        // Mock successful response
-        const mockResponse = {
-          message: 'Signature created successfully (simulated after API error)',
-          id: Math.floor(Math.random() * 1000),
-          date: new Date().toISOString()
-        };
+        // Update local state
+        setSignedPeriods([...signedPeriods, currentPeriod]);
+        setSubmissionSuccess(true);
         
-        console.log('Simulated successful response:', mockResponse);
+        // Clear the signature
+        clearSignature();
+        
+        // Show success message
+        toast.success("Succès", {
+          description: `Signature enregistrée pour la période ${availablePeriods[currentPeriod]}.`
+        });
+        
+        // Close the popup after a delay
+        setTimeout(() => {
+          if (window.closeAttendancePopup) {
+            window.closeAttendancePopup();
+          }
+        }, 2000);
+        
+      } catch (error) {
+        console.error('API request failed:', error);
+        toast.error("Erreur", {
+          description: error.message || "Une erreur est survenue lors de l'envoi de la signature."
+        });
       }
-
-      setSubmissionSuccess(true);
-      toast.success("Signature enregistrée", {
-        description: "Votre présence a été enregistrée avec succès."
-      });
-      
-      // Clear the signature after successful submission
-      clearSignature();
-      
-      // Close the popup if it's in a popup
-      if (window.closeAttendancePopup) {
-        setTimeout(() => window.closeAttendancePopup(), 2000);
-      }
-      
     } catch (error) {
       console.error('Error submitting signature:', error);
       toast.error("Erreur", {
-        description: error.message || "Impossible d'enregistrer votre signature. Veuillez réessayer."
+        description: "Une erreur est survenue lors de la soumission de la signature."
       });
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const isButtonDisabled = () => {
+    if (isSubmitting) return true;
+    if (!location) return true;
+    if (!signatureRef.current || signatureRef.current.isEmpty()) return true;
+    if (signedPeriods.includes(currentPeriod)) return true;
+    return false;
+  };
+
+  const getButtonText = () => {
+    if (isSubmitting) return "Envoi en cours...";
+    if (!location) return "Localisation requise";
+    if (!signatureRef.current || signatureRef.current.isEmpty()) return "Signature requise";
+    if (signedPeriods.includes(currentPeriod)) return "Déjà signé pour cette période";
+    if (!currentPeriod) return "Hors période";
+    return "Signer";
+  };
+
   return (
     <div className="space-y-4">
       <div className="border rounded-md p-4 bg-gray-50 dark:bg-gray-900">
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
-          Signez ci-dessous pour confirmer votre présence
+          {currentPeriod ? (
+            `Signez ci-dessous pour confirmer votre présence pour la période ${availablePeriods[currentPeriod]}`
+          ) : (
+            "Les signatures ne sont autorisées qu'entre 9h-12h (matin) et 13h-17h (après-midi)."
+          )}
         </p>
         
         {/* Use our fallback canvas implementation with proper ref forwarding */}
@@ -337,55 +390,29 @@ const DocumentSignature = () => {
           <Button 
             variant="outline" 
             onClick={clearSignature}
-            disabled={isSubmitting}
+            disabled={isButtonDisabled()}
           >
             Effacer
           </Button>
           
           <Button 
             onClick={submitSignature}
-            disabled={isSubmitting || submissionSuccess}
+            disabled={isButtonDisabled()}
           >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Envoi...
-              </>
-            ) : submissionSuccess ? (
-              "Envoyé ✓"
-            ) : (
-              "Confirmer ma présence"
-            )}
+            {getButtonText()}
           </Button>
         </div>
       </div>
       
       {/* Location status */}
-      <div className="p-3 bg-gray-50 border border-gray-200 rounded-md">
+      <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+        <MapPin className="h-4 w-4 mr-2" />
         {isLocating ? (
-          <div className="flex items-center">
-            <Loader2 className="h-4 w-4 mr-2 animate-spin text-gray-500" />
-            <p className="text-sm text-gray-600">Détection de votre position en cours...</p>
-          </div>
+          "Détection de la localisation..."
         ) : location ? (
-          <div className="flex items-center">
-            <MapPin className="h-4 w-4 mr-2 text-green-500" />
-            <p className="text-sm text-green-600">Position détectée</p>
-          </div>
+          "Localisation détectée"
         ) : (
-          <div className="flex flex-col space-y-2">
-            <p className="text-sm text-yellow-600">
-              Impossible de détecter votre position. La localisation est requise pour signer.
-            </p>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={getLocation}
-              className="self-start"
-            >
-              Réessayer
-            </Button>
-          </div>
+          "Localisation non disponible"
         )}
       </div>
     </div>

@@ -29,6 +29,154 @@ class SignatureController extends AbstractController
         $this->signatureRepository = $signatureRepository;
     }
 
+    private function getCurrentTime(): \DateTimeImmutable
+    {
+        return new \DateTimeImmutable('now', new \DateTimeZone('Europe/Paris'));
+    }
+
+    #[Route('/today', methods: ['GET'])]
+    public function checkTodaySignature(): JsonResponse
+    {
+        try {
+            $user = $this->getUser();
+            if (!$user) {
+                return $this->json(['message' => 'User not authenticated'], Response::HTTP_UNAUTHORIZED);
+            }
+
+            // Get today's date (start and end of day) in Paris timezone
+            $currentTime = $this->getCurrentTime();
+            $today = $currentTime->setTime(0, 0);
+            $tomorrow = $today->modify('+1 day');
+
+            // Log the time values for debugging
+            error_log('Current time (Paris): ' . $currentTime->format('Y-m-d H:i:s'));
+            error_log('Today start: ' . $today->format('Y-m-d H:i:s'));
+            error_log('Tomorrow start: ' . $tomorrow->format('Y-m-d H:i:s'));
+
+            // Get current time to determine period
+            $hour = (int)$currentTime->format('H');
+            error_log('Current hour: ' . $hour);
+            
+            $period = null;
+            if ($hour >= 9 && $hour < 12) {
+                $period = Signature::PERIOD_MORNING;
+            } elseif ($hour >= 13 && $hour < 17) {
+                $period = Signature::PERIOD_AFTERNOON;
+            }
+            error_log('Determined period: ' . ($period ?? 'null'));
+
+            // Get all signatures for today
+            $signatures = $this->signatureRepository->createQueryBuilder('s')
+                ->where('s.user = :user')
+                ->andWhere('s.date >= :today')
+                ->andWhere('s.date < :tomorrow')
+                ->setParameter('user', $user)
+                ->setParameter('today', $today)
+                ->setParameter('tomorrow', $tomorrow)
+                ->getQuery()
+                ->getResult();
+
+            error_log('Found ' . count($signatures) . ' signatures for today');
+
+            // Check which periods have been signed
+            $signedPeriods = array_map(function($sig) {
+                return $sig->getPeriod();
+            }, $signatures);
+
+            error_log('Signed periods: ' . implode(', ', $signedPeriods));
+
+            // Serialize signatures properly
+            $serializedSignatures = json_decode($this->serializer->serialize($signatures, 'json', ['groups' => 'signature:read']), true);
+
+            return $this->json([
+                'currentPeriod' => $period,
+                'signedPeriods' => $signedPeriods,
+                'availablePeriods' => Signature::getAvailablePeriods(),
+                'signatures' => $serializedSignatures
+            ]);
+        } catch (\Exception $e) {
+            error_log('Error in checkTodaySignature: ' . $e->getMessage());
+            error_log('Stack trace: ' . $e->getTraceAsString());
+            return $this->json([
+                'success' => false,
+                'message' => 'Error checking today\'s signature: ' . $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    #[Route('/{id}', methods: ['GET'])]
+    public function show(int $id): JsonResponse
+    {
+        try {
+            $user = $this->getUser();
+            if (!$user) {
+                return $this->json(['message' => 'User not authenticated'], Response::HTTP_UNAUTHORIZED);
+            }
+
+            $signature = $this->signatureRepository->find($id);
+            if (!$signature) {
+                return $this->json(['message' => 'Signature not found'], Response::HTTP_NOT_FOUND);
+            }
+
+            // Check if user is the owner or a teacher
+            $isTeacher = in_array('ROLE_TEACHER', $user->getRoles());
+
+            if ($signature->getUser() !== $user && !$isTeacher) {
+                return $this->json(['message' => 'Access denied'], Response::HTTP_FORBIDDEN);
+            }
+
+            $serializedSignature = json_decode($this->serializer->serialize($signature, 'json', ['groups' => 'signature:read']), true);
+
+            return $this->json([
+                'success' => true,
+                'signature' => $serializedSignature
+            ]);
+        } catch (\Exception $e) {
+            error_log('Error in show: ' . $e->getMessage());
+            error_log('Stack trace: ' . $e->getTraceAsString());
+            return $this->json([
+                'success' => false,
+                'message' => 'Error retrieving signature: ' . $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    #[Route('', methods: ['GET'])]
+    public function list(): JsonResponse
+    {
+        try {
+            $user = $this->getUser();
+            if (!$user) {
+                return $this->json(['message' => 'User not authenticated'], Response::HTTP_UNAUTHORIZED);
+            }
+
+            // Check if user has ROLE_TEACHER to see all signatures
+            $isTeacher = in_array('ROLE_TEACHER', $user->getRoles());
+
+            if ($isTeacher) {
+                // Teachers see all recent signatures
+                $signatures = $this->signatureRepository->findRecent();
+            } else {
+                // Students only see their own signatures
+                $signatures = $this->signatureRepository->findByUser($user);
+            }
+
+            $serializedSignatures = json_decode($this->serializer->serialize($signatures, 'json', ['groups' => 'signature:read']), true);
+
+            return $this->json([
+                'success' => true,
+                'signatures' => $serializedSignatures
+            ]);
+        } catch (\Exception $e) {
+            error_log('Error in list: ' . $e->getMessage());
+            error_log('Stack trace: ' . $e->getTraceAsString());
+            return $this->json([
+                'success' => false,
+                'message' => 'Error retrieving signatures: ' . $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
     #[Route('', methods: ['POST'])]
     public function create(Request $request): JsonResponse
     {
@@ -49,12 +197,46 @@ class SignatureController extends AbstractController
             if (!isset($data['location']) || empty($data['location'])) {
                 return $this->json(['message' => 'Location is required'], Response::HTTP_BAD_REQUEST);
             }
+
+            // Determine the current period based on time (using Paris timezone)
+            $currentTime = $this->getCurrentTime();
+            $hour = (int)$currentTime->format('H');
+            
+            if ($hour >= 9 && $hour < 12) {
+                $period = Signature::PERIOD_MORNING;
+            } elseif ($hour >= 13 && $hour < 17) {
+                $period = Signature::PERIOD_AFTERNOON;
+            } else {
+                return $this->json([
+                    'message' => 'Signatures are only allowed between 9h-12h (morning) and 13h-17h (afternoon)'
+                ], Response::HTTP_BAD_REQUEST);
+            }
+
+            // Check if user has already signed for this period today
+            $existingSignature = $this->signatureRepository->createQueryBuilder('s')
+                ->where('s.user = :user')
+                ->andWhere('s.date >= :today')
+                ->andWhere('s.date < :tomorrow')
+                ->andWhere('s.period = :period')
+                ->setParameter('user', $user)
+                ->setParameter('today', $currentTime->setTime(0, 0))
+                ->setParameter('tomorrow', $currentTime->setTime(0, 0)->modify('+1 day'))
+                ->setParameter('period', $period)
+                ->getQuery()
+                ->getOneOrNullResult();
+
+            if ($existingSignature) {
+                return $this->json([
+                    'message' => 'You have already signed for the ' . $period . ' period today'
+                ], Response::HTTP_BAD_REQUEST);
+            }
             
             // Create a new signature
             $signature = new Signature();
             $signature->setUser($user);
             $signature->setLocation($data['location']);
-            $signature->setDate(new \DateTimeImmutable());
+            $signature->setDate($currentTime);
+            $signature->setPeriod($period);
             
             // Save to database
             $this->entityManager->persist($signature);
@@ -62,9 +244,11 @@ class SignatureController extends AbstractController
             
             // Return success response
             return $this->json([
+                'success' => true,
                 'message' => 'Signature created successfully',
                 'id' => $signature->getId(),
-                'date' => $signature->getDate()->format('Y-m-d H:i:s')
+                'date' => $signature->getDate()->format('Y-m-d H:i:s'),
+                'period' => $signature->getPeriod()
             ], Response::HTTP_CREATED);
             
         } catch (\Exception $e) {
@@ -74,91 +258,9 @@ class SignatureController extends AbstractController
             
             // Return error response
             return $this->json([
+                'success' => false,
                 'message' => 'Error creating signature: ' . $e->getMessage()
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    #[Route('', methods: ['GET'])]
-    public function list(): JsonResponse
-    {
-        $user = $this->getUser();
-        if (!$user) {
-            return $this->json(['message' => 'User not authenticated'], Response::HTTP_UNAUTHORIZED);
-        }
-
-        // Check if user has ROLE_TEACHER to see all signatures
-        $isTeacher = in_array('ROLE_TEACHER', $user->getRoles());
-
-        if ($isTeacher) {
-            // Teachers see all recent signatures
-            $signatures = $this->signatureRepository->findRecent();
-        } else {
-            // Students only see their own signatures
-            $signatures = $this->signatureRepository->findByUser($user);
-        }
-
-        return $this->json([
-            'signatures' => $this->serializer->serialize($signatures, 'json', ['groups' => 'signature:read'])
-        ]);
-    }
-
-    #[Route('/{id}', methods: ['GET'])]
-    public function show(int $id): JsonResponse
-    {
-        $user = $this->getUser();
-        if (!$user) {
-            return $this->json(['message' => 'User not authenticated'], Response::HTTP_UNAUTHORIZED);
-        }
-
-        $signature = $this->signatureRepository->find($id);
-        if (!$signature) {
-            return $this->json(['message' => 'Signature not found'], Response::HTTP_NOT_FOUND);
-        }
-
-        // Check if user is the owner or a teacher
-        $isTeacher = in_array('ROLE_TEACHER', $user->getRoles());
-
-        if ($signature->getUser() !== $user && !$isTeacher) {
-            return $this->json(['message' => 'Access denied'], Response::HTTP_FORBIDDEN);
-        }
-
-        return $this->json([
-            'signature' => $this->serializer->serialize($signature, 'json', ['groups' => 'signature:read'])
-        ]);
-    }
-
-    #[Route('/today', methods: ['GET'])]
-    public function checkTodaySignature(): JsonResponse
-    {
-        try {
-            $user = $this->getUser();
-            if (!$user) {
-                return $this->json(['message' => 'User not authenticated'], Response::HTTP_UNAUTHORIZED);
-            }
-
-            // Get today's date (start and end of day)
-            $today = new \DateTimeImmutable('today');
-            $tomorrow = $today->modify('+1 day');
-
-            // Check if the user has already signed in today
-            $signature = $this->signatureRepository->createQueryBuilder('s')
-                ->where('s.user = :user')
-                ->andWhere('s.date >= :today')
-                ->andWhere('s.date < :tomorrow')
-                ->setParameter('user', $user)
-                ->setParameter('today', $today)
-                ->setParameter('tomorrow', $tomorrow)
-                ->getQuery()
-                ->getOneOrNullResult();
-
-            return $this->json([
-                'hasSignedToday' => $signature !== null,
-                'signature' => $signature ? json_decode($this->serializer->serialize($signature, 'json', ['groups' => 'signature:read']), true) : null
-            ]);
-        } catch (\Exception $e) {
-            error_log('Error in checkTodaySignature: ' . $e->getMessage());
-            return $this->json(['message' => 'Error checking today\'s signature'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 }

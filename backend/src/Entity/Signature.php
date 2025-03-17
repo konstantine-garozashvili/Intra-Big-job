@@ -3,12 +3,16 @@
 namespace App\Entity;
 
 use App\Repository\SignatureRepository;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: SignatureRepository::class)]
 class Signature
 {
+    public const PERIOD_MORNING = 'morning';
+    public const PERIOD_AFTERNOON = 'afternoon';
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -27,6 +31,10 @@ class Signature
     #[ORM\Column(length: 255)]
     #[Groups(['signature:read'])]
     private ?string $location = null;
+
+    #[ORM\Column(type: Types::STRING, length: 10)]
+    #[Groups(['signature:read'])]
+    private ?string $period = null;
 
     public function __construct()
     {
@@ -72,5 +80,27 @@ class Signature
         $this->location = $location;
 
         return $this;
+    }
+
+    public function getPeriod(): ?string
+    {
+        return $this->period;
+    }
+
+    public function setPeriod(string $period): static
+    {
+        if (!in_array($period, [self::PERIOD_MORNING, self::PERIOD_AFTERNOON])) {
+            throw new \InvalidArgumentException('Invalid period');
+        }
+        $this->period = $period;
+        return $this;
+    }
+
+    public static function getAvailablePeriods(): array
+    {
+        return [
+            self::PERIOD_MORNING => 'Matin (9h-12h)',
+            self::PERIOD_AFTERNOON => 'Après-midi (13h-17h)'
+        ];
     }
 }
