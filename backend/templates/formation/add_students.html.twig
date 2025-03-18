@@ -5,7 +5,7 @@
 {% block body %}
 <h1>Ajouter des étudiants à la formation "{{ formation.name }}"</h1>
 
-{{ form_start(form) }}
+{{ form_start(form, {'attr': {'data-turbo': 'false'}}) }}
     {{ form_widget(form) }}
     <button class="btn btn-primary">Enregistrer</button>
 {{ form_end(form) }}

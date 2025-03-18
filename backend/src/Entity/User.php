@@ -416,7 +416,7 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     {
         if (!$this->formations->contains($formation)) {
             $this->formations[] = $formation;
-            $formation->addStudent($this); // Assure-toi que dans Formation, la méthode addStudent() existe
+            $formation->addStudent($this); 
         }
         return $this;
     }
@@ -424,7 +424,7 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     public function removeFormation(Formation $formation): self
     {
         if ($this->formations->removeElement($formation)) {
-            $formation->removeStudent($this); // Assure-toi que dans Formation, la méthode removeStudent() existe
+            $formation->removeStudent($this);
         }
         return $this;
     }

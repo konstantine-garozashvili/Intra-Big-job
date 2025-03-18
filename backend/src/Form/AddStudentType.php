@@ -18,9 +18,8 @@ class AddStudentType extends AbstractType
             'choice_label' => function (User $user) {
                 return $user->getFirstName() . ' ' . $user->getLastName() . ' (' . $user->getEmail() . ')';
             },
-            'multiple' => true,    // Pour sélectionner plusieurs étudiants
-            'expanded' => true,    // Affiche sous forme de cases à cocher
-            // Ajuste le query_builder selon ta logique de gestion des rôles
+            'multiple' => true,
+            'expanded' => true,
             'query_builder' => function (\Doctrine\ORM\EntityRepository $er) {
                 return $er->createQueryBuilder('u')
                     ->innerJoin('u.userRoles', 'ur')
