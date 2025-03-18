@@ -78,7 +78,7 @@ axiosInstance.interceptors.response.use(response => {
  * @returns {string} - L'URL complète normalisée
  */
 export const normalizeApiUrl = (path) => {
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+  const baseUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
   
   // Supprimer le "/api" à la fin de baseUrl si path commence par "/api"
   if (path.startsWith('/api')) {
