@@ -5,6 +5,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import App from './App.jsx'
 import './index.css'
 import './lib/animations.css'
+import './lib/no-scrollbars.css'
 import { setQueryClient } from './lib/services/queryClient'
 
 // Configuration du client React Query

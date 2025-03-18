@@ -106,6 +106,7 @@ const customStyles = `
     top: 0;
     z-index: 100;
     width: 100%;
+    overflow-x: hidden;
   }
   
   @media (max-width: 1024px) {
@@ -401,118 +402,120 @@ const Navbar = memo(({ user }) => {
       {/* Injection des styles personnalisés */}
       <style>{customStyles}</style>
 
-      <nav className="bg-[#02284f] shadow-lg navbar-fixed">
-        <div className="container px-4 mx-auto">
-          <div className="flex items-center justify-between h-16">
-            {/* Partie gauche: Logo et burger menu */}
-            <div className="flex items-center">
-              <div className="menu-burger-wrapper">
-                <MenuBurger />
+      <header className="navbar-fixed bg-[#02284f] shadow-lg">
+        <nav className="bg-[#02284f] w-full">
+          <div className="container px-4 mx-auto">
+            <div className="flex items-center justify-between h-16">
+              {/* Partie gauche: Logo et burger menu */}
+              <div className="flex items-center">
+                <div className="menu-burger-wrapper">
+                  <MenuBurger />
+                </div>
+                <div className="flex-shrink-0">
+                  <Link
+                    to={
+                      isAuthenticated
+                        ? permissions.getRoleDashboardPath()
+                        : "/login"
+                    }
+                    className="text-2xl font-black tracking-tight text-white"
+                  >
+                    Big<span className="text-[#528eb2]">Project</span>
+                  </Link>
+                </div>
               </div>
-              <div className="flex-shrink-0">
-                <Link
-                  to={
-                    isAuthenticated
-                      ? permissions.getRoleDashboardPath()
-                      : "/login"
-                  }
-                  className="text-2xl font-black tracking-tight text-white"
-                >
-                  Big<span className="text-[#528eb2]">Project</span>
-                </Link>
+
+              {/* Partie centrale: Barre de recherche */}
+              {isAuthenticated && (
+                <div className="hidden md:flex flex-1 justify-center mx-4">
+                  <div className="search-container w-full max-w-md flex justify-end">
+                    <SearchBar />
+                  </div>
+                </div>
+              )}
+
+              {/* Partie droite: Authentification */}
+              <div className="flex items-center">
+                {/* Barre de recherche mobile */}
+                {isAuthenticated && (
+                  <div className="md:hidden mr-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="rounded-full w-10 h-10 p-0 bg-transparent text-gray-200 hover:bg-[#02284f]/80 hover:text-white"
+                      onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
+                    >
+                      <Search className="h-5 w-5" />
+                    </Button>
+                  </div>
+                )}
+                
+                {/* Menu utilisateur */}
+                {isAuthenticated ? (
+                  <UserMenu
+                    onLogout={() => setLogoutDialogOpen(true)}
+                    userData={userData}
+                    setLogoutDialogOpen={setLogoutDialogOpen}
+                  />
+                ) : (
+                  <div className="mobile-auth-buttons">
+                    <AuthButtons />
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Partie centrale: Barre de recherche */}
-            {isAuthenticated && (
-              <div className="hidden md:flex flex-1 justify-center mx-4">
-                <div className="search-container w-full max-w-md flex justify-end">
-                  <SearchBar />
-                </div>
+            {/* Barre de recherche mobile */}
+            {isAuthenticated && mobileSearchOpen && (
+              <div className="md:hidden px-4 pb-4">
+                <SearchBar />
               </div>
             )}
-
-            {/* Partie droite: Authentification */}
-            <div className="flex items-center">
-              {/* Barre de recherche mobile */}
-              {isAuthenticated && (
-                <div className="md:hidden mr-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="rounded-full w-10 h-10 p-0 bg-transparent text-gray-200 hover:bg-[#02284f]/80 hover:text-white"
-                    onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
-                  >
-                    <Search className="h-5 w-5" />
-                  </Button>
-                </div>
-              )}
-              
-              {/* Menu utilisateur */}
-              {isAuthenticated ? (
-                <UserMenu
-                  onLogout={() => setLogoutDialogOpen(true)}
-                  userData={userData}
-                  setLogoutDialogOpen={setLogoutDialogOpen}
-                />
-              ) : (
-                <div className="mobile-auth-buttons">
-                  <AuthButtons />
-                </div>
-              )}
-            </div>
           </div>
 
-          {/* Barre de recherche mobile */}
-          {isAuthenticated && mobileSearchOpen && (
-            <div className="md:hidden px-4 pb-4">
-              <SearchBar />
-            </div>
+          {/* Dialogue de confirmation de déconnexion */}
+          {logoutDialogOpen && (
+            <Dialog
+              open={logoutDialogOpen}
+              onOpenChange={(open) => !isLoggingOut && setLogoutDialogOpen(open)}
+            >
+              <DialogContent className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-hidden rounded-2xl border-0 shadow-xl">
+                <div className="overflow-y-auto max-h-[70vh] fade-in-up">
+                  <DialogHeader>
+                    <DialogTitle className="text-xl font-semibold">
+                      Confirmation de déconnexion
+                    </DialogTitle>
+                    <DialogDescription className="text-base mt-2">
+                      Êtes-vous sûr de vouloir vous déconnecter de votre compte ?
+                      Toutes vos sessions actives seront fermées.
+                    </DialogDescription>
+                  </DialogHeader>
+                </div>
+                <DialogFooter className="mt-6 flex justify-end space-x-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setLogoutDialogOpen(false)}
+                    disabled={isLoggingOut}
+                    className="rounded-full border-2 hover:bg-gray-100 transition-all duration-200"
+                  >
+                    Annuler
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={handleLogout}
+                    disabled={isLoggingOut}
+                    className={`rounded-full bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 transition-all duration-200 ${
+                      isLoggingOut ? "opacity-80" : ""
+                    }`}
+                  >
+                    {isLoggingOut ? "Déconnexion..." : "Se déconnecter"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           )}
-        </div>
-
-        {/* Dialogue de confirmation de déconnexion */}
-        {logoutDialogOpen && (
-          <Dialog
-            open={logoutDialogOpen}
-            onOpenChange={(open) => !isLoggingOut && setLogoutDialogOpen(open)}
-          >
-            <DialogContent className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-hidden rounded-2xl border-0 shadow-xl">
-              <div className="overflow-y-auto max-h-[70vh] fade-in-up">
-                <DialogHeader>
-                  <DialogTitle className="text-xl font-semibold">
-                    Confirmation de déconnexion
-                  </DialogTitle>
-                  <DialogDescription className="text-base mt-2">
-                    Êtes-vous sûr de vouloir vous déconnecter de votre compte ?
-                    Toutes vos sessions actives seront fermées.
-                  </DialogDescription>
-                </DialogHeader>
-              </div>
-              <DialogFooter className="mt-6 flex justify-end space-x-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setLogoutDialogOpen(false)}
-                  disabled={isLoggingOut}
-                  className="rounded-full border-2 hover:bg-gray-100 transition-all duration-200"
-                >
-                  Annuler
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={handleLogout}
-                  disabled={isLoggingOut}
-                  className={`rounded-full bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 transition-all duration-200 ${
-                    isLoggingOut ? "opacity-80" : ""
-                  }`}
-                >
-                  {isLoggingOut ? "Déconnexion..." : "Se déconnecter"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        )}
-      </nav>
+        </nav>
+      </header>
     </>
   );
 });

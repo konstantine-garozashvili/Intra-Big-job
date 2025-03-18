@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, createContext, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, createContext, useMemo, useLayoutEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
 import ProfileProgress from '../pages/Global/Profile/components/profile-view/ProfileProgress';
@@ -208,6 +208,32 @@ const MainLayout = () => {
     refreshProfileData,
     isProfileLoading: isLoading
   }), [profileData, refreshProfileData, isLoading]);
+
+  // Immediately hide scrollbars when component mounts
+  useLayoutEffect(() => {
+    // Apply Chrome-specific scrollbar hiding
+    document.documentElement.style.setProperty('--webkit-scrollbar-width', '0px');
+    document.documentElement.style.setProperty('--webkit-scrollbar-display', 'none');
+
+    // Force Chrome to re-evaluate its scrollbar display
+    const styleEl = document.createElement('style');
+    styleEl.textContent = `
+      ::-webkit-scrollbar {
+        display: none !important;
+        width: 0 !important;
+        height: 0 !important;
+        background: transparent !important;
+      }
+    `;
+    document.head.appendChild(styleEl);
+
+    return () => {
+      // Cleanup if necessary
+      if (styleEl && styleEl.parentNode) {
+        styleEl.parentNode.removeChild(styleEl);
+      }
+    };
+  }, []);
 
   return (
     <ProfileContext.Provider value={profileContextValue}>

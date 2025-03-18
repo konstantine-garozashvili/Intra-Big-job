@@ -5,48 +5,75 @@
 let activeLoadingCount = 0;
 
 /**
- * Add a permanent scrollbar style to prevent layout shifts
+ * Injects a style tag to hide scrollbars in all browsers
  */
-const addPermanentScrollbarStyle = () => {
-  // If the style is already added, don't add it again
-  if (document.getElementById('permanent-scrollbar-style')) {
-    return;
+const injectScrollbarHidingStyles = () => {
+  if (document.getElementById('hide-scrollbars-style')) {
+    return; // Style already injected
   }
-  
-  // Create a style element
+
   const style = document.createElement('style');
-  style.id = 'permanent-scrollbar-style';
-  
-  // This approach forces a scrollbar to always be visible
-  // and ensures fixed elements maintain their position
-  style.textContent = `
-    html {
-      overflow-y: scroll;
+  style.id = 'hide-scrollbars-style';
+  style.innerHTML = `
+    /* Hide scrollbars in all browsers while keeping scrollability */
+    
+    /* Universal selector for all elements */
+    * {
+      -ms-overflow-style: none !important;
+      scrollbar-width: none !important;
     }
     
-    html.loading-active {
-      overflow: hidden;
+    /* WebKit browsers (Chrome, Safari, newer versions of Opera) */
+    ::-webkit-scrollbar,
+    ::-webkit-scrollbar-track,
+    ::-webkit-scrollbar-thumb {
+      width: 0 !important;
+      height: 0 !important;
+      background: transparent !important;
+      display: none !important;
+    }
+    
+    /* Specific elements that might have scrollbars */
+    html, body, div, main, section, article, aside, nav, header, footer {
+      scrollbar-width: none !important;
+      -ms-overflow-style: none !important;
+    }
+    
+    html::-webkit-scrollbar,
+    body::-webkit-scrollbar,
+    div::-webkit-scrollbar,
+    main::-webkit-scrollbar,
+    section::-webkit-scrollbar,
+    article::-webkit-scrollbar,
+    aside::-webkit-scrollbar,
+    nav::-webkit-scrollbar,
+    header::-webkit-scrollbar,
+    footer::-webkit-scrollbar {
+      width: 0 !important;
+      height: 0 !important;
+      background: transparent !important;
+      display: none !important;
     }
   `;
-  
-  // Add the style to the document
+
   document.head.appendChild(style);
 };
+
+// Run this immediately
+injectScrollbarHidingStyles();
 
 /**
  * Show the global loading state
  */
 export const showGlobalLoader = () => {
-  // Add permanent scrollbar on first use
-  if (activeLoadingCount === 0) {
-    addPermanentScrollbarStyle();
-  }
-
   // Increment the active loading count
   activeLoadingCount++;
   
-  // Add loading-active class to the html element (not body)
+  // Add loading-active class to the html element
   document.documentElement.classList.add('loading-active');
+  
+  // Ensure scrollbars are hidden
+  injectScrollbarHidingStyles();
 };
 
 /**

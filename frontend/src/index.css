@@ -64,18 +64,67 @@
     --chart-4: 197 37% 24%; /* #235465 */
     --chart-5: 195 53% 79%; /* #addde6 */
   }
-}
 
-/* Base styles */
-@layer base {
   * {
     @apply border-border outline-ring/50;
   }
+  
+  /* First, make the universal selector hide all scrollbars */
+  ::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+    background: transparent !important; /* Optional: just make scrollbar invisible */
+  }
+  
   body {
     @apply bg-background text-foreground font-poppins;
     margin: 0;
     padding: 0;
     min-width: 100%;
+    /* Enable scrolling but hide scrollbar */
+    -ms-overflow-style: none !important; /* IE and Edge */
+    scrollbar-width: none !important; /* Firefox */
+    overflow-y: scroll;
+  }
+
+  /* Chrome, Safari and Opera - more specific for body */
+  body::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+  }
+
+  /* For html element specifically */
+  html {
+    overflow-y: scroll;
+    -ms-overflow-style: none !important;
+    scrollbar-width: none !important;
+  }
+
+  html::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+  }
+  
+  /* More specific selector for Chrome */
+  *::-webkit-scrollbar,
+  *::-webkit-scrollbar-thumb,
+  *::-webkit-scrollbar-track {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+    background: transparent !important;
+  }
+  
+  /* Target specific elements that might still show scrollbars */
+  .scrollable-div::-webkit-scrollbar,
+  [data-radix-scroll-area-viewport]::-webkit-scrollbar,
+  [cmdk-list]::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
   }
 }
 
@@ -446,29 +495,6 @@
 .scrollable-div::-webkit-scrollbar-track {
   background-color: #f3f4f6; /* Couleur plus claire pour la piste */
   border-radius: 10px;
-}
-
-/* Prevent layout shifts during loading states */
-html {
-  scrollbar-gutter: stable;
-  overflow-y: scroll;
-  overflow-x: hidden;
-}
-
-/* Ensure fixed elements maintain position */
-.navbar, 
-.fixed,
-.fixed-top,
-[class*="navbar-"],
-[class*="fixed-"] {
-  padding-right: var(--removed-body-scroll-bar-size, 0px);
-}
-
-/* Handle data-scroll-locked state */
-html > body[data-scroll-locked] {
-  overflow: visible !important;
-  margin-right: 0 !important;
-  min-width: 100%;
 }
 
 /* Smooth transitions for loading state changes */
