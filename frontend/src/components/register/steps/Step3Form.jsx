@@ -67,11 +67,10 @@ const Step3Form = ({ goToPrevStep, onSubmit }) => {
     e.preventDefault();
     setStep3Tried(true);
     
-    // const isValid = validateStep3();
-    // if (isValid) {
-    //   onSubmit(e);
-    // } else {
-    // }
+    const isValid = validateStep3();
+    if (isValid) {
+      onSubmit(e);
+    }
   };
 
   // Vérifier si une erreur doit être affichée
@@ -119,6 +118,7 @@ const Step3Form = ({ goToPrevStep, onSubmit }) => {
             onChange={(e) => setAddressName(e.target.value)}
             onAddressSelect={handleAddressSelect}
             error={null} // Important: ne pas passer d'erreur ici pour éviter les doublons
+            className=""
             inputClassName={`w-full px-4 py-3 rounded-md border ${shouldShowError('addressName') ? 'border-red-500' : 'border-gray-300'}`}
           />
           {shouldShowError('addressName') && (

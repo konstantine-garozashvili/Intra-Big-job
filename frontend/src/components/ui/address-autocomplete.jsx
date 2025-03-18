@@ -13,6 +13,7 @@ export const AddressAutocomplete = React.forwardRef(({
   error,
   required = false,
   onAddressSelect,
+  inputClassName,
   ...props
 }, ref) => {
   // États
@@ -196,7 +197,8 @@ export const AddressAutocomplete = React.forwardRef(({
   
   const inputClasses = cn(
     "block w-full h-11 px-3 pt-5 pb-5 text-base bg-transparent rounded-md appearance-none focus:outline-none",
-    "transition-all duration-200"
+    "transition-all duration-200",
+    inputClassName
   );
   
   return (
