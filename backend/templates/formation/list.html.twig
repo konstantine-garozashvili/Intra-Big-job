@@ -2,19 +2,112 @@
 
 {% block title %}Liste des formations{% endblock %}
 
+{% block stylesheets %}
+{{ parent() }}
+<style>
+    .formations-wrapper {
+        margin: 2em auto;
+        max-width: 1200px;
+        padding: 0 20px;
+    }
+    .formations-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2em;
+    }
+    .formations-title {
+        color: #2c3e50;
+        margin: 0;
+    }
+    .formations-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    .formations-table th,
+    .formations-table td {
+        padding: 1rem;
+        text-align: left;
+        border-bottom: 1px solid #e9ecef;
+    }
+    .formations-table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        color: #495057;
+    }
+    .formations-table tr:hover {
+        background-color: #f8f9fa;
+    }
+    .btn {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        text-decoration: none;
+        font-weight: 500;
+        transition: background-color 0.2s;
+    }
+    .btn-primary {
+        background-color: #007bff;
+        color: white;
+    }
+    .btn-primary:hover {
+        background-color: #0056b3;
+    }
+    .btn-secondary {
+        background-color: #6c757d;
+        color: white;
+    }
+    .btn-secondary:hover {
+        background-color: #545b62;
+    }
+    .empty-state {
+        text-align: center;
+        padding: 2rem;
+        color: #6c757d;
+    }
+</style>
+{% endblock %}
+
 {% block body %}
-<h1>Liste des formations</h1>
+<div class="formations-wrapper">
+    <div class="formations-header">
+        <h1 class="formations-title">Liste des formations</h1>
+        <a href="#" class="btn btn-primary">Créer une formation</a>
+    </div>
 
-<a href="{{ path('formation_new') }}" class="btn btn-success">Créer une formation</a>
-
-<ul>
-    {% for formation in formations %}
-        <li>
-            <strong>{{ formation.name }}</strong> - Promotion : {{ formation.promotion }}
-            <a href="{{ path('formation_add_students', {id: formation.id}) }}">Ajouter des étudiants</a>
-        </li>
+    {% if formations is not empty %}
+        <table class="formations-table">
+            <thead>
+                <tr>
+                    <th>Nom de la formation</th>
+                    <th>Promotion</th>
+                    <th>Nombre d'étudiants</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for formation in formations %}
+                    <tr>
+                        <td>{{ formation.name }}</td>
+                        <td>{{ formation.promotion }}</td>
+                        <td>{{ formation.students|length }}</td>
+                        <td>
+                            <a href="{{ path('formation_add_students', {id: formation.id}) }}" class="btn btn-secondary">
+                                Gérer les étudiants
+                            </a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     {% else %}
-        <li>Aucune formation trouvée.</li>
-    {% endfor %}
-</ul>
+        <div class="empty-state">
+            <p>Aucune formation n'est disponible pour le moment.</p>
+        </div>
+    {% endif %}
+</div>
 {% endblock %}

@@ -20,30 +20,37 @@ class RoleFixtures extends Fixture
     {
         $roles = [
             self::ROLE_ADMIN => [
+                'id' => 1,
                 'name' => 'ADMIN',
                 'description' => 'Administrateur du système avec des droits étendus'
             ],
             self::ROLE_SUPERADMIN => [
+                'id' => 2,
                 'name' => 'SUPERADMIN',
                 'description' => 'Super Administrateur avec tous les droits système'
             ],
             self::ROLE_HR => [
+                'id' => 3,
                 'name' => 'HR',
                 'description' => 'Ressources Humaines - Gestion des utilisateurs et des profils'
             ],
             self::ROLE_TEACHER => [
+                'id' => 4,
                 'name' => 'TEACHER',
                 'description' => 'Formateur - Création et gestion des formations'
             ],
             self::ROLE_STUDENT => [
+                'id' => 5,
                 'name' => 'STUDENT',
                 'description' => 'Élève - Accès aux formations et aux ressources pédagogiques'
             ],
             self::ROLE_GUEST => [
+                'id' => 6,
                 'name' => 'GUEST',
                 'description' => 'Invité - Accès limité en lecture seule'
             ],
             self::ROLE_RECRUITER => [
+                'id' => 7,
                 'name' => 'RECRUITER',
                 'description' => 'Recruteur - Gestion des candidatures et des offres d\'emploi'
             ],
@@ -51,6 +58,7 @@ class RoleFixtures extends Fixture
 
         foreach ($roles as $reference => $data) {
             $role = new Role();
+            $role->setId($data['id']);
             $role->setName($data['name']);
             $role->setDescription($data['description']);
             $manager->persist($role);
@@ -59,4 +67,4 @@ class RoleFixtures extends Fixture
 
         $manager->flush();
     }
-} 
+}

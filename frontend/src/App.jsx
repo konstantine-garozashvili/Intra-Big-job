@@ -18,6 +18,8 @@ const Dashboard = lazy(() => import('./pages/Dashboard'))
 const HomePage = lazy(() => import('./components/HomePage'))
 // Import de la page de gestion des rôles utilisateurs
 const GuestStudentRoleManager = lazy(() => import('./pages/Recruiter/GuestStudentRoleManager'))
+// Import de la page des formations
+const FormationList = lazy(() => import('./pages/FormationList'))
 import { Toaster } from './components/ui/sonner'
 import './index.css'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -39,6 +41,7 @@ const preloadPages = () => {
   const preloadDashboard = () => import('./pages/Dashboard'); // Préchargement du Dashboard
   const preloadHomePage = () => import('./components/HomePage'); // Préchargement de HomePage
   const preloadGuestStudentRoleManager = () => import('./pages/Recruiter/GuestStudentRoleManager'); // Préchargement de GuestStudentRoleManager
+  const preloadFormationList = () => import('./pages/FormationList'); // Préchargement de FormationList
   
   // Déclencher le préchargement
   preloadLogin();
@@ -53,6 +56,7 @@ const preloadPages = () => {
   preloadDashboard();
   preloadHomePage();
   preloadGuestStudentRoleManager();
+  preloadFormationList();
 };
 
 // Composant pour observer les liens et précharger les pages correspondantes
@@ -102,6 +106,7 @@ const App = () => {
                 <Route element={<ProtectedRoute />}>
                   <Route path="/profil" element={<Profil />} />
                   <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/formations" element={<FormationList />} />
                 </Route>
                 
                 {/* Routes pour les recruteurs et administrateurs */}
