@@ -10,9 +10,12 @@ import { useNavigate } from 'react-router-dom';
 
 // Convert role constants to display format for allowed search roles
 const getRoleDisplayFormat = (roleConstant) => {
-  switch (roleConstant) {
+  // Normaliser le rôle en retirant le préfixe ROLE_ s'il existe
+  const normalizedRole = roleConstant.replace(/^ROLE_/i, '');
+  
+  switch (normalizedRole.toUpperCase()) {
     case 'ADMIN': return 'Admin';
-    case 'SUPER_ADMIN': return 'Super Admin';
+    case 'SUPER_ADMIN': 
     case 'SUPERADMIN': return 'Super Admin';
     case 'TEACHER': return 'Formateur';
     case 'STUDENT': return 'Étudiant';
@@ -52,8 +55,12 @@ export const SearchBar = () => {
     
     // Check if user is logged in
     if (isLoggedIn) {
-      // All roles except students and guests can search everyone
-      if (hasAnyRole([ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.HR, ROLES.RECRUITER])) {
+      // SuperAdmin a accès à tous les rôles (avec les deux variantes)
+      if (hasRole(ROLES.SUPERADMIN)) {
+        searchableRoles = ['ADMIN', 'SUPER_ADMIN', 'SUPERADMIN', 'TEACHER', 'STUDENT', 'RECRUITER', 'HR', 'GUEST'];
+      }
+      // Admin et autres rôles peuvent rechercher la plupart des rôles
+      else if (hasAnyRole([ROLES.ADMIN, ROLES.TEACHER, ROLES.HR, ROLES.RECRUITER])) {
         searchableRoles = ['ADMIN', 'SUPER_ADMIN', 'TEACHER', 'STUDENT', 'RECRUITER', 'HR', 'GUEST'];
       } 
       // Students can search for students, teachers, recruiters, and HR
@@ -341,7 +348,11 @@ export const SearchBar = () => {
       {isFocused && query.length === 0 && isLoggedIn && (
         <div className="absolute top-full left-0 w-full mt-2 px-3 py-2 text-xs text-white/70 bg-[#02284f]/90 rounded-md">
           <p>
-            {allowedSearchRoles.length > 0 ? (
+            {hasRole(ROLES.SUPERADMIN) ? (
+              <>En tant que Super Admin, vous pouvez rechercher tous les utilisateurs par nom ou par rôle : {allowedSearchRoles.map(role => 
+                role !== 'SUPERADMIN' ? getRoleDisplayFormat(role).toLowerCase() : null
+              ).filter(Boolean).join(', ')}</>
+            ) : allowedSearchRoles.length > 0 ? (
               allowedSearchRoles.length === 1 ? (
                 <>Vous pouvez rechercher des <strong>{getRoleDisplayFormat(allowedSearchRoles[0]).toLowerCase()}</strong> par nom</>
               ) : (

@@ -12,7 +12,7 @@ const ROLE_DISPLAY_MAP = {};
 // Populate the role display map from the ROLE_ALIASES
 Object.entries(ROLE_ALIASES).forEach(([role, aliases]) => {
   aliases.forEach(alias => {
-    ROLE_DISPLAY_MAP[alias] = ROLES[role];
+    ROLE_DISPLAY_MAP[alias] = ROLES[role] || (role === 'SUPERADMIN' ? 'ROLE_SUPERADMIN' : null);
   });
 });
 
@@ -36,23 +36,52 @@ export const userAutocompleteService = {
       const matchResult = matchRoleFromSearchTerm(query);
       const isRoleSearch = !!matchResult;
       
+      let roleConstant = null;
       if (isRoleSearch) {
-        const roleConstant = ROLES[matchResult.role];
+        // Gérer explicitement le cas du SUPERADMIN/SUPER_ADMIN pour la recherche
+        if (matchResult.role === 'SUPERADMIN' || matchResult.role === 'SUPER_ADMIN') {
+          roleConstant = ROLES.SUPERADMIN;
+        } else {
+          roleConstant = ROLES[matchResult.role];
+        }
       }
       
       // Perform a GET request to the /user-autocomplete endpoint with the query parameter.
       const response = await apiService.get('/user-autocomplete', { params: { q: query } });
       
-      // If no results and this was a role search, try with the original role name
+      // If no results and this was a role search, try with alternative role names
       if (isRoleSearch && (!response || response.length === 0)) {
+        let alternativeQueries = [];
+        
         // Try with the original role name (without underscore)
-        const originalRoleName = matchResult.role.replace('_', '');
+        if (matchResult.role.includes('_')) {
+          alternativeQueries.push(matchResult.role.replace('_', ''));
+        }
         
-        // Make a second request with the modified role name
-        const secondResponse = await apiService.get('/user-autocomplete', { params: { q: originalRoleName } });
+        // Try with the role name in both forms
+        if (matchResult.role === 'SUPERADMIN') {
+          alternativeQueries.push('SUPER_ADMIN');
+          alternativeQueries.push('super admin');
+        } else if (matchResult.role === 'SUPER_ADMIN') {
+          alternativeQueries.push('SUPERADMIN');
+          alternativeQueries.push('superadmin');
+        }
         
-        if (secondResponse && secondResponse.length > 0) {
-          return secondResponse;
+        // Try with the first alias of the role
+        const aliasesForRole = ROLE_ALIASES[matchResult.role];
+        if (aliasesForRole && aliasesForRole.length > 0) {
+          alternativeQueries.push(aliasesForRole[0]);
+        }
+        
+        // Try with each alternative query
+        for (const alternativeQuery of alternativeQueries) {
+          const alternativeResponse = await apiService.get('/user-autocomplete', { 
+            params: { q: alternativeQuery } 
+          });
+          
+          if (alternativeResponse && alternativeResponse.length > 0) {
+            return alternativeResponse;
+          }
         }
       }
       
