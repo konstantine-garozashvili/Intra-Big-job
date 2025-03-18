@@ -2,13 +2,98 @@
 
 {% block title %}Créer une formation{% endblock %}
 
+{% block stylesheets %}
+{{ parent() }}
+<style>
+    .form-wrapper {
+        margin: 2em auto;
+        max-width: 800px;
+        padding: 2rem;
+        background: white;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+    }
+    .form-title {
+        color: #2c3e50;
+        margin: 0 0 2rem 0;
+    }
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: #495057;
+        font-weight: 500;
+    }
+    .form-control {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        font-size: 1rem;
+    }
+    .form-control:focus {
+        border-color: #80bdff;
+        outline: 0;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+    .form-actions {
+        margin-top: 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .btn {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        border: none;
+        cursor: pointer;
+    }
+    .btn-primary {
+        background-color: #007bff;
+        color: white;
+    }
+    .btn-primary:hover {
+        background-color: #0056b3;
+        transform: translateY(-1px);
+    }
+    .btn-link {
+        color: #6c757d;
+        text-decoration: none;
+    }
+    .btn-link:hover {
+        color: #495057;
+        text-decoration: underline;
+    }
+</style>
+{% endblock %}
+
 {% block body %}
-<h1>Créer une nouvelle formation</h1>
+<div class="form-wrapper">
+    <h1 class="form-title">Créer une nouvelle formation</h1>
 
-{{ form_start(form) }}
-    {{ form_widget(form) }}
-    <button class="btn btn-primary">Créer la formation</button>
-{{ form_end(form) }}
+    {{ form_start(form) }}
+        <div class="form-group">
+            {{ form_label(form.name) }}
+            {{ form_widget(form.name, {'attr': {'class': 'form-control'}}) }}
+            {{ form_errors(form.name) }}
+        </div>
 
-<a href="{{ path('formation_list') }}">Retour à la liste des formations</a>
+        <div class="form-group">
+            {{ form_label(form.promotion) }}
+            {{ form_widget(form.promotion, {'attr': {'class': 'form-control'}}) }}
+            {{ form_errors(form.promotion) }}
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Créer la formation</button>
+            <a href="{{ path('formation_list') }}" class="btn-link">Retour à la liste des formations</a>
+        </div>
+    {{ form_end(form) }}
+</div>
 {% endblock %}

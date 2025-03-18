@@ -9,6 +9,10 @@ export const formationService = {
         return await apiService.get(`/api/formations/${id}`);
     },
 
+    async createFormation(formationData) {
+        return await apiService.post('/api/formations', formationData);
+    },
+
     async addStudentToFormation(formationId, studentId) {
         return await apiService.post(`/api/formations/${formationId}/students`, {
             studentId: studentId
