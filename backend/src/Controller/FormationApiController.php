@@ -65,6 +65,35 @@ class FormationApiController extends AbstractController
         return new JsonResponse($data);
     }
 
+    #[Route('', name: 'api_formations_create', methods: ['POST'])]
+    #[IsGranted('ROLE_TEACHER')]
+    public function create(Request $request): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+
+        if (!isset($data['name']) || !isset($data['promotion'])) {
+            return new JsonResponse(['error' => 'Name and promotion are required'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $formation = new Formation();
+        $formation->setName($data['name']);
+        $formation->setPromotion($data['promotion']);
+        if (isset($data['description'])) {
+            $formation->setDescription($data['description']);
+        }
+
+        $this->entityManager->persist($formation);
+        $this->entityManager->flush();
+
+        return new JsonResponse([
+            'id' => $formation->getId(),
+            'name' => $formation->getName(),
+            'promotion' => $formation->getPromotion(),
+            'description' => $formation->getDescription(),
+            'students' => []
+        ], Response::HTTP_CREATED);
+    }
+
     #[Route('/available-students', name: 'api_formations_available_students', methods: ['GET'])]
     #[IsGranted('ROLE_TEACHER')]
     public function getAvailableStudents(Request $request): JsonResponse

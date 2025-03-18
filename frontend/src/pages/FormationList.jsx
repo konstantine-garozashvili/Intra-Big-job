@@ -24,17 +24,25 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, UserPlus, Users, ChevronDown, ChevronUp } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Loader2, UserPlus, Users, ChevronDown, ChevronUp, Plus } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 
 const FormationList = () => {
   const [formations, setFormations] = useState([]);
   const [showModal, setShowModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedFormation, setSelectedFormation] = useState(null);
   const [selectedStudentIds, setSelectedStudentIds] = useState([]);
   const [availableStudents, setAvailableStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedFormation, setExpandedFormation] = useState(null);
+  const [newFormation, setNewFormation] = useState({
+    name: '',
+    promotion: '',
+    description: ''
+  });
 
   useEffect(() => {
     loadFormations();
@@ -81,6 +89,11 @@ const FormationList = () => {
     setAvailableStudents([]);
   };
 
+  const closeCreateModal = () => {
+    setShowCreateModal(false);
+    setNewFormation({ name: '', promotion: '', description: '' });
+  };
+
   const toggleStudent = (studentId) => {
     setSelectedStudentIds(prev => {
       if (prev.includes(studentId)) {
@@ -89,6 +102,28 @@ const FormationList = () => {
         return [...prev, studentId];
       }
     });
+  };
+
+  const handleCreateFormation = async (e) => {
+    e.preventDefault();
+    if (!newFormation.name || !newFormation.promotion) {
+      toast.error('Veuillez remplir tous les champs');
+      return;
+    }
+
+    try {
+      const response = await formationService.createFormation(newFormation);
+      if (response.success === false) {
+        toast.error(response.message || 'Erreur lors de la création de la formation');
+        return;
+      }
+      toast.success('Formation créée avec succès');
+      await loadFormations();
+      closeCreateModal();
+    } catch (error) {
+      console.error('Erreur lors de la création de la formation:', error);
+      toast.error('Erreur lors de la création de la formation');
+    }
   };
 
   const addStudents = async () => {
@@ -129,6 +164,10 @@ const FormationList = () => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <CardTitle className="text-2xl font-bold">Gestion des Formations</CardTitle>
+          <Button onClick={() => setShowCreateModal(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Créer une formation
+          </Button>
         </CardHeader>
         <CardContent>
           <Table>
@@ -176,20 +215,28 @@ const FormationList = () => {
                   {expandedFormation === formation.id && (
                     <TableRow>
                       <TableCell colSpan={4} className="bg-gray-50 p-4">
-                        <div className="space-y-2">
-                          <h4 className="font-medium text-sm text-gray-700 mb-2">Liste des étudiants inscrits :</h4>
-                          {formation.students.length > 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                              {formation.students.map(student => (
-                                <div key={student.id} className="flex items-center space-x-2 p-2 bg-white rounded-md shadow-sm">
-                                  <Users className="h-4 w-4 text-gray-500" />
-                                  <span>{student.firstName} {student.lastName}</span>
-                                </div>
-                              ))}
+                        <div className="space-y-4">
+                          {formation.description && (
+                            <div className="bg-white p-3 rounded-md shadow-sm">
+                              <h4 className="font-medium text-sm text-gray-700 mb-2">Description de la formation :</h4>
+                              <p className="text-gray-600 text-sm whitespace-pre-wrap">{formation.description}</p>
                             </div>
-                          ) : (
-                            <p className="text-gray-500 italic">Aucun étudiant inscrit</p>
                           )}
+                          <div>
+                            <h4 className="font-medium text-sm text-gray-700 mb-2">Liste des étudiants inscrits :</h4>
+                            {formation.students.length > 0 ? (
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                                {formation.students.map(student => (
+                                  <div key={student.id} className="flex items-center space-x-2 p-2 bg-white rounded-md shadow-sm">
+                                    <Users className="h-4 w-4 text-gray-500" />
+                                    <span>{student.firstName} {student.lastName}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-gray-500 italic">Aucun étudiant inscrit</p>
+                            )}
+                          </div>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -201,34 +248,15 @@ const FormationList = () => {
         </CardContent>
       </Card>
 
+      {/* Modal d'ajout d'étudiants */}
       <Dialog open={showModal} onOpenChange={setShowModal}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              Ajouter des étudiants à {selectedFormation?.name}
-            </DialogTitle>
+            <DialogTitle>Ajouter des étudiants à {selectedFormation?.name}</DialogTitle>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-sm text-gray-500">
-                {selectedStudentIds.length} étudiant{selectedStudentIds.length > 1 ? 's' : ''} sélectionné{selectedStudentIds.length > 1 ? 's' : ''}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  if (selectedStudentIds.length === availableStudents.length) {
-                    setSelectedStudentIds([]);
-                  } else {
-                    setSelectedStudentIds(availableStudents.map(student => student.id));
-                  }
-                }}
-              >
-                {selectedStudentIds.length === availableStudents.length ? "Tout désélectionner" : "Tout sélectionner"}
-              </Button>
-            </div>
+          <div className="py-4">
             <div className="space-y-4">
-              {availableStudents.map(student => (
+              {availableStudents.map((student) => (
                 <div key={student.id} className="flex items-center space-x-2">
                   <Checkbox
                     id={`student-${student.id}`}
@@ -249,10 +277,59 @@ const FormationList = () => {
             <Button variant="outline" onClick={closeModal}>
               Annuler
             </Button>
-            <Button onClick={addStudents} disabled={selectedStudentIds.length === 0}>
-              Ajouter {selectedStudentIds.length} étudiant{selectedStudentIds.length > 1 ? 's' : ''}
+            <Button onClick={addStudents}>
+              Ajouter les étudiants
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de création de formation */}
+      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Créer une nouvelle formation</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCreateFormation}>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="name">Nom de la formation</Label>
+                <Input
+                  id="name"
+                  value={newFormation.name}
+                  onChange={(e) => setNewFormation(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Entrez le nom de la formation"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="promotion">Promotion</Label>
+                <Input
+                  id="promotion"
+                  value={newFormation.promotion}
+                  onChange={(e) => setNewFormation(prev => ({ ...prev, promotion: e.target.value }))}
+                  placeholder="Entrez la promotion"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="description">Description</Label>
+                <textarea
+                  id="description"
+                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={newFormation.description}
+                  onChange={(e) => setNewFormation(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Entrez une description (optionnel)"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={closeCreateModal}>
+                Annuler
+              </Button>
+              <Button type="submit">
+                Créer la formation
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>
