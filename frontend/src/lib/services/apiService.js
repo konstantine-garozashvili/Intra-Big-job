@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Créer une instance axios avec des configurations par défaut
 const axiosInstance = axios.create({
-  timeout: 1500, // Réduit de 15000ms à 8000ms
+  timeout: 15000, // Increased from 1500ms to 15000ms
   headers: {
     'Accept': 'application/json',
     'X-Requested-With': 'XMLHttpRequest'
@@ -89,6 +89,20 @@ export const normalizeApiUrl = (path) => {
   return `${baseUrl}${baseUrl.endsWith('/') || path.startsWith('/') ? '' : '/'}${path}`;
 };
 
+// Add retry utility function at the top
+const retryRequest = async (requestFn, retryCount = 0, maxRetries = 3) => {
+  try {
+    return await requestFn();
+  } catch (error) {
+    if (retryCount < maxRetries && (error.code === 'ECONNABORTED' || error.message.includes('timeout'))) {
+      console.log(`Retrying request attempt ${retryCount + 1}/${maxRetries}...`);
+      await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+      return retryRequest(requestFn, retryCount + 1, maxRetries);
+    }
+    throw error;
+  }
+};
+
 /**
  * Service d'API pour gérer les appels centralisés
  */
@@ -134,10 +148,14 @@ const apiService = {
         }
       }
       
-      // Si pas en cache ou cache expiré, faire la requête
-      const response = await axiosInstance.get(url, authOptions);
+      // Use retry mechanism for the actual request
+      const response = await retryRequest(
+        () => axiosInstance.get(url, authOptions)
+      );
+      
       return response.data;
     } catch (error) {
+      console.error(`Error in GET request to ${path}:`, error);
       throw error;
     }
   },
@@ -171,7 +189,9 @@ const apiService = {
           ? formDataOptions 
           : this.withAuth(formDataOptions);
         
-        const response = await axiosInstance.post(url, data, authOptions);
+        const response = await retryRequest(
+          () => axiosInstance.post(url, data, authOptions)
+        );
         
         // Invalidate related caches for profile picture operations
         if (path.includes('/profile/picture')) {
@@ -186,7 +206,9 @@ const apiService = {
           ? options 
           : this.withAuth(options);
         
-        const response = await axiosInstance.post(url, data, authOptions);
+        const response = await retryRequest(
+          () => axiosInstance.post(url, data, authOptions)
+        );
         
         // Invalidate related caches for profile operations
         if (path.includes('/profile')) {
@@ -196,6 +218,7 @@ const apiService = {
         return response.data;
       }
     } catch (error) {
+      console.error(`Error in POST request to ${path}:`, error);
       throw error;
     }
   },
@@ -209,9 +232,12 @@ const apiService = {
    */
   async put(path, data = {}, options = {}) {
     try {
-      // Add authentication to the request
+      const url = normalizeApiUrl(path);
       const authOptions = this.withAuth(options);
-      const response = await axiosInstance.put(normalizeApiUrl(path), data, authOptions);
+      
+      const response = await retryRequest(
+        () => axiosInstance.put(url, data, authOptions)
+      );
       
       // Invalidate related caches for profile operations
       if (path.includes('/profile')) {
@@ -220,6 +246,7 @@ const apiService = {
       
       return response.data;
     } catch (error) {
+      console.error(`Error in PUT request to ${path}:`, error);
       throw error;
     }
   },
@@ -232,7 +259,7 @@ const apiService = {
    */
   async delete(path, options = {}) {
     try {
-      // Add authentication to the request
+      const url = normalizeApiUrl(path);
       const authOptions = this.withAuth(options);
       
       // Add cache busting for profile picture requests
@@ -242,13 +269,14 @@ const apiService = {
         options.params._t = timestamp;
       }
       
-      // Pour Axios delete, le second paramètre doit être un objet de configuration
-      // avec une propriété 'headers'
-      const response = await axiosInstance.delete(normalizeApiUrl(path), {
-        headers: authOptions.headers,
-        params: options.params,
-        data: options.data // Si vous avez besoin d'envoyer des données dans le corps
-      });
+      // Use retry mechanism for the actual request
+      const response = await retryRequest(
+        () => axiosInstance.delete(url, {
+          headers: authOptions.headers,
+          params: options.params,
+          data: options.data
+        })
+      );
       
       // Invalidate related caches for profile picture operations
       if (path.includes('/profile/picture')) {
@@ -257,6 +285,7 @@ const apiService = {
       
       return response.data;
     } catch (error) {
+      console.error(`Error in DELETE request to ${path}:`, error);
       throw error;
     }
   },
