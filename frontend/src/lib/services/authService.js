@@ -1,5 +1,6 @@
 import axios from 'axios';
 import apiService from './apiService';
+import { toast } from 'sonner';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
@@ -251,17 +252,41 @@ export const authService = {
    * @returns {boolean} - True si l'utilisateur a le rôle
    */
   hasRole(role) {
-    const token = this.getToken();
-    if (!token) return false;
-
-    try {
-      const decodedToken = decodeToken(token);
-      return decodedToken && decodedToken.roles && decodedToken.roles.includes(role);
-    } catch (error) {
-      return false;
+    const user = this.getUser();
+    if (!user) return false;
+    
+    // Extraire les rôles de l'utilisateur
+    let userRoles = [];
+    
+    if (Array.isArray(user.roles)) {
+      userRoles = user.roles;
+    } else if (typeof user.roles === 'object' && user.roles !== null) {
+      userRoles = Object.values(user.roles);
+    } else if (user.role) {
+      userRoles = Array.isArray(user.role) ? user.role : [user.role];
     }
+    
+    // Vérifier si l'utilisateur a le rôle spécifié
+    return userRoles.some(userRole => {
+      // Si le rôle est une chaîne de caractères
+      if (typeof userRole === 'string') {
+        const roleLower = userRole.toLowerCase();
+        const searchRole = role.toLowerCase();
+        return roleLower.includes(searchRole) || roleLower === 'role_' + searchRole;
+      }
+      
+      // Si le rôle est un objet
+      if (typeof userRole === 'object' && userRole !== null) {
+        // Essayer d'extraire le nom du rôle de différentes propriétés possibles
+        const roleName = (userRole.name || userRole.role || userRole.roleName || '').toLowerCase();
+        const searchRole = role.toLowerCase();
+        return roleName.includes(searchRole) || roleName === 'role_' + searchRole;
+      }
+      
+      return false;
+    });
   },
-
+  
   /**
    * Récupère les informations complètes de l'utilisateur connecté depuis l'API
    * @returns {Promise<Object>} - Données complètes de l'utilisateur
@@ -272,19 +297,55 @@ export const authService = {
         throw new Error('User not logged in');
       }
       
-      const response = await apiService.get('/user/current');
+      const response = await apiService.get('/me');
+      console.log('Réponse de /api/me:', response);
       
-      // Mettre à jour les informations stockées localement
-      if (response) {
-        localStorage.setItem('user', JSON.stringify(response));
+      // Extraire les données utilisateur de la réponse
+      let userData = response;
+      
+      // Vérifier si les données sont dans une propriété 'user' ou 'data'
+      if (response.user) {
+        userData = response.user;
+      } else if (response.data) {
+        userData = response.data;
+      } else if (response.success && response.user) {
+        userData = response.user;
       }
       
-      return response;
+      // Mettre à jour les informations stockées localement
+      if (userData) {
+        localStorage.setItem('user', JSON.stringify(userData));
+      }
+      
+      return userData;
     } catch (error) {
       console.error('Erreur lors de la récupération des informations utilisateur:', error);
       console.error('Détails:', error.response?.data || error.message);
       throw error;
     }
+  },
+  
+  /**
+   * Nettoie toutes les données d'authentification et redirige vers la page de connexion
+   * @param {boolean} showNotification - Indique si une notification doit être affichée
+   * @param {string} message - Message personnalisé à afficher dans la notification
+   */
+  clearAuthData(showNotification = true, message = 'Vous avez été déconnecté.') {
+    // Supprimer toutes les données d'authentification du localStorage
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('refreshToken');
+    
+    // Afficher une notification si demandé
+    if (showNotification) {
+      toast.success(message, {
+        duration: 3000,
+        position: 'top-center',
+      });
+    }
+    
+    // Rediriger vers la page de connexion
+    window.location.href = '/login';
   },
 };
 
