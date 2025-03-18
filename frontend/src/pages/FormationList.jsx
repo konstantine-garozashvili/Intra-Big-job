@@ -24,15 +24,17 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, UserPlus, Users } from "lucide-react";
+import { Loader2, UserPlus, Users, ChevronDown, ChevronUp } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const FormationList = () => {
   const [formations, setFormations] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [selectedFormation, setSelectedFormation] = useState(null);
-  const [selectedStudentId, setSelectedStudentId] = useState('');
+  const [selectedStudentIds, setSelectedStudentIds] = useState([]);
   const [availableStudents, setAvailableStudents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [expandedFormation, setExpandedFormation] = useState(null);
 
   useEffect(() => {
     loadFormations();
@@ -64,6 +66,7 @@ const FormationList = () => {
         return;
       }
       setAvailableStudents(response);
+      setSelectedStudentIds([]);
       setShowModal(true);
     } catch (error) {
       console.error('Erreur lors du chargement des étudiants disponibles:', error);
@@ -74,34 +77,43 @@ const FormationList = () => {
   const closeModal = () => {
     setShowModal(false);
     setSelectedFormation(null);
-    setSelectedStudentId('');
+    setSelectedStudentIds([]);
     setAvailableStudents([]);
   };
 
-  const addStudent = async () => {
-    if (!selectedStudentId || !selectedFormation) {
-      toast.error('Veuillez sélectionner un étudiant');
+  const toggleStudent = (studentId) => {
+    setSelectedStudentIds(prev => {
+      if (prev.includes(studentId)) {
+        return prev.filter(id => id !== studentId);
+      } else {
+        return [...prev, studentId];
+      }
+    });
+  };
+
+  const addStudents = async () => {
+    if (selectedStudentIds.length === 0 || !selectedFormation) {
+      toast.error('Veuillez sélectionner au moins un étudiant');
       return;
     }
 
     try {
-      const response = await formationService.addStudentToFormation(
-        selectedFormation.id,
-        selectedStudentId
+      const promises = selectedStudentIds.map(studentId =>
+        formationService.addStudentToFormation(selectedFormation.id, studentId)
       );
       
-      if (response.success === false) {
-        toast.error(response.message || 'Erreur lors de l\'ajout de l\'étudiant');
-        return;
-      }
-
-      toast.success('Étudiant ajouté avec succès');
+      await Promise.all(promises);
+      toast.success('Étudiants ajoutés avec succès');
       await loadFormations();
       closeModal();
     } catch (error) {
-      console.error('Erreur lors de l\'ajout de l\'étudiant:', error);
-      toast.error('Erreur lors de l\'ajout de l\'étudiant');
+      console.error('Erreur lors de l\'ajout des étudiants:', error);
+      toast.error('Erreur lors de l\'ajout des étudiants');
     }
+  };
+
+  const toggleFormationExpand = (formationId) => {
+    setExpandedFormation(expandedFormation === formationId ? null : formationId);
   };
 
   if (loading) {
@@ -117,10 +129,6 @@ const FormationList = () => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <CardTitle className="text-2xl font-bold">Gestion des Formations</CardTitle>
-          <Button variant="outline" onClick={() => {}}>
-            <UserPlus className="mr-2 h-4 w-4" />
-            Nouvelle Formation
-          </Button>
         </CardHeader>
         <CardContent>
           <Table>
@@ -134,28 +142,59 @@ const FormationList = () => {
             </TableHeader>
             <TableBody>
               {formations.map((formation) => (
-                <TableRow key={formation.id}>
-                  <TableCell className="font-medium">{formation.name}</TableCell>
-                  <TableCell>{formation.promotion}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center">
-                      <Users className="h-4 w-4 mr-2" />
-                      <Badge variant="secondary">
-                        {formation.students.length} étudiants
-                      </Badge>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => showAddStudentModal(formation)}
-                    >
-                      <UserPlus className="h-4 w-4 mr-2" />
-                      Ajouter un étudiant
-                    </Button>
-                  </TableCell>
-                </TableRow>
+                <React.Fragment key={formation.id}>
+                  <TableRow className="cursor-pointer hover:bg-gray-50" onClick={() => toggleFormationExpand(formation.id)}>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center">
+                        {expandedFormation === formation.id ? <ChevronUp className="w-4 h-4 mr-2" /> : <ChevronDown className="w-4 h-4 mr-2" />}
+                        {formation.name}
+                      </div>
+                    </TableCell>
+                    <TableCell>{formation.promotion}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center">
+                        <Users className="h-4 w-4 mr-2" />
+                        <Badge variant="secondary">
+                          {formation.students.length} étudiants
+                        </Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          showAddStudentModal(formation);
+                        }}
+                      >
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        Ajouter des étudiants
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                  {expandedFormation === formation.id && (
+                    <TableRow>
+                      <TableCell colSpan={4} className="bg-gray-50 p-4">
+                        <div className="space-y-2">
+                          <h4 className="font-medium text-sm text-gray-700 mb-2">Liste des étudiants inscrits :</h4>
+                          {formation.students.length > 0 ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                              {formation.students.map(student => (
+                                <div key={student.id} className="flex items-center space-x-2 p-2 bg-white rounded-md shadow-sm">
+                                  <Users className="h-4 w-4 text-gray-500" />
+                                  <span>{student.firstName} {student.lastName}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-gray-500 italic">Aucun étudiant inscrit</p>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </React.Fragment>
               ))}
             </TableBody>
           </Table>
@@ -163,34 +202,37 @@ const FormationList = () => {
       </Card>
 
       <Dialog open={showModal} onOpenChange={setShowModal}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>
-              Ajouter un étudiant à {selectedFormation?.name}
+              Ajouter des étudiants à {selectedFormation?.name}
             </DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <select
-                value={selectedStudentId}
-                onChange={(e) => setSelectedStudentId(e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">Choisir un étudiant</option>
-                {availableStudents.map(student => (
-                  <option key={student.id} value={student.id}>
+            <div className="space-y-4">
+              {availableStudents.map(student => (
+                <div key={student.id} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`student-${student.id}`}
+                    checked={selectedStudentIds.includes(student.id)}
+                    onCheckedChange={() => toggleStudent(student.id)}
+                  />
+                  <label
+                    htmlFor={`student-${student.id}`}
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
                     {student.firstName} {student.lastName}
-                  </option>
-                ))}
-              </select>
+                  </label>
+                </div>
+              ))}
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={closeModal}>
               Annuler
             </Button>
-            <Button onClick={addStudent} disabled={!selectedStudentId}>
-              Confirmer
+            <Button onClick={addStudents} disabled={selectedStudentIds.length === 0}>
+              Ajouter {selectedStudentIds.length} étudiant{selectedStudentIds.length > 1 ? 's' : ''}
             </Button>
           </DialogFooter>
         </DialogContent>
