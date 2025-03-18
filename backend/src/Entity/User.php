@@ -114,6 +114,10 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     #[ORM\OneToMany(mappedBy: 'user', targetEntity: UserStatus::class, orphanRemoval: true)]
     private Collection $userStatuses;
 
+    #[ORM\Column(type: 'boolean')]
+    #[Groups(['user:read'])]
+    private bool $isActive = false;
+
 
     public function __construct()
     {
@@ -221,7 +225,7 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
 
     public function setCreatedAt(\DateTimeImmutable $createdAt): static
     {
-        $this->createdAt = $createt;
+        $this->createdAt = $createdAt;
 
         return $this;
     }
@@ -539,6 +543,18 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
                 $userStatus->setUser(null);
             }
         }
+
+        return $this;
+    }
+
+    public function isUserActive(): bool
+    {
+        return $this->isActive;
+    }
+
+    public function setIsUserActive(bool $isUserActive): static
+    {
+        $this->isActive = $isUserActive;
 
         return $this;
     }
