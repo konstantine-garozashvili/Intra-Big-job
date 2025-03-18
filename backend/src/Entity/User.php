@@ -111,12 +111,17 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     #[ORM\OneToMany(mappedBy: 'user', targetEntity: UserDiploma::class, orphanRemoval: true)]
     private Collection $userDiplomas;
 
+    #[ORM\OneToMany(mappedBy: 'user', targetEntity: UserStatus::class, orphanRemoval: true)]
+    private Collection $userStatuses;
+
+
     public function __construct()
     {
         $this->createdAt = new \DateTimeImmutable();
         $this->userRoles = new ArrayCollection();
         $this->addresses = new ArrayCollection();
         $this->userDiplomas = new ArrayCollection();
+        $this->userStatuses = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -508,4 +513,34 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
         
         return $diplomas;
     }
+
+    /**
+     * @return Collection<int, UserStatus>
+     */
+    public function getUserStatuses(): Collection
+    {
+        return $this->userStatuses;
+    }
+
+    public function addUserStatus(UserStatus $userStatus): static
+    {
+        if (!$this->userStatuses->contains($userStatus)) {
+            $this->userStatuses->add($userStatus);
+            $userStatus->setUser($this);
+        }
+
+        return $this;
+    }
+
+    public function removeUserStatus(UserStatus $userStatus): static
+    {
+        if ($this->userStatuses->removeElement($userStatus)) {
+            if ($userStatus->getUser() === $this) {
+                $userStatus->setUser(null);
+            }
+        }
+
+        return $this;
+    }
 }
+

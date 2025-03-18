@@ -3,7 +3,10 @@
 namespace App\Entity;
 
 use App\Repository\StatusRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: StatusRepository::class)]
 class Status
@@ -11,40 +14,76 @@ class Status
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['status:read', 'user:read'])]
     private ?int $id = null;
 
-    #[ORM\Column]
-    private ?int $user_id = null;
+    #[ORM\Column(length: 255)]
+    #[Groups(['status:read', 'user:read'])]
+    private ?string $name = null;
 
-    #[ORM\Column]
-    private ?int $status_id = null;
+    #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['status:read', 'user:read'])]
+    private ?string $description = null;
+
+    #[ORM\OneToMany(mappedBy: 'status', targetEntity: UserStatus::class)]
+    private Collection $userStatuses;
+
+    public function __construct()
+    {
+        $this->userStatuses = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
         return $this->id;
     }
 
-    public function getUserId(): ?int
+    public function getName(): ?string
     {
-        return $this->user_id;
+        return $this->name;
     }
 
-    public function setUserId(int $user_id): static
+    public function setName(string $name): static
     {
-        $this->user_id = $user_id;
-
+        $this->name = $name;
         return $this;
     }
 
-    public function getStatusId(): ?int
+    public function getDescription(): ?string
     {
-        return $this->status_id;
+        return $this->description;
     }
 
-    public function setStatusId(int $status_id): static
+    public function setDescription(?string $description): static
     {
-        $this->status_id = $status_id;
+        $this->description = $description;
+        return $this;
+    }
 
+    /**
+     * @return Collection<int, UserStatus>
+     */
+    public function getUserStatuses(): Collection
+    {
+        return $this->userStatuses;
+    }
+
+    public function addUserStatus(UserStatus $userStatus): static
+    {
+        if (!$this->userStatuses->contains($userStatus)) {
+            $this->userStatuses->add($userStatus);
+            $userStatus->setStatus($this);
+        }
+        return $this;
+    }
+
+    public function removeUserStatus(UserStatus $userStatus): static
+    {
+        if ($this->userStatuses->removeElement($userStatus)) {
+            if ($userStatus->getStatus() === $this) {
+                $userStatus->setStatus(null);
+            }
+        }
         return $this;
     }
 }
