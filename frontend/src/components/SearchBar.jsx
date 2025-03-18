@@ -59,10 +59,22 @@ export const SearchBar = () => {
       if (hasRole(ROLES.SUPERADMIN)) {
         searchableRoles = ['ADMIN', 'SUPER_ADMIN', 'SUPERADMIN', 'TEACHER', 'STUDENT', 'RECRUITER', 'HR', 'GUEST'];
       }
-      // Admin et autres rôles peuvent rechercher la plupart des rôles
-      else if (hasAnyRole([ROLES.ADMIN, ROLES.TEACHER, ROLES.HR, ROLES.RECRUITER])) {
+      // Admin peut rechercher tous les rôles
+      else if (hasRole(ROLES.ADMIN)) {
         searchableRoles = ['ADMIN', 'SUPER_ADMIN', 'TEACHER', 'STUDENT', 'RECRUITER', 'HR', 'GUEST'];
       } 
+      // Teacher ne peut rechercher que les students et les HR
+      else if (hasRole(ROLES.TEACHER) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN])) {
+        searchableRoles = ['STUDENT', 'HR'];
+      }
+      // HR peut rechercher les teachers, students et recruiters
+      else if (hasRole(ROLES.HR) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN])) {
+        searchableRoles = ['TEACHER', 'STUDENT', 'RECRUITER'];
+      }
+      // Recruteurs ne peuvent chercher que les étudiants et les formateurs
+      else if (hasRole(ROLES.RECRUITER) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.HR, ROLES.TEACHER])) {
+        searchableRoles = ['TEACHER', 'STUDENT'];
+      }
       // Students can search for students, teachers, recruiters, and HR
       else if (hasRole(ROLES.STUDENT)) {
         searchableRoles = ['TEACHER', 'STUDENT', 'RECRUITER', 'HR'];
@@ -352,6 +364,12 @@ export const SearchBar = () => {
               <>En tant que Super Admin, vous pouvez rechercher tous les utilisateurs par nom ou par rôle : {allowedSearchRoles.map(role => 
                 role !== 'SUPERADMIN' ? getRoleDisplayFormat(role).toLowerCase() : null
               ).filter(Boolean).join(', ')}</>
+            ) : hasRole(ROLES.TEACHER) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN]) ? (
+              <>En tant que Formateur, vous pouvez uniquement rechercher des <strong>étudiants</strong> et des personnes des <strong>ressources humaines</strong> par nom ou par rôle</>
+            ) : hasRole(ROLES.RECRUITER) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.HR, ROLES.TEACHER]) ? (
+              <>En tant que Recruteur, vous pouvez uniquement rechercher des <strong>étudiants</strong> et des <strong>formateurs</strong> par nom ou par rôle</>
+            ) : hasRole(ROLES.HR) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN]) ? (
+              <>En tant que RH, vous pouvez uniquement rechercher des <strong>étudiants</strong>, des <strong>formateurs</strong> et des <strong>recruteurs</strong> par nom ou par rôle</>
             ) : allowedSearchRoles.length > 0 ? (
               allowedSearchRoles.length === 1 ? (
                 <>Vous pouvez rechercher des <strong>{getRoleDisplayFormat(allowedSearchRoles[0]).toLowerCase()}</strong> par nom</>
@@ -399,7 +417,13 @@ export const SearchBar = () => {
                       <Briefcase className="w-10 h-10 text-purple-300 mb-2" />
                       <p className="text-gray-500 font-medium">Aucun utilisateur trouvé avec ce rôle</p>
                       <p className="text-gray-400 text-sm mt-1">
-                        {allowedSearchRoles.length > 0 ? (
+                        {hasRole(ROLES.TEACHER) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN]) ? (
+                          <>En tant que Formateur, vous pouvez uniquement rechercher des <strong>étudiants</strong> et des personnes des <strong>ressources humaines</strong></>
+                        ) : hasRole(ROLES.RECRUITER) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.HR, ROLES.TEACHER]) ? (
+                          <>En tant que Recruteur, vous pouvez uniquement rechercher des <strong>étudiants</strong> et des <strong>formateurs</strong></>
+                        ) : hasRole(ROLES.HR) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN]) ? (
+                          <>En tant que RH, vous pouvez uniquement rechercher des <strong>étudiants</strong>, des <strong>formateurs</strong> et des <strong>recruteurs</strong></>
+                        ) : allowedSearchRoles.length > 0 ? (
                           allowedSearchRoles.length === 1 ? (
                             <>Vous pouvez uniquement rechercher des <strong>{getRoleDisplayFormat(allowedSearchRoles[0]).toLowerCase()}</strong></>
                           ) : (
@@ -415,7 +439,13 @@ export const SearchBar = () => {
                       <Search className="w-10 h-10 text-gray-300 mb-2" />
                       <p className="text-gray-500 font-medium">Aucun utilisateur trouvé</p>
                       <p className="text-gray-400 text-sm mt-1">
-                        {allowedSearchRoles.length > 0 ? (
+                        {hasRole(ROLES.TEACHER) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN]) ? (
+                          <>Essayez avec un autre terme ou recherchez par rôle : <strong>étudiant</strong> ou <strong>ressources humaines</strong></>
+                        ) : hasRole(ROLES.RECRUITER) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.HR, ROLES.TEACHER]) ? (
+                          <>Essayez avec un autre terme ou recherchez par rôle : <strong>étudiant</strong> ou <strong>formateur</strong></>
+                        ) : hasRole(ROLES.HR) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN]) ? (
+                          <>Essayez avec un autre terme ou recherchez par rôle : <strong>étudiant</strong>, <strong>formateur</strong> ou <strong>recruteur</strong></>
+                        ) : allowedSearchRoles.length > 0 ? (
                           allowedSearchRoles.length === 1 ? (
                             <>Essayez avec un autre terme ou recherchez par le rôle <strong>{getRoleDisplayFormat(allowedSearchRoles[0]).toLowerCase()}</strong></>
                           ) : (

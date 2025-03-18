@@ -32,9 +32,39 @@ export const userAutocompleteService = {
         throw new Error('Vous devez être connecté pour effectuer une recherche.');
       }
       
+      // Vérifier le rôle de l'utilisateur actuel
+      const currentUser = await authService.getCurrentUser();
+      const userRoles = currentUser?.roles || [];
+      
+      const isSuperAdmin = userRoles.includes(ROLES.SUPERADMIN);
+      const isAdmin = userRoles.includes(ROLES.ADMIN);
+      const isTeacher = userRoles.includes(ROLES.TEACHER) && !isSuperAdmin && !isAdmin;
+      const isHR = userRoles.includes(ROLES.HR) && !isSuperAdmin && !isAdmin;
+      const isRecruiter = userRoles.includes(ROLES.RECRUITER) && !isSuperAdmin && !isAdmin && !isTeacher && !isHR;
+
       // Check if this might be a role-based search using the centralized function
       const matchResult = matchRoleFromSearchTerm(query);
       const isRoleSearch = !!matchResult;
+      
+      // Vérifier les restrictions de rôle selon le rôle de l'utilisateur
+      if (isRoleSearch) {
+        const searchedRole = matchResult.role.toUpperCase();
+        
+        // Si c'est un teacher, il ne peut chercher que STUDENT et HR
+        if (isTeacher && searchedRole !== 'STUDENT' && searchedRole !== 'HR') {
+          return [];
+        }
+        
+        // Si c'est un RH, il ne peut chercher que TEACHER, STUDENT et RECRUITER
+        if (isHR && searchedRole !== 'TEACHER' && searchedRole !== 'STUDENT' && searchedRole !== 'RECRUITER') {
+          return [];
+        }
+        
+        // Si c'est un recruteur, il ne peut chercher que TEACHER et STUDENT
+        if (isRecruiter && searchedRole !== 'TEACHER' && searchedRole !== 'STUDENT') {
+          return [];
+        }
+      }
       
       let roleConstant = null;
       if (isRoleSearch) {
