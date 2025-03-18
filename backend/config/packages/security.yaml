@@ -47,19 +47,6 @@ security:
         - { path: ^/verification-error, roles: PUBLIC_ACCESS }
         - { path: ^/api/test, roles: PUBLIC_ACCESS }
         - { path: ^/api/me, roles: IS_AUTHENTICATED_FULLY }
-        
-        # Routes d'administration protégées
-        - { path: ^/api/admin, roles: [ROLE_ADMIN, ROLE_SUPER_ADMIN] }
-        - { path: ^/api/superadmin, roles: ROLE_SUPER_ADMIN }
-        
-        # Routes spécifiques aux rôles
-        - { path: ^/api/student, roles: [ROLE_STUDENT, ROLE_ADMIN, ROLE_SUPER_ADMIN] }
-        - { path: ^/api/teacher, roles: [ROLE_TEACHER, ROLE_ADMIN, ROLE_SUPER_ADMIN] }
-        - { path: ^/api/hr, roles: [ROLE_HR, ROLE_ADMIN, ROLE_SUPER_ADMIN] }
-        - { path: ^/api/guest, roles: [ROLE_GUEST, ROLE_ADMIN, ROLE_SUPER_ADMIN] }
-        - { path: ^/api/recruiter, roles: [ROLE_RECRUITER, ROLE_ADMIN, ROLE_SUPER_ADMIN] }
-        
-        # Règle générale pour les autres routes API
         - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
 
 when@test:

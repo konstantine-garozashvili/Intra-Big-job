@@ -78,11 +78,6 @@ export const canEditPersonalInfo = (userRole) => {
  * @returns {boolean} - Whether the field is editable
  */
 export const isFieldEditable = (userRole, fieldName) => {
-  // Superadmin can edit everything
-  if (userRole === 'ROLE_SUPER_ADMIN' || userRole === 'SUPER_ADMIN' || userRole === 'SUPERADMIN') {
-    return true;
-  }
-  
   // Only admin can edit email
   if (fieldName === 'email') return isAdmin(userRole);
   

@@ -6,6 +6,7 @@ import { toast } from "sonner"
 import { useRolePermissions } from "@/features/roles/useRolePermissions"
 import { useRoles } from "@/features/roles/roleContext"
 import QuickLoginButtons from './QuickLoginButtons'
+import { showGlobalLoader, hideGlobalLoader } from "@/lib/utils/loadingUtils"
 
 // Separate input component to prevent re-renders of the entire form
 const FormInput = React.memo(({ 
@@ -126,7 +127,10 @@ export function AuthForm() {
     setIsLoading(true)
     
     try {
-      await authService.login(formState.email, formState.password)
+      // Show global loading state with higher priority
+      showGlobalLoader()
+      
+      const response = await authService.login(formState.email, formState.password)
       
       if (formState.rememberMe) {
         localStorage.setItem('rememberedEmail', formState.email)
@@ -135,38 +139,78 @@ export function AuthForm() {
       }
       
       // Dispatch login success event
-      window.dispatchEvent(new Event('login-success'));
+      window.dispatchEvent(new Event('login-success'))
       
       // Get the return URL if it exists
       const returnTo = sessionStorage.getItem('returnTo')
       
-      // Navigate immediately without waiting for user data
-      if (returnTo) {
-        sessionStorage.removeItem('returnTo')
-        navigate(returnTo)
-      } else {
-        // Try to get a dashboard path from minimal user data in token
-        // If not available, use a default path
-        try {
-          const dashboardPath = permissions.getRoleDashboardPath() || '/dashboard';
-          navigate(dashboardPath);
-        } catch (error) {
-          navigate('/dashboard');
+      // Add small delay before navigation - REDUCED from 300ms to 150ms
+      setTimeout(() => {
+        if (returnTo) {
+          sessionStorage.removeItem('returnTo')
+          navigate(returnTo)
+        } else {
+          // Get role from token directly to determine dashboard path
+          const token = localStorage.getItem('token')
+          let dashboardPath = '/dashboard'
+          
+          if (token) {
+            try {
+              const tokenParts = token.split('.')
+              if (tokenParts.length === 3) {
+                const payload = JSON.parse(atob(tokenParts[1]))
+                if (payload.roles && payload.roles.length > 0) {
+                  // Determine dashboard path based on role
+                  const mainRole = payload.roles[0]
+                  switch (mainRole) {
+                    case 'ROLE_ADMIN':
+                      dashboardPath = '/admin/dashboard'
+                      break
+                    case 'ROLE_SUPERADMIN':
+                      dashboardPath = '/superadmin/dashboard'
+                      break
+                    case 'ROLE_TEACHER':
+                      dashboardPath = '/teacher/dashboard'
+                      break
+                    case 'ROLE_STUDENT':
+                      dashboardPath = '/student/dashboard'
+                      break
+                    case 'ROLE_HR':
+                      dashboardPath = '/hr/dashboard'
+                      break
+                    default:
+                      dashboardPath = '/dashboard'
+                  }
+                }
+              }
+            } catch (error) {
+              console.error('Error parsing token:', error)
+            }
+          }
+          
+          // Navigate directly to role-specific dashboard
+          navigate(dashboardPath)
         }
-      }
-      
-      // Show success toast after navigation
-      toast.success("Connexion réussie")
+        
+        // Show success toast after navigation
+        toast.success("Connexion réussie")
+      }, 150)
       
       // Listen for when full user data is loaded
       const handleUserDataLoaded = () => {
-        refreshRoles();
-        window.removeEventListener('user-data-loaded', handleUserDataLoaded);
-      };
+        refreshRoles()
+        window.removeEventListener('user-data-loaded', handleUserDataLoaded)
+        // Loading will be handled by global loading utilities now
+      }
       
-      window.addEventListener('user-data-loaded', handleUserDataLoaded);
+      window.addEventListener('user-data-loaded', handleUserDataLoaded)
       
     } catch (error) {
+      // Remove loading state on error after a brief delay
+      setTimeout(() => {
+        hideGlobalLoader()
+      }, 200)
+      
       if (error.response) {
         const { data } = error.response
         

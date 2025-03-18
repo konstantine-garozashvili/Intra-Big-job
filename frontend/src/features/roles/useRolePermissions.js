@@ -29,8 +29,8 @@ export const useRolePermissions = () => {
     },
     
     isFieldEditable: (fieldName) => {
-      // Admin et SuperAdmin peuvent éditer l'email
-      if (fieldName === 'email') return hasRole(ROLES.ADMIN) || hasRole(ROLES.SUPERADMIN);
+      // Only admin can edit email
+      if (fieldName === 'email') return permissions.isAdmin();
       
       // Portfolio URL can be edited by students and admins
       if (fieldName === 'portfolioUrl') {
@@ -51,7 +51,7 @@ export const useRolePermissions = () => {
       return false;
     },
     
-    canEditAddress: () => hasRole(ROLES.ADMIN) || hasRole(ROLES.SUPERADMIN),
+    canEditAddress: () => permissions.isAdmin(),
     
     showLinkedIn: () => {
       return permissions.isAdmin() || 

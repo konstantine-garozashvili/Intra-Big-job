@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Link } from 'react-router-dom';
+import DashboardHeader from '@/components/shared/DashboardHeader';
 
 import { 
   BookOpen, 
@@ -97,41 +98,11 @@ const TeacherDashboard = () => {
       className="p-0"
     >
       <div className="container p-4 mx-auto sm:p-6 lg:p-8 bg-gray-50 dark:bg-gray-900 min-h-screen">
-        {/* En-tête */}
-        <motion.div 
-          className="mb-8"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <Avatar className="h-16 w-16 border-4 border-primary/20">
-                <AvatarImage src={user?.avatar} alt={`${user?.firstName} ${user?.lastName}`} />
-                <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-white text-xl">
-                  {userInitials}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100">
-                  Bienvenue, {user?.firstName} {user?.lastName}
-                </h1>
-                <div className="flex items-center gap-2 mt-1">
-                  <School className="h-4 w-4 text-primary" />
-                  <p className="text-gray-600 dark:text-gray-400 font-medium">
-                    Formation {dashboardData?.formation?.name}
-                  </p>
-                </div>
-              </div>
-            </div>
-            <Link to="/profile">
-              <Button className="self-start md:self-center" size="sm">
-                <User className="mr-2 h-4 w-4" />
-                Voir mon profil
-              </Button>
-            </Link>
-          </div>
-        </motion.div>
+        <DashboardHeader 
+          user={user}
+          icon={GraduationCap}
+          roleTitle="Tableau de bord formateur"
+        />
 
         {/* Informations de la formation */}
         {dashboardData?.formation && (

@@ -1,5 +1,6 @@
 import axios from 'axios';
 import authService from '@services/authService';
+import apiService from '@/lib/services/apiService';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
@@ -34,6 +35,41 @@ const documentCache = {
     this.documents = null;
     this.documentsByType = {};
     this.lastFetch = null;
+    
+    // Also invalidate the API service cache
+    apiService.invalidateDocumentCache();
+  },
+  
+  // Mettre à jour le cache avec des données optimistes
+  updateOptimistically(type, document) {
+    if (!this.documents) {
+      this.documents = [];
+    }
+    
+    // Ajouter le document au cache global
+    this.documents.push(document);
+    
+    // Ajouter le document au cache par type
+    const normalizedType = type.toUpperCase();
+    if (!this.documentsByType[normalizedType]) {
+      this.documentsByType[normalizedType] = [];
+    }
+    
+    this.documentsByType[normalizedType].push(document);
+  },
+  
+  // Supprimer un document du cache
+  removeDocument(documentId) {
+    if (this.documents) {
+      this.documents = this.documents.filter(doc => doc.id !== documentId);
+    }
+    
+    // Supprimer de tous les caches par type
+    Object.keys(this.documentsByType).forEach(type => {
+      if (this.documentsByType[type]) {
+        this.documentsByType[type] = this.documentsByType[type].filter(doc => doc.id !== documentId);
+      }
+    });
   }
 };
 
@@ -79,6 +115,26 @@ class DocumentService {
    */
   async uploadCV(formData) {
     try {
+      // Extraire le fichier pour l'optimistic update
+      const file = formData.get('file') || formData.get('cv');
+      
+      // Créer un document temporaire pour l'optimistic update
+      const tempDocument = {
+        id: `temp-${Date.now()}`,
+        type: 'CV',
+        name: file ? file.name : 'CV en cours d\'upload',
+        mime_type: file ? file.type : 'application/pdf',
+        created_at: new Date().toISOString(),
+        is_temp: true // Marquer comme temporaire
+      };
+      
+      // Mettre à jour le cache avec le document temporaire
+      documentCache.updateOptimistically('CV', tempDocument);
+      
+      // Notifier les abonnés de la mise à jour optimiste
+      documentEvents.notify();
+      
+      // Ajouter le type au formData
       formData.append('type', 'CV');
       
       const config = {
@@ -101,6 +157,9 @@ class DocumentService {
       
       return response.data;
     } catch (error) {
+      // En cas d'erreur, forcer un rafraîchissement pour supprimer les documents temporaires
+      documentCache.clear();
+      documentEvents.notify();
       throw error;
     }
   }
@@ -113,6 +172,26 @@ class DocumentService {
    */
   async uploadCVForStudent(formData, studentId) {
     try {
+      // Extraire le fichier pour l'optimistic update
+      const file = formData.get('file') || formData.get('cv');
+      
+      // Créer un document temporaire pour l'optimistic update
+      const tempDocument = {
+        id: `temp-${Date.now()}`,
+        type: 'CV',
+        name: file ? file.name : 'CV en cours d\'upload',
+        mime_type: file ? file.type : 'application/pdf',
+        created_at: new Date().toISOString(),
+        student_id: studentId,
+        is_temp: true // Marquer comme temporaire
+      };
+      
+      // Mettre à jour le cache avec le document temporaire
+      documentCache.updateOptimistically('CV', tempDocument);
+      
+      // Notifier les abonnés de la mise à jour optimiste
+      documentEvents.notify();
+      
       const config = {
         headers: {
           'Authorization': `Bearer ${authService.getToken()}`
@@ -132,6 +211,9 @@ class DocumentService {
       
       return response.data;
     } catch (error) {
+      // En cas d'erreur, forcer un rafraîchissement pour supprimer les documents temporaires
+      documentCache.clear();
+      documentEvents.notify();
       throw error;
     }
   }
@@ -166,6 +248,12 @@ class DocumentService {
    */
   async deleteDocument(documentId) {
     try {
+      // Optimistic update - supprimer du cache avant la requête
+      documentCache.removeDocument(documentId);
+      
+      // Notifier les abonnés de la mise à jour optimiste
+      documentEvents.notify();
+      
       const response = await axios.delete(
         `${API_URL}/documents/${documentId}`,
         {
@@ -182,6 +270,9 @@ class DocumentService {
       
       return response.data;
     } catch (error) {
+      // En cas d'erreur, forcer un rafraîchissement pour restaurer l'état correct
+      documentCache.clear();
+      documentEvents.notify();
       throw error;
     }
   }
@@ -226,6 +317,7 @@ class DocumentService {
    */
   clearCache() {
     documentCache.clear();
+    documentEvents.notify();
   }
 }
 

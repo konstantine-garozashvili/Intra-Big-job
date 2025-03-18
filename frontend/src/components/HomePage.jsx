@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { authService } from '@/lib/services/authService';
 import { useRolePermissions } from '@/features/roles/useRolePermissions';
-import { Spinner } from './ui/spinner';
 
 /**
  * Composant pour la page d'accueil qui redirige vers la page appropriée 
@@ -34,15 +33,6 @@ const HomePage = () => {
 
     checkAuth();
   }, [permissions]);
-
-  // Show spinner while checking
-  if (isChecking) {
-    return (
-      <div className="flex justify-center items-center min-h-[70vh]">
-        <Spinner type="dots" size="lg" />
-      </div>
-    );
-  }
 
   // Redirection en fonction de l'état d'authentification
   return <Navigate to={isAuthenticated ? dashboardPath : '/login'} replace />;

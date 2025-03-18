@@ -11,18 +11,14 @@ export const usePersonalInformation = ({
   setEditedData
 }) => {
   const isStudent = userRole === 'ROLE_STUDENT';
-  const isSuperAdmin = userRole === 'ROLE_SUPER_ADMIN' || userRole === 'SUPER_ADMIN' || userRole === 'SUPERADMIN';
   const isAdmin = useCallback(() => {
-    const adminRoles = ['ROLE_ADMIN', 'ROLE_SUPER_ADMIN', 'ADMIN', 'SUPER_ADMIN', 'SUPERADMIN'];
+    const adminRoles = ['ROLE_ADMIN', 'ROLE_SUPER_ADMIN', 'ADMIN', 'SUPER_ADMIN'];
     return adminRoles.includes(userRole);
   }, [userRole])();
   
   const studentProfile = userData?.studentProfile || {};
   
   const isFieldEditable = useCallback((field) => {
-    // SuperAdmin can edit everything
-    if (isSuperAdmin) return true;
-    
     // Admins can edit everything
     if (isAdmin) return true;
     
@@ -41,7 +37,7 @@ export const usePersonalInformation = ({
     
     // Only allow editing the fields in the editableFields array
     return editableFields.includes(field);
-  }, [isAdmin, isStudent, userRole, isSuperAdmin]);
+  }, [isAdmin, isStudent, userRole]);
 
   // Function to handle input changes
   const handleInputChange = (field, value) => {
@@ -134,7 +130,6 @@ export const usePersonalInformation = ({
   return {
     isStudent,
     isAdmin,
-    isSuperAdmin,
     studentProfile,
     isFieldEditable,
     handleInputChange,

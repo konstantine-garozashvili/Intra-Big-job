@@ -1,5 +1,5 @@
-import React, { useMemo, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useStudentDashboardData } from '@/hooks/useDashboardQueries';
 import DashboardLayout from '@/components/DashboardLayout';
 import { motion } from 'framer-motion';
@@ -30,11 +30,6 @@ import * as RechartsPrimitive from "recharts";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { useRoles } from '@/features/roles/roleContext';
-import { useRolePermissions } from '@/features/roles/useRolePermissions';
-import { toast } from 'sonner';
-import { ROLES } from '@/features/roles/roleContext';
 
 // Variants d'animation
 const containerVariants = {
@@ -67,23 +62,6 @@ const fadeInVariants = {
 
 const StudentDashboard = () => {
   const { user, isLoading, isError, error } = useStudentDashboardData();
-  const { hasRole } = useRoles();
-  const permissions = useRolePermissions();
-  const navigate = useNavigate();
-  
-  useEffect(() => {
-    const isStudent = hasRole(ROLES.STUDENT);
-    
-    if (!isStudent) {
-      toast.error("Vous n'avez pas les droits d'accès à cette page", {
-        duration: 3000,
-        position: 'top-center',
-      });
-      
-      const dashboardPath = permissions.getRoleDashboardPath();
-      navigate(dashboardPath, { replace: true });
-    }
-  }, [hasRole, permissions, navigate]);
 
   // Données du graphique radar des compétences
   const competencesData = [
@@ -149,14 +127,6 @@ const StudentDashboard = () => {
     }
   ];
 
-  // Statistiques rapides
-  const quickStats = useMemo(() => [
-    { title: 'Cours suivis', value: '45/60', icon: BookOpen, color: 'text-blue-500', bgColor: 'bg-blue-100 dark:bg-blue-900/20' },
-    { title: 'Moyenne générale', value: '16.5/20', icon: Trophy, color: 'text-emerald-500', bgColor: 'bg-emerald-100 dark:bg-emerald-900/20' },
-    { title: 'Projets validés', value: '8/10', icon: FolderGit2, color: 'text-purple-500', bgColor: 'bg-purple-100 dark:bg-purple-900/20' },
-    { title: 'Taux de présence', value: '98%', icon: UserCheck, color: 'text-amber-500', bgColor: 'bg-amber-100 dark:bg-amber-900/20' },
-  ], []);
-
   // Prochains événements
   const upcomingEvents = [
     { 
@@ -197,69 +167,67 @@ const StudentDashboard = () => {
       <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8">
         {/* En-tête du dashboard avec avatar */}
         <motion.div 
-          initial={{ opacity: 0, y: -15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8"
-        >
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <Avatar className="h-16 w-16 border-4 border-white dark:border-gray-800 shadow-md">
-                <AvatarImage src={user?.avatar} alt={`${user?.firstName} ${user?.lastName}`} />
-                <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-white text-xl">
-                  {user?.firstName?.[0]}{user?.lastName?.[0]}
-                </AvatarFallback>
-              </Avatar>
-            </div>
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100">
-                Bienvenue, {user?.firstName || 'Étudiant'}
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
-                <Sparkles className="h-3.5 w-3.5 text-primary" />
-                <span>Tableau de bord étudiant</span>
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button variant="outline" size="sm" className="gap-2 relative">
-              <Bell className="h-4 w-4" />
-              <span className="hidden sm:inline">Notifications</span>
-              <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
-                3
-              </span>
-            </Button>
-            <Link to="/profile">
-              <Button size="sm" className="gap-2 bg-primary hover:bg-primary/90">
-                <User className="h-4 w-4" />
-                <span className="hidden sm:inline">Mon profil</span>
-              </Button>
-            </Link>
-          </div>
-        </motion.div>
-
-        {/* Statistiques rapides */}
-        <motion.div 
-          variants={containerVariants}
+          variants={{
+            hidden: { opacity: 0, y: -15 },
+            visible: { opacity: 1, y: 0, transition: { duration: 0.4 } }
+          }}
           initial="hidden"
           animate="visible"
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
+          className="relative p-6 mb-8 overflow-hidden bg-white shadow-lg dark:bg-gray-800 rounded-xl"
         >
-          {quickStats.map((stat, index) => (
-            <motion.div key={stat.title} variants={itemVariants}>
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 p-4 border border-gray-100 dark:border-gray-700">
-                <div className="flex items-center gap-4">
-                  <div className={`rounded-full p-3 ${stat.bgColor}`}>
-                    <stat.icon className={`h-5 w-5 ${stat.color}`} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{stat.title}</p>
-                    <h3 className="text-xl font-bold mt-0.5 text-gray-900 dark:text-gray-100">{stat.value}</h3>
-                  </div>
-                </div>
+          <div className="flex flex-col items-start justify-between md:flex-row md:items-center">
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <Avatar className="h-16 w-16 border-4 border-white dark:border-gray-800 shadow-md">
+                  <AvatarImage src={user?.avatar} alt={`${user?.firstName} ${user?.lastName}`} />
+                  <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-white text-xl">
+                    {user?.firstName?.[0]}{user?.lastName?.[0]}
+                  </AvatarFallback>
+                </Avatar>
               </div>
-            </motion.div>
-          ))}
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100">
+                  Bienvenue{" "}
+                  <span className="relative inline-block px-3 py-1 text-white transition-all duration-300 transform rounded-lg shadow-md bg-gradient-to-r from-blue-500 to-indigo-600 hover:scale-105">
+                    <span className="relative inline-block">
+                      {user?.firstName || 'Étudiant'}
+                    </span>
+                    <motion.div
+                      className="absolute inset-0 bg-white rounded-lg opacity-0"
+                      animate={{
+                        opacity: [0, 0.1, 0],
+                        scale: [1, 1.05, 1]
+                      }}
+                      transition={{
+                        duration: 2,
+                        repeat: Infinity,
+                        ease: "easeInOut"
+                      }}
+                    />
+                  </span>
+                </h1>
+                <p className="text-gray-600 dark:text-gray-400 flex items-center gap-1.5 mt-1">
+                  <Sparkles className="h-3.5 w-3.5 text-primary" />
+                  <span>Tableau de bord étudiant</span>
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center mt-4 md:mt-0 gap-3">
+              <div className="flex items-center mr-4">
+                <Clock className="w-5 h-5 mr-2 text-blue-500 dark:text-blue-400" />
+                <span className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+                  {new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                </span>
+              </div>
+              <Link to="/profile">
+                <Button size="sm" className="gap-2 bg-primary hover:bg-primary/90">
+                  <User className="h-4 w-4" />
+                  <span className="hidden sm:inline">Mon profil</span>
+                </Button>
+              </Link>
+            </div>
+          </div>
+          <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-indigo-600"></div>
         </motion.div>
 
         {/* Cartes principales */}

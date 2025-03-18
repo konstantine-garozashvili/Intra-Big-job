@@ -275,6 +275,7 @@ class UserPictureController extends AbstractController
         $user = $this->security->getUser();
         
         if (!$user) {
+            error_log('[ProfilePicture] Error: User not authenticated');
             return $this->json([
                 'success' => false,
                 'message' => 'Utilisateur non authentifié'
@@ -283,6 +284,7 @@ class UserPictureController extends AbstractController
         
         try {
             $picturePath = $user->getProfilePicturePath();
+            error_log('[ProfilePicture] User ID: ' . $user->getId() . ', Picture Path: ' . ($picturePath ?: 'null'));
             
             if (!$picturePath) {
                 return $this->json([
@@ -295,18 +297,27 @@ class UserPictureController extends AbstractController
             }
             
             // Get the URL to access the profile picture
-            $pictureUrl = $storageFactory->getDocumentUrl($picturePath);
-            
-            return $this->json([
-                'success' => true,
-                'data' => [
-                    'has_profile_picture' => true,
-                    'profile_picture_path' => $picturePath,
-                    'profile_picture_url' => $pictureUrl
-                ]
-            ]);
+            try {
+                $pictureUrl = $storageFactory->getDocumentUrl($picturePath);
+                error_log('[ProfilePicture] Generated URL: ' . $pictureUrl);
+                
+                return $this->json([
+                    'success' => true,
+                    'data' => [
+                        'has_profile_picture' => true,
+                        'profile_picture_path' => $picturePath,
+                        'profile_picture_url' => $pictureUrl
+                    ]
+                ]);
+            } catch (\Exception $urlError) {
+                error_log('[ProfilePicture] URL Generation Error: ' . $urlError->getMessage());
+                error_log('[ProfilePicture] Stack trace: ' . $urlError->getTraceAsString());
+                throw $urlError;
+            }
             
         } catch (\Exception $e) {
+            error_log('[ProfilePicture] General Error: ' . $e->getMessage());
+            error_log('[ProfilePicture] Stack trace: ' . $e->getTraceAsString());
             return $this->json([
                 'success' => false,
                 'message' => 'Une erreur est survenue lors de la récupération de la photo de profil: ' . $e->getMessage()
