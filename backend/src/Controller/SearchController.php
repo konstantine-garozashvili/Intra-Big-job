@@ -199,7 +199,7 @@ class SearchController extends AbstractController
         $guestRoles = ['GUEST', 'ROLE_GUEST'];
         
         $hasSuperAdminRole = count(array_intersect($superAdminRoles, $userRoles)) > 0;
-        $hasAdminRole = count(array_intersect($adminRoles, $userRoles)) > 0;
+        $hasAdminRole = count(array_intersect($adminRoles, $userRoles)) > 0 && !$hasSuperAdminRole;
         $hasTeacherRole = count(array_intersect($teacherRoles, $userRoles)) > 0 && !$hasAdminRole && !$hasSuperAdminRole;
         $hasHrRole = count(array_intersect($hrRoles, $userRoles)) > 0 && !$hasAdminRole && !$hasSuperAdminRole;
         $hasRecruiterRole = count(array_intersect($recruiterRoles, $userRoles)) > 0 && !$hasAdminRole && !$hasSuperAdminRole && !$hasTeacherRole && !$hasHrRole;
@@ -220,11 +220,16 @@ class SearchController extends AbstractController
             $this->logger->debug('Super Admin user detected, allowing ALL roles', ['allowedRoles' => $allowedRoles]);
         }
         else if ($hasAdminRole) {
-            // Admin a accès à tous les rôles
-            $allowedRoles = ['SUPER_ADMIN', 'ADMIN', 'TEACHER', 'STUDENT', 'RECRUITER', 'HR', 'GUEST',
-                            'ROLE_SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_TEACHER', 'ROLE_STUDENT', 'ROLE_RECRUITER', 'ROLE_HR', 'ROLE_GUEST',
-                            'SUPERADMIN', 'ROLE_SUPERADMIN'];
-            $this->logger->debug('Admin user detected, allowing all roles', ['allowedRoles' => $allowedRoles]);
+            // Admin peut chercher tous les rôles SAUF superadmin
+            $allowedRoles = [
+                'ADMIN', 'ROLE_ADMIN', 
+                'TEACHER', 'ROLE_TEACHER', 
+                'STUDENT', 'ROLE_STUDENT', 
+                'RECRUITER', 'ROLE_RECRUITER', 
+                'HR', 'ROLE_HR', 
+                'GUEST', 'ROLE_GUEST'
+            ];
+            $this->logger->debug('Admin user detected, allowing all roles except superadmin', ['allowedRoles' => $allowedRoles]);
         }
         else if ($hasTeacherRole) {
             // Les formateurs ne peuvent chercher que les étudiants et les RH

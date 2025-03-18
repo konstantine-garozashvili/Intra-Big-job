@@ -37,7 +37,7 @@ export const userAutocompleteService = {
       const userRoles = currentUser?.roles || [];
       
       const isSuperAdmin = userRoles.includes(ROLES.SUPERADMIN);
-      const isAdmin = userRoles.includes(ROLES.ADMIN);
+      const isAdmin = userRoles.includes(ROLES.ADMIN) && !isSuperAdmin;
       const isTeacher = userRoles.includes(ROLES.TEACHER) && !isSuperAdmin && !isAdmin;
       const isHR = userRoles.includes(ROLES.HR) && !isSuperAdmin && !isAdmin;
       const isRecruiter = userRoles.includes(ROLES.RECRUITER) && !isSuperAdmin && !isAdmin && !isTeacher && !isHR;
@@ -49,6 +49,11 @@ export const userAutocompleteService = {
       // Vérifier les restrictions de rôle selon le rôle de l'utilisateur
       if (isRoleSearch) {
         const searchedRole = matchResult.role.toUpperCase();
+        
+        // Si c'est un admin, il ne peut pas chercher les superadmins
+        if (isAdmin && (searchedRole === 'SUPER_ADMIN' || searchedRole === 'SUPERADMIN')) {
+          return [];
+        }
         
         // Si c'est un teacher, il ne peut chercher que STUDENT et HR
         if (isTeacher && searchedRole !== 'STUDENT' && searchedRole !== 'HR') {

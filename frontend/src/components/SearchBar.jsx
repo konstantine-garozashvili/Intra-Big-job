@@ -59,9 +59,9 @@ export const SearchBar = () => {
       if (hasRole(ROLES.SUPERADMIN)) {
         searchableRoles = ['ADMIN', 'SUPER_ADMIN', 'SUPERADMIN', 'TEACHER', 'STUDENT', 'RECRUITER', 'HR', 'GUEST'];
       }
-      // Admin peut rechercher tous les rôles
+      // Admin peut rechercher tous les rôles SAUF superadmin
       else if (hasRole(ROLES.ADMIN)) {
-        searchableRoles = ['ADMIN', 'SUPER_ADMIN', 'TEACHER', 'STUDENT', 'RECRUITER', 'HR', 'GUEST'];
+        searchableRoles = ['ADMIN', 'TEACHER', 'STUDENT', 'RECRUITER', 'HR', 'GUEST'];
       } 
       // Teacher ne peut rechercher que les students et les HR
       else if (hasRole(ROLES.TEACHER) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN])) {
@@ -364,6 +364,10 @@ export const SearchBar = () => {
               <>En tant que Super Admin, vous pouvez rechercher tous les utilisateurs par nom ou par rôle : {allowedSearchRoles.map(role => 
                 role !== 'SUPERADMIN' ? getRoleDisplayFormat(role).toLowerCase() : null
               ).filter(Boolean).join(', ')}</>
+            ) : hasRole(ROLES.ADMIN) ? (
+              <>En tant qu'Admin, vous pouvez rechercher tous les utilisateurs par nom ou par rôle, à l'exception des <strong>super admins</strong> : {allowedSearchRoles.map(role => 
+                getRoleDisplayFormat(role).toLowerCase()
+              ).join(', ')}</>
             ) : hasRole(ROLES.TEACHER) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN]) ? (
               <>En tant que Formateur, vous pouvez uniquement rechercher des <strong>étudiants</strong> et des personnes des <strong>ressources humaines</strong> par nom ou par rôle</>
             ) : hasRole(ROLES.RECRUITER) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.HR, ROLES.TEACHER]) ? (
@@ -417,7 +421,9 @@ export const SearchBar = () => {
                       <Briefcase className="w-10 h-10 text-purple-300 mb-2" />
                       <p className="text-gray-500 font-medium">Aucun utilisateur trouvé avec ce rôle</p>
                       <p className="text-gray-400 text-sm mt-1">
-                        {hasRole(ROLES.TEACHER) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN]) ? (
+                        {hasRole(ROLES.ADMIN) && !hasRole(ROLES.SUPERADMIN) ? (
+                          <>En tant qu'Admin, vous ne pouvez pas rechercher les <strong>super admins</strong>. Essayez un autre rôle.</>
+                        ) : hasRole(ROLES.TEACHER) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN]) ? (
                           <>En tant que Formateur, vous pouvez uniquement rechercher des <strong>étudiants</strong> et des personnes des <strong>ressources humaines</strong></>
                         ) : hasRole(ROLES.RECRUITER) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.HR, ROLES.TEACHER]) ? (
                           <>En tant que Recruteur, vous pouvez uniquement rechercher des <strong>étudiants</strong> et des <strong>formateurs</strong></>
@@ -439,7 +445,9 @@ export const SearchBar = () => {
                       <Search className="w-10 h-10 text-gray-300 mb-2" />
                       <p className="text-gray-500 font-medium">Aucun utilisateur trouvé</p>
                       <p className="text-gray-400 text-sm mt-1">
-                        {hasRole(ROLES.TEACHER) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN]) ? (
+                        {hasRole(ROLES.ADMIN) && !hasRole(ROLES.SUPERADMIN) ? (
+                          <>Essayez avec un autre terme ou recherchez par rôle (à l'exception des <strong>super admins</strong>) : {allowedSearchRoles.map(role => getRoleDisplayFormat(role).toLowerCase()).join(', ')}</>
+                        ) : hasRole(ROLES.TEACHER) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN]) ? (
                           <>Essayez avec un autre terme ou recherchez par rôle : <strong>étudiant</strong> ou <strong>ressources humaines</strong></>
                         ) : hasRole(ROLES.RECRUITER) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.HR, ROLES.TEACHER]) ? (
                           <>Essayez avec un autre terme ou recherchez par rôle : <strong>étudiant</strong> ou <strong>formateur</strong></>
