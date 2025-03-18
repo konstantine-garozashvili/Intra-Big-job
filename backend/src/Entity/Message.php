@@ -21,6 +21,11 @@ class Message
     #[Groups(['message:read'])]
     private ?User $sender = null;
 
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: true)]
+    #[Groups(['message:read'])]
+    private ?User $recipient = null;
+
     #[ORM\Column(type: Types::TEXT)]
     #[Groups(['message:read'])]
     private ?string $content = null;
@@ -56,6 +61,18 @@ class Message
     public function setSender(?User $sender): static
     {
         $this->sender = $sender;
+
+        return $this;
+    }
+
+    public function getRecipient(): ?User
+    {
+        return $this->recipient;
+    }
+
+    public function setRecipient(?User $recipient): static
+    {
+        $this->recipient = $recipient;
 
         return $this;
     }

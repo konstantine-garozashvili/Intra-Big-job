@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\User;
+use App\Repository\UserRepository;
 use App\Service\RegistrationService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -13,19 +14,56 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 
 #[Route('/api')]
 class UserController extends AbstractController
 {
     private $security;
     private $serializer;
+    private $userRepository;
     
     public function __construct(
         Security $security,
-        SerializerInterface $serializer
+        SerializerInterface $serializer,
+        UserRepository $userRepository
     ) {
         $this->security = $security;
         $this->serializer = $serializer;
+        $this->userRepository = $userRepository;
+    }
+    
+    /**
+     * Récupère la liste de tous les utilisateurs
+     */
+    #[Route('/users/list', name: 'api_users_list', methods: ['GET'])]
+    public function listUsers(): JsonResponse
+    {
+        /** @var User $currentUser */
+        $currentUser = $this->security->getUser();
+        
+        if (!$currentUser) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Utilisateur non authentifié'
+            ], 401);
+        }
+        
+        // Récupérer tous les utilisateurs
+        $users = $this->userRepository->findAll();
+        
+        $context = [
+            'groups' => ['message:read'],
+            AbstractNormalizer::CIRCULAR_REFERENCE_HANDLER => function ($object) {
+                return $object->getId();
+            },
+            'enable_max_depth' => true,
+            'json_encode_options' => JSON_PRETTY_PRINT
+        ];
+        
+        return $this->json(
+            json_decode($this->serializer->serialize($users, 'json', $context), true)
+        );
     }
     
     #[Route('/register', name: 'app_register', methods: ['POST'])]
