@@ -25,6 +25,7 @@ import './index.css'
 import ProtectedRoute from './components/ProtectedRoute'
 import PublicRoute from './components/PublicRoute'
 import RecruiterProtectedRoute from './components/RecruiterProtectedRoute'
+import TeacherProtectedRoute from './components/TeacherProtectedRoute'
 
 // Fonction pour précharger les pages au survol des liens
 const preloadPages = () => {
@@ -42,6 +43,7 @@ const preloadPages = () => {
   const preloadHomePage = () => import('./components/HomePage'); // Préchargement de HomePage
   const preloadGuestStudentRoleManager = () => import('./pages/Recruiter/GuestStudentRoleManager'); // Préchargement de GuestStudentRoleManager
   const preloadFormationList = () => import('./pages/FormationList'); // Préchargement de FormationList
+  const preloadTeacherProtectedRoute = () => import('./components/TeacherProtectedRoute'); // Préchargement de TeacherProtectedRoute
   
   // Déclencher le préchargement
   preloadLogin();
@@ -57,6 +59,7 @@ const preloadPages = () => {
   preloadHomePage();
   preloadGuestStudentRoleManager();
   preloadFormationList();
+  preloadTeacherProtectedRoute();
 };
 
 // Composant pour observer les liens et précharger les pages correspondantes
@@ -106,6 +109,10 @@ const App = () => {
                 <Route element={<ProtectedRoute />}>
                   <Route path="/profil" element={<Profil />} />
                   <Route path="/dashboard" element={<Dashboard />} />
+                </Route>
+                
+                {/* Routes pour les enseignants, administrateurs et super-administrateurs */}
+                <Route element={<TeacherProtectedRoute />}>
                   <Route path="/formations" element={<FormationList />} />
                 </Route>
                 
