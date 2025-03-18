@@ -2,29 +2,29 @@ import apiService from './apiService';
 
 export const formationService = {
     async getAllFormations() {
-        return await apiService.get('/api/formations');
+        return await apiService.get('/formations');
     },
 
     async getFormationById(id) {
-        return await apiService.get(`/api/formations/${id}`);
+        return await apiService.get(`/formations/${id}`);
     },
 
     async createFormation(formationData) {
-        return await apiService.post('/api/formations', formationData);
+        return await apiService.post('/formations', formationData);
     },
 
     async addStudentToFormation(formationId, studentId) {
-        return await apiService.post(`/api/formations/${formationId}/students`, {
+        return await apiService.post(`/formations/${formationId}/students`, {
             studentId: studentId
         });
     },
 
     async getFormationStudents(formationId) {
-        return await apiService.get(`/api/formations/${formationId}/students`);
+        return await apiService.get(`/formations/${formationId}/students`);
     },
 
     async getAvailableStudents(formationId) {
-        return await apiService.get(`/api/formations/available-students`, {
+        return await apiService.get(`/formations/available-students`, {
             params: { formationId }
         });
     }

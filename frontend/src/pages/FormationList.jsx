@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { formationService } from '../lib/services/formationService';
+import authService from '../lib/services/authService';
 import { toast } from 'sonner';
 import {
   Card,
@@ -38,6 +39,7 @@ const FormationList = () => {
   const [availableStudents, setAvailableStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedFormation, setExpandedFormation] = useState(null);
+  const [hasCreatePermission, setHasCreatePermission] = useState(false);
   const [newFormation, setNewFormation] = useState({
     name: '',
     promotion: '',
@@ -46,6 +48,7 @@ const FormationList = () => {
 
   useEffect(() => {
     loadFormations();
+    checkPermissions();
   }, []);
 
   const loadFormations = async () => {
@@ -63,6 +66,13 @@ const FormationList = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const checkPermissions = () => {
+    const isTeacher = authService.hasRole('teacher');
+    const isAdmin = authService.hasRole('admin');
+    const isSuperAdmin = authService.hasRole('superadmin');
+    setHasCreatePermission(isTeacher || isAdmin || isSuperAdmin);
   };
 
   const showAddStudentModal = async (formation) => {
@@ -164,10 +174,12 @@ const FormationList = () => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <CardTitle className="text-2xl font-bold">Gestion des Formations</CardTitle>
-          <Button onClick={() => setShowCreateModal(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Créer une formation
-          </Button>
+          {hasCreatePermission && (
+            <Button onClick={() => setShowCreateModal(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Créer une formation
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           <Table>
