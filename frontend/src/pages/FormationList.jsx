@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { formationService } from '../lib/services/formationService';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 
 const FormationList = () => {
   const [formations, setFormations] = useState([]);

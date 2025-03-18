@@ -4,6 +4,25 @@ import apiService from './apiService';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 /**
+ * Décode un token JWT
+ * @param {string} token - Le token JWT à décoder
+ * @returns {Object|null} - Le contenu décodé du token ou null si invalide
+ */
+function decodeToken(token) {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    return JSON.parse(jsonPayload);
+  } catch (error) {
+    console.error('Erreur lors du décodage du token:', error);
+    return null;
+  }
+}
+
+/**
  * Service pour l'authentification et la gestion des utilisateurs
  */
 export const authService = {
@@ -199,12 +218,12 @@ export const authService = {
   },
 
   /**
-   * Récupère les informations de l'utilisateur connecté
-   * @returns {Object|null} - Informations de l'utilisateur ou null
+   * Récupère l'utilisateur stocké dans le localStorage
+   * @returns {Object|null} - Données de l'utilisateur ou null
    */
   getUser() {
-    const userStr = localStorage.getItem('user');
-    return userStr ? JSON.parse(userStr) : null;
+    const user = localStorage.getItem('user');
+    return user ? JSON.parse(user) : null;
   },
 
   /**
@@ -212,7 +231,35 @@ export const authService = {
    * @returns {boolean} - True si connecté
    */
   isLoggedIn() {
-    return !!this.getToken();
+    const token = this.getToken();
+    if (!token) return false;
+
+    try {
+      const decodedToken = decodeToken(token);
+      if (!decodedToken) return false;
+      
+      const currentTime = Date.now() / 1000;
+      return decodedToken.exp > currentTime;
+    } catch (error) {
+      return false;
+    }
+  },
+
+  /**
+   * Vérifie si l'utilisateur a un rôle spécifique
+   * @param {string} role - Le rôle à vérifier
+   * @returns {boolean} - True si l'utilisateur a le rôle
+   */
+  hasRole(role) {
+    const token = this.getToken();
+    if (!token) return false;
+
+    try {
+      const decodedToken = decodeToken(token);
+      return decodedToken && decodedToken.roles && decodedToken.roles.includes(role);
+    } catch (error) {
+      return false;
+    }
   },
 
   /**
@@ -220,39 +267,33 @@ export const authService = {
    * @returns {Promise<Object>} - Données complètes de l'utilisateur
    */
   async getCurrentUser() {
-    const token = this.getToken();
-    if (!token) {
-      throw new Error('Aucun token d\'authentification trouvé');
-    }
-
     try {
-      const response = await apiService.get('/me', apiService.withAuth());
+      if (!this.isLoggedIn()) {
+        throw new Error('User not logged in');
+      }
       
-      // Extraire l'objet utilisateur si la réponse contient un objet "user"
-      const userData = response.user || response;
+      const response = await apiService.get('/user/current');
       
-      return userData;
+      // Mettre à jour les informations stockées localement
+      if (response) {
+        localStorage.setItem('user', JSON.stringify(response));
+      }
+      
+      return response;
     } catch (error) {
-      console.error('Erreur lors de la récupération des données utilisateur:', error);
+      console.error('Erreur lors de la récupération des informations utilisateur:', error);
       console.error('Détails:', error.response?.data || error.message);
       throw error;
     }
-  }
+  },
 };
 
 // Générer ou récupérer un identifiant unique pour l'appareil
 function getOrCreateDeviceId() {
-  // Vérifier si un deviceId existe déjà dans le localStorage
   let deviceId = localStorage.getItem('device_id');
   
-  // Si non, en créer un nouveau
   if (!deviceId) {
-    // Générer un identifiant unique (UUID v4)
-    deviceId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-      const r = Math.random() * 16 | 0;
-      const v = c === 'x' ? r : (r & 0x3 | 0x8);
-      return v.toString(16);
-    });
+    deviceId = 'web_' + Math.random().toString(36).substring(2, 15);
     localStorage.setItem('device_id', deviceId);
   }
   
@@ -261,32 +302,29 @@ function getOrCreateDeviceId() {
 
 // Obtenir des informations de base sur l'appareil
 function getDeviceInfo() {
-  const userAgent = navigator.userAgent;
-  let deviceType = 'unknown';
-  let deviceName = 'Browser';
+  const userAgent = window.navigator.userAgent;
+  let deviceName = 'Unknown Device';
+  let deviceType = 'web';
   
-  // Détection simple du type d'appareil
-  if (/Android/i.test(userAgent)) {
-    deviceType = 'mobile';
+  // Détecter le système d'exploitation
+  if (userAgent.includes('Windows')) {
+    deviceName = 'Windows Device';
+  } else if (userAgent.includes('Mac')) {
+    deviceName = 'Mac Device';
+  } else if (userAgent.includes('Linux')) {
+    deviceName = 'Linux Device';
+  } else if (userAgent.includes('Android')) {
     deviceName = 'Android Device';
-  } else if (/iPhone|iPad|iPod/i.test(userAgent)) {
     deviceType = 'mobile';
+  } else if (userAgent.includes('iPhone') || userAgent.includes('iPad')) {
     deviceName = 'iOS Device';
-  } else if (/Windows/i.test(userAgent)) {
-    deviceType = 'desktop';
-    deviceName = 'Windows PC';
-  } else if (/Macintosh/i.test(userAgent)) {
-    deviceType = 'desktop';
-    deviceName = 'Mac';
-  } else if (/Linux/i.test(userAgent)) {
-    deviceType = 'desktop';
-    deviceName = 'Linux';
+    deviceType = 'mobile';
   }
   
   return {
-    deviceType,
-    deviceName
+    deviceName,
+    deviceType
   };
 }
 
-export default authService; 
+export default authService;
