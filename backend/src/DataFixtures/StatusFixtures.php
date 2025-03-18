@@ -15,7 +15,7 @@ class StatusFixtures extends Fixture
     public const STATUS_GRADUATED = 'status-graduated';
     public const STATUS_ON_LEAVE = 'status-on-leave';
 
-    // ✅ Ajout du statut par défaut
+    // Ajout du statut par défaut
     public const STATUS_DEFAULT = self::STATUS_ACTIVE; 
 
 
