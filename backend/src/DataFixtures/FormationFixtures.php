@@ -13,24 +13,19 @@ class FormationFixtures extends Fixture implements DependentFixtureInterface
     {
         $formations = [
             [
-                'name' => 'Développement Web Full Stack',
+                'name' => 'Formation 1',
                 'promotion' => '2024-2025',
-                'description' => 'Formation complète en développement web, couvrant à la fois le front-end et le back-end.'
+                'description' => 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.'
             ],
             [
-                'name' => 'DevOps & Cloud Computing',
+                'name' => 'Formation 2',
                 'promotion' => '2024-2025',
-                'description' => 'Formation aux pratiques DevOps et aux technologies cloud modernes.'
+                'description' => 'Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.'
             ],
             [
-                'name' => 'Intelligence Artificielle & Data Science',
+                'name' => 'Formation 3',
                 'promotion' => '2024-2025',
-                'description' => 'Formation approfondie en IA et analyse de données.'
-            ],
-            [
-                'name' => 'Cybersécurité',
-                'promotion' => '2024-2025',
-                'description' => 'Formation aux techniques de sécurité informatique et à la protection des systèmes.'
+                'description' => 'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.'
             ]
         ];
 
