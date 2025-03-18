@@ -215,20 +215,28 @@ const FormationList = () => {
                   {expandedFormation === formation.id && (
                     <TableRow>
                       <TableCell colSpan={4} className="bg-gray-50 p-4">
-                        <div className="space-y-2">
-                          <h4 className="font-medium text-sm text-gray-700 mb-2">Liste des étudiants inscrits :</h4>
-                          {formation.students.length > 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                              {formation.students.map(student => (
-                                <div key={student.id} className="flex items-center space-x-2 p-2 bg-white rounded-md shadow-sm">
-                                  <Users className="h-4 w-4 text-gray-500" />
-                                  <span>{student.firstName} {student.lastName}</span>
-                                </div>
-                              ))}
+                        <div className="space-y-4">
+                          {formation.description && (
+                            <div className="bg-white p-3 rounded-md shadow-sm">
+                              <h4 className="font-medium text-sm text-gray-700 mb-2">Description de la formation :</h4>
+                              <p className="text-gray-600 text-sm whitespace-pre-wrap">{formation.description}</p>
                             </div>
-                          ) : (
-                            <p className="text-gray-500 italic">Aucun étudiant inscrit</p>
                           )}
+                          <div>
+                            <h4 className="font-medium text-sm text-gray-700 mb-2">Liste des étudiants inscrits :</h4>
+                            {formation.students.length > 0 ? (
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                                {formation.students.map(student => (
+                                  <div key={student.id} className="flex items-center space-x-2 p-2 bg-white rounded-md shadow-sm">
+                                    <Users className="h-4 w-4 text-gray-500" />
+                                    <span>{student.firstName} {student.lastName}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-gray-500 italic">Aucun étudiant inscrit</p>
+                            )}
+                          </div>
                         </div>
                       </TableCell>
                     </TableRow>
