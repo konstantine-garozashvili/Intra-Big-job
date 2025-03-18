@@ -1,0 +1,14 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Test Formulaire{% endblock %}
+
+{% block body %}
+<h1>Formulaire de test</h1>
+
+{# Ajoute data-turbo="false" pour désactiver Turbo pour ce formulaire #}
+{{ form_start(form, {'attr': {'data-turbo': 'false'}}) }}
+    {{ form_widget(form) }}
+    <button class="btn btn-primary">Envoyer</button>
+{{ form_end(form) }}
+
+{% endblock %}

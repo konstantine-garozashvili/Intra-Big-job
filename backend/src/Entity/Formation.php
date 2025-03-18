@@ -80,7 +80,7 @@ class Formation
     {
         return $this->students;
     }
-    
+    // Ajoute un étudiant à la formation
     public function addStudent(User $student): self
     {
         if (!$this->students->contains($student)) {

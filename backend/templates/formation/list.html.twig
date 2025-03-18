@@ -4,6 +4,9 @@
 
 {% block body %}
 <h1>Liste des formations</h1>
+
+<a href="{{ path('formation_new') }}" class="btn btn-success">Créer une formation</a>
+
 <ul>
     {% for formation in formations %}
         <li>
