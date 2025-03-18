@@ -190,34 +190,70 @@ class SearchController extends AbstractController
         $this->logger->debug('Current user roles', ['roles' => $userRoles]);
         
         // Check if user has any of these roles (with or without ROLE_ prefix)
-        $adminRoles = ['SUPER_ADMIN', 'ADMIN', 'TEACHER', 'HR', 'RECRUITER', 
-                      'ROLE_SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_TEACHER', 'ROLE_HR', 'ROLE_RECRUITER',
-                      'SUPERADMIN'];
+        $superAdminRoles = ['SUPERADMIN', 'ROLE_SUPERADMIN', 'SUPER_ADMIN', 'ROLE_SUPER_ADMIN'];
+        $adminRoles = ['ADMIN', 'ROLE_ADMIN'];
+        $teacherRoles = ['TEACHER', 'ROLE_TEACHER'];
+        $hrRoles = ['HR', 'ROLE_HR'];
+        $recruiterRoles = ['RECRUITER', 'ROLE_RECRUITER'];
         $studentRoles = ['STUDENT', 'ROLE_STUDENT'];
         $guestRoles = ['GUEST', 'ROLE_GUEST'];
         
-        $hasAdminRole = count(array_intersect($adminRoles, $userRoles)) > 0;
+        $hasSuperAdminRole = count(array_intersect($superAdminRoles, $userRoles)) > 0;
+        $hasAdminRole = count(array_intersect($adminRoles, $userRoles)) > 0 && !$hasSuperAdminRole;
+        $hasTeacherRole = count(array_intersect($teacherRoles, $userRoles)) > 0 && !$hasAdminRole && !$hasSuperAdminRole;
+        $hasHrRole = count(array_intersect($hrRoles, $userRoles)) > 0 && !$hasAdminRole && !$hasSuperAdminRole;
+        $hasRecruiterRole = count(array_intersect($recruiterRoles, $userRoles)) > 0 && !$hasAdminRole && !$hasSuperAdminRole && !$hasTeacherRole && !$hasHrRole;
         $hasStudentRole = count(array_intersect($studentRoles, $userRoles)) > 0;
         $hasGuestRole = count(array_intersect($guestRoles, $userRoles)) > 0;
         
-        if ($hasAdminRole) {
-            // Admin, Super Admin, Teacher, HR, Recruiter can search everyone
-            $allowedRoles = ['SUPER_ADMIN', 'ADMIN', 'TEACHER', 'STUDENT', 'RECRUITER', 'HR', 'GUEST',
-                            'ROLE_SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_TEACHER', 'ROLE_STUDENT', 'ROLE_RECRUITER', 'ROLE_HR', 'ROLE_GUEST',
-                            'SUPERADMIN'];
-            $this->logger->debug('Admin user detected, allowing all roles', ['allowedRoles' => $allowedRoles]);
-        } elseif ($hasStudentRole) {
-            // Students can search students, teachers, recruiters, and HR
-            $allowedRoles = ['TEACHER', 'STUDENT', 'RECRUITER', 'HR',
-                            'ROLE_TEACHER', 'ROLE_STUDENT', 'ROLE_RECRUITER', 'ROLE_HR'];
+        if ($hasSuperAdminRole) {
+            // Super Admin peut chercher absolument tous les rôles
+            $allowedRoles = [
+                'SUPER_ADMIN', 'ROLE_SUPER_ADMIN', 'SUPERADMIN', 'ROLE_SUPERADMIN',
+                'ADMIN', 'ROLE_ADMIN', 
+                'TEACHER', 'ROLE_TEACHER', 
+                'STUDENT', 'ROLE_STUDENT', 
+                'RECRUITER', 'ROLE_RECRUITER', 
+                'HR', 'ROLE_HR', 
+                'GUEST', 'ROLE_GUEST'
+            ];
+            $this->logger->debug('Super Admin user detected, allowing ALL roles', ['allowedRoles' => $allowedRoles]);
+        }
+        else if ($hasAdminRole) {
+            // Admin peut chercher tous les rôles SAUF superadmin
+            $allowedRoles = [
+                'ADMIN', 'ROLE_ADMIN', 
+                'TEACHER', 'ROLE_TEACHER', 
+                'STUDENT', 'ROLE_STUDENT', 
+                'RECRUITER', 'ROLE_RECRUITER', 
+                'HR', 'ROLE_HR', 
+                'GUEST', 'ROLE_GUEST'
+            ];
+            $this->logger->debug('Admin user detected, allowing all roles except superadmin', ['allowedRoles' => $allowedRoles]);
+        }
+        else if ($hasTeacherRole) {
+            // Les formateurs ne peuvent chercher que les étudiants et les RH
+            $allowedRoles = ['STUDENT', 'ROLE_STUDENT', 'HR', 'ROLE_HR'];
+            $this->logger->debug('Teacher user detected, restricting to STUDENT and HR roles', ['allowedRoles' => $allowedRoles]);
+        }
+        else if ($hasHrRole) {
+            // Les RH peuvent chercher les étudiants, formateurs et recruteurs
+            $allowedRoles = ['TEACHER', 'ROLE_TEACHER', 'STUDENT', 'ROLE_STUDENT', 'RECRUITER', 'ROLE_RECRUITER'];
+            $this->logger->debug('HR user detected, restricting to TEACHER, STUDENT and RECRUITER roles', ['allowedRoles' => $allowedRoles]);
+        }
+        else if ($hasRecruiterRole) {
+            // Les recruteurs ne peuvent chercher que les étudiants et les formateurs
+            $allowedRoles = ['TEACHER', 'ROLE_TEACHER', 'STUDENT', 'ROLE_STUDENT'];
+            $this->logger->debug('Recruiter user detected, restricting to TEACHER and STUDENT roles', ['allowedRoles' => $allowedRoles]);
+        }
+        else if ($hasStudentRole) {
+            // Students can only search for students, teachers, recruiters, and HR
+            $allowedRoles = ['TEACHER', 'ROLE_TEACHER', 'STUDENT', 'ROLE_STUDENT', 'RECRUITER', 'ROLE_RECRUITER', 'HR', 'ROLE_HR'];
             $this->logger->debug('Student user detected, applying role restrictions', ['allowedRoles' => $allowedRoles]);
-        } elseif ($hasGuestRole) {
+        } else if ($hasGuestRole) {
             // Guests can only search recruiters
             $allowedRoles = ['RECRUITER', 'ROLE_RECRUITER'];
             $this->logger->debug('Guest user detected, applying role restrictions', ['allowedRoles' => $allowedRoles]);
-        } else {
-            // Default fallback - treat as guest
-            $this->logger->debug('Unknown user role, applying default restrictions', ['allowedRoles' => $allowedRoles]);
         }
         
         return $allowedRoles;

@@ -114,41 +114,57 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
     {
         // Role alias mapping (for translation and common terms)
         $roleAliases = [
-            // Super Admin aliases
-            'superadmin' => 'SUPER_ADMIN',
-            'super admin' => 'SUPER_ADMIN',
-            'super' => 'SUPER_ADMIN',
+            // Super Admin aliases - Extended version
+            'superadmin' => 'SUPERADMIN',
+            'super admin' => 'SUPERADMIN',
+            'super-admin' => 'SUPERADMIN',
+            'super' => 'SUPERADMIN',
+            'super adm' => 'SUPERADMIN',
+            'super administrateur' => 'SUPERADMIN',
+            'superadministrateur' => 'SUPERADMIN',
+            'super-administrateur' => 'SUPERADMIN',
             
-            // Student aliases
+            // Student aliases - Extended version
             'etudiant' => 'STUDENT',
             'étudiant' => 'STUDENT',
             'etud' => 'STUDENT',
             'étud' => 'STUDENT',
-            'student' => 'STUDENT', // Keep English for compatibility
+            'student' => 'STUDENT', 
+            'élève' => 'STUDENT',
+            'eleve' => 'STUDENT',
+            'apprenant' => 'STUDENT',
             
-            // Admin aliases
+            // Admin aliases - Extended version
             'admin' => 'ADMIN',
             'adm' => 'ADMIN',
+            'administrateur' => 'ADMIN',
             
-            // Teacher aliases
+            // Teacher aliases - Extended version
             'formateur' => 'TEACHER',
             'forma' => 'TEACHER',
             'form' => 'TEACHER',
+            'enseignant' => 'TEACHER',
+            'prof' => 'TEACHER',
+            'professeur' => 'TEACHER',
             
-            // HR aliases
+            // HR aliases - Extended version
             'ressources humaines' => 'HR',
             'ressources' => 'HR',
             'rh' => 'HR',
+            'hr' => 'HR',
+            'human resources' => 'HR',
             
-            // Guest aliases
+            // Guest aliases - Extended version
             'invité' => 'GUEST',
             'invite' => 'GUEST',
             'inv' => 'GUEST',
+            'guest' => 'GUEST',
             
-            // Recruiter aliases
+            // Recruiter aliases - Extended version
             'recruteur' => 'RECRUITER',
             'recru' => 'RECRUITER',
-            'rec' => 'RECRUITER'
+            'rec' => 'RECRUITER',
+            'recruiter' => 'RECRUITER'
         ];
         
         // Check if the search term matches any role alias - improved detection with more lenient matching
@@ -187,17 +203,10 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
             }
         }
         
-        // Map standardized role names to database role names
-        if ($roleSearchTerm) {
-            // Map from standardized format to database format
-            $roleNameMapping = [
-                'SUPER_ADMIN' => 'SUPERADMIN',
-                // Add other mappings if needed
-            ];
-            
-            if (isset($roleNameMapping[$roleSearchTerm])) {
-                $roleSearchTerm = $roleNameMapping[$roleSearchTerm];
-            }
+        // Mapping special case for SUPER_ADMIN (pour assurer la compatibilité)
+        if ($roleSearchTerm === 'SUPERADMIN') {
+            // Check if we need to use SUPER_ADMIN format instead based on database format
+            return 'SUPERADMIN';
         }
         
         return $roleSearchTerm;
