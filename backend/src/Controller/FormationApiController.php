@@ -36,9 +36,19 @@ class FormationApiController extends AbstractController
     }
 
     #[Route('', name: 'api_formations_list', methods: ['GET'])]
-    #[IsGranted('ROLE_TEACHER')]
+    #[IsGranted('IS_AUTHENTICATED_FULLY')]
     public function list(): JsonResponse
     {
+        // Vérifier si l'utilisateur a l'un des rôles requis
+        $user = $this->getUser();
+        $userRoles = $user->getRoles();
+        
+        if (!in_array('ROLE_TEACHER', $userRoles) && 
+            !in_array('ROLE_ADMIN', $userRoles) && 
+            !in_array('ROLE_SUPERADMIN', $userRoles)) {
+            return new JsonResponse(['error' => 'Accès refusé'], Response::HTTP_FORBIDDEN);
+        }
+        
         $formations = $this->formationRepository->findAll();
         $data = [];
 
@@ -66,9 +76,19 @@ class FormationApiController extends AbstractController
     }
 
     #[Route('/available-students', name: 'api_formations_available_students', methods: ['GET'])]
-    #[IsGranted('ROLE_TEACHER')]
+    #[IsGranted('IS_AUTHENTICATED_FULLY')]
     public function getAvailableStudents(Request $request): JsonResponse
     {
+        // Vérifier si l'utilisateur a l'un des rôles requis
+        $user = $this->getUser();
+        $userRoles = $user->getRoles();
+        
+        if (!in_array('ROLE_TEACHER', $userRoles) && 
+            !in_array('ROLE_ADMIN', $userRoles) && 
+            !in_array('ROLE_SUPERADMIN', $userRoles)) {
+            return new JsonResponse(['error' => 'Accès refusé'], Response::HTTP_FORBIDDEN);
+        }
+        
         $formationId = $request->query->get('formationId');
         $formation = $formationId ? $this->formationRepository->find($formationId) : null;
 
@@ -99,9 +119,19 @@ class FormationApiController extends AbstractController
     }
 
     #[Route('/{id}/students', name: 'api_formations_add_student', methods: ['POST'])]
-    #[IsGranted('ROLE_TEACHER')]
+    #[IsGranted('IS_AUTHENTICATED_FULLY')]
     public function addStudent(Formation $formation, Request $request): JsonResponse
     {
+        // Vérifier si l'utilisateur a l'un des rôles requis
+        $user = $this->getUser();
+        $userRoles = $user->getRoles();
+        
+        if (!in_array('ROLE_TEACHER', $userRoles) && 
+            !in_array('ROLE_ADMIN', $userRoles) && 
+            !in_array('ROLE_SUPERADMIN', $userRoles)) {
+            return new JsonResponse(['error' => 'Accès refusé'], Response::HTTP_FORBIDDEN);
+        }
+        
         $data = json_decode($request->getContent(), true);
         $studentId = $data['studentId'] ?? null;
 
