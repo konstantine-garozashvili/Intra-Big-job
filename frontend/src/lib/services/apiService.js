@@ -146,7 +146,7 @@ const apiService = {
    */
   async post(path, data = {}, options = {}) {
     try {
-      console.log(`[apiService] POST ${path}:`, { data: { ...data, password: data.password ? '***' : undefined } });
+      console.log(`[apiService] POST ${path}:`, { data });
       const url = normalizeApiUrl(path);
       const response = await axios.post(url, data, options);
       return response.data;
