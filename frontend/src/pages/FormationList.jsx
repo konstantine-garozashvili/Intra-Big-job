@@ -38,6 +38,7 @@ const FormationList = () => {
   const [selectedStudentIds, setSelectedStudentIds] = useState([]);
   const [availableStudents, setAvailableStudents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [expandedFormation, setExpandedFormation] = useState(null);
   const [hasCreatePermission, setHasCreatePermission] = useState(false);
   const [newFormation, setNewFormation] = useState({
@@ -122,6 +123,7 @@ const FormationList = () => {
     }
 
     try {
+      setIsSubmitting(true);
       const response = await formationService.createFormation(newFormation);
       if (response.success === false) {
         toast.error(response.message || 'Erreur lors de la création de la formation');
@@ -133,6 +135,8 @@ const FormationList = () => {
     } catch (error) {
       console.error('Erreur lors de la création de la formation:', error);
       toast.error('Erreur lors de la création de la formation');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -311,6 +315,7 @@ const FormationList = () => {
                   value={newFormation.name}
                   onChange={(e) => setNewFormation(prev => ({ ...prev, name: e.target.value }))}
                   placeholder="Entrez le nom de la formation"
+                  disabled={isSubmitting}
                 />
               </div>
               <div className="grid gap-2">
@@ -320,6 +325,7 @@ const FormationList = () => {
                   value={newFormation.promotion}
                   onChange={(e) => setNewFormation(prev => ({ ...prev, promotion: e.target.value }))}
                   placeholder="Entrez la promotion"
+                  disabled={isSubmitting}
                 />
               </div>
               <div className="grid gap-2">
@@ -330,15 +336,23 @@ const FormationList = () => {
                   value={newFormation.description}
                   onChange={(e) => setNewFormation(prev => ({ ...prev, description: e.target.value }))}
                   placeholder="Entrez une description (optionnel)"
+                  disabled={isSubmitting}
                 />
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={closeCreateModal}>
+              <Button type="button" variant="outline" onClick={closeCreateModal} disabled={isSubmitting}>
                 Annuler
               </Button>
-              <Button type="submit">
-                Créer la formation
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Création en cours...
+                  </>
+                ) : (
+                  'Créer la formation'
+                )}
               </Button>
             </DialogFooter>
           </form>
