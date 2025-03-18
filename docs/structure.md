@@ -12,7 +12,7 @@ backend/
 │   │   ├── HR/           # Fonctionnalités RH
 │   │   ├── Student/      # Fonctionnalités Étudiant
 │   │   ├── SuperAdmin/   # Fonctionnalités Super Admin
-│   │   ├── Teacher/      # Fonctionnalités Professeur
+│   │   ├── Teacher/      # Fonctionnalités Formateur
 │   │   └── User/         # Fonctionnalités Utilisateur
 │   ├── Service/          # Services publics partagés
 │   └── Controller/       # Contrôleurs publics partagés
@@ -28,7 +28,7 @@ frontend/
 │   │   ├── HR/          # Pages RH
 │   │   ├── Student/     # Pages Étudiant
 │   │   ├── SuperAdmin/  # Pages Super Admin
-│   │   ├── Teacher/     # Pages Professeur
+│   │   ├── Teacher/     # Pages Formateur
 │   │   └── User/        # Pages Utilisateur
 │   ├── components/      # Composants React réutilisables
 │   │   ├── ui/          # Composants UI génériques

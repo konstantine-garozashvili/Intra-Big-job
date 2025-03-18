@@ -16,7 +16,7 @@ Intra-Bigjob-Group-5/
 │   │   │   ├── HR/       # Fonctionnalités RH
 │   │   │   ├── Student/  # Fonctionnalités Étudiant
 │   │   │   ├── SuperAdmin/# Fonctionnalités Super Admin
-│   │   │   ├── Teacher/  # Fonctionnalités Professeur
+│   │   │   ├── Teacher/  # Fonctionnalités Formateur
 │   │   │   └── User/     # Fonctionnalités Utilisateur
 │   │   ├── Controller/   # Contrôleurs publics partagés
 │   │   ├── Entity/       # Entités Doctrine partagées
@@ -41,7 +41,7 @@ Intra-Bigjob-Group-5/
 │   │   │   ├── HR/      # Pages RH
 │   │   │   ├── Student/ # Pages Étudiant
 │   │   │   ├── SuperAdmin/# Pages Super Admin
-│   │   │   ├── Teacher/ # Pages Professeur
+│   │   │   ├── Teacher/ # Pages Formateur
 │   │   │   └── User/    # Pages Utilisateur
 │   │   ├── services/    # Services partagés (API, auth, etc.)
 │   │   ├── layouts/     # Layouts de l'application

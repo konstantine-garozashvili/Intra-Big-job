@@ -3,7 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\DiplomaRepository;
-use Doctrine\DBAL\Types\Types;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
 
@@ -20,18 +21,17 @@ class Diploma
     #[Groups(['diploma:read', 'user:read'])]
     private ?string $name = null;
 
-    #[ORM\ManyToOne(inversedBy: 'diplomas')]
-    #[ORM\JoinColumn(nullable: false)]
-    #[Groups(['diploma:read'])]
-    private ?User $user = null;
-
-    #[ORM\Column(type: Types::DATE_MUTABLE)]
-    #[Groups(['diploma:read', 'user:read'])]
-    private ?\DateTimeInterface $date = null;
-
     #[ORM\Column(length: 255)]
     #[Groups(['diploma:read', 'user:read'])]
     private ?string $institution = null;
+
+    #[ORM\OneToMany(mappedBy: 'diploma', targetEntity: UserDiploma::class, orphanRemoval: true)]
+    private Collection $userDiplomas;
+
+    public function __construct()
+    {
+        $this->userDiplomas = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -50,30 +50,6 @@ class Diploma
         return $this;
     }
 
-    public function getUser(): ?User
-    {
-        return $this->user;
-    }
-
-    public function setUser(?User $user): static
-    {
-        $this->user = $user;
-
-        return $this;
-    }
-
-    public function getDate(): ?\DateTimeInterface
-    {
-        return $this->date;
-    }
-
-    public function setDate(\DateTimeInterface $date): static
-    {
-        $this->date = $date;
-
-        return $this;
-    }
-
     public function getInstitution(): ?string
     {
         return $this->institution;
@@ -85,4 +61,34 @@ class Diploma
 
         return $this;
     }
-} 
+
+    /**
+     * @return Collection<int, UserDiploma>
+     */
+    public function getUserDiplomas(): Collection
+    {
+        return $this->userDiplomas;
+    }
+
+    public function addUserDiploma(UserDiploma $userDiploma): static
+    {
+        if (!$this->userDiplomas->contains($userDiploma)) {
+            $this->userDiplomas->add($userDiploma);
+            $userDiploma->setDiploma($this);
+        }
+
+        return $this;
+    }
+
+    public function removeUserDiploma(UserDiploma $userDiploma): static
+    {
+        if ($this->userDiplomas->removeElement($userDiploma)) {
+            // set the owning side to null (unless already changed)
+            if ($userDiploma->getDiploma() === $this) {
+                $userDiploma->setDiploma(null);
+            }
+        }
+
+        return $this;
+    }
+}

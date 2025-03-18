@@ -26,7 +26,16 @@ class RegistrationController extends AbstractController
     public function register(Request $request): JsonResponse
     {
         try {
-            $data = json_decode($request->getContent(), true);
+            // Forcer l'encodage UTF-8 pour la requête
+            $content = $request->getContent();
+            $data = json_decode($content, true);
+            
+            // Journaliser les données reçues (sans le mot de passe)
+            $logData = $data;
+            if (isset($logData['password'])) {
+                $logData['password'] = '***';
+            }
+            error_log('Données d\'inscription reçues: ' . json_encode($logData, JSON_UNESCAPED_UNICODE));
             
             // Vérifier les données requises
             if (!isset($data['email']) || !isset($data['password']) || !isset($data['firstName']) || !isset($data['lastName'])) {
@@ -41,7 +50,7 @@ class RegistrationController extends AbstractController
             
             return $this->json([
                 'success' => true,
-                'message' => 'Inscription réussie. Un email de confirmation a été envoyé à votre adresse email.',
+                'message' => 'Inscription réussie.',
                 'userId' => $user->getId()
             ]);
         } catch (UniqueConstraintViolationException $e) {

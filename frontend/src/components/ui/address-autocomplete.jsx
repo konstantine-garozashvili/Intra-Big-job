@@ -2,7 +2,6 @@ import * as React from "react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { adresseApi } from "@/lib/api";
-import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Loader2 } from "lucide-react";
 
 /**
@@ -62,7 +61,7 @@ export const AddressAutocomplete = React.forwardRef(({
       setSuggestions(results);
       setShowSuggestions(results.length > 0);
     } catch (error) {
-      console.error("Erreur lors de la recherche d'adresses:", error);
+      // console.error("Erreur lors de la recherche d'adresses:", error);
     } finally {
       setIsLoading(false);
     }
@@ -77,7 +76,7 @@ export const AddressAutocomplete = React.forwardRef(({
         setSuggestions([]);
         setShowSuggestions(false);
       }
-    }, 300);
+    }, 150);
     
     return () => clearTimeout(delayDebounceFn);
   }, [query, searchAddresses]);
@@ -97,7 +96,7 @@ export const AddressAutocomplete = React.forwardRef(({
       if (!suggestionsRef.current?.contains(document.activeElement)) {
         setShowSuggestions(false);
       }
-    }, 200);
+    }, 100);
   }, []);
   
   const handleChange = useCallback((e) => {
@@ -112,19 +111,25 @@ export const AddressAutocomplete = React.forwardRef(({
   
   const handleSuggestionClick = useCallback((suggestion) => {
     // Mettre à jour la valeur du champ
-    setQuery(suggestion.label);
+    // Assurer l'encodage correct des adresses avec caractères accentués
+    const formattedAddress = decodeURIComponent(encodeURIComponent(suggestion.label));
+    setQuery(formattedAddress);
     setHasValue(true);
     setShowSuggestions(false);
     setSelectedIndex(-1);
     
+    // Extraire le code postal et la ville
+    const postcode = suggestion.postcode || '';
+    const city = suggestion.city || '';
+    
     // Appeler le callback avec les détails de l'adresse sélectionnée
     if (onAddressSelect) {
       onAddressSelect({
-        address: suggestion.label,
+        address: formattedAddress,
         houseNumber: suggestion.houseNumber,
         street: suggestion.street,
-        postcode: suggestion.postcode,
-        city: suggestion.city,
+        postcode: postcode,
+        city: decodeURIComponent(encodeURIComponent(city)),
         coordinates: suggestion.coordinates
       });
     }
@@ -133,7 +138,7 @@ export const AddressAutocomplete = React.forwardRef(({
     const syntheticEvent = {
       target: {
         name: props.name,
-        value: suggestion.label
+        value: formattedAddress
       }
     };
     
@@ -195,7 +200,13 @@ export const AddressAutocomplete = React.forwardRef(({
   );
   
   return (
-    <div className="relative" ref={containerRef}>
+    <div
+      ref={containerRef}
+      className={cn(
+        "relative",
+        className
+      )}
+    >
       <div className={containerClasses}>
         {/* Étiquette flottante */}
         <label 
@@ -233,39 +244,33 @@ export const AddressAutocomplete = React.forwardRef(({
       )}
       
       {/* Liste des suggestions */}
-      <AnimatePresence>
-        {showSuggestions && suggestions.length > 0 && (
-          <motion.div
-            ref={suggestionsRef}
-            className="absolute z-50 w-full mt-1 bg-white rounded-md shadow-lg max-h-60 overflow-y-auto"
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
-          >
-            <ul className="py-1">
-              {suggestions.map((suggestion, index) => (
-                <li 
-                  key={suggestion.id || index}
-                  className={cn(
-                    "px-3 py-2 cursor-pointer flex items-start gap-2",
-                    "hover:bg-gray-100 transition-colors duration-150",
-                    selectedIndex === index ? "bg-gray-100" : ""
-                  )}
-                  onClick={() => handleSuggestionClick(suggestion)}
-                  onMouseEnter={() => setSelectedIndex(index)}
-                >
-                  <MapPin className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
-                  <div className="flex flex-col">
-                    <span className="font-medium text-gray-800">{suggestion.label}</span>
-                    <span className="text-xs text-gray-500">{suggestion.context}</span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {showSuggestions && suggestions.length > 0 && (
+        <div
+          ref={suggestionsRef}
+          className="absolute z-50 w-full mt-1 bg-white rounded-md shadow-lg max-h-60 overflow-y-auto fade-in-up"
+        >
+          <ul className="py-1">
+            {suggestions.map((suggestion, index) => (
+              <li 
+                key={suggestion.id || index}
+                className={cn(
+                  "px-3 py-2 cursor-pointer flex items-start gap-2",
+                  "hover:bg-gray-100 transition-colors duration-150",
+                  selectedIndex === index ? "bg-gray-100" : ""
+                )}
+                onClick={() => handleSuggestionClick(suggestion)}
+                onMouseEnter={() => setSelectedIndex(index)}
+              >
+                <MapPin className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                <div className="flex flex-col">
+                  <span className="font-medium text-gray-800">{suggestion.label}</span>
+                  <span className="text-xs text-gray-500">{suggestion.context}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 });

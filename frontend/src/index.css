@@ -1,4 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+@import './lib/loading-animation.css';
+@import './lib/browser-loading-override.css';
 
 @tailwind base;
 @tailwind components;
@@ -71,6 +73,9 @@
   }
   body {
     @apply bg-background text-foreground font-poppins;
+    margin: 0;
+    padding: 0;
+    min-width: 100%;
   }
 }
 
@@ -330,27 +335,38 @@
 /* Phone input styles - optimized */
 .phone-input-fr {
   position: relative;
+  display: flex;
   width: 100%;
+  border-radius: 0.375rem;
+  overflow: hidden;
+  transition: all 0.15s ease;
 }
 
 .phone-input-fr .prefix {
   display: flex;
   align-items: center;
   justify-content: center;
+  min-width: 3.5rem;
+  padding: 0 0.5rem;
   background-color: #f9fafb;
-  border-right: 1px solid #e5e7eb;
-  padding: 0 12px;
+  border: 1px solid #e5e7eb;
+  border-right: none;
+  border-radius: 0.375rem 0 0 0.375rem;
+  font-size: 0.875rem;
   font-weight: 500;
-  color: #374151;
+  color: #4b5563;
   height: 100%;
 }
 
 .phone-input-fr input {
   flex: 1;
-  border: none;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0 0.375rem 0.375rem 0;
+  font-size: 0.875rem;
+  color: #1f2937;
   outline: none;
-  padding: 0 12px;
-  font-size: 16px;
+  transition: all 0.15s ease;
 }
 
 .phone-input-fr input::placeholder {
@@ -360,6 +376,22 @@
 .phone-input-fr.error .prefix,
 .phone-input-fr.error input {
   border-color: #ef4444 !important;
+}
+
+.phone-input-fr:focus-within input {
+  border-color: #528eb2;
+  box-shadow: 0 0 0 2px rgba(82, 142, 178, 0.2);
+}
+
+.phone-input-fr:focus-within .prefix {
+  border-color: #528eb2;
+  border-right-color: transparent;
+}
+
+/* Hack to ensure even spacing in the phone number display */
+.phone-number-field {
+  font-family: "Roboto Mono", monospace;
+  letter-spacing: 0.025rem;
 }
 
 /* Responsive styles */
@@ -385,7 +417,6 @@
 
 /* Cleanup of unused styles */
 .calendar-popup {
-  margin-top: 5px;
   position: absolute;
   left: 0;
   top: 100%;
@@ -400,7 +431,6 @@
   border-radius: 12px; /* Arrondir un peu plus les coins */
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1); /* Ombre plus douce et plus grande */
 }
-
 
 /* Style de la barre de défilement */
 .scrollable-div::-webkit-scrollbar {
@@ -418,3 +448,47 @@
   border-radius: 10px;
 }
 
+/* Prevent layout shifts during loading states */
+html {
+  scrollbar-gutter: stable;
+  overflow-y: scroll;
+  overflow-x: hidden;
+}
+
+/* Ensure fixed elements maintain position */
+.navbar, 
+.fixed,
+.fixed-top,
+[class*="navbar-"],
+[class*="fixed-"] {
+  padding-right: var(--removed-body-scroll-bar-size, 0px);
+}
+
+/* Handle data-scroll-locked state */
+html > body[data-scroll-locked] {
+  overflow: visible !important;
+  margin-right: 0 !important;
+  min-width: 100%;
+}
+
+/* Smooth transitions for loading state changes */
+.transition-opacity {
+  transition-property: opacity;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Loading dots animation */
+.dots-loading::after {
+  content: "...";
+  display: inline-block;
+  animation: dots 1.5s infinite;
+  width: 1.5em;
+  text-align: left;
+}
+
+@keyframes dots {
+  0%, 20% { content: "."; }
+  40% { content: ".."; }
+  60%, 100% { content: "..."; }
+}

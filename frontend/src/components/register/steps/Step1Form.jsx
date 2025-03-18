@@ -1,29 +1,30 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Eye, EyeOff } from "lucide-react";
-import { useRegisterContext } from "../RegisterContext";
+import { useUserData, useValidation } from "../RegisterContext";
 import { PasswordStrengthIndicator } from "../RegisterUtils";
 
 const Step1Form = ({ goToNextStep }) => {
   const {
-    // États
     firstName, setFirstName,
     lastName, setLastName, 
     email, setEmail,
     password, setPassword,
-    showPassword, togglePasswordVisibility,
-    
-    // Fonctions
+  } = useUserData();
+
+  const {
     setStep1Tried,
     setErrors
-  } = useRegisterContext();
+  } = useValidation();
 
-  // État local pour les erreurs
+  // État local pour les erreurs et la visibilité du mot de passe
   const [localErrors, setLocalErrors] = useState({});
+  const [showPassword, setShowPassword] = useState(false);
+
+  const togglePasswordVisibility = () => setShowPassword(prev => !prev);
 
   // Validation de l'étape 1
   const validateStep1 = () => {
-    console.log("Validation étape 1...");
     setStep1Tried(true);
     
     // Effacer les erreurs du contexte

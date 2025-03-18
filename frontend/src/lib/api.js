@@ -38,7 +38,7 @@ export const adresseApi = {
         score: feature.properties.score
       }));
     } catch (error) {
-      console.error('Erreur lors de la recherche d\'adresse:', error);
+      // console.error('Erreur lors de la recherche d\'adresse:', error);
       return [];
     }
   },
@@ -74,7 +74,7 @@ export const adresseApi = {
         coordinates: feature.geometry.coordinates
       };
     } catch (error) {
-      console.error('Erreur lors de la géolocalisation inverse:', error);
+      // console.error('Erreur lors de la géolocalisation inverse:', error);
       return null;
     }
   }

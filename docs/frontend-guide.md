@@ -29,7 +29,7 @@ frontend/
 │   │   ├── HR/         # Pages RH
 │   │   ├── Student/    # Pages Étudiant
 │   │   ├── SuperAdmin/ # Pages Super Admin
-│   │   ├── Teacher/    # Pages Professeur
+│   │   ├── Teacher/    # Pages Formateur
 │   │   └── User/       # Pages Utilisateur
 │   ├── services/       # Services (API, authentification, etc.)
 │   ├── layouts/        # Layouts de l'application

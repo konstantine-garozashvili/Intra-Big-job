@@ -147,4 +147,116 @@ class AuthController extends AbstractController
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
+    
+    /**
+     * Endpoint pour changer le mot de passe de l'utilisateur connecté
+     */
+    #[Route('/change-password', name: 'api_change_password', methods: ['POST'])]
+    public function changePassword(Request $request): JsonResponse
+    {
+        try {
+            $user = $this->getUser();
+            
+            if (!$user) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Utilisateur non authentifié'
+                ], Response::HTTP_UNAUTHORIZED);
+            }
+            
+            $content = json_decode($request->getContent(), true);
+            
+            if (!isset($content['currentPassword']) || !isset($content['newPassword'])) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Veuillez fournir le mot de passe actuel et le nouveau mot de passe'
+                ], Response::HTTP_BAD_REQUEST);
+            }
+            
+            $currentPassword = $content['currentPassword'];
+            $newPassword = $content['newPassword'];
+            
+            // Validation avancée du nouveau mot de passe
+            $passwordValidation = $this->validatePassword($newPassword);
+            
+            if (!$passwordValidation['isValid']) {
+                $errorMessages = [];
+                $errors = $passwordValidation['errors'];
+                
+                if ($errors['length']) {
+                    $errorMessages[] = 'Le mot de passe doit contenir au moins 8 caractères';
+                }
+                if ($errors['upperCase']) {
+                    $errorMessages[] = 'Le mot de passe doit contenir au moins une lettre majuscule';
+                }
+                if ($errors['lowerCase']) {
+                    $errorMessages[] = 'Le mot de passe doit contenir au moins une lettre minuscule';
+                }
+                if ($errors['digit']) {
+                    $errorMessages[] = 'Le mot de passe doit contenir au moins un chiffre';
+                }
+                if ($errors['specialChar']) {
+                    $errorMessages[] = 'Le mot de passe doit contenir au moins un caractère spécial';
+                }
+                
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Le mot de passe ne respecte pas les critères de sécurité',
+                    'errors' => $errorMessages
+                ], Response::HTTP_BAD_REQUEST);
+            }
+            
+            $this->authService->changePassword($user, $currentPassword, $newPassword);
+            
+            return $this->json([
+                'success' => true,
+                'message' => 'Mot de passe modifié avec succès'
+            ]);
+            
+        } catch (AuthenticationException $e) {
+            return $this->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], Response::HTTP_UNAUTHORIZED);
+        } catch (\Exception $e) {
+            $this->logger->error('Erreur lors du changement de mot de passe: ' . $e->getMessage());
+            return $this->json([
+                'success' => false,
+                'message' => 'Une erreur est survenue lors du changement de mot de passe'
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * Valide un mot de passe selon des critères de complexité
+     * 
+     * @param string $password Mot de passe à valider
+     * @return array Résultat de validation avec détails
+     */
+    private function validatePassword(string $password): array
+    {
+        $minLength = 8;
+        $hasUpperCase = preg_match('/[A-Z]/', $password);
+        $hasLowerCase = preg_match('/[a-z]/', $password);
+        $hasDigit = preg_match('/\d/', $password);
+        $hasSpecialChar = preg_match('/[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>\/?]/', $password);
+        
+        $isValid = 
+            strlen($password) >= $minLength && 
+            $hasUpperCase && 
+            $hasLowerCase && 
+            $hasDigit && 
+            $hasSpecialChar;
+        
+        return [
+            'isValid' => $isValid,
+            'errors' => [
+                'length' => strlen($password) < $minLength,
+                'upperCase' => !$hasUpperCase,
+                'lowerCase' => !$hasLowerCase,
+                'digit' => !$hasDigit,
+                'specialChar' => !$hasSpecialChar
+            ]
+        ];
+    }
 } 

@@ -13,7 +13,7 @@ import { CountrySelector } from "@/components/ui/country-selector";
 import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { useRegisterContext } from "./RegisterContext";
+import { useUserData, useAddress, useValidation } from "./RegisterContext";
 import Step1Form from "./steps/Step1Form";
 import Step2Form from "./steps/Step2Form";
 import Step3Form from "./steps/Step3Form";
@@ -101,14 +101,9 @@ const PasswordStrengthIndicator = ({ password }) => {
 
 // Composant principal du formulaire d'inscription
 const RegisterForm = () => {
-  // Récupérer les valeurs et fonctions du contexte
-  const {
-    setErrors,
-    setStep1Attempted,
-    setStep2Attempted,
-    handleSubmit: contextHandleSubmit,
-    isSubmitting
-  } = useRegisterContext();
+  // Récupérer les valeurs et fonctions des contextes séparés
+  const { setErrors, setStep1Attempted, setStep2Attempted } = useValidation();
+  const { handleSubmit: contextHandleSubmit, isSubmitting } = useValidation();
   
   // Référence pour suivre les changements d'étape
   const prevStepRef = useRef(1);
@@ -128,23 +123,23 @@ const RegisterForm = () => {
   ];
   
   // Fonction pour passer à l'étape suivante
-  const goToNextStep = () => {
-    console.log(`Passage à l'étape ${currentStep + 1}`);
+  const goToNextStep = useCallback(() => {
+    // console.log(`Passage à l'étape ${currentStep + 1}`);
     if (currentStep === 1) {
       setStep1Attempted(true);
     } else if (currentStep === 2) {
       setStep2Attempted(true);
     }
     setCurrentStep(prev => prev + 1);
-  };
+  }, [currentStep, setStep1Attempted, setStep2Attempted]);
   
   // Fonction pour revenir à l'étape précédente
-  const goToPrevStep = () => {
+  const goToPrevStep = useCallback(() => {
     if (currentStep > 1) {
-      console.log(`Retour à l'étape ${currentStep - 1}`);
+      // console.log(`Retour à l'étape ${currentStep - 1}`);
       setCurrentStep(prev => prev - 1);
     }
-  };
+  }, [currentStep]);
   
   // Nettoyer les erreurs du contexte au montage
   useEffect(() => {
@@ -158,8 +153,6 @@ const RegisterForm = () => {
       return;
     }
     
-    console.log(`Changement à l'étape ${currentStep}`);
-    
     // Nettoyer les erreurs du contexte à chaque changement d'étape
     setErrors({});
     
@@ -168,9 +161,9 @@ const RegisterForm = () => {
   }, [currentStep, setErrors]);
   
   // Version personnalisée de handleSubmit qui utilise notre validation
-  const handleFormSubmit = (e) => {
+  const handleFormSubmit = useCallback((e) => {
     e.preventDefault();
-    console.log("handleFormSubmit appelé dans RegisterForm");
+    // console.log("handleFormSubmit appelé dans RegisterForm");
     
     // Créer une version modifiée de l'événement pour contourner la validation du contexte
     const customEvent = {
@@ -184,9 +177,9 @@ const RegisterForm = () => {
     };
     
     // Utiliser le handleSubmit du contexte
-    console.log("Appel de contextHandleSubmit avec customEvent");
+    // console.log("Appel de contextHandleSubmit avec customEvent");
     contextHandleSubmit(customEvent);
-  };
+  }, [contextHandleSubmit]);
   
   return (
     <div className="w-full bg-white rounded-lg shadow-lg mx-auto overflow-hidden">

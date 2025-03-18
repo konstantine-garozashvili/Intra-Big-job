@@ -2,23 +2,23 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useRegisterContext } from "../RegisterContext";
+import { useAddress, useValidation } from "../RegisterContext";
 
 const Step3Form = ({ goToPrevStep, onSubmit }) => {
   const {
-    // États
     addressName, setAddressName,
     addressComplement, setAddressComplement,
     city, setCity,
     postalCode, setPostalCode,
     acceptTerms,
-    
-    // Fonctions
     handleTermsChange,
     handleAddressSelect,
+  } = useAddress();
+
+  const {
     isSubmitting,
     registerSuccess,
-  } = useRegisterContext();
+  } = useValidation();
 
   // État local pour les erreurs et validation
   const [localErrors, setLocalErrors] = React.useState({});
@@ -26,7 +26,6 @@ const Step3Form = ({ goToPrevStep, onSubmit }) => {
 
   // Validation de l'étape 3
   const validateStep3 = () => {
-    console.log("Validation étape 3...");
     
     const newErrors = {};
     let valid = true;
@@ -68,13 +67,11 @@ const Step3Form = ({ goToPrevStep, onSubmit }) => {
     e.preventDefault();
     setStep3Tried(true);
     
-    const isValid = validateStep3();
-    if (isValid) {
-      console.log("Étape 3 validée, soumission du formulaire...");
-      onSubmit(e);
-    } else {
-      console.log("Validation de l'étape 3 échouée");
-    }
+    // const isValid = validateStep3();
+    // if (isValid) {
+    //   onSubmit(e);
+    // } else {
+    // }
   };
 
   // Vérifier si une erreur doit être affichée

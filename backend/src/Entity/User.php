@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Domains\Student\Entity\StudentProfile;
 use App\Repository\UserRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -10,6 +11,7 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\Table(name: '`user`')]
@@ -44,6 +46,11 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
 
     #[ORM\Column(length: 20)]
     #[Groups(['user:read'])]
+    #[Assert\NotBlank(message: "Le numéro de téléphone ne peut pas être vide")]
+    #[Assert\Regex(
+        pattern: "/^\+?[0-9]{10,15}$/",
+        message: "Le numéro de téléphone doit contenir entre 10 et 15 chiffres, éventuellement précédé d'un +"
+    )]
     private ?string $phoneNumber = null;
 
     #[ORM\Column(length: 255)]
@@ -78,18 +85,38 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     #[Groups(['user:read'])]
     private ?Theme $theme = null;
 
-    #[ORM\OneToMany(mappedBy: 'user', targetEntity: Diploma::class, orphanRemoval: true)]
-    private Collection $diplomas;
-
     #[ORM\OneToMany(mappedBy: 'user', targetEntity: Address::class, orphanRemoval: true)]
     private Collection $addresses;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['user:read'])]
+    private ?string $profilePicturePath = null;
+
+    #[ORM\ManyToOne(inversedBy: 'users')]
+    #[Groups(['user:read'])]
+    private ?Specialization $specialization = null;
+
+    #[ORM\OneToOne(mappedBy: 'user', cascade: ['persist', 'remove'])]
+    #[Groups(['user:read'])]
+    private ?StudentProfile $studentProfile = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['user:read'])]
+    #[Assert\Regex(
+        pattern: "/^https:\/\/www\.linkedin\.com\/in\/.+/",
+        message: "Le lien LinkedIn doit commencer par 'https://www.linkedin.com/in/'"
+    )]
+    private ?string $linkedinUrl = null;
+
+    #[ORM\OneToMany(mappedBy: 'user', targetEntity: UserDiploma::class, orphanRemoval: true)]
+    private Collection $userDiplomas;
 
     public function __construct()
     {
         $this->createdAt = new \DateTimeImmutable();
         $this->userRoles = new ArrayCollection();
-        $this->diplomas = new ArrayCollection();
         $this->addresses = new ArrayCollection();
+        $this->userDiplomas = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -181,6 +208,7 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
         return $this;
     }
 
+
     public function getCreatedAt(): ?\DateTimeImmutable
     {
         return $this->createdAt;
@@ -188,7 +216,7 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
 
     public function setCreatedAt(\DateTimeImmutable $createdAt): static
     {
-        $this->createdAt = $createdAt;
+        $this->createdAt = $createt;
 
         return $this;
     }
@@ -296,36 +324,6 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     }
 
     /**
-     * @return Collection<int, Diploma>
-     */
-    public function getDiplomas(): Collection
-    {
-        return $this->diplomas;
-    }
-
-    public function addDiploma(Diploma $diploma): static
-    {
-        if (!$this->diplomas->contains($diploma)) {
-            $this->diplomas->add($diploma);
-            $diploma->setUser($this);
-        }
-
-        return $this;
-    }
-
-    public function removeDiploma(Diploma $diploma): static
-    {
-        if ($this->diplomas->removeElement($diploma)) {
-            // set the owning side to null (unless already changed)
-            if ($diploma->getUser() === $this) {
-                $diploma->setUser(null);
-            }
-        }
-
-        return $this;
-    }
-
-    /**
      * @return Collection<int, Address>
      */
     public function getAddresses(): Collection
@@ -398,5 +396,116 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     {
         // If you store any temporary, sensitive data on the user, clear it here
         // $this->plainPassword = null;
+    }
+
+    public function getProfilePicturePath(): ?string
+    {
+        return $this->profilePicturePath;
+    }
+
+    public function setProfilePicturePath(?string $profilePicturePath): static
+    {
+        $this->profilePicturePath = $profilePicturePath;
+        return $this;
+    }
+
+    public function getSpecialization(): ?Specialization
+    {
+        return $this->specialization;
+    }
+
+    public function setSpecialization(?Specialization $specialization): static
+    {
+        $this->specialization = $specialization;
+        return $this;
+    }
+
+    public function getStudentProfile(): ?StudentProfile
+    {
+        return $this->studentProfile;
+    }
+
+    public function setStudentProfile(?StudentProfile $studentProfile): static
+    {
+        // unset the owning side of the relation if necessary
+        if ($studentProfile === null && $this->studentProfile !== null) {
+            $this->studentProfile->setUser(null);
+        }
+
+        // set the owning side of the relation if necessary
+        if ($studentProfile !== null && $studentProfile->getUser() !== $this) {
+            $studentProfile->setUser($this);
+        }
+
+        $this->studentProfile = $studentProfile;
+
+        return $this;
+    }
+
+    public function getLinkedinUrl(): ?string
+    {
+        return $this->linkedinUrl;
+    }
+
+    public function setLinkedinUrl(?string $linkedinUrl): static
+    {
+        $this->linkedinUrl = $linkedinUrl;
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, UserDiploma>
+     */
+    public function getUserDiplomas(): Collection
+    {
+        return $this->userDiplomas;
+    }
+
+    public function addUserDiploma(UserDiploma $userDiploma): static
+    {
+        if (!$this->userDiplomas->contains($userDiploma)) {
+            $this->userDiplomas->add($userDiploma);
+            $userDiploma->setUser($this);
+        }
+
+        return $this;
+    }
+
+    public function removeUserDiploma(UserDiploma $userDiploma): static
+    {
+        if ($this->userDiplomas->removeElement($userDiploma)) {
+            // set the owning side to null (unless already changed)
+            if ($userDiploma->getUser() === $this) {
+                $userDiploma->setUser(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * Get all diplomas associated with this user
+     * 
+     * @return array An array of diploma objects with their obtained dates
+     */
+    public function getDiplomas(): array
+    {
+        $diplomas = [];
+        foreach ($this->userDiplomas as $userDiploma) {
+            $diploma = $userDiploma->getDiploma();
+            // Add the obtained date to the diploma object
+            $diploma->obtainedAt = $userDiploma->getObtainedDate();
+            $diplomas[] = $diploma;
+        }
+        
+        // Trier les diplômes par date d'obtention (du plus récent au plus ancien)
+        usort($diplomas, function($a, $b) {
+            if (!$a->obtainedAt || !$b->obtainedAt) {
+                return 0;
+            }
+            return $b->obtainedAt <=> $a->obtainedAt;
+        });
+        
+        return $diplomas;
     }
 }

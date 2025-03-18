@@ -10,6 +10,10 @@ RUN apt-get update && apt-get install -y \
     intl \
     zip
 
+# Installation de l'extension APCu pour de meilleures performances
+RUN pecl install apcu && docker-php-ext-enable apcu \
+    && echo "apc.enable_cli=1" >> /usr/local/etc/php/conf.d/docker-php-ext-apcu.ini
+
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 ENV COMPOSER_ALLOW_SUPERUSER=1
