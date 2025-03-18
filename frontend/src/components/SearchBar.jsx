@@ -6,6 +6,7 @@ import { getPrimaryRole, matchRoleFromSearchTerm, getFrenchRoleDisplayName, ROLE
 import { Search, User, X, UserCircle2, Briefcase } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../lib/utils';
+import { useNavigate } from 'react-router-dom';
 
 // Convert role constants to display format for allowed search roles
 const getRoleDisplayFormat = (roleConstant) => {
@@ -37,6 +38,7 @@ export const SearchBar = () => {
   const inputRef = useRef(null);
   const suggestionsRef = useRef(null);
   const searchTimeoutRef = useRef(null);
+  const navigate = useNavigate();
 
   // Vérifier si l'utilisateur est connecté
   useEffect(() => {
@@ -179,6 +181,10 @@ export const SearchBar = () => {
     setQuery(`${suggestion.firstName} ${suggestion.lastName}`);
     setSuggestions([]);
     setShowSuggestions(false);
+    
+    // Rediriger vers la page de profil de l'utilisateur sélectionné
+    console.log(`Navigating to profile of user with ID: ${suggestion.id}`);
+    navigate(`/profile/${suggestion.id}`);
   };
 
   const handleKeyDown = (e) => {

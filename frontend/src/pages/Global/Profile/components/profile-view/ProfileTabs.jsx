@@ -37,16 +37,30 @@ const ProfileTabs = ({ userData, isPublicProfile = false }) => {
 
   // Get the first role name
   const getMainRole = () => {
-    if (userData.user && userData.user.roles && userData.user.roles.length > 0) {
-      return userData.user.roles[0].name;
+    if (userData?.user?.roles) {
+      if (Array.isArray(userData.user.roles) && userData.user.roles.length > 0) {
+        const firstRole = userData.user.roles[0];
+        // Si c'est un objet avec une propriété name
+        if (typeof firstRole === 'object' && firstRole !== null && firstRole.name) {
+          return firstRole.name;
+        }
+        // Si c'est une chaîne
+        if (typeof firstRole === 'string') {
+          return firstRole;
+        }
+      }
+      // Si roles est une chaîne
+      if (typeof userData.user.roles === 'string') {
+        return userData.user.roles;
+      }
     }
     return "USER";
   };
 
   const mainRole = getMainRole();
   
-  // Vérifier si l'utilisateur a des diplômes
-  const hasDiplomas = userData.diplomas && userData.diplomas.length > 0;
+  // Vérifier si l'utilisateur a des diplômes (avec vérification sécurisée)
+  const hasDiplomas = userData?.diplomas && Array.isArray(userData.diplomas) && userData.diplomas.length > 0;
   
   // Si l'utilisateur est un formateur, toujours afficher l'onglet "Expérience et Cours"
   const shouldShowExperienceTab = mainRole === "TEACHER" || hasDiplomas;
