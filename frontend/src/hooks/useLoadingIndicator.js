@@ -1,121 +1,68 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
+import { resetLoadingState } from '../lib/utils/loadingUtils';
 
 /**
- * Custom hook to handle the browser's loading indicator
- * This hook will hide the browser's default loading indicator
- * and prevent the "Transfert des données" message from appearing
+ * Hook to manage loading indicator behavior
+ * Handles browser's default loading indicator and custom loading state
  */
 const useLoadingIndicator = () => {
-  // Use a ref to track if we've already applied the loading indicator fix
-  const appliedRef = useRef(false);
-
   useEffect(() => {
-    // Skip if we've already applied the fix
-    if (appliedRef.current) return;
-    
-    // Mark as applied to prevent multiple applications
-    appliedRef.current = true;
-    
-    // Function to hide the browser's loading indicator
-    const hideLoadingIndicator = () => {
-      // Remove any loading classes from the document
-      document.documentElement.classList.remove('nprogress-busy');
-      document.documentElement.classList.remove('loading');
-      
-      // Add a class to help with CSS targeting
-      document.documentElement.classList.add('custom-loader-active');
-      
-      // Hide any loading indicators
-      const loadingElements = document.querySelectorAll('#nprogress, .nprogress');
-      loadingElements.forEach(el => {
-        if (el) {
-          el.style.display = 'none';
-        }
-      });
-    };
+    // Reset loading state on mount
+    resetLoadingState();
 
-    // Hide loading indicator on initial load
-    hideLoadingIndicator();
-
-    // Hide loading indicator before unload
-    window.addEventListener('beforeunload', hideLoadingIndicator);
+    // Create a meta tag to disable the browser's default loading indicator
+    const meta = document.createElement('meta');
+    meta.name = 'theme-color';
+    meta.content = '#ffffff';
+    document.head.appendChild(meta);
     
-    // Add event listeners for page load events
-    window.addEventListener('load', () => {
-      // Remove the custom-loader-active class after the page has fully loaded
+    // Create a style tag to disable the browser's default loading indicator
+    const style = document.createElement('style');
+    style.textContent = `
+      /* Disable browser's default loading indicator when our custom loader is active */
+      html.custom-loader-active, 
+      html.custom-loader-active body {
+        cursor: auto !important;
+      }
+      
+      /* Hide any progress indicators when our custom loader is active */
+      html.custom-loader-active progress {
+        display: none !important;
+      }
+    `;
+    document.head.appendChild(style);
+    
+    // Add the custom-loader-active class initially
+    document.documentElement.classList.add('custom-loader-active');
+    
+    // Handle page load complete
+    const handlePageLoad = () => {
       setTimeout(() => {
         document.documentElement.classList.remove('custom-loader-active');
-      }, 500);
-    });
+      }, 300);
+    };
     
-    window.addEventListener('DOMContentLoaded', hideLoadingIndicator);
+    // Add load event listener
+    window.addEventListener('load', handlePageLoad);
     
-    // Create a MutationObserver to watch for loading indicators
-    const observer = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        if (mutation.type === 'attributes' && 
-            (mutation.attributeName === 'class' || mutation.attributeName === 'style')) {
-          // Only apply if the class contains loading-related classes
-          const classList = document.documentElement.classList;
-          if (classList.contains('nprogress-busy') || classList.contains('loading')) {
-            hideLoadingIndicator();
-          }
-        }
+    // Handle page visibility changes
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // Reset loading state when page becomes visible again
+        resetLoadingState();
       }
-    });
-    
-    // Start observing the document
-    observer.observe(document.documentElement, { 
-      attributes: true,
-      childList: false,
-      subtree: false
-    });
-
-    // More careful approach to network requests
-    const originalFetch = window.fetch;
-    window.fetch = function(...args) {
-      // Only hide the loading indicator for non-navigation fetches
-      if (args[0] && typeof args[0] === 'string' && !args[0].includes('html')) {
-        hideLoadingIndicator();
-      }
-      
-      return originalFetch.apply(this, args);
-    };
-
-    const originalXHROpen = XMLHttpRequest.prototype.open;
-    const originalXHRSend = XMLHttpRequest.prototype.send;
-    
-    XMLHttpRequest.prototype.open = function(...args) {
-      return originalXHROpen.apply(this, args);
     };
     
-    XMLHttpRequest.prototype.send = function(...args) {
-      // Add event listeners to hide loading indicator
-      this.addEventListener('loadstart', hideLoadingIndicator);
-      this.addEventListener('loadend', () => {
-        hideLoadingIndicator();
-        // Remove the custom-loader-active class after the request is complete
-        setTimeout(() => {
-          document.documentElement.classList.remove('custom-loader-active');
-        }, 100);
-      });
-      
-      return originalXHRSend.apply(this, args);
-    };
-
+    // Add visibility change event listener
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
     return () => {
-      // Restore original functions
-      window.fetch = originalFetch;
-      XMLHttpRequest.prototype.open = originalXHROpen;
-      XMLHttpRequest.prototype.send = originalXHRSend;
-      
-      // Remove event listeners
-      window.removeEventListener('beforeunload', hideLoadingIndicator);
-      window.removeEventListener('load', hideLoadingIndicator);
-      window.removeEventListener('DOMContentLoaded', hideLoadingIndicator);
-      
-      // Disconnect the observer
-      observer.disconnect();
+      // Clean up
+      document.head.removeChild(meta);
+      document.head.removeChild(style);
+      document.documentElement.classList.remove('custom-loader-active');
+      window.removeEventListener('load', handlePageLoad);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
 };

@@ -73,6 +73,9 @@
   }
   body {
     @apply bg-background text-foreground font-poppins;
+    margin: 0;
+    padding: 0;
+    min-width: 100%;
   }
 }
 
@@ -443,4 +446,49 @@
 .scrollable-div::-webkit-scrollbar-track {
   background-color: #f3f4f6; /* Couleur plus claire pour la piste */
   border-radius: 10px;
+}
+
+/* Prevent layout shifts during loading states */
+html {
+  scrollbar-gutter: stable;
+  overflow-y: scroll;
+  overflow-x: hidden;
+}
+
+/* Ensure fixed elements maintain position */
+.navbar, 
+.fixed,
+.fixed-top,
+[class*="navbar-"],
+[class*="fixed-"] {
+  padding-right: var(--removed-body-scroll-bar-size, 0px);
+}
+
+/* Handle data-scroll-locked state */
+html > body[data-scroll-locked] {
+  overflow: visible !important;
+  margin-right: 0 !important;
+  min-width: 100%;
+}
+
+/* Smooth transitions for loading state changes */
+.transition-opacity {
+  transition-property: opacity;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Loading dots animation */
+.dots-loading::after {
+  content: "...";
+  display: inline-block;
+  animation: dots 1.5s infinite;
+  width: 1.5em;
+  text-align: left;
+}
+
+@keyframes dots {
+  0%, 20% { content: "."; }
+  40% { content: ".."; }
+  60%, 100% { content: "..."; }
 }

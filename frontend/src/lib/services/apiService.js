@@ -46,11 +46,17 @@ const CACHE_CONFIG = {
   ]
 };
 
+// Function to get a session-aware cache key
+const getCacheKey = (url, params = {}) => {
+  const sessionId = localStorage.getItem('session_id') || 'anonymous';
+  return `session_${sessionId}:${url}:${JSON.stringify(params || {})}`;
+};
+
 axiosInstance.interceptors.response.use(response => {
   // Mettre en cache les réponses GET
   if (response.config.method === 'get' && response.config.url) {
     const url = response.config.url;
-    const cacheKey = url + JSON.stringify(response.config.params || {});
+    const cacheKey = getCacheKey(url, response.config.params || {});
     
     // Skip caching for endpoints that should never be cached
     const shouldNeverCache = CACHE_CONFIG.neverCache.some(endpoint => url.includes(endpoint));
@@ -120,7 +126,7 @@ const apiService = {
       
       // Vérifier si la réponse est en cache et toujours valide
       if (useCache) {
-        const cacheKey = url + JSON.stringify(authOptions.params || {});
+        const cacheKey = getCacheKey(url, authOptions.params || {});
         const cachedResponse = cache.get(cacheKey);
         
         if (cachedResponse && (Date.now() - cachedResponse.timestamp) < cacheDuration) {
@@ -128,6 +134,7 @@ const apiService = {
         }
       }
       
+      // Si pas en cache ou cache expiré, faire la requête
       const response = await axiosInstance.get(url, authOptions);
       return response.data;
     } catch (error) {
@@ -281,6 +288,7 @@ const apiService = {
    * Vide le cache
    */
   clearCache() {
+    // Just clear everything - safer and simpler
     cache.clear();
   },
   
@@ -291,7 +299,7 @@ const apiService = {
    */
   invalidateCache(path, params = {}) {
     const url = normalizeApiUrl(path);
-    const cacheKey = url + JSON.stringify(params);
+    const cacheKey = getCacheKey(url, params);
     cache.delete(cacheKey);
   },
   
@@ -327,6 +335,17 @@ const apiService = {
     
     // Delete all document-related cache entries
     documentKeys.forEach(key => cache.delete(key));
+  },
+  
+  /**
+   * Vérifie si l'entrée de cache est toujours valide
+   * @param {string} cacheKey - Clé de cache
+   * @param {number} cacheDuration - Durée de validité du cache
+   * @returns {boolean} - True si l'entrée est valide
+   */
+  isCacheValid(cacheKey, cacheDuration) {
+    const cachedResponse = cache.get(cacheKey);
+    return cachedResponse && (Date.now() - cachedResponse.timestamp) < cacheDuration;
   }
 };
 

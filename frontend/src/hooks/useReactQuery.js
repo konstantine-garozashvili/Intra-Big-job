@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import apiService, { normalizeApiUrl } from '@/lib/services/apiService';
+import { getSessionId } from '@/lib/services/authService';
 
 /**
  * Configuration de base pour les requêtes API
@@ -15,6 +16,18 @@ const SPECIAL_ENDPOINTS = {
 };
 
 /**
+ * Préfixer les clés de requête avec l'ID de session
+ * Cette fonction permet d'isoler les requêtes entre différentes sessions d'utilisateurs
+ * @param {Array|string} queryKey - Clé de requête originale
+ * @returns {Array} - Clé de requête préfixée avec l'ID de session
+ */
+const prefixQueryKey = (queryKey) => {
+  const sessionId = getSessionId();
+  const finalQueryKey = Array.isArray(queryKey) ? queryKey : [queryKey];
+  return ['session', sessionId, ...finalQueryKey];
+};
+
+/**
  * Hook pour effectuer des requêtes GET avec mise en cache
  * @param {string} endpoint - Endpoint de l'API
  * @param {Array|string} queryKey - Clé pour identifier la requête dans le cache
@@ -22,7 +35,8 @@ const SPECIAL_ENDPOINTS = {
  * @returns {Object} - Résultat de useQuery
  */
 export function useApiQuery(endpoint, queryKey, options = {}) {
-  const finalQueryKey = Array.isArray(queryKey) ? queryKey : [queryKey];
+  // Préfixer la clé de requête avec l'ID de session pour isoler les données entre utilisateurs
+  const finalQueryKey = prefixQueryKey(queryKey);
   
   // Determine if this is a special endpoint that needs custom handling
   const isProfilePicture = endpoint === SPECIAL_ENDPOINTS.profilePicture;
@@ -64,7 +78,12 @@ export function useApiQuery(endpoint, queryKey, options = {}) {
  */
 export function useApiMutation(endpoint, method = 'post', invalidateQueryKey, options = {}) {
   const queryClient = useQueryClient();
-  const finalInvalidateKey = Array.isArray(invalidateQueryKey) ? invalidateQueryKey : invalidateQueryKey ? [invalidateQueryKey] : null;
+  
+  // Préfixer la clé d'invalidation avec l'ID de session
+  let finalInvalidateKey = null;
+  if (invalidateQueryKey) {
+    finalInvalidateKey = prefixQueryKey(invalidateQueryKey);
+  }
   
   // Determine if this is a special endpoint
   const isProfilePicture = typeof endpoint === 'string' && endpoint === SPECIAL_ENDPOINTS.profilePicture;
@@ -138,11 +157,14 @@ export function useApiMutation(endpoint, method = 'post', invalidateQueryKey, op
             refetchType: 'all' // Force refetch even for inactive queries
           });
           
-          // Also invalidate any profile-related queries
+          // Also invalidate any profile-related queries using the session prefix pattern
+          const sessionId = getSessionId();
           queryClient.invalidateQueries({
             predicate: (query) => {
               const key = query.queryKey;
               return Array.isArray(key) && 
+                key[0] === 'session' && 
+                key[1] === sessionId && 
                 (key.includes('profile') || 
                  key.includes('profilePicture') || 
                  key.includes('currentProfile'));
@@ -159,11 +181,14 @@ export function useApiMutation(endpoint, method = 'post', invalidateQueryKey, op
             refetchType: 'all'
           });
           
-          // Also invalidate any document-related queries
+          // Also invalidate any document-related queries using the session prefix pattern
+          const sessionId = getSessionId();
           queryClient.invalidateQueries({
             predicate: (query) => {
               const key = query.queryKey;
               return Array.isArray(key) && 
+                key[0] === 'session' && 
+                key[1] === sessionId &&
                 (key.includes('document') || 
                  key.includes('userCVDocument') || 
                  key.includes('documents'));
@@ -197,7 +222,8 @@ export function useApiMutation(endpoint, method = 'post', invalidateQueryKey, op
  * @returns {Object} - Résultat de useInfiniteQuery
  */
 export function useApiInfiniteQuery(endpoint, queryKey, getNextPageParam, options = {}) {
-  const finalQueryKey = Array.isArray(queryKey) ? queryKey : [queryKey];
+  // Préfixer la clé de requête avec l'ID de session
+  const finalQueryKey = prefixQueryKey(queryKey);
   
   return useInfiniteQuery({
     queryKey: finalQueryKey,
@@ -224,7 +250,8 @@ export function useApiInfiniteQuery(endpoint, queryKey, getNextPageParam, option
  */
 export function usePrefetchQuery(endpoint, queryKey) {
   const queryClient = useQueryClient();
-  const finalQueryKey = Array.isArray(queryKey) ? queryKey : [queryKey];
+  // Préfixer la clé de requête avec l'ID de session
+  const finalQueryKey = prefixQueryKey(queryKey);
   
   const prefetch = async () => {
     try {

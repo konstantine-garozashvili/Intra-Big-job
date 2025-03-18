@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import DashboardHeader from '@/components/shared/DashboardHeader';
 import "./Calendar.css";
+import { toast } from 'sonner';
 
 const ROLE_COLORS = {
   'ADMIN': 'bg-blue-100 text-blue-800',
@@ -41,64 +42,97 @@ const AdminDashboard = () => {
   });
 
   const editUserMutation = useApiMutation(
-    (data) => `/users/${data.id}`,
+    (data) => data && data.id ? `/users/${data.id}` : '/users',
     'put',
     'admin-users',
     {
       onSuccess: () => {
         setIsEditModalOpen(false);
         refetch();
+        toast.success('Les informations de l\'utilisateur ont été mises à jour.');
       },
       onError: (error) => {
-        alert(error.message || 'Une erreur est survenue lors de la modification de l\'utilisateur');
+        console.error('Erreur lors de la modification de l\'utilisateur:', error);
+        toast.error('Impossible de modifier l\'utilisateur.');
       }
     }
   );
 
   const deleteUserMutation = useApiMutation(
-    (id) => `/users/${id}`,
+    (id) => id ? `/users/${id}` : '/users',
     'delete',
     'admin-users',
     {
       onSuccess: () => {
         setIsDeleteModalOpen(false);
         refetch();
+        toast.success('L\'utilisateur a été supprimé avec succès.');
       },
       onError: (error) => {
-        alert(error.message || 'Une erreur est survenue lors de la suppression de l\'utilisateur');
+        console.error('Erreur lors de la suppression de l\'utilisateur:', error);
+        toast.error('Impossible de supprimer l\'utilisateur.');
       }
     }
   );
 
   const handleEditUser = async (e) => {
     e.preventDefault();
-    if (!selectedUser) return;
+    if (!selectedUser || !selectedUser.id) {
+      toast.error('Utilisateur invalide. Veuillez réessayer.');
+      return;
+    }
 
     const userData = {
       ...editFormData,
       id: selectedUser.id
     };
 
-    editUserMutation.mutate(userData);
+    try {
+      editUserMutation.mutate(userData);
+    } catch (error) {
+      console.error('Error in handleEditUser:', error);
+      toast.error('Une erreur s\'est produite. Veuillez réessayer.');
+    }
   };
 
   const handleDeleteUser = async () => {
-    if (!selectedUser) return;
-    deleteUserMutation.mutate(selectedUser.id);
+    if (!selectedUser || !selectedUser.id) {
+      toast.error('Utilisateur invalide. Impossible de supprimer.');
+      return;
+    }
+    
+    try {
+      deleteUserMutation.mutate(selectedUser.id);
+    } catch (error) {
+      console.error('Error in handleDeleteUser:', error);
+      toast.error('Une erreur s\'est produite lors de la suppression.');
+    }
   };
 
   const openEditModal = (user) => {
+    if (!user || !user.id) {
+      console.error('Invalid user object received in openEditModal:', user);
+      toast.error('Impossible d\'éditer cet utilisateur. Données invalides.');
+      return;
+    }
+    
     setSelectedUser(user);
     setEditFormData({
-      firstName: user.firstName,
-      lastName: user.lastName,
-      email: user.email,
-      phoneNumber: user.phoneNumber,
+      firstName: user.firstName || '',
+      lastName: user.lastName || '',
+      email: user.email || '',
+      phoneNumber: user.phoneNumber || '',
     });
     setIsEditModalOpen(true);
   };
 
   const openDeleteModal = (user) => {
+    if (!user || !user.id) {
+      console.error('Invalid user object received in openDeleteModal:', user);
+      toast.error('Impossible de supprimer cet utilisateur. Données invalides.');
+      return;
+    }
+    
     setSelectedUser(user);
     setIsDeleteModalOpen(true);
   };

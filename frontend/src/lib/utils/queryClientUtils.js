@@ -23,31 +23,28 @@ export const getQueryClient = () => {
 };
 
 /**
- * Vide le cache du queryClient
+ * Vide le cache du queryClient de manière sûre
  * Cette fonction est utile pour effacer toutes les données en cache lors de la déconnexion
+ * ou du changement d'utilisateur
  */
 export const clearQueryCache = () => {
   if (queryClientInstance) {
-    // Annuler toutes les requêtes en cours
-    queryClientInstance.cancelQueries();
-    
-    // Vider complètement le cache
-    queryClientInstance.clear();
-    
-    // Invalider explicitement toutes les requêtes pour s'assurer qu'elles sont rechargées
-    queryClientInstance.invalidateQueries();
-    
-    // Réinitialiser l'état du client
-    queryClientInstance.resetQueries();
-    
-    // Forcer un garbage collection pour libérer la mémoire
-    setTimeout(() => {
-      // Forcer un rafraîchissement des données après la déconnexion
-      window.dispatchEvent(new CustomEvent('query-cache-cleared'));
-    }, 0);
-    
-    return true;
+    try {
+      // Méthode simple et fiable qui ne cause pas de problème avec DevTools
+      queryClientInstance.clear();
+      
+      // Déclencher un événement pour informer l'application
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('query-cache-cleared'));
+      }, 0);
+      
+      return true;
+    } catch (error) {
+      console.error('Error clearing query cache:', error);
+      return false;
+    }
   }
-  // console.warn('Impossible de vider le cache: queryClient non défini');
+  
+  console.warn('Impossible de vider le cache: queryClient non défini');
   return false;
 }; 
