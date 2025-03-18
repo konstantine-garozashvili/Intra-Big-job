@@ -158,15 +158,32 @@ export const authService = {
     const timeoutPromise = new Promise((_, reject) => {
       setTimeout(() => {
         reject(new Error('User data fetch timeout'));
-      }, 1500); // Réduit de 3000ms à 1500ms pour accélérer le chargement
+      }, 15000); // Increased from 1500ms to 15000ms for better reliability
     });
     
     // Sinon, créer une nouvelle promesse
     const fetchPromise = this.getCurrentUser()
       .then(userData => {
+        if (!userData) {
+          throw new Error('No user data received');
+        }
         localStorage.setItem('user', JSON.stringify(userData));
         window.dispatchEvent(new Event('user-data-loaded'));
         return userData;
+      })
+      .catch(error => {
+        console.error('Error fetching user data:', error);
+        // Try to use cached data if available
+        const cachedUser = localStorage.getItem('user');
+        if (cachedUser) {
+          try {
+            return JSON.parse(cachedUser);
+          } catch (e) {
+            // Invalid cached data
+            localStorage.removeItem('user');
+          }
+        }
+        throw error;
       });
     
     // Race between fetch and timeout
@@ -188,18 +205,18 @@ export const authService = {
                 const minimalUser = {
                   username: payload.username,
                   roles: payload.roles || [],
-                  // Extract additional data if available in token
                   id: payload.id,
                   email: payload.username,
                   firstName: payload.firstName,
-                  lastName: payload.lastName
+                  lastName: payload.lastName,
+                  _fromToken: true // Flag to indicate this is minimal data
                 };
                 return minimalUser;
               }
             }
           }
         } catch (tokenError) {
-          // Silent fail for token parsing
+          console.error('Error parsing token:', tokenError);
         }
         
         throw error;
@@ -298,7 +315,7 @@ export const authService = {
           });
           
           // Annuler aussi toutes les requêtes en cours
-          queryClient.cancelQueries({
+          queryClient.removeQueries({
             predicate: (query) => {
               const key = query.queryKey;
               return Array.isArray(key) && key[0] === 'session' && key[1] === sessionId;
@@ -443,7 +460,12 @@ export const authService = {
     userDataPromise = new Promise(async (resolve, reject) => {
       try {
         // Utiliser le cache sauf si on force le rafraîchissement
-        const options = forceRefresh ? { cache: 'no-store' } : {};
+        const options = {
+          ...(forceRefresh ? { cache: 'no-store' } : {}),
+          timeout: 15000, // Ensure 15s timeout is set
+          retries: 3 // Allow up to 3 retries
+        };
+        
         const response = await apiService.get('/me', { ...apiService.withAuth(), ...options });
         
         // Extraire l'objet utilisateur si la réponse contient un objet "user"
@@ -459,7 +481,22 @@ export const authService = {
         
         resolve(userData);
       } catch (error) {
+        console.error('Error in getCurrentUser:', error);
         userDataPromise = null; // Réinitialiser la promesse en cas d'erreur
+        
+        // Try to use cached data if available
+        const cachedUser = localStorage.getItem('user');
+        if (cachedUser) {
+          try {
+            const userData = JSON.parse(cachedUser);
+            resolve(userData);
+            return;
+          } catch (e) {
+            // Invalid cached data
+            localStorage.removeItem('user');
+          }
+        }
+        
         reject(error);
       }
     });

@@ -142,27 +142,64 @@ const MainLayout = () => {
     };
     
     // Fonction pour récupérer les données utilisateur
-    const fetchUserData = async () => {
+    const fetchUserData = async (retryCount = 0) => {
       if (authService.isLoggedIn()) {
         try {
           const data = await authService.getCurrentUser();
+          if (!data) {
+            throw new Error('No user data received');
+          }
           setUserData(data);
           
           // After getting basic user data, fetch complete profile data
           const profileData = await profileService.getAllProfileData();
           setProfileData(profileData);
           setIsLoading(false);
+          
           // Attendre un court instant avant d'afficher le composant de progression
           setTimeout(() => {
             setShowProgress(true);
             // Remove loading state when everything is loaded
             hideGlobalLoader();
           }, 300);
+          
           // Recalculate height after data is loaded
           calculateMinHeight();
         } catch (error) {
           console.error('Error fetching data:', error);
-          setIsLoading(false);
+          
+          // Retry logic for network errors with exponential backoff
+          if (retryCount < 3 && (error.code === 'ECONNABORTED' || error.message.includes('timeout'))) {
+            console.log(`Retrying fetch attempt ${retryCount + 1}/3...`);
+            const backoffDelay = Math.min(1000 * Math.pow(2, retryCount), 8000); // Exponential backoff with max 8s
+            setTimeout(() => fetchUserData(retryCount + 1), backoffDelay);
+            return;
+          }
+          
+          // Try to use cached data if available
+          const cachedUser = localStorage.getItem('user');
+          if (cachedUser) {
+            try {
+              const parsedUser = JSON.parse(cachedUser);
+              setUserData(parsedUser);
+              setIsLoading(false);
+              
+              // Even with cached data, try to fetch profile data
+              try {
+                const profileData = await profileService.getAllProfileData();
+                setProfileData(profileData);
+              } catch (profileError) {
+                console.error('Error fetching profile data with cached user:', profileError);
+              }
+            } catch (e) {
+              // Invalid cached data
+              localStorage.removeItem('user');
+              setIsLoading(false);
+            }
+          } else {
+            setIsLoading(false);
+          }
+          
           // Remove loading state on error
           hideGlobalLoader();
         }
