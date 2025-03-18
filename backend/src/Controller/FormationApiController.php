@@ -76,9 +76,19 @@ class FormationApiController extends AbstractController
     }
 
     #[Route('', name: 'api_formations_create', methods: ['POST'])]
-    #[IsGranted('ROLE_TEACHER')]
+    #[IsGranted('IS_AUTHENTICATED_FULLY')]
     public function create(Request $request): JsonResponse
     {
+        // Vérifier si l'utilisateur a l'un des rôles requis
+        $user = $this->getUser();
+        $userRoles = $user->getRoles();
+        
+        if (!in_array('ROLE_TEACHER', $userRoles) && 
+            !in_array('ROLE_ADMIN', $userRoles) && 
+            !in_array('ROLE_SUPERADMIN', $userRoles)) {
+            return new JsonResponse(['error' => 'Accès refusé'], Response::HTTP_FORBIDDEN);
+        }
+        
         $data = json_decode($request->getContent(), true);
 
         if (!isset($data['name']) || !isset($data['promotion'])) {
