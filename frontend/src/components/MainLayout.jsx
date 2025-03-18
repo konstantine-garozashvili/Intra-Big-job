@@ -20,7 +20,7 @@ const MainLayout = () => {
   const [profileData, setProfileData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showProgress, setShowProgress] = useState(false);
-  const { hasRole } = useRoles();
+  const { hasRole, isLoading: rolesLoading } = useRoles();
   const location = useLocation();
   const [isAuthenticated, setIsAuthenticated] = useState(authService.isLoggedIn());
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -201,6 +201,15 @@ const MainLayout = () => {
       window.removeEventListener('user-data-loaded', handleUserDataLoaded);
     };
   }, [calculateMinHeight]);
+
+  // Montrer le loader global pendant le chargement des rôles si l'utilisateur est authentifié
+  useEffect(() => {
+    if (isAuthenticated && rolesLoading) {
+      showGlobalLoader();
+    } else {
+      hideGlobalLoader();
+    }
+  }, [isAuthenticated, rolesLoading]);
 
   // Create a memoized context value to prevent unnecessary re-renders
   const profileContextValue = useMemo(() => ({

@@ -128,13 +128,21 @@ export const RoleProvider = ({ children }) => {
   const value = useMemo(() => {
     return {
       roles: userRoles || [],
-      isLoading,
+      isLoading: isLoading || !user, // Considérer comme chargement si pas d'utilisateur
       // Add role check functions
       hasRole: (role) => {
+        // Si toujours en chargement, on retourne null pour indiquer l'indécision
+        if (isLoading) return null;
         return userRoles?.some(r => r === role);
       },
-      hasAnyRole: (roles) => roles.some(role => userRoles?.some(r => r === role)),
-      hasAllRoles: (roles) => roles.every(role => userRoles?.some(r => r === role)),
+      hasAnyRole: (roles) => {
+        if (isLoading) return null;
+        return roles.some(role => userRoles?.some(r => r === role));
+      },
+      hasAllRoles: (roles) => {
+        if (isLoading) return null;
+        return roles.every(role => userRoles?.some(r => r === role));
+      },
       // Add a function to refresh roles
       refreshRoles: () => {
         fetchUser(true).then(() => {
@@ -142,7 +150,7 @@ export const RoleProvider = ({ children }) => {
         });
       }
     };
-  }, [userRoles, isLoading, queryClient, fetchUser]);
+  }, [userRoles, isLoading, queryClient, fetchUser, user]);
 
   return (
     <RoleContext.Provider value={value}>
