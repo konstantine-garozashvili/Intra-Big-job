@@ -209,6 +209,24 @@ const FormationList = () => {
             </DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm text-gray-500">
+                {selectedStudentIds.length} étudiant{selectedStudentIds.length > 1 ? 's' : ''} sélectionné{selectedStudentIds.length > 1 ? 's' : ''}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (selectedStudentIds.length === availableStudents.length) {
+                    setSelectedStudentIds([]);
+                  } else {
+                    setSelectedStudentIds(availableStudents.map(student => student.id));
+                  }
+                }}
+              >
+                {selectedStudentIds.length === availableStudents.length ? "Tout désélectionner" : "Tout sélectionner"}
+              </Button>
+            </div>
             <div className="space-y-4">
               {availableStudents.map(student => (
                 <div key={student.id} className="flex items-center space-x-2">
