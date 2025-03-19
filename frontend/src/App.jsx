@@ -12,6 +12,11 @@ const RegistrationSuccess = lazy(() => import('./pages/RegistrationSuccess'))
 const VerificationSuccess = lazy(() => import('./pages/VerificationSuccess'))
 const VerificationError = lazy(() => import('./pages/VerificationError'))
 
+// Lazy loading pour la réinitialisation de mot de passe
+const ResetPasswordRequest = lazy(() => import('./components/auth/ResetPasswordRequest'))
+const ResetPasswordConfirmation = lazy(() => import('./components/auth/ResetPasswordConfirmation'))
+const ResetPassword = lazy(() => import('./components/auth/ResetPassword'))
+
 // Lazy loading pour le Profil et Dashboard
 const SettingsProfile = lazy(() => import('./pages/Global/Profile/views/SettingsProfile'))
 const SecuritySettings = lazy(() => import('./pages/Global/Profile/views/SecuritySettings'))
@@ -68,10 +73,20 @@ const useIntelligentPreload = () => {
       // Sur la page de login, précharger le dashboard et l'enregistrement
       preloadComponent(() => import('./pages/Dashboard'));
       preloadComponent(() => import('./pages/Register'));
+      // Précharger les composants de réinitialisation de mot de passe
+      preloadComponent(() => import('./components/auth/ResetPasswordRequest'));
     } 
     else if (currentPath.includes('/register')) {
       // Sur la page d'enregistrement, précharger la confirmation
       preloadComponent(() => import('./pages/RegistrationSuccess'));
+    }
+    else if (currentPath.includes('/reset-password')) {
+      // Précharger les composants de réinitialisation de mot de passe
+      if (currentPath === '/reset-password') {
+        preloadComponent(() => import('./components/auth/ResetPasswordConfirmation'));
+      } else if (currentPath.includes('/reset-password/confirmation')) {
+        preloadComponent(() => import('./components/auth/ResetPassword'));
+      }
     }
     else if (currentPath.includes('/profile')) {
       // Sur le profil, précharger les sous-pages de profil
@@ -289,6 +304,10 @@ const AppContent = () => {
                     <Route path="/registration-success" element={<RegistrationSuccess />} />
                     <Route path="/verification-success" element={<VerificationSuccess />} />
                     <Route path="/verification-error" element={<VerificationError />} />
+                    {/* Routes de réinitialisation de mot de passe */}
+                    <Route path="/reset-password" element={<ResetPasswordRequest />} />
+                    <Route path="/reset-password/confirmation" element={<ResetPasswordConfirmation />} />
+                    <Route path="/reset-password/:token" element={<ResetPassword />} />
                   </Route>
                   
                   <Route element={<ProtectedRoute />}>
