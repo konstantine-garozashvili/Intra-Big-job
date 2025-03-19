@@ -99,6 +99,7 @@ export const SearchBar = () => {
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+        // Toujours fermer les suggestions quand on clique à l'extérieur, même pour les recruteurs
         setShowSuggestions(false);
         setIsFocused(false);
       }
@@ -129,6 +130,13 @@ export const SearchBar = () => {
     };
   }, []);
 
+  // Ajouter un effet pour débugger le comportement des suggestions
+  useEffect(() => {
+    if (hasRole(ROLES.RECRUITER)) {
+      console.log('Suggestions visibility changed:', showSuggestions);
+    }
+  }, [showSuggestions, hasRole]);
+
   const checkForRoleSearch = (value) => {
     // Use the centralized function to check for role matches
     const matchResult = matchRoleFromSearchTerm(value, allowedSearchRoles);
@@ -146,10 +154,16 @@ export const SearchBar = () => {
       return;
     }
     
+    // Special case for recruiters - always show suggestions panel
+    const isRecruiter = hasRole(ROLES.RECRUITER) && !hasRole(ROLES.SUPERADMIN);
+    
     // Only fetch when query is 1 or more characters
     if (value.length < 1) {
       setSuggestions([]);
-      setShowSuggestions(false);
+      // Ne pas masquer les suggestions pour les recruteurs
+      if (!isRecruiter && !hasRole(ROLES.SUPERADMIN)) {
+        setShowSuggestions(false);
+      }
       setIsLoading(false);
       return;
     }
@@ -162,14 +176,20 @@ export const SearchBar = () => {
           setShowSuggestions(true);
         } else {
           setSuggestions([]);
-          setShowSuggestions(false);
+          // Ne pas masquer les suggestions pour les recruteurs
+          if (!isRecruiter && !hasRole(ROLES.SUPERADMIN)) {
+            setShowSuggestions(false);
+          }
         }
         setIsLoading(false);
       })
       .catch((error) => {
         console.error('Error fetching suggestions:', error);
         setSuggestions([]);
-        setShowSuggestions(false);
+        // Ne pas masquer les suggestions pour les recruteurs
+        if (!isRecruiter && !hasRole(ROLES.SUPERADMIN)) {
+          setShowSuggestions(false);
+        }
         setIsLoading(false);
       });
   };
@@ -188,6 +208,13 @@ export const SearchBar = () => {
     // Clear any existing timeout
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
+    }
+
+    // Special case for recruiters - always show suggestions panel
+    const isRecruiter = hasRole(ROLES.RECRUITER) && !hasRole(ROLES.SUPERADMIN);
+    // Pour les recruteurs, assurons-nous que le panneau reste affiché
+    if (isRecruiter && !showSuggestions) {
+      setShowSuggestions(true);
     }
 
     // Debounce the search to avoid too many requests
@@ -293,10 +320,44 @@ export const SearchBar = () => {
     }
     setIsFocused(true);
     
-    // Pour superadmin : directement afficher des suggestions d'utilisateurs, même avec un champ vide
-    if (hasRole(ROLES.SUPERADMIN)) {
-      // Faire une recherche avec un caractère simple pour récupérer une liste d'utilisateurs
-      fetchSuggestions('a');
+    // Pour superadmin et recruteur : directement afficher des suggestions d'utilisateurs, même avec un champ vide
+    if (hasRole(ROLES.SUPERADMIN) || hasRole(ROLES.RECRUITER)) {
+      // TOUJOURS afficher le panneau de suggestions immédiatement, même vide
+      setSuggestions([]);
+      setShowSuggestions(true);
+      
+      // Faire une recherche directe pour récupérer une liste d'utilisateurs
+      setIsLoading(true);
+      
+      // Pour les recruteurs, utiliser directement un terme qui correspond à leur domaine de recherche
+      const searchTerm = hasRole(ROLES.RECRUITER) && !hasRole(ROLES.SUPERADMIN) ? 'formateur' : 'a';
+      
+      userAutocompleteService.getSuggestions(searchTerm)
+        .then((data) => {
+          if (Array.isArray(data) && data.length > 0) {
+            setSuggestions(data);
+            // Ne pas modifier setShowSuggestions ici - il est déjà à true
+          } else if (hasRole(ROLES.RECRUITER) && !hasRole(ROLES.SUPERADMIN)) {
+            // Si pas de résultats avec formateur, essayer étudiant
+            return userAutocompleteService.getSuggestions('étudiant');
+          } else {
+            // Si pas de résultats avec 'a' pour superadmin, ne rien faire
+            // Le panneau restera affiché avec le message "Aucun utilisateur trouvé"
+            return null;
+          }
+        })
+        .then((secondData) => {
+          if (secondData && Array.isArray(secondData) && secondData.length > 0) {
+            setSuggestions(secondData);
+            // Ne pas modifier setShowSuggestions ici - il est déjà à true
+          }
+          setIsLoading(false);
+        })
+        .catch((error) => {
+          console.error('Error fetching suggestions:', error);
+          // Ne pas modifier setShowSuggestions ici - il doit rester à true
+          setIsLoading(false);
+        });
     } 
     // Pour les autres utilisateurs
     else if (query.length >= 1) {
@@ -367,7 +428,7 @@ export const SearchBar = () => {
       </div>
       
       {/* Message d'aide (affiché uniquement quand focusé, query vide et PAS superadmin) */}
-      {isFocused && query.length === 0 && isLoggedIn && !hasRole(ROLES.SUPERADMIN) && !showSuggestions && (
+      {isFocused && query.length === 0 && isLoggedIn && !hasRole(ROLES.SUPERADMIN) && !hasRole(ROLES.RECRUITER) && !showSuggestions && (
         <div className="absolute top-full left-0 w-full mt-2 px-3 py-2 text-xs text-white/70 bg-[#02284f]/90 rounded-md">
           <p>
             {hasRole(ROLES.ADMIN) ? (
@@ -376,8 +437,6 @@ export const SearchBar = () => {
               ).join(', ')}</>
             ) : hasRole(ROLES.TEACHER) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN]) ? (
               <>En tant que Formateur, vous pouvez uniquement rechercher des <strong>étudiants</strong> et des personnes des <strong>ressources humaines</strong> par nom ou par rôle</>
-            ) : hasRole(ROLES.RECRUITER) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.HR, ROLES.TEACHER]) ? (
-              <>En tant que Recruteur, vous pouvez uniquement rechercher des <strong>étudiants</strong> et des <strong>formateurs</strong> par nom ou par rôle</>
             ) : hasRole(ROLES.HR) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN]) ? (
               <>En tant que RH, vous pouvez uniquement rechercher des <strong>étudiants</strong>, des <strong>formateurs</strong> et des <strong>recruteurs</strong> par nom ou par rôle</>
             ) : allowedSearchRoles.length > 0 ? (
@@ -393,6 +452,7 @@ export const SearchBar = () => {
         </div>
       )}
       
+      {/* Message d'aide pour les utilisateurs non connectés */}
       {!isLoggedIn && isFocused && (
         <div className="absolute top-full left-0 w-full mt-2 px-3 py-2 text-xs text-white/70 bg-[#02284f]/90 rounded-md">
           <p>Vous devez être connecté pour effectuer une recherche.</p>
@@ -546,13 +606,17 @@ export const SearchBar = () => {
                   ))}
                 </div>
                 
-                {/* Message d'aide pour superadmin à la fin de la liste des résultats */}
-                {hasRole(ROLES.SUPERADMIN) && query.length === 0 && (
+                {/* Message d'aide pour superadmin ou recruteur à la fin de la liste des résultats */}
+                {(hasRole(ROLES.SUPERADMIN) || hasRole(ROLES.RECRUITER)) && query.length === 0 && (
                   <div className="px-3 py-2 bg-gray-50 border-t border-gray-100 text-xs text-gray-500">
                     <p>
-                      En tant que Super Admin, vous pouvez rechercher tous les utilisateurs par nom ou par rôle : {allowedSearchRoles.map(role => 
-                        role !== 'SUPERADMIN' ? getRoleDisplayFormat(role).toLowerCase() : null
-                      ).filter(Boolean).join(', ')}
+                      {hasRole(ROLES.SUPERADMIN) ? (
+                        <>En tant que Super Admin, vous pouvez rechercher tous les utilisateurs par nom ou par rôle : {allowedSearchRoles.map(role => 
+                          role !== 'SUPERADMIN' ? getRoleDisplayFormat(role).toLowerCase() : null
+                        ).filter(Boolean).join(', ')}</>
+                      ) : (
+                        <>En tant que Recruteur, vous pouvez uniquement rechercher des <strong>étudiants</strong> et des <strong>formateurs</strong> par nom ou par rôle</>
+                      )}
                     </p>
                   </div>
                 )}
