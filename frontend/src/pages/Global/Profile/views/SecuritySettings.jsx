@@ -37,6 +37,23 @@ const SecuritySettings = () => {
 
   const handlePasswordChange = async (e) => {
     e.preventDefault();
+    
+    // Form validation
+    if (!currentPassword) {
+      toast.error('Veuillez saisir votre mot de passe actuel');
+      return;
+    }
+    
+    if (!newPassword) {
+      toast.error('Veuillez saisir un nouveau mot de passe');
+      return;
+    }
+    
+    if (newPassword.length < 8) {
+      toast.error('Le nouveau mot de passe doit contenir au moins 8 caractères');
+      return;
+    }
+    
     if (newPassword !== confirmPassword) {
       toast.error('Les mots de passe ne correspondent pas');
       return;
@@ -50,14 +67,20 @@ const SecuritySettings = () => {
 
     setLoading(true);
     try {
-      await authService.changePassword({
+      const result = await authService.changePassword({
         currentPassword,
         newPassword
       });
-      toast.success('Mot de passe modifié avec succès');
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
+      
+      if (result.success) {
+        toast.success(result.message || 'Mot de passe modifié avec succès');
+        // Reset form fields after successful password change
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+      } else {
+        toast.error(result.message || 'Erreur lors du changement de mot de passe');
+      }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Erreur lors du changement de mot de passe');
     } finally {

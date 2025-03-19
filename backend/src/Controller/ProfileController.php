@@ -21,7 +21,7 @@ use Symfony\Component\Serializer\SerializerInterface;
 
 
 #[Route('/api/profil')]
-class ProfilController extends AbstractController
+class ProfileController extends AbstractController
 {
     private $security;
     private $serializer;

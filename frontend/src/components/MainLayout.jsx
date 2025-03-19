@@ -120,9 +120,6 @@ const MainLayout = () => {
       // Show loading before any state changes
       showGlobalLoader();
       
-      // Get redirect path from event if available
-      const redirectPath = event?.detail?.redirectTo || '/login';
-      
       // Add a small delay before changing state
       setTimeout(() => {
         setIsAuthenticated(false);
@@ -134,19 +131,14 @@ const MainLayout = () => {
         setMinContentHeight('150vh');
         calculateMinHeight();
         
-        // Keep loading visible for a consistent time
+        // Réduire le temps d'affichage du loader pour une expérience plus fluide
         setTimeout(() => {
-          hideGlobalLoader(100);
-          
-          // Redirect to login page if not already redirected by authService
-          if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
-            window.location.href = redirectPath;
-          }
+          hideGlobalLoader(50);
           
           // Recalculate height after transition completes
-          setTimeout(() => calculateMinHeight(), 200);
-        }, 400);
-      }, 100);
+          setTimeout(() => calculateMinHeight(), 100);
+        }, 200);
+      }, 50);
     };
     
     // Fonction pour récupérer les données utilisateur

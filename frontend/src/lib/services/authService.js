@@ -413,19 +413,14 @@ export const authService = {
       // Générer un nouvel identifiant de session pour la prochaine connexion
       currentSessionId = generateSessionId();
       
-      // Déclencher les événements de déconnexion
+      // MODIFICATION: Ne déclencher qu'un seul événement de déconnexion
+      // et supprimer la redirection forcée via window.location.href
       window.dispatchEvent(new CustomEvent('logout-success', {
         detail: { redirectTo }
       }));
-      window.dispatchEvent(new Event('auth-logout-success'));
-      
-      // Forcer la redirection vers la page de login après un court délai
-      setTimeout(() => {
-        window.location.href = redirectTo;
-      }, 300);
       
       // Remove loading state after a short delay
-      hideGlobalLoader(300);
+      hideGlobalLoader(100);
       
       return true;
     } catch (error) {
@@ -447,16 +442,11 @@ export const authService = {
       // Générer un nouvel identifiant de session
       currentSessionId = generateSessionId();
       
-      // Émettre les événements de déconnexion
+      // MODIFICATION: Ne déclencher qu'un seul événement de déconnexion
+      // et supprimer la redirection forcée via window.location.href
       window.dispatchEvent(new CustomEvent('logout-success', {
         detail: { redirectTo }
       }));
-      window.dispatchEvent(new Event('auth-logout-success'));
-      
-      // Forcer la redirection même en cas d'erreur
-      setTimeout(() => {
-        window.location.href = redirectTo;
-      }, 300);
       
       // Remove loading state on error
       hideGlobalLoader();
@@ -660,7 +650,7 @@ export const authService = {
    */
   async changePassword(passwordData) {
     try {
-      const response = await apiService.post('/change-password', passwordData, apiService.withAuth());
+      const response = await apiService.post('/api/change-password', passwordData, apiService.withAuth());
       return response;
     } catch (error) {
       throw error;

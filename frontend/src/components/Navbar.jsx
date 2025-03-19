@@ -371,29 +371,29 @@ const Navbar = memo(({ user }) => {
       // Fermer la boîte de dialogue de déconnexion
       setLogoutDialogOpen(false);
 
-      // Anticiper la déconnexion en nettoyant d'abord les états UI
-      setUserData(null);
-      setIsAuthenticated(false);
-      
-      // Déclencher un pré-événement de déconnexion pour que les hooks et composants puissent se préparer
+      // Déclencher un événement de pré-déconnexion pour préparer l'interface
       window.dispatchEvent(new Event('logout-start'));
       
-      // Appeler le service de déconnexion avec le chemin de redirection
-      await authService.logout('/');
-      
-      // Il n'est plus nécessaire de naviguer manuellement ici car
-      // l'événement logout-success s'en chargera via le gestionnaire dans App.jsx
+      // Masquer l'interface utilisateur et afficher le loader
       setTimeout(() => {
-        setIsLoggingOut(false);
-      }, 100);
+        // Anticiper la déconnexion en nettoyant d'abord les états UI
+        setUserData(null);
+        setIsAuthenticated(false);
+        
+        // Appeler le service de déconnexion avec le chemin de redirection
+        authService.logout('/login');
+        
+        // Réinitialiser l'état de déconnexion après un délai
+        setTimeout(() => {
+          setIsLoggingOut(false);
+        }, 100);
+      }, 50);
     } catch (error) {
-      console.error('Error during logout:', error);
-      
-      // En cas d'erreur, forcer quand même la déconnexion
-      authService.logout('/');
-      setUserData(null);
-      setIsAuthenticated(false);
+      console.error('Erreur lors de la déconnexion:', error);
       setIsLoggingOut(false);
+      
+      // En cas d'erreur, forcer une déconnexion propre
+      authService.clearAuthData(true, 'Une erreur est survenue lors de la déconnexion.');
     }
   };
 

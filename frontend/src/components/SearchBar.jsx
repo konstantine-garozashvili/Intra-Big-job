@@ -704,7 +704,7 @@ export const SearchBar = () => {
                       animate={{ 
                         opacity: 1, 
                         y: 0,
-                        backgroundColor: index === activeSuggestion ? "rgba(82, 142, 178, 0.08)" : "transparent" 
+                        backgroundColor: index === activeSuggestion ? "rgba(82, 142, 178, 0.08)" : "rgba(0,0,0,0)" 
                       }}
                       transition={{ 
                         duration: 0.2,

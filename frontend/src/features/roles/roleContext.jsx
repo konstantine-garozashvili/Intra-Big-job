@@ -25,16 +25,13 @@ export const RoleProvider = ({ children }) => {
   const fetchUser = useCallback(async (forceRefresh = false) => {
     if (authService.isLoggedIn()) {
       try {
-        console.log('Fetching user data, forceRefresh:', forceRefresh);
         const userData = await authService.getCurrentUser(forceRefresh);
-        console.log('User data fetched:', userData);
         setUser(userData);
         
         // Check if role has changed
         const currentRole = userData?.roles?.[0];
         if (currentRole && lastRole && currentRole !== lastRole) {
           // Clear role-specific caches
-          console.log('Role changed, clearing caches:', { currentRole, lastRole });
           queryClient.removeQueries(['admin-users']);
           queryClient.removeQueries(['admin-dashboard']);
           queryClient.removeQueries(['student-dashboard']);
@@ -49,7 +46,6 @@ export const RoleProvider = ({ children }) => {
         
         return userData;
       } catch (error) {
-        console.error('Error fetching user data:', error);
         setUser(null);
         setLastRole(null);
         // Clear query data to ensure consistent state
@@ -57,7 +53,6 @@ export const RoleProvider = ({ children }) => {
         return null;
       }
     } else {
-      console.log('User not logged in, setting user to null');
       setUser(null);
       setLastRole(null);
       // Clear query data to ensure consistent state
@@ -115,40 +110,28 @@ export const RoleProvider = ({ children }) => {
   const { data: userRoles, isLoading } = useQuery({
     queryKey: ['userRoles', user?.id],
     queryFn: async () => {
-      console.log('Running userRoles query function', { userId: user?.id });
       // If no user, return empty array
       if (!user) {
-        console.log('No user found, returning empty roles array');
         return [];
       }
       
       // If user has roles already, use those
       if (user.roles && Array.isArray(user.roles) && user.roles.length > 0) {
-        console.log('Using roles from user object:', user.roles);
         return user.roles;
       }
       
-      console.log('No roles found in user object, returning empty array');
       return [];
     },
     enabled: !!user,
     staleTime: 5 * 60 * 1000, // 5 minutes
     cacheTime: 10 * 60 * 1000, // 10 minutes
-    onError: (error) => {
-      console.error('Error fetching user roles:', error);
+    onError: () => {
       return [];
     }
   });
 
   // Create memoized value for the context
   const value = useMemo(() => {
-    console.log('RoleContext value being created:', {
-      userRoles,
-      isLoading,
-      userId: user?.id,
-      hasUser: !!user
-    });
-    
     return {
       roles: userRoles || [],
       isLoading: isLoading || !user, // Considérer comme chargement si pas d'utilisateur
@@ -157,21 +140,18 @@ export const RoleProvider = ({ children }) => {
         // Si toujours en chargement, on retourne null pour indiquer l'indécision
         if (isLoading) return null;
         const result = userRoles?.some(r => r === role);
-        console.log(`hasRole check: ${role}, result: ${result}, userRoles: ${JSON.stringify(userRoles)}`);
         return result;
       },
       hasAnyRole: (roles) => {
         if (isLoading) return null;
         if (!roles || !Array.isArray(roles)) return false;
         const result = roles.some(role => userRoles?.some(r => r === role));
-        console.log(`hasAnyRole check: ${JSON.stringify(roles)}, result: ${result}, userRoles: ${JSON.stringify(userRoles)}`);
         return result;
       },
       hasAllRoles: (roles) => {
         if (isLoading) return null;
         if (!roles || !Array.isArray(roles)) return false;
         const result = roles.every(role => userRoles?.some(r => r === role));
-        console.log(`hasAllRoles check: ${JSON.stringify(roles)}, result: ${result}, userRoles: ${JSON.stringify(userRoles)}`);
         return result;
       },
       // Add a function to refresh roles

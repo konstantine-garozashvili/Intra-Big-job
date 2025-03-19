@@ -2,7 +2,8 @@ import axios from 'axios';
 import authService from '@services/authService';
 import apiService from '@/lib/services/apiService';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+// Updated to use the base URL without /api as the prefix is already added in apiService
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 // Simple event emitter for document updates
 export const documentEvents = {
@@ -88,16 +89,9 @@ class DocumentService {
     }
     
     try {
-      const response = await axios.get(
-        `${API_URL}/documents`,
-        {
-          headers: {
-            'Authorization': `Bearer ${authService.getToken()}`
-          }
-        }
-      );
+      const response = await apiService.get('/documents');
       
-      const documents = response.data.data || [];
+      const documents = response.data || [];
       
       documentCache.documents = documents;
       documentCache.lastFetch = Date.now();
@@ -143,11 +137,8 @@ class DocumentService {
         }
       };
       
-      const response = await axios.post(
-        `${API_URL}/documents/upload/cv`, 
-        formData,
-        config
-      );
+      // Use apiService instead of direct axios call
+      const response = await apiService.post('/documents/upload/cv', formData, config);
       
       // Clear cache after upload
       documentCache.clear();
@@ -155,7 +146,7 @@ class DocumentService {
       // Notify subscribers about the update
       documentEvents.notify();
       
-      return response.data;
+      return response;
     } catch (error) {
       // En cas d'erreur, forcer un rafraîchissement pour supprimer les documents temporaires
       documentCache.clear();
@@ -198,18 +189,15 @@ class DocumentService {
         }
       };
       
-      const response = await axios.post(
-        `${API_URL}/documents/upload/cv/${studentId}`, 
-        formData,
-        config
-      );
+      // Use apiService instead of direct axios call
+      const response = await apiService.post(`/documents/upload/cv/${studentId}`, formData, config);
       
       documentCache.clear();
       
       // Notify subscribers about the update
       documentEvents.notify();
       
-      return response.data;
+      return response;
     } catch (error) {
       // En cas d'erreur, forcer un rafraîchissement pour supprimer les documents temporaires
       documentCache.clear();
@@ -225,14 +213,17 @@ class DocumentService {
    */
   async downloadDocument(documentId) {
     try {
+      const config = {
+        headers: {
+          'Authorization': `Bearer ${authService.getToken()}`
+        },
+        responseType: 'blob'
+      };
+      
+      // Use apiService.get with raw: true option
       const response = await axios.get(
-        `${API_URL}/documents/${documentId}/download`,
-        {
-          headers: {
-            'Authorization': `Bearer ${authService.getToken()}`
-          },
-          responseType: 'blob'
-        }
+        `${API_URL}/api/documents/${documentId}/download`,
+        config
       );
       
       return response.data;
@@ -248,29 +239,23 @@ class DocumentService {
    */
   async deleteDocument(documentId) {
     try {
-      // Optimistic update - supprimer du cache avant la requête
+      // Remove from cache first for optimistic UI update
       documentCache.removeDocument(documentId);
-      
-      // Notifier les abonnés de la mise à jour optimiste
-      documentEvents.notify();
-      
-      const response = await axios.delete(
-        `${API_URL}/documents/${documentId}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${authService.getToken()}`
-          }
-        }
-      );
-      
-      documentCache.clear();
       
       // Notify subscribers about the update
       documentEvents.notify();
       
-      return response.data;
+      const response = await apiService.delete(`/documents/${documentId}`);
+      
+      // Clear the cache after deletion
+      documentCache.clear();
+      
+      // Notify subscribers about the update again after server confirmation
+      documentEvents.notify();
+      
+      return response;
     } catch (error) {
-      // En cas d'erreur, forcer un rafraîchissement pour restaurer l'état correct
+      // Refresh cache in case of error
       documentCache.clear();
       documentEvents.notify();
       throw error;
@@ -278,29 +263,23 @@ class DocumentService {
   }
 
   /**
-   * Get document by type (e.g., get CV)
-   * @param {string} type - The type code of the document (e.g., 'CV')
+   * Get documents by type (CV, DIPLOME, etc.)
+   * @param {string} type - Document type to filter by
    * @param {boolean} [forceRefresh=false] - Force a refresh of the cache
-   * @returns {Promise<Array>} Array of documents matching the type
+   * @returns {Promise<Array>} Array of documents of the specified type
    */
   async getDocumentByType(type, forceRefresh = false) {
     const normalizedType = type.toUpperCase();
     
+    // Check if we have cached documents of this type
     if (!forceRefresh && documentCache.isValid() && documentCache.documentsByType[normalizedType]) {
       return documentCache.documentsByType[normalizedType];
     }
     
     try {
-      const response = await axios.get(
-        `${API_URL}/documents/type/${normalizedType}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${authService.getToken()}`
-          }
-        }
-      );
+      const response = await apiService.get(`/documents/type/${normalizedType}`);
       
-      const documents = response.data.data || [];
+      const documents = response.data || [];
       
       // Cache the documents by type
       documentCache.documentsByType[normalizedType] = documents;

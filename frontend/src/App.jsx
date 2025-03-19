@@ -233,8 +233,12 @@ const AppContent = () => {
   // Écouteur d'événement pour la navigation après déconnexion
   useEffect(() => {
     const handleLogoutNavigation = (event) => {
-      // Get redirectTo path from event detail if available, default to '/'
-      const redirectTo = event?.detail?.redirectTo || '/';
+      // Référence pour éviter les déclenchements multiples
+      if (window.__isLoggingOut) return;
+      window.__isLoggingOut = true;
+      
+      // Toujours rediriger vers /login
+      const redirectTo = '/login';
       
       // Show loader during navigation
       setShowLoader(true);
@@ -242,27 +246,28 @@ const AppContent = () => {
       // Set navigating state to true
       setIsNavigating(true);
       
-      // Reduced delay from 50ms to 20ms
+      // Utiliser la redirection avec replace pour éviter l'historique
+      navigate(redirectTo, { replace: true });
+      
+      // Attendre que la navigation soit terminée avant de masquer le loader
       setTimeout(() => {
-        // Navigate to home or specified redirect path
-        navigate(redirectTo);
-        
-        // Keep loader visible for a minimum time - REDUCED from 500ms to 300ms
+        setIsNavigating(false);
         setTimeout(() => {
-          setIsNavigating(false);
-          // Hide loader after a short delay - REDUCED from 300ms to 150ms 
+          setShowLoader(false);
+          
+          // Réinitialiser le flag après un délai suffisant
           setTimeout(() => {
-            setShowLoader(false);
-          }, 150);
-        }, 300);
-      }, 20);
+            window.__isLoggingOut = false;
+          }, 500);
+        }, 100);
+      }, 300);
     };
 
     const handleLoginSuccess = () => {
       // Show loader during login
       setShowLoader(true);
       
-      // Keep loader visible for a minimum time - REDUCED from 1000ms to 500ms
+      // Keep loader visible for a minimum time
       setTimeout(() => {
         // Hide loader after navigation is complete
         setShowLoader(false);

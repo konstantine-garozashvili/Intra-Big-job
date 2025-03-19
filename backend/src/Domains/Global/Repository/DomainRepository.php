@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Repository;
+namespace App\Domains\Global\Repository;
 
 use App\Entity\Domain;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -38,4 +38,4 @@ class DomainRepository extends ServiceEntityRepository
             $this->getEntityManager()->flush();
         }
     }
-} 
+}
