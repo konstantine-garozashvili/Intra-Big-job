@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { GraduationCap, Plus, Trash2, X, Save, Calendar, Check, ChevronsUpDown } from 'lucide-react';
+import React, { useState, lazy, Suspense, memo } from 'react';
+import { GraduationCap, Plus, Trash2, X, Save, Calendar as CalendarIcon, Check, ChevronsUpDown } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -19,12 +19,58 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import * as roleUtils from '../../utils/roleUtils';
 import { useApiQuery, useApiMutation } from '@/hooks/useReactQuery';
+import 'react-calendar/dist/Calendar.css';
+import '../../../../../styles/custom-calendar.css';
+import { motion, AnimatePresence } from 'framer-motion';
+
+// Style personnalisé pour adapter le calendrier au thème de la gestion des diplômes
+const diplomaCalendarStyles = `
+  .modern-calendar .react-calendar__navigation button.react-calendar__navigation__label {
+    color: #528eb2;
+  }
+  
+  .modern-calendar .react-calendar__navigation button.react-calendar__navigation__arrow {
+    color: #528eb2;
+  }
+  
+  .modern-calendar .react-calendar__tile--active,
+  .modern-calendar .react-calendar__tile--active:enabled:hover,
+  .modern-calendar .react-calendar__tile--active:enabled:focus {
+    background: #528eb2 !important;
+  }
+  
+  .modern-calendar .react-calendar__tile--now {
+    background: #f0f7ff;
+    color: #528eb2;
+  }
+  
+  .calendar-confirm-button {
+    background-color: #528eb2;
+  }
+  
+  .calendar-confirm-button:hover {
+    background-color: #457a9b;
+  }
+`;
+
+// Chargement dynamique du calendrier pour améliorer les performances
+const Calendar = lazy(() => import('react-calendar'));
+
+// Composant de chargement pour le calendrier - Mémorisé
+const CalendarFallback = memo(() => (
+  <div className="flex items-center justify-center p-8">
+    <div className="w-8 h-8 border-t-2 border-b-2 border-[#0066ff] rounded-full animate-spin"></div>
+  </div>
+));
+
+CalendarFallback.displayName = 'CalendarFallback';
 
 const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
   const userRole = userData?.role;
   const [isAdding, setIsAdding] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [diplomaToDelete, setDiplomaToDelete] = useState(null);
+  const [calendarOpen, setCalendarOpen] = useState(false);
   
   const [newDiploma, setNewDiploma] = useState({
     diplomaId: '',
@@ -203,6 +249,20 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
     });
   };
   
+  const handleDateChange = (date) => {
+    // Mettre à jour la date et formater au format yyyy-MM-dd pour l'API
+    setNewDiploma({
+      ...newDiploma, 
+      obtainedDate: format(date, 'yyyy-MM-dd')
+    });
+    if (error) setError('');
+  };
+
+  // Formater la date pour l'affichage
+  const formattedObtainedDate = newDiploma.obtainedDate ? 
+    format(new Date(newDiploma.obtainedDate), 'dd MMMM yyyy', { locale: fr }) : 
+    null;
+  
   // Check if this component should be rendered at all
   const shouldRenderDiplomaManager = () => {
     return roleUtils.isAdmin(userRole) || roleUtils.isStudent(userRole) || roleUtils.isGuest(userRole);
@@ -214,6 +274,9 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
 
   return (
     <div className="space-y-4">
+      {/* Style intégré pour le calendrier */}
+      <style dangerouslySetInnerHTML={{ __html: diplomaCalendarStyles }} />
+      
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
@@ -343,16 +406,84 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
                   >
                     Date d'obtention
                   </label>
-                  <input
-                    id="date-obtention"
-                    type="date"
-                    value={newDiploma.obtainedDate}
-                    onChange={(e) => {
-                      setNewDiploma({...newDiploma, obtainedDate: e.target.value});
-                      if (error) setError('');
-                    }}
-                    className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm"
-                  />
+                  <div className="relative">
+                    <div 
+                      className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm flex items-center cursor-pointer transition-colors hover:border-[#0066ff]"
+                      onClick={() => setCalendarOpen(true)}
+                    >
+                      {formattedObtainedDate ? (
+                        <span className="text-gray-900">
+                          {formattedObtainedDate}
+                        </span>
+                      ) : (
+                        <span className="text-gray-500">JJ/MM/AAAA</span>
+                      )}
+                      <CalendarIcon className="ml-auto h-4 w-4 text-gray-400" />
+                    </div>
+                    
+                    <Dialog open={calendarOpen} onOpenChange={setCalendarOpen}>
+                      <DialogContent className="p-0 sm:max-w-[425px] bg-white rounded-lg shadow-xl border-none overflow-hidden">
+                        <AnimatePresence>
+                          {calendarOpen && (
+                            <motion.div
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: 20 }}
+                              transition={{ duration: 0.3, type: "spring", stiffness: 300, damping: 25 }}
+                            >
+                              <div className="p-4 pb-0">
+                                <DialogTitle className="text-xl font-semibold text-center text-gray-900">
+                                  Sélectionnez la date d'obtention
+                                </DialogTitle>
+                              </div>
+                              <div className="calendar-container w-full p-4">
+                                <Suspense fallback={<CalendarFallback />}>
+                                  <Calendar 
+                                    onChange={handleDateChange} 
+                                    value={new Date(newDiploma.obtainedDate)} 
+                                    locale="fr"
+                                    maxDate={new Date()}
+                                    minDetail="decade" 
+                                    defaultView="month"
+                                    minDate={new Date(1940, 0, 1)}
+                                    className="modern-calendar w-full"
+                                    formatShortWeekday={(locale, date) => ['L', 'M', 'M', 'J', 'V', 'S', 'D'][date.getDay()]}
+                                    navigationLabel={({ date }) => 
+                                      date.toLocaleString('fr', { month: 'long', year: 'numeric' }).toLowerCase()
+                                    }
+                                    next2Label={<span className="text-lg text-[#528eb2]">»</span>}
+                                    prev2Label={<span className="text-lg text-[#528eb2]">«</span>}
+                                    nextLabel={<span className="text-lg text-[#528eb2]">›</span>}
+                                    prevLabel={<span className="text-lg text-[#528eb2]">‹</span>}
+                                    showNeighboringMonth={false}
+                                    tileClassName={({ date, view }) => {
+                                      // Vérifie si la date est dans le futur
+                                      const today = new Date();
+                                      today.setHours(0, 0, 0, 0);
+                                      
+                                      if (view === 'month' && date > today) {
+                                        return 'calendar-future-date';
+                                      }
+                                      
+                                      return null;
+                                    }}
+                                  />
+                                </Suspense>
+                              </div>
+                              <div className="p-4 flex justify-end">
+                                <Button 
+                                  onClick={() => setCalendarOpen(false)}
+                                  className="bg-[#528eb2] hover:bg-[#528eb2]/90 text-white font-medium text-sm px-4 py-2 rounded-md transition-colors"
+                                >
+                                  Confirmer
+                                </Button>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
                 </div>
               </div>
               <div className="flex justify-end gap-3 mt-4">
