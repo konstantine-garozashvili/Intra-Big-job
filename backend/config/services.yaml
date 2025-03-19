@@ -94,3 +94,14 @@ services:
     # Notre gestionnaire d'erreur d'authentification personnalisé
     lexik_jwt_authentication.handler.authentication_failure:
         class: App\Security\AuthenticationFailureHandler
+
+    # Message cleanup listener for automatic cleanup of old messages
+    App\EventListener\MessageCleanupListener:
+        arguments:
+            $messageCleanupService: '@App\Service\MessageCleanupService'
+            $logger: '@logger'
+            $cacheDir: '%kernel.cache_dir%'
+            $cleanupInterval: 86400  # 24 hours in seconds
+            $daysToKeep: 15  # Keep messages for 15 days
+        tags:
+            - { name: kernel.event_listener, event: kernel.terminate, method: onKernelTerminate }
