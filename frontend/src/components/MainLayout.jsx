@@ -7,6 +7,7 @@ import { authService } from '../lib/services/authService';
 import { profileService } from '../pages/Global/Profile/services/profileService';
 import Footer from './Footer';
 import { showGlobalLoader, hideGlobalLoader } from '../lib/utils/loadingUtils';
+import ChatButton from './chat/ChatButton';
 
 // Create a context for profile data and refresh function
 export const ProfileContext = createContext({
@@ -289,6 +290,9 @@ const MainLayout = () => {
         {showProgress && profileData && hasRole(ROLES.GUEST) && (
           <ProfileProgress userData={profileData} />
         )}
+        
+        {/* Add ChatButton for authenticated users */}
+        {isAuthenticated && !isFullScreenPage && <ChatButton />}
         
         {/* Footer sans transition */}
         <Footer />

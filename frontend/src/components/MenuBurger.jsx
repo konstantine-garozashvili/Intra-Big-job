@@ -25,7 +25,8 @@ import {
   ChevronDown,
   ChevronRight,
   X,
-  Menu
+  Menu,
+  ClipboardCheck
 } from 'lucide-react';
 import { useRolePermissions } from '@/features/roles/useRolePermissions';
 
@@ -244,6 +245,20 @@ const MenuBurger = memo(() => {
       icon: <LayoutDashboard className="w-5 h-5 mr-2 text-[#528eb2]" />,
       roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.STUDENT],
       to: '/dashboard',
+    },
+    {
+      key: 'attendance',
+      label: 'Présence',
+      icon: <Clipboard className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.STUDENT],
+      to: '/student/attendance',
+    },
+    {
+      key: 'signature_monitoring',
+      label: 'Suivi des signatures',
+      icon: <ClipboardCheck className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.TEACHER],
+      to: '/teacher/signature-monitoring',
     },
     {
       key: 'centres_formations',

@@ -127,6 +127,8 @@
     height: 0 !important;
 }
 
+}  /* Close the first @layer base block that started at line 8 */
+
 /* Base styles */
 @layer base {
   * {

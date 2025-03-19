@@ -58,9 +58,10 @@
     "recharts": "^2.15.1",
     "shadcn": "^2.4.0-canary.9",
     "sonner": "^2.0.1",
+    "styled-components": "^6.1.15",
     "tailwind-merge": "^3.0.2",
-    "tailwindcss-animate": "^1.0.7",
-    "styled-components": "^6.1.15"
+    "tailwind-scrollbar-hide": "^2.0.0",
+    "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",

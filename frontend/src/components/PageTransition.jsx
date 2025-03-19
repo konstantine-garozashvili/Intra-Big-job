@@ -45,3 +45,8 @@ const PageTransition = memo(({ children }) => {
   );
 });
 
+// Add display name for better debugging
+PageTransition.displayName = 'PageTransition';
+
+export default PageTransition;
+

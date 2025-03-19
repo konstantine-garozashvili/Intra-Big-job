@@ -96,6 +96,10 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     #[Groups(['user:read'])]
     private Collection $groups;
 
+    #[ORM\ManyToOne(inversedBy: 'users')]
+    #[Groups(['user:read'])]
+    private ?Specialization $specialization = null;
+
     public function __construct()
     {
         $this->createdAt = new \DateTimeImmutable();
@@ -500,5 +504,17 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     {
         // If you store any temporary, sensitive data on the user, clear it here
         // $this->plainPassword = null;
+    }
+
+    public function getSpecialization(): ?Specialization
+    {
+        return $this->specialization;
+    }
+
+    public function setSpecialization(?Specialization $specialization): static
+    {
+        $this->specialization = $specialization;
+
+        return $this;
     }
 }

@@ -320,7 +320,7 @@ const AppContent = () => {
                       <Route path="projects" element={<StudentProjects />} />
                       {/* Ajout de la route d'assiduité pour étudiants */}
                       <Route element={<StudentRoute />}>
-                        <Route path="attendance" element={<StudentAttendance />} />
+                      <Route path="attendance" element={<StudentAttendance />} />
                       </Route>
                     </Route>
                     

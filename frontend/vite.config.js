@@ -77,13 +77,12 @@ export default defineConfig({
       'framer-motion'
     ],
     force: true
-    },
-    proxy: {
-      '/api': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-        secure: false
-      }
+  },
+  proxy: {
+    '/api': {
+      target: 'http://localhost:8000',
+      changeOrigin: true,
+      secure: false
     }
   }
 })

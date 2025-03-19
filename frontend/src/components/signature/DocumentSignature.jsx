@@ -4,6 +4,7 @@ import { Button } from '../ui/button';
 import { Loader2, MapPin, CheckCircle, AlertCircle } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '../ui/alert';
 import { useNavigate } from 'react-router-dom';
+import { authService } from '../../lib/services/authService';
 
 // Custom fallback implementation for SignatureCanvas
 const FallbackSignatureCanvas = forwardRef((props, ref) => {
@@ -148,6 +149,7 @@ const DocumentSignature = () => {
   const [signedPeriods, setSignedPeriods] = useState([]);
   const [availablePeriods, setAvailablePeriods] = useState({});
   const signatureRef = useRef(null);
+  const [isLoading, setIsLoading] = useState(false);
   
   // Check if user is a student
   useEffect(() => {
@@ -161,37 +163,124 @@ const DocumentSignature = () => {
     }
   }, [navigate]);
   
-  // Check today's signatures when component mounts
+  // Add this function near the beginning of the DocumentSignature component
+  const fetchDataWithRetry = async (url, options, retries = 3) => {
+    for (let attempt = 0; attempt < retries; attempt++) {
+      try {
+        const response = await fetch(url, options);
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.warn(`API call failed (attempt ${attempt + 1}/${retries}):`, errorData);
+          
+          // If this is the last attempt, throw the error
+          if (attempt === retries - 1) {
+            throw new Error(errorData.message || `Request failed with status ${response.status}`);
+          }
+          
+          // Wait before retrying (exponential backoff)
+          await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt)));
+          continue;
+        }
+        
+        return await response.json();
+      } catch (error) {
+        console.error(`API call error (attempt ${attempt + 1}/${retries}):`, error);
+        
+        // If this is the last attempt, rethrow the error
+        if (attempt === retries - 1) {
+          throw error;
+        }
+        
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt)));
+      }
+    }
+  };
+  
+  // Ensure user data is properly stored in localStorage
   useEffect(() => {
+    const setupUserData = async () => {
+      try {
+        await authService.ensureUserDataInLocalStorage();
+      } catch (error) {
+        console.error('Failed to ensure user data in localStorage:', error);
+      }
+    };
+    
+    setupUserData();
+    
     const checkTodaySignatures = async () => {
       try {
+        setIsLoading(true);
+        
+        // Create a failsafe timeout
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error("API request timeout")), 10000)
+        );
+        
+        // Get token
         const token = localStorage.getItem('token');
-        if (!token) return;
-
-        const response = await fetch('http://localhost:8000/api/signatures/today', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          console.error('Error response:', errorData);
-          toast.error("Erreur", {
-            description: errorData.message || "Une erreur est survenue lors de la vérification des signatures."
-          });
-          return;
+        if (!token) {
+          throw new Error('Authentication token not found');
         }
-
-        const data = await response.json();
-        console.log('Signature data:', data); // Debug log
-        setCurrentPeriod(data.currentPeriod);
-        setSignedPeriods(data.signedPeriods);
-        setAvailablePeriods(data.availablePeriods);
+        
+        try {
+          // Race the fetch against a timeout
+          const data = await Promise.race([
+            fetchDataWithRetry('http://localhost:8000/api/signatures/today', {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            }),
+            timeoutPromise
+          ]);
+          
+          console.log('Signature data:', data);
+          
+          // Set the data even if it's partial
+          if (data) {
+            if (data.currentPeriod) setCurrentPeriod(data.currentPeriod);
+            if (data.signedPeriods) setSignedPeriods(data.signedPeriods || []);
+            if (data.availablePeriods) setAvailablePeriods(data.availablePeriods);
+          } else {
+            // Fallback defaults
+            setCurrentPeriod('afternoon'); // Default to afternoon
+            setSignedPeriods([]);
+            setAvailablePeriods({
+              morning: 'Matin (9h-12h)',
+              afternoon: 'Après-midi (13h-17h)'
+            });
+          }
+        } catch (error) {
+          console.error('Error checking today\'s signatures:', error);
+          
+          // Fallback to default values
+          setCurrentPeriod('afternoon'); // Default to afternoon
+          setSignedPeriods([]);
+          setAvailablePeriods({
+            morning: 'Matin (9h-12h)',
+            afternoon: 'Après-midi (13h-17h)'
+          });
+          
+          toast.error("Erreur", {
+            description: "Impossible de vérifier les signatures. Utilisation de valeurs par défaut."
+          });
+        } finally {
+          setIsLoading(false);
+        }
       } catch (error) {
-        console.error('Error checking today\'s signatures:', error);
-        toast.error("Erreur", {
-          description: "Impossible de vérifier les signatures. Veuillez réessayer."
+        console.error('Error in signature setup:', error);
+        setIsLoading(false);
+        
+        // Fallback to default values
+        setCurrentPeriod('afternoon'); // Default to afternoon
+        setSignedPeriods([]);
+        setAvailablePeriods({
+          morning: 'Matin (9h-12h)',
+          afternoon: 'Après-midi (13h-17h)'
         });
       }
     };
