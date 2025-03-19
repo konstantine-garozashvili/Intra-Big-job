@@ -120,6 +120,26 @@ export const useTeacherDashboardData = () => {
 export const useAdminDashboardData = () => {
   const sessionId = getSessionId();
   
+  // Get minimal user data from token if available
+  const getMinimalUserData = () => {
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        return JSON.parse(userStr);
+      }
+    } catch (e) {
+      console.error('Error parsing user data from localStorage:', e);
+    }
+    return null;
+  };
+  
+  // Use minimal user data from token while full data loads
+  const minimalUserData = getMinimalUserData();
+  
+  // S'assurer que le token est disponible
+  const token = localStorage.getItem('token');
+  const isAuthenticated = !!token;
+  
   // Utiliser useApiQuery pour récupérer la liste des utilisateurs
   const usersQuery = useApiQuery(
     '/users', 
@@ -141,30 +161,14 @@ export const useAdminDashboardData = () => {
           return undefined;
         }
       },
-      // Always enabled to load immediately
-      enabled: true,
+      // N'activer la requête que si l'utilisateur est authentifié
+      enabled: isAuthenticated,
       // Add a timeout to prevent hanging
       retry: 1,
       retryDelay: 1000,
       timeout: 4000, // Réduit de 8000ms à 4000ms
     }
   );
-  
-  // Get minimal user data from token if available
-  const getMinimalUserData = () => {
-    try {
-      const userStr = localStorage.getItem('user');
-      if (userStr) {
-        return JSON.parse(userStr);
-      }
-    } catch (e) {
-      console.error('Error parsing user data from localStorage:', e);
-    }
-    return null;
-  };
-  
-  // Use minimal user data from token while full data loads
-  const minimalUserData = getMinimalUserData();
   
   // Load full user data in parallel
   const userQuery = useApiQuery('/me', ['user-data', sessionId], {
@@ -176,6 +180,8 @@ export const useAdminDashboardData = () => {
     retry: 1,
     retryDelay: 1000,
     timeout: 4000, // Réduit de 8000ms à 4000ms
+    // N'activer la requête que si l'utilisateur est authentifié
+    enabled: isAuthenticated,
     select: (data) => {
       return data.user || data;
     }
