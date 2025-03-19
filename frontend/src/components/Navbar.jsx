@@ -290,17 +290,6 @@ const Navbar = memo(() => {
                         Présence
                       </Link>
                     )}
-                    
-                    {/* Lien pour le suivi des signatures (pour les enseignants uniquement) */}
-                    {(hasRole('ROLE_TEACHER') || hasRole('TEACHER')) && (
-                      <Link 
-                        to="/signature-monitoring" 
-                        className="px-3 py-2 rounded-md text-gray-200 hover:text-white hover:bg-[#02284f]/80 transition-colors flex items-center"
-                      >
-                        <ClipboardCheck className="h-4 w-4 mr-2" />
-                        Suivi des présences
-                      </Link>
-                    )}
                   </>
                 )}
               </div>

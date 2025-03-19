@@ -15,6 +15,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard'))
 const HomePage = lazy(() => import('./components/HomePage'))
 // Import des pages de signature
 const StudentAttendance = lazy(() => import('./pages/Student/Attendance'))
+// Import des pages de signature
 const TeacherSignatureMonitoring = lazy(() => import('./pages/Teacher/SignatureMonitoring'))
 import { Toaster } from './components/ui/sonner'
 import './index.css'
@@ -98,9 +99,6 @@ const App = () => {
                     <Route element={<StudentRoute />}>
                       <Route path="/attendance" element={<StudentAttendance />} />
                     </Route>
-                    
-                    {/* Route de suivi des signatures pour les enseignants */}
-                    <Route path="/signature-monitoring" element={<TeacherSignatureMonitoring />} />
                   </Route>
                   
                   {/* Redirection des routes inconnues vers la page d'accueil */}
