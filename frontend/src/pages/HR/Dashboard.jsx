@@ -258,24 +258,28 @@ const HRDashboard = () => {
                 className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
               >
                 <StatCard 
+                  key="total-employees"
                   title="Effectif total" 
                   value={mockData.employee.total} 
                   icon={Users} 
                   color="blue" 
                 />
                 <StatCard 
+                  key="active-employees"
                   title="Employés actifs" 
                   value={mockData.employee.active} 
                   icon={Users} 
                   color="green" 
                 />
                 <StatCard 
+                  key="on-leave"
                   title="En congé" 
                   value={mockData.employee.onLeave} 
                   icon={Calendar} 
                   color="yellow" 
                 />
                 <StatCard 
+                  key="occupation-rate"
                   title="Taux d'occupation" 
                   value={`${Math.round((mockData.employee.active / mockData.employee.total) * 100)}%`} 
                   icon={BarChart3} 
@@ -331,11 +335,13 @@ const HRDashboard = () => {
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <ActionButton 
+                        key="generate-report"
                         text="Générer rapport d'effectifs" 
                         icon={FileSpreadsheet} 
                         color="green" 
                       />
                       <ActionButton 
+                        key="export-list"
                         text="Exporter liste des employés" 
                         icon={FileDown} 
                         color="purple" 

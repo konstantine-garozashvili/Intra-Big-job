@@ -1,8 +1,6 @@
-import axios from 'axios';
+import axiosInstance from '@/lib/axios';
 import authService from '@services/authService';
 import apiService from '@/lib/services/apiService';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 // Simple event emitter for document updates
 export const documentEvents = {
@@ -88,14 +86,7 @@ class DocumentService {
     }
     
     try {
-      const response = await axios.get(
-        `${API_URL}/documents`,
-        {
-          headers: {
-            'Authorization': `Bearer ${authService.getToken()}`
-          }
-        }
-      );
+      const response = await axiosInstance.get('/documents');
       
       const documents = response.data.data || [];
       
@@ -137,17 +128,7 @@ class DocumentService {
       // Ajouter le type au formData
       formData.append('type', 'CV');
       
-      const config = {
-        headers: {
-          'Authorization': `Bearer ${authService.getToken()}`
-        }
-      };
-      
-      const response = await axios.post(
-        `${API_URL}/documents/upload/cv`, 
-        formData,
-        config
-      );
+      const response = await axiosInstance.post('/documents/upload/cv', formData);
       
       // Clear cache after upload
       documentCache.clear();
@@ -192,17 +173,7 @@ class DocumentService {
       // Notifier les abonnés de la mise à jour optimiste
       documentEvents.notify();
       
-      const config = {
-        headers: {
-          'Authorization': `Bearer ${authService.getToken()}`
-        }
-      };
-      
-      const response = await axios.post(
-        `${API_URL}/documents/upload/cv/${studentId}`, 
-        formData,
-        config
-      );
+      const response = await axiosInstance.post(`/documents/upload/cv/${studentId}`, formData);
       
       documentCache.clear();
       
@@ -225,15 +196,9 @@ class DocumentService {
    */
   async downloadDocument(documentId) {
     try {
-      const response = await axios.get(
-        `${API_URL}/documents/${documentId}/download`,
-        {
-          headers: {
-            'Authorization': `Bearer ${authService.getToken()}`
-          },
-          responseType: 'blob'
-        }
-      );
+      const response = await axiosInstance.get(`/documents/${documentId}/download`, {
+        responseType: 'blob'
+      });
       
       return response.data;
     } catch (error) {
@@ -248,21 +213,15 @@ class DocumentService {
    */
   async deleteDocument(documentId) {
     try {
-      // Optimistic update - supprimer du cache avant la requête
+      // Optimistically remove the document from the cache
       documentCache.removeDocument(documentId);
       
-      // Notifier les abonnés de la mise à jour optimiste
+      // Notify subscribers about the optimistic update
       documentEvents.notify();
       
-      const response = await axios.delete(
-        `${API_URL}/documents/${documentId}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${authService.getToken()}`
-          }
-        }
-      );
+      const response = await axiosInstance.delete(`/documents/${documentId}`);
       
+      // Clear cache after delete
       documentCache.clear();
       
       // Notify subscribers about the update
@@ -270,7 +229,7 @@ class DocumentService {
       
       return response.data;
     } catch (error) {
-      // En cas d'erreur, forcer un rafraîchissement pour restaurer l'état correct
+      // En cas d'erreur, forcer un rafraîchissement pour supprimer les documents temporaires
       documentCache.clear();
       documentEvents.notify();
       throw error;
@@ -291,14 +250,7 @@ class DocumentService {
     }
     
     try {
-      const response = await axios.get(
-        `${API_URL}/documents/type/${normalizedType}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${authService.getToken()}`
-          }
-        }
-      );
+      const response = await axiosInstance.get(`/documents/type/${normalizedType}`);
       
       const documents = response.data.data || [];
       
