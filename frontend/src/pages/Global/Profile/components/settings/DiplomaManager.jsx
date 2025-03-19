@@ -20,38 +20,7 @@ import { fr } from 'date-fns/locale';
 import * as roleUtils from '../../utils/roleUtils';
 import { useApiQuery, useApiMutation } from '@/hooks/useReactQuery';
 import 'react-calendar/dist/Calendar.css';
-import '../../../../../styles/custom-calendar.css';
-import { motion, AnimatePresence } from 'framer-motion';
-
-// Style personnalisé pour adapter le calendrier au thème de la gestion des diplômes
-const diplomaCalendarStyles = `
-  .modern-calendar .react-calendar__navigation button.react-calendar__navigation__label {
-    color: #528eb2;
-  }
-  
-  .modern-calendar .react-calendar__navigation button.react-calendar__navigation__arrow {
-    color: #528eb2;
-  }
-  
-  .modern-calendar .react-calendar__tile--active,
-  .modern-calendar .react-calendar__tile--active:enabled:hover,
-  .modern-calendar .react-calendar__tile--active:enabled:focus {
-    background: #528eb2 !important;
-  }
-  
-  .modern-calendar .react-calendar__tile--now {
-    background: #f0f7ff;
-    color: #528eb2;
-  }
-  
-  .calendar-confirm-button {
-    background-color: #528eb2;
-  }
-  
-  .calendar-confirm-button:hover {
-    background-color: #457a9b;
-  }
-`;
+import '@/styles/custom-calendar.css'; // Import du CSS personnalisé pour le calendrier
 
 // Chargement dynamique du calendrier pour améliorer les performances
 const Calendar = lazy(() => import('react-calendar'));
@@ -249,20 +218,19 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
     });
   };
   
+  // Formater la date pour l'affichage
+  const formattedObtainedDate = newDiploma.obtainedDate 
+    ? new Intl.DateTimeFormat('fr-FR').format(new Date(newDiploma.obtainedDate)) 
+    : null;
+
+  // Fonction pour gérer le changement de date
   const handleDateChange = (date) => {
-    // Mettre à jour la date et formater au format yyyy-MM-dd pour l'API
     setNewDiploma({
-      ...newDiploma, 
+      ...newDiploma,
       obtainedDate: format(date, 'yyyy-MM-dd')
     });
-    if (error) setError('');
   };
 
-  // Formater la date pour l'affichage
-  const formattedObtainedDate = newDiploma.obtainedDate ? 
-    format(new Date(newDiploma.obtainedDate), 'dd MMMM yyyy', { locale: fr }) : 
-    null;
-  
   // Check if this component should be rendered at all
   const shouldRenderDiplomaManager = () => {
     return roleUtils.isAdmin(userRole) || roleUtils.isStudent(userRole) || roleUtils.isGuest(userRole);
@@ -274,9 +242,6 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
 
   return (
     <div className="space-y-4">
-      {/* Style intégré pour le calendrier */}
-      <style dangerouslySetInnerHTML={{ __html: diplomaCalendarStyles }} />
-      
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
@@ -318,29 +283,32 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
         </div>
       ) : (
         <>
-          {/* Add Diploma Button */}
-          {roleUtils.canEditAcademic(userRole) && !isAdding && (
-            <button
-              onClick={() => setIsAdding(true)}
-              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg border-2 border-dashed border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50 transition-all"
-            >
-              <Plus className="h-5 w-5" />
-              <span>Ajouter un diplôme</span>
-            </button>
-          )}
-
-          {/* Add Diploma Form */}
+          {/* Formulaire d'ajout de diplôme */}
           {isAdding && (
-            <div className="bg-gray-50 p-4 rounded-lg space-y-4">
-              <h3 className="text-base font-medium">Ajouter un diplôme</h3>
+            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-medium text-gray-900">Ajouter un nouveau diplôme</h3>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={cancelAdd}
+                  className="h-8 w-8 rounded-full"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              
               {error && (
-                <div className="text-sm text-red-500 p-2 bg-red-50 rounded-md">
+                <div className="mb-4 p-2 bg-red-50 border border-red-200 rounded text-red-600 text-sm">
                   {error}
                 </div>
               )}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Diplôme</label>
+              
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="diploma" className="block text-sm font-medium text-gray-700 mb-1">
+                    Diplôme
+                  </label>
                   <Popover open={open} onOpenChange={setOpen}>
                     <PopoverTrigger asChild>
                       <Button
@@ -349,66 +317,56 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
                         aria-expanded={open}
                         className="w-full justify-between"
                       >
-                        <span className="truncate">
-                          {newDiploma.diplomaId
-                            ? availableDiplomas.find((diploma) => diploma.id.toString() === newDiploma.diplomaId)?.name
-                            : "Sélectionner un diplôme..."}
-                        </span>
+                        {newDiploma.diplomaId
+                          ? availableDiplomas.find(
+                              (diploma) => diploma.id.toString() === newDiploma.diplomaId.toString()
+                            )?.name
+                          : "Sélectionnez un diplôme..."}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                    <PopoverContent className="w-full p-0" align="start">
                       <Command>
                         <CommandInput placeholder="Rechercher un diplôme..." />
+                        <CommandEmpty>Aucun diplôme trouvé.</CommandEmpty>
                         <CommandList>
-                          <CommandEmpty>Aucun diplôme trouvé.</CommandEmpty>
                           <CommandGroup>
-                            {availableDiplomas.map((diploma) => {
-                              const alreadyHasDiploma = diplomas.some(
-                                userDiploma => userDiploma.diploma.id.toString() === diploma.id.toString()
-                              );
-                              
-                              return (
-                                <CommandItem
-                                  key={diploma.id}
-                                  value={diploma.name}
-                                  disabled={alreadyHasDiploma}
-                                  onSelect={() => {
-                                    setNewDiploma({ ...newDiploma, diplomaId: diploma.id.toString() });
-                                    if (error) setError('');
-                                    setOpen(false);
-                                  }}
+                            {availableDiplomas.map((diploma) => (
+                              <CommandItem
+                                key={diploma.id}
+                                onSelect={() => {
+                                  setNewDiploma({
+                                    ...newDiploma,
+                                    diplomaId: diploma.id.toString(),
+                                  });
+                                  setOpen(false);
+                                }}
+                              >
+                                <Check
                                   className={cn(
-                                    alreadyHasDiploma && "opacity-50",
-                                    "flex items-center justify-between"
+                                    "mr-2 h-4 w-4",
+                                    newDiploma.diplomaId.toString() === diploma.id.toString()
+                                      ? "opacity-100"
+                                      : "opacity-0"
                                   )}
-                                >
-                                  <div className="flex flex-col">
-                                    <span className="font-medium">{diploma.name}</span>
-                                    <span className="text-sm text-gray-500">{diploma.institution}</span>
-                                  </div>
-                                  {newDiploma.diplomaId === diploma.id.toString() && (
-                                    <Check className="h-4 w-4 shrink-0" />
-                                  )}
-                                </CommandItem>
-                              );
-                            })}
+                                />
+                                {diploma.name}
+                              </CommandItem>
+                            ))}
                           </CommandGroup>
                         </CommandList>
                       </Command>
                     </PopoverContent>
                   </Popover>
                 </div>
-                <div className="space-y-2">
-                  <label
-                    htmlFor="date-obtention"
-                    className="block text-sm font-medium text-gray-700"
-                  >
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Date d'obtention
                   </label>
                   <div className="relative">
                     <div 
-                      className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm flex items-center cursor-pointer transition-colors hover:border-[#0066ff]"
+                      className="w-full px-4 py-3 rounded-md border flex items-center cursor-pointer transition-colors hover:border-[#0066ff] border-gray-300"
                       onClick={() => setCalendarOpen(true)}
                     >
                       {formattedObtainedDate ? (
@@ -418,100 +376,80 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
                       ) : (
                         <span className="text-gray-500">JJ/MM/AAAA</span>
                       )}
-                      <CalendarIcon className="ml-auto h-4 w-4 text-gray-400" />
+                      <CalendarIcon className="ml-auto h-5 w-5 text-gray-500" />
                     </div>
                     
                     <Dialog open={calendarOpen} onOpenChange={setCalendarOpen}>
                       <DialogContent className="p-0 sm:max-w-[425px] bg-white rounded-lg shadow-xl border-none overflow-hidden">
-                        <AnimatePresence>
-                          {calendarOpen && (
-                            <motion.div
-                              initial={{ opacity: 0, y: 20 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, y: 20 }}
-                              transition={{ duration: 0.3, type: "spring", stiffness: 300, damping: 25 }}
-                            >
-                              <div className="p-4 pb-0">
-                                <DialogTitle className="text-xl font-semibold text-center text-gray-900">
-                                  Sélectionnez la date d'obtention
-                                </DialogTitle>
-                              </div>
-                              <div className="calendar-container w-full p-4">
-                                <Suspense fallback={<CalendarFallback />}>
-                                  <Calendar 
-                                    onChange={handleDateChange} 
-                                    value={new Date(newDiploma.obtainedDate)} 
-                                    locale="fr"
-                                    maxDate={new Date()}
-                                    minDetail="decade" 
-                                    defaultView="month"
-                                    minDate={new Date(1940, 0, 1)}
-                                    className="modern-calendar w-full"
-                                    formatShortWeekday={(locale, date) => ['L', 'M', 'M', 'J', 'V', 'S', 'D'][date.getDay()]}
-                                    navigationLabel={({ date }) => 
-                                      date.toLocaleString('fr', { month: 'long', year: 'numeric' }).toLowerCase()
-                                    }
-                                    next2Label={<span className="text-lg text-[#528eb2]">»</span>}
-                                    prev2Label={<span className="text-lg text-[#528eb2]">«</span>}
-                                    nextLabel={<span className="text-lg text-[#528eb2]">›</span>}
-                                    prevLabel={<span className="text-lg text-[#528eb2]">‹</span>}
-                                    showNeighboringMonth={false}
-                                    tileClassName={({ date, view }) => {
-                                      // Vérifie si la date est dans le futur
-                                      const today = new Date();
-                                      today.setHours(0, 0, 0, 0);
-                                      
-                                      if (view === 'month' && date > today) {
-                                        return 'calendar-future-date';
-                                      }
-                                      
-                                      return null;
-                                    }}
-                                  />
-                                </Suspense>
-                              </div>
-                              <div className="p-4 flex justify-end">
-                                <Button 
-                                  onClick={() => setCalendarOpen(false)}
-                                  className="bg-[#528eb2] hover:bg-[#528eb2]/90 text-white font-medium text-sm px-4 py-2 rounded-md transition-colors"
-                                >
-                                  Confirmer
-                                </Button>
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
+                        <div className="p-4 pb-0">
+                          <DialogTitle className="text-xl font-semibold text-center text-gray-900">
+                            Sélectionnez la date d'obtention
+                          </DialogTitle>
+                          <DialogDescription className="text-sm text-center text-gray-500 mt-1">
+                            Choisissez la date à laquelle vous avez obtenu ce diplôme.
+                          </DialogDescription>
+                        </div>
+                        <div className="calendar-container w-full p-4">
+                          <Suspense fallback={<CalendarFallback />}>
+                            <Calendar 
+                              onChange={handleDateChange} 
+                              value={new Date(newDiploma.obtainedDate)} 
+                              locale="fr"
+                              maxDate={new Date()}
+                              minDetail="decade" 
+                              defaultView="month"
+                              minDate={new Date(1940, 0, 1)}
+                              className="modern-calendar w-full"
+                              formatShortWeekday={(locale, date) => ['L', 'M', 'M', 'J', 'V', 'S', 'D'][date.getDay()]}
+                              navigationLabel={({ date }) => 
+                                date.toLocaleString('fr', { month: 'long', year: 'numeric' }).toLowerCase()
+                              }
+                              next2Label={<span className="text-lg text-[#0066ff]">»</span>}
+                              prev2Label={<span className="text-lg text-[#0066ff]">«</span>}
+                              nextLabel={<span className="text-lg text-[#0066ff]">›</span>}
+                              prevLabel={<span className="text-lg text-[#0066ff]">‹</span>}
+                              showNeighboringMonth={false}
+                              tileClassName={({ date, view }) => {
+                                // Vérifie si la date est dans le futur
+                                const today = new Date();
+                                today.setHours(0, 0, 0, 0);
+                                
+                                if (view === 'month' && date > today) {
+                                  return 'calendar-future-date';
+                                }
+                                
+                                return null;
+                              }}
+                            />
+                          </Suspense>
+                        </div>
+                        <div className="p-4 flex justify-end">
+                          <button 
+                            className="calendar-confirm-button"
+                            onClick={() => setCalendarOpen(false)}
+                          >
+                            Confirmer
+                          </button>
+                        </div>
                       </DialogContent>
                     </Dialog>
                   </div>
                 </div>
-              </div>
-              <div className="flex justify-end gap-3 mt-4">
-                <Button 
-                  variant="outline" 
-                  onClick={cancelAdd}
-                  className="text-sm"
-                >
-                  <X className="h-4 w-4 mr-2" />
-                  Annuler
-                </Button>
-                <Button 
-                  onClick={handleAddDiploma}
-                  disabled={addDiplomaMutation.isPending}
-                  className="text-sm"
-                >
-                  {addDiplomaMutation.isPending ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      <span>Enregistrement...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Save className="h-4 w-4 mr-2" />
-                      Enregistrer
-                    </>
-                  )}
-                </Button>
+                
+                <div className="flex space-x-2 justify-end mt-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={cancelAdd}
+                  >
+                    Annuler
+                  </Button>
+                  <Button 
+                    onClick={handleAddDiploma}
+                    disabled={addDiplomaMutation.isPending}
+                  >
+                    {addDiplomaMutation.isPending ? 'Enregistrement...' : 'Sauvegarder'}
+                  </Button>
+                </div>
               </div>
             </div>
           )}
@@ -570,6 +508,24 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
                   Ajouter un diplôme
                 </Button>
               )}
+            </div>
+          )}
+
+          {/* Bouton d'ajout */}
+          {!isAdding && (
+            <Button 
+              variant="outline" 
+              className="w-full border-dashed border-gray-300 text-gray-600 hover:text-blue-600 hover:border-blue-600 mt-2"
+              onClick={() => setIsAdding(true)}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Ajouter un diplôme
+            </Button>
+          )}
+          
+          {diplomas && diplomas.length === 0 && !isAdding && (
+            <div className="text-center p-4 bg-gray-50 rounded-lg mt-2">
+              <p className="text-gray-500 text-sm">Vous n'avez pas encore ajouté de diplôme à votre profil.</p>
             </div>
           )}
         </>
