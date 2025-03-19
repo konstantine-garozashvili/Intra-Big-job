@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { profileService } from '../services/profileService';
 import documentService from '../services/documentService';
-import axios from 'axios';
+import axiosInstance from '@/lib/axios';
 import authService from '@services/authService';
 
 // API URL
@@ -127,18 +127,9 @@ export const useUserCV = (userId = null) => {
     queryFn: async () => {
       try {
         // If userId is provided, we need to fetch the CV for that specific user
-        // This would require a backend endpoint that supports this
         if (userId) {
           // This assumes there's an endpoint to get documents by user ID and type
-          // You might need to implement this endpoint on the backend
-          const response = await axios.get(
-            `${API_URL}/documents/user/${userId}/type/CV`,
-            {
-              headers: {
-                'Authorization': `Bearer ${authService.getToken()}`
-              }
-            }
-          );
+          const response = await axiosInstance.get(`/documents/user/${userId}/type/CV`);
           return response.data;
         } else {
           // For current user, use the existing method

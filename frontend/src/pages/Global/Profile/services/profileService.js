@@ -97,13 +97,42 @@ class ProfileService {
       
       const response = await apiService.get('/api/profil/consolidated');
       
-      // Mettre en cache les données
-      profileCache.consolidatedData = response.data;
-      profileCache.consolidatedDataTimestamp = now;
+      // Gérer différents formats de réponse possibles
+      let profileData;
       
-      return response.data;
+      if (response && typeof response === 'object') {
+        if (response.data) {
+          // Si la réponse a une propriété data, l'utiliser
+          profileData = response.data;
+        } else if (response.user || response.profile) {
+          // Si la réponse contient directement les données utilisateur ou profil
+          profileData = response;
+        } else {
+          // Si la réponse est déjà le format attendu
+          profileData = response;
+        }
+        
+        // Mettre en cache les données
+        profileCache.consolidatedData = profileData;
+        profileCache.consolidatedDataTimestamp = now;
+        
+        return profileData;
+      }
+      
+      // Si aucun format valide n'est trouvé, retourner un objet vide mais structuré
+      return {
+        user: null,
+        profile: null,
+        error: 'Invalid response format'
+      };
     } catch (error) {
-      throw error;
+      console.error('Error fetching profile data:', error);
+      // Retourner un objet structuré même en cas d'erreur
+      return {
+        user: null,
+        profile: null,
+        error: error.message
+      };
     }
   }
   

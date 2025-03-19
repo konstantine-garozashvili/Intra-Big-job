@@ -1,43 +1,4 @@
-import axios from 'axios';
-
-// Utiliser une constante pour l'URL de l'API
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-
-// Créer une instance axios avec des configurations par défaut
-const apiClient = axios.create({
-  baseURL: API_URL,
-  timeout: 15000, // Standardized 15-second timeout
-  headers: {
-    'Content-Type': 'application/json',
-  }
-});
-
-// Intercepteur pour ajouter le token d'authentification à chaque requête
-apiClient.interceptors.request.use(
-  config => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
-    }
-    return config;
-  },
-  error => Promise.reject(error)
-);
-
-// Intercepteur pour gérer les erreurs de réponse
-apiClient.interceptors.response.use(
-  response => response,
-  error => {
-    // Gérer les erreurs spécifiques (401, 403, etc.)
-    if (error.response) {
-      if (error.response.status === 401) {
-        // Rediriger vers la page de connexion ou rafraîchir le token
-        // Utiliser un système d'événements ou un contexte pour gérer cela
-      }
-    }
-    return Promise.reject(error);
-  }
-);
+import axiosInstance from '@/lib/axios';
 
 /**
  * Service pour gérer les profils étudiants
@@ -49,7 +10,7 @@ export const studentProfileService = {
    */
   getMyProfile: async () => {
     try {
-      const response = await apiClient.get('/student/profile');
+      const response = await axiosInstance.get('/student/profile');
       return response.data;
     } catch (error) {
       throw error;
@@ -72,7 +33,7 @@ export const studentProfileService = {
         validData.isSeekingApprenticeship = data.isSeekingApprenticeship;
       }
       
-      const response = await apiClient.patch('/student/profile/job-seeking-status', validData);
+      const response = await axiosInstance.patch('/student/profile/job-seeking-status', validData);
       return response.data;
     } catch (error) {
       throw error;
@@ -85,7 +46,7 @@ export const studentProfileService = {
    */
   toggleInternshipSeeking: async () => {
     try {
-      const response = await apiClient.patch('/student/profile/toggle-internship-seeking');
+      const response = await axiosInstance.patch('/student/profile/toggle-internship-seeking');
       return response.data;
     } catch (error) {
       throw error;
@@ -98,7 +59,7 @@ export const studentProfileService = {
    */
   toggleApprenticeshipSeeking: async () => {
     try {
-      const response = await apiClient.patch('/student/profile/toggle-apprenticeship-seeking');
+      const response = await axiosInstance.patch('/student/profile/toggle-apprenticeship-seeking');
       return response.data;
     } catch (error) {
       throw error;

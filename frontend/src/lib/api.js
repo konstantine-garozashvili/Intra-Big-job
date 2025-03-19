@@ -1,4 +1,4 @@
-import axios from 'axios';
+import { addressApiInstance } from './axios';
 
 // Configuration de l'API Adresse du gouvernement français
 const API_ADRESSE_URL = 'https://api-adresse.data.gouv.fr';
@@ -17,7 +17,7 @@ export const adresseApi = {
     if (!query || query.length < 3) return [];
     
     try {
-      const response = await axios.get(`${API_ADRESSE_URL}/search`, {
+      const response = await addressApiInstance.get('/search', {
         params: {
           q: query,
           limit,
@@ -51,7 +51,7 @@ export const adresseApi = {
    */
   reverseGeocode: async (lon, lat) => {
     try {
-      const response = await axios.get(`${API_ADRESSE_URL}/reverse`, {
+      const response = await addressApiInstance.get('/reverse', {
         params: {
           lon,
           lat
