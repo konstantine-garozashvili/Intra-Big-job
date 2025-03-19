@@ -31,6 +31,7 @@ class RegistrationService
     private CityRepository $cityRepository;
     private PostalCodeRepository $postalCodeRepository;
     private RoleRepository $roleRepository;
+    private StatusRepository $statusRepository;
     private ThemeRepository $themeRepository;
     private VerificationService $verificationService;
 
@@ -42,6 +43,7 @@ class RegistrationService
         CityRepository $cityRepository,
         PostalCodeRepository $postalCodeRepository,
         RoleRepository $roleRepository,
+        StatusRepository $statusRepository,
         ThemeRepository $themeRepository,
         VerificationService $verificationService
     ) {
@@ -52,6 +54,7 @@ class RegistrationService
         $this->cityRepository = $cityRepository;
         $this->postalCodeRepository = $postalCodeRepository;
         $this->roleRepository = $roleRepository;
+        $this->statusRepository = $statusRepository;
         $this->themeRepository = $themeRepository;
         $this->verificationService = $verificationService;
     }
@@ -111,6 +114,9 @@ class RegistrationService
         
         // Ajouter le rôle utilisateur par défaut
         $this->addDefaultRole($user);
+
+        // Ajouter le rôle utilisateur par défaut
+        $this->addDefaultStatus($user);
         
         // Valider l'utilisateur avant de persister
         $errors = $this->validator->validate($user);
@@ -228,6 +234,9 @@ class RegistrationService
         $userStatus = new UserStatus();
         $userStatus->setUser($user);
         $userStatus->setStatus($status);
+
+        $this->entityManager->persist($userStatus);
+        $user->addUserStatus($userStatus);
     }
     
     /**
