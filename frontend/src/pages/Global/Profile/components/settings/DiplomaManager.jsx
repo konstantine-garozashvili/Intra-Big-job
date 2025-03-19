@@ -381,14 +381,14 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
                     
                     <Dialog open={calendarOpen} onOpenChange={setCalendarOpen}>
                       <DialogContent className="p-0 sm:max-w-[425px] bg-white rounded-lg shadow-xl border-none overflow-hidden">
-                        <div className="p-4 pb-0">
+                        <DialogHeader className="p-4 pb-0">
                           <DialogTitle className="text-xl font-semibold text-center text-gray-900">
                             Sélectionnez la date d'obtention
                           </DialogTitle>
                           <DialogDescription className="text-sm text-center text-gray-500 mt-1">
                             Choisissez la date à laquelle vous avez obtenu ce diplôme.
                           </DialogDescription>
-                        </div>
+                        </DialogHeader>
                         <div className="calendar-container w-full p-4">
                           <Suspense fallback={<CalendarFallback />}>
                             <Calendar 
@@ -423,14 +423,14 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
                             />
                           </Suspense>
                         </div>
-                        <div className="p-4 flex justify-end">
+                        <DialogFooter className="p-4">
                           <button 
-                            className="calendar-confirm-button"
+                            className="calendar-confirm-button ml-auto"
                             onClick={() => setCalendarOpen(false)}
                           >
                             Confirmer
                           </button>
-                        </div>
+                        </DialogFooter>
                       </DialogContent>
                     </Dialog>
                   </div>
