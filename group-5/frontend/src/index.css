@@ -1,0 +1,494 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+@import './lib/loading-animation.css';
+@import './lib/browser-loading-override.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-primary: 200 39% 51%; /* #528eb2 - Couleur principale du nouveau frontend */
+    --color-secondary: 211 95% 16%; /* #02284f - Couleur secondaire du nouveau frontend */
+    --color-white: 0 0% 100%; /* #FFFFFF */
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 200 39% 51%; /* #528eb2 - Même que color-primary */
+    --primary-foreground: 210 40% 98%;
+    --secondary: 211 95% 16%; /* #02284f - Même que color-secondary */
+    --secondary-foreground: 210 40% 98%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 200 39% 95%; /* Couleur d'accent très claire pour le hover */
+    --accent-foreground: 222.2 84% 4.9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 200 39% 51%; /* #528eb2 - Pour le focus ring */
+    --radius: 0.5rem;
+    --chart-1: 200 39% 51%; /* #528eb2 */
+    --chart-2: 204 100% 25%; /* #003366 - Variante plus foncée */
+    --chart-3: 211 95% 16%; /* #02284f */
+    --chart-4: 197 37% 24%; /* #235465 - Variante de bleu */
+    --chart-5: 195 53% 79%; /* #addde6 - Variante claire */
+  }
+
+  .dark {
+    --background: 211 95% 16%; /* #02284f - Fond sombre basé sur la couleur secondaire */
+    --foreground: 210 40% 98%;
+    --card: 211 95% 16%; /* #02284f */
+    --card-foreground: 210 40% 98%;
+    --popover: 211 95% 16%; /* #02284f */
+    --popover-foreground: 210 40% 98%;
+    --primary: 200 39% 51%; /* #528eb2 - Conserver la couleur principale */
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 200 39% 30%; /* #528eb2 avec une transparence plus élevée pour le mode sombre */
+   /*  --accent-foreground: 210 40% 98%; */
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 200 39% 51%; /* #528eb2 */
+    --chart-1: 200 39% 51%; /* #528eb2 */
+    --chart-2: 204 100% 25%; /* #003366 */
+    --chart-3: 211 95% 16%; /* #02284f */
+    --chart-4: 197 37% 24%; /* #235465 */
+    --chart-5: 195 53% 79%; /* #addde6 */
+  }
+}
+
+/* Base styles */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-poppins;
+    margin: 0;
+    padding: 0;
+    min-width: 100%;
+  }
+}
+
+/* Utility classes */
+.text-color-secondary {
+    color: hsl(var(--color-secondary));
+}
+
+.text-color-primary {
+    color: hsl(var(--color-primary));
+}
+
+/* Style personnalisé pour les éléments du dropdown menu */
+@layer components {
+  .dropdown-menu-item {
+    @apply flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors;
+   
+  }
+  
+  .dropdown-menu-item.danger {
+    @apply text-destructive;
+    @apply hover:bg-destructive/10 hover:text-destructive/90;
+  }
+}
+
+/* Calendar styles - grouped and optimized */
+.react-calendar {
+  width: 350px;
+  max-width: 100%;
+  background: white;
+  border: none !important;
+  border-radius: 12px;
+  font-family: 'Poppins', sans-serif;
+  line-height: 1.125em;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+/* Calendar navigation */
+.react-calendar__navigation {
+  display: flex;
+  height: 48px;
+  margin-bottom: 0;
+  background-color: #f9f9f9;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.react-calendar__navigation button {
+  min-width: 44px;
+  background: none;
+  font-size: 16px;
+  font-weight: 500;
+  color: #333;
+  border: 0;
+  border-radius: 8px;
+  margin: 4px;
+}
+
+.react-calendar__navigation button:disabled {
+  color: #d1d5db;
+}
+
+.react-calendar__navigation button:enabled:hover,
+.react-calendar__navigation button:enabled:focus {
+  background-color: #f3f4f6;
+}
+
+.react-calendar__navigation__label {
+  font-weight: 600 !important;
+  font-size: 1rem !important;
+  color: #0062FF !important;
+}
+
+/* Calendar weekdays */
+.react-calendar__month-view__weekdays {
+  text-align: center;
+  text-transform: uppercase;
+  font-weight: 600;
+  font-size: 0.75em;
+  padding: 8px 0;
+  color: #6b7280;
+  background-color: #f9f9f9;
+}
+
+.react-calendar__month-view__weekdays__weekday {
+  padding: 8px;
+}
+
+.react-calendar__month-view__weekdays__weekday abbr {
+  text-decoration: none;
+}
+
+/* Calendar days */
+.react-calendar__month-view__days__day {
+  padding: 10px 0;
+  font-weight: 500;
+}
+
+.react-calendar__month-view__days__day--weekend {
+  color: #ef4444;
+}
+
+.react-calendar__month-view__days__day--neighboringMonth {
+  color: #d1d5db;
+}
+
+/* Calendar tiles */
+.react-calendar__tile {
+  max-width: 100%;
+  padding: 12px 6px;
+  background: none;
+  text-align: center;
+  line-height: 16px;
+  font-size: 14px;
+  border: 0;
+  border-radius: 8px;
+  margin: 2px;
+}
+
+.react-calendar__tile:disabled {
+  background-color: #f3f4f6;
+  color: #d1d5db;
+}
+
+.react-calendar__tile:enabled:hover,
+.react-calendar__tile:enabled:focus,
+.react-calendar__tile:hover {
+  background-color: #f3f4f6;
+  border-radius: 8px;
+}
+
+.react-calendar__tile:focus {
+  background-color: #e5edff;
+  border-radius: 8px;
+}
+
+/* Current day */
+.react-calendar__tile--now {
+  background: #e5edff;
+  color: #0062FF;
+  font-weight: 600;
+}
+
+.react-calendar__tile--now:enabled:hover,
+.react-calendar__tile--now:enabled:focus {
+  background: #d1e0ff;
+}
+
+/* Selected day */
+.react-calendar__tile--active {
+  background: #0062FF;
+  color: white;
+  font-weight: 600;
+}
+
+.react-calendar__tile--active:enabled:hover,
+.react-calendar__tile--active:enabled:focus {
+  background: #0050cc;
+}
+
+/* Dialog styles */
+.dialog-content-calendar {
+  padding: 0 !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  border: none !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+}
+
+.dialog-close-button {
+  position: absolute !important;
+  top: 8px !important;
+  right: 8px !important;
+  width: 30px !important;
+  height: 30px !important;
+  border-radius: 50% !important;
+  background-color: #f3f4f6 !important;
+  color: #6b7280 !important;
+  z-index: 10 !important;
+}
+
+.dialog-close-button:hover {
+  background-color: #e5e7eb !important;
+  color: #374151 !important;
+}
+
+.calendar-container {
+  padding: 0 !important;
+}
+
+/* Country selector styles - optimized */
+[cmdk-empty] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 64px;
+  color: #6b7280;
+  font-size: 14px;
+  font-style: italic;
+}
+
+.country-item {
+  cursor: pointer !important;
+  color: #333 !important;
+  transition: all 0.2s ease;
+  user-select: none;
+  position: relative;
+  opacity: 1 !important;
+  filter: none !important;
+  pointer-events: auto !important;
+  margin: 2px 0;
+}
+
+.country-item:hover {
+  background-color: transparent !important;
+}
+
+.country-item:active {
+  background-color: transparent !important;
+}
+
+.country-item svg {
+  color: #0062FF;
+}
+
+/* Command dialog styles */
+[cmdk-item],
+[cmdk-list],
+[cmdk-group],
+[data-radix-popper-content-wrapper] {
+  pointer-events: auto !important;
+  opacity: 1 !important;
+  filter: none !important;
+}
+
+[cmdk-item][aria-selected="true"],
+[cmdk-item]:hover,
+[cmdk-item][data-selected="true"],
+[cmdk-item][data-highlighted="true"],
+[cmdk-item][aria-selected],
+.country-item[aria-selected],
+.country-item[data-selected],
+.country-item[data-highlighted] {
+  background-color: transparent !important;
+}
+
+[cmdk-list] {
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+[cmdk-group] {
+  overflow: visible !important;
+}
+
+/* Phone input styles - optimized */
+.phone-input-fr {
+  position: relative;
+  display: flex;
+  width: 100%;
+  border-radius: 0.375rem;
+  overflow: hidden;
+  transition: all 0.15s ease;
+}
+
+.phone-input-fr .prefix {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.5rem;
+  padding: 0 0.5rem;
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-right: none;
+  border-radius: 0.375rem 0 0 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #4b5563;
+  height: 100%;
+}
+
+.phone-input-fr input {
+  flex: 1;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0 0.375rem 0.375rem 0;
+  font-size: 0.875rem;
+  color: #1f2937;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.phone-input-fr input::placeholder {
+  color: #9ca3af;
+}
+
+.phone-input-fr.error .prefix,
+.phone-input-fr.error input {
+  border-color: #ef4444 !important;
+}
+
+.phone-input-fr:focus-within input {
+  border-color: #528eb2;
+  box-shadow: 0 0 0 2px rgba(82, 142, 178, 0.2);
+}
+
+.phone-input-fr:focus-within .prefix {
+  border-color: #528eb2;
+  border-right-color: transparent;
+}
+
+/* Hack to ensure even spacing in the phone number display */
+.phone-number-field {
+  font-family: "Roboto Mono", monospace;
+  letter-spacing: 0.025rem;
+}
+
+/* Responsive styles */
+@media (max-width: 640px) {
+  .react-calendar {
+    width: 300px;
+    font-size: 0.9rem;
+  }
+  
+  .react-calendar__tile {
+    padding: 10px 4px;
+    font-size: 13px;
+  }
+  
+  .react-calendar__navigation {
+    height: 44px;
+  }
+  
+  .react-calendar__navigation button {
+    font-size: 14px;
+  }
+}
+
+/* Cleanup of unused styles */
+.calendar-popup {
+  position: absolute;
+  left: 0;
+  top: 100%;
+  z-index: 100;
+}
+
+/* Removed redundant react-tel-input styles that are no longer needed */
+.scrollable-div {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px; /* Un peu plus d'espace autour du contenu */
+  border-radius: 12px; /* Arrondir un peu plus les coins */
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1); /* Ombre plus douce et plus grande */
+}
+
+/* Style de la barre de défilement */
+.scrollable-div::-webkit-scrollbar {
+  width: 5px; /* Un peu plus large pour une meilleure expérience de défilement */
+  border-radius: 10px; /* Coins arrondis pour la scrollbar */
+}
+
+.scrollable-div::-webkit-scrollbar-thumb {
+  background-color:#00284f; /* Couleur plus douce et moderne pour le pouce */
+  border-radius: 8px; /* Arrondir les bords du pouce */
+}
+
+.scrollable-div::-webkit-scrollbar-track {
+  background-color: #f3f4f6; /* Couleur plus claire pour la piste */
+  border-radius: 10px;
+}
+
+/* Prevent layout shifts during loading states */
+html {
+  scrollbar-gutter: stable;
+  overflow-y: scroll;
+  overflow-x: hidden;
+}
+
+/* Ensure fixed elements maintain position */
+.navbar, 
+.fixed,
+.fixed-top,
+[class*="navbar-"],
+[class*="fixed-"] {
+  padding-right: var(--removed-body-scroll-bar-size, 0px);
+}
+
+/* Handle data-scroll-locked state */
+html > body[data-scroll-locked] {
+  overflow: visible !important;
+  margin-right: 0 !important;
+  min-width: 100%;
+}
+
+/* Smooth transitions for loading state changes */
+.transition-opacity {
+  transition-property: opacity;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Loading dots animation */
+.dots-loading::after {
+  content: "...";
+  display: inline-block;
+  animation: dots 1.5s infinite;
+  width: 1.5em;
+  text-align: left;
+}
+
+@keyframes dots {
+  0%, 20% { content: "."; }
+  40% { content: ".."; }
+  60%, 100% { content: "..."; }
+}
