@@ -88,6 +88,14 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     #[ORM\OneToMany(mappedBy: 'user', targetEntity: Signature::class, orphanRemoval: true)]
     private Collection $signatures;
 
+    #[ORM\OneToMany(mappedBy: 'creator', targetEntity: Group::class)]
+    #[Groups(['user:read'])]
+    private Collection $createdGroups;
+
+    #[ORM\ManyToMany(targetEntity: Group::class, mappedBy: 'members')]
+    #[Groups(['user:read'])]
+    private Collection $groups;
+
     public function __construct()
     {
         $this->createdAt = new \DateTimeImmutable();
@@ -95,6 +103,8 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
         $this->diplomas = new ArrayCollection();
         $this->addresses = new ArrayCollection();
         $this->signatures = new ArrayCollection();
+        $this->createdGroups = new ArrayCollection();
+        $this->groups = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -385,6 +395,63 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
             if ($signature->getUser() === $this) {
                 $signature->setUser(null);
             }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Group>
+     */
+    public function getCreatedGroups(): Collection
+    {
+        return $this->createdGroups;
+    }
+
+    public function addCreatedGroup(Group $group): static
+    {
+        if (!$this->createdGroups->contains($group)) {
+            $this->createdGroups->add($group);
+            $group->setCreator($this);
+        }
+
+        return $this;
+    }
+
+    public function removeCreatedGroup(Group $group): static
+    {
+        if ($this->createdGroups->removeElement($group)) {
+            // set the owning side to null (unless already changed)
+            if ($group->getCreator() === $this) {
+                $group->setCreator(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Group>
+     */
+    public function getGroups(): Collection
+    {
+        return $this->groups;
+    }
+
+    public function addGroup(Group $group): static
+    {
+        if (!$this->groups->contains($group)) {
+            $this->groups->add($group);
+            $group->addMember($this);
+        }
+
+        return $this;
+    }
+
+    public function removeGroup(Group $group): static
+    {
+        if ($this->groups->removeElement($group)) {
+            $group->removeMember($this);
         }
 
         return $this;

@@ -42,6 +42,10 @@ class Message
     #[Groups(['message:read'])]
     private array $readBy = [];
 
+    #[ORM\ManyToOne(inversedBy: 'messages')]
+    #[Groups(['message:read'])]
+    private ?Group $group = null;
+
     public function __construct()
     {
         $this->createdAt = new \DateTimeImmutable();
@@ -137,5 +141,17 @@ class Message
     public function isReadBy(int $userId): bool
     {
         return in_array($userId, $this->readBy);
+    }
+
+    public function getGroup(): ?Group
+    {
+        return $this->group;
+    }
+
+    public function setGroup(?Group $group): static
+    {
+        $this->group = $group;
+
+        return $this;
     }
 }

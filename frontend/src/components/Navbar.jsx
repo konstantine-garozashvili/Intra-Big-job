@@ -66,17 +66,66 @@ const Navbar = memo(() => {
       // Si l'utilisateur est connecté, charger ses données
       if (status) {
         try {
+          // First try to get user data from the current user endpoint
+          try {
+            const currentUser = await authService.getCurrentUser();
+            if (currentUser) {
+              setUserData(currentUser);
+              
+              // Update roles in localStorage if they exist in the response
+              if (currentUser.roles && Array.isArray(currentUser.roles)) {
+                const formattedRoles = currentUser.roles.map(role => 
+                  role.startsWith('ROLE_') ? role : `ROLE_${role.toUpperCase()}`
+                );
+                localStorage.setItem('userRoles', JSON.stringify(formattedRoles));
+                console.log('Updated roles in localStorage from /me endpoint:', formattedRoles);
+              }
+              
+              return; // Exit early if we got user data
+            }
+          } catch (currentUserError) {
+            console.warn('Could not fetch current user data, falling back to profile:', currentUserError);
+          }
+          
+          // Fallback to profile data
           const profilData = await profilService.getAllProfilData();
           // Vérifions la structure des données et adaptons l'accès en fonction
           if (profilData && profilData.user) {
             setUserData(profilData.user);
+            
+            // Update roles in localStorage if they exist in the response
+            if (profilData.user.roles && Array.isArray(profilData.user.roles)) {
+              const formattedRoles = profilData.user.roles.map(role => 
+                role.startsWith('ROLE_') ? role : `ROLE_${role.toUpperCase()}`
+              );
+              localStorage.setItem('userRoles', JSON.stringify(formattedRoles));
+              console.log('Updated roles in localStorage from profile endpoint:', formattedRoles);
+            }
           } else if (profilData && profilData.data && profilData.data.user) {
             // Alternative si la structure est différente
             setUserData(profilData.data.user);
+            
+            // Update roles in localStorage if they exist in the response
+            if (profilData.data.user.roles && Array.isArray(profilData.data.user.roles)) {
+              const formattedRoles = profilData.data.user.roles.map(role => 
+                role.startsWith('ROLE_') ? role : `ROLE_${role.toUpperCase()}`
+              );
+              localStorage.setItem('userRoles', JSON.stringify(formattedRoles));
+              console.log('Updated roles in localStorage from profile data endpoint:', formattedRoles);
+            }
           } else {
             // Fallback: essayons de récupérer directement les données utilisateur
             const userData = await profilService.getUserData();
             setUserData(userData);
+            
+            // Update roles in localStorage if they exist in the response
+            if (userData && userData.roles && Array.isArray(userData.roles)) {
+              const formattedRoles = userData.roles.map(role => 
+                role.startsWith('ROLE_') ? role : `ROLE_${role.toUpperCase()}`
+              );
+              localStorage.setItem('userRoles', JSON.stringify(formattedRoles));
+              console.log('Updated roles in localStorage from user data endpoint:', formattedRoles);
+            }
           }
         } catch (profileError) {
           console.error('Erreur lors de la récupération des données du profil:', profileError);
@@ -155,16 +204,54 @@ const Navbar = memo(() => {
     }
   };
 
-  // Add a function to check if user has a specific role
+  // Improved function to check if user has a specific role
   const hasRole = (role) => {
-    // First check userData.roles
-    if (userData && userData.roles && userData.roles.includes(role)) {
-      return true;
+    // Normalize the role format (ensure it has ROLE_ prefix)
+    const normalizedRole = role.startsWith('ROLE_') ? role : `ROLE_${role.toUpperCase()}`;
+    
+    // Check userData.roles first (from API)
+    if (userData && userData.roles && Array.isArray(userData.roles)) {
+      // Normalize each role in userData.roles for comparison
+      const normalizedUserRoles = userData.roles.map(r => 
+        r.startsWith('ROLE_') ? r : `ROLE_${r.toUpperCase()}`
+      );
+      
+      if (normalizedUserRoles.includes(normalizedRole)) {
+        return true;
+      }
     }
+    
     // Fallback to localStorage
-    const userRoles = JSON.parse(localStorage.getItem('userRoles') || '[]');
-    return userRoles.includes(role);
+    try {
+      const userRolesStr = localStorage.getItem('userRoles');
+      if (userRolesStr) {
+        const userRoles = JSON.parse(userRolesStr);
+        
+        if (Array.isArray(userRoles)) {
+          // Normalize each role in localStorage for comparison
+          const normalizedLocalRoles = userRoles.map(r => 
+            r.startsWith('ROLE_') ? r : `ROLE_${r.toUpperCase()}`
+          );
+          
+          return normalizedLocalRoles.includes(normalizedRole);
+        }
+      }
+    } catch (error) {
+      console.error('Error parsing user roles from localStorage:', error);
+    }
+    
+    return false;
   };
+
+  // Add debugging for roles
+  useEffect(() => {
+    if (isAuthenticated) {
+      console.log('User data in Navbar:', userData);
+      console.log('User roles from localStorage:', JSON.parse(localStorage.getItem('userRoles') || '[]'));
+      console.log('Is student role check:', hasRole('ROLE_STUDENT'));
+      console.log('Is teacher role check:', hasRole('ROLE_TEACHER'));
+    }
+  }, [isAuthenticated, userData]);
 
   return (
     <>
@@ -194,7 +281,7 @@ const Navbar = memo(() => {
                     </Link>
                     
                     {/* Lien pour l'enregistrement de présence (pour les étudiants uniquement) */}
-                    {hasRole('ROLE_STUDENT') && (
+                    {(hasRole('ROLE_STUDENT') || hasRole('STUDENT')) && (
                       <Link 
                         to="/attendance" 
                         className="px-3 py-2 rounded-md text-gray-200 hover:text-white hover:bg-[#02284f]/80 transition-colors flex items-center"
@@ -205,7 +292,7 @@ const Navbar = memo(() => {
                     )}
                     
                     {/* Lien pour le suivi des signatures (pour les enseignants uniquement) */}
-                    {hasRole('ROLE_TEACHER') && (
+                    {(hasRole('ROLE_TEACHER') || hasRole('TEACHER')) && (
                       <Link 
                         to="/signature-monitoring" 
                         className="px-3 py-2 rounded-md text-gray-200 hover:text-white hover:bg-[#02284f]/80 transition-colors flex items-center"
@@ -286,6 +373,36 @@ const Navbar = memo(() => {
                                 </DropdownMenuItem>
                                 
                                 <DropdownMenuSeparator className="my-1 bg-gray-100" />
+                                
+                                {/* Debug button - only visible in development */}
+                                {import.meta.env.DEV && (
+                                  <>
+                                    <DropdownMenuItem 
+                                      className="flex items-center p-3 text-blue-600"
+                                      onClick={() => {
+                                        // Display role information
+                                        const userRoles = JSON.parse(localStorage.getItem('userRoles') || '[]');
+                                        const userDataRoles = userData?.roles || [];
+                                        
+                                        console.log('User roles debug:');
+                                        console.log('- From localStorage:', userRoles);
+                                        console.log('- From userData:', userDataRoles);
+                                        console.log('- hasRole(ROLE_STUDENT):', hasRole('ROLE_STUDENT'));
+                                        console.log('- hasRole(STUDENT):', hasRole('STUDENT'));
+                                        console.log('- hasRole(ROLE_TEACHER):', hasRole('ROLE_TEACHER'));
+                                        console.log('- hasRole(TEACHER):', hasRole('TEACHER'));
+                                        
+                                        alert(`Roles in localStorage: ${userRoles.join(', ')}\nRoles in userData: ${userDataRoles.join(', ')}`);
+                                      }}
+                                    >
+                                      <svg className="mr-2 h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                                      </svg>
+                                      <span>Debug Roles</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator className="my-1 bg-gray-100" />
+                                  </>
+                                )}
                                 
                                 <DropdownMenuItem 
                                   className="flex items-center p-3 text-red-600"
