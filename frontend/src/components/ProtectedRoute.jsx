@@ -69,7 +69,7 @@ const ProtectedRoute = () => {
       return false;
     }
     
-    if (path.startsWith('/recruiter') && !permissions.isRecruiter()) {
+    if (path.startsWith('/recruiter') && !permissions.isRecruiter() && !permissions.isAdmin() && !permissions.isSuperAdmin()) {
       toast.error("Accès refusé: Cette page est réservée aux recruteurs", {
         duration: 3000,
         position: 'top-center',

@@ -45,7 +45,8 @@ class FormationApiController extends AbstractController
         
         if (!in_array('ROLE_TEACHER', $userRoles) && 
             !in_array('ROLE_ADMIN', $userRoles) && 
-            !in_array('ROLE_SUPERADMIN', $userRoles)) {
+            !in_array('ROLE_SUPERADMIN', $userRoles) &&
+            !in_array('ROLE_RECRUITER', $userRoles)) {
             return new JsonResponse(['error' => 'Accès refusé'], Response::HTTP_FORBIDDEN);
         }
         
@@ -85,7 +86,8 @@ class FormationApiController extends AbstractController
         
         if (!in_array('ROLE_TEACHER', $userRoles) && 
             !in_array('ROLE_ADMIN', $userRoles) && 
-            !in_array('ROLE_SUPERADMIN', $userRoles)) {
+            !in_array('ROLE_SUPERADMIN', $userRoles) &&
+            !in_array('ROLE_RECRUITER', $userRoles)) {
             return new JsonResponse(['error' => 'Accès refusé'], Response::HTTP_FORBIDDEN);
         }
         
@@ -124,7 +126,8 @@ class FormationApiController extends AbstractController
         
         if (!in_array('ROLE_TEACHER', $userRoles) && 
             !in_array('ROLE_ADMIN', $userRoles) && 
-            !in_array('ROLE_SUPERADMIN', $userRoles)) {
+            !in_array('ROLE_SUPERADMIN', $userRoles) &&
+            !in_array('ROLE_RECRUITER', $userRoles)) {
             return new JsonResponse(['error' => 'Accès refusé'], Response::HTTP_FORBIDDEN);
         }
         
@@ -169,7 +172,8 @@ class FormationApiController extends AbstractController
         
         if (!in_array('ROLE_TEACHER', $userRoles) && 
             !in_array('ROLE_ADMIN', $userRoles) && 
-            !in_array('ROLE_SUPERADMIN', $userRoles)) {
+            !in_array('ROLE_SUPERADMIN', $userRoles) &&
+            !in_array('ROLE_RECRUITER', $userRoles)) {
             return new JsonResponse(['error' => 'Accès refusé'], Response::HTTP_FORBIDDEN);
         }
         

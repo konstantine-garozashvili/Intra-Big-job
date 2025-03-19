@@ -18,7 +18,7 @@ class FormationController extends AbstractController
     /**
      * Affiche la liste de toutes les formations.
      */
-    #[Security("is_granted('ROLE_RECRUTEUR') or is_granted('ROLE_RH') or is_granted('ROLE_ADMIN') or is_granted('ROLE_SUPERADMIN')")]
+    #[Security("is_granted('ROLE_TEACHER') or is_granted('ROLE_RECRUTEUR') or is_granted('ROLE_RH') or is_granted('ROLE_ADMIN') or is_granted('ROLE_SUPERADMIN')")]
     #[Route('/formations', name: 'formation_list', methods: ['GET'])]
     public function list(FormationRepository $formationRepository): Response
     {
@@ -33,7 +33,7 @@ class FormationController extends AbstractController
      * Affiche le formulaire pour ajouter des étudiants à une formation donnée.
      * La formation est récupérée automatiquement via l'ID dans l'URL.
      */
-    #[Security("is_granted('ROLE_RECRUTEUR') or is_granted('ROLE_RH') or is_granted('ROLE_ADMIN') or is_granted('ROLE_SUPERADMIN')")]
+    #[Security("is_granted('ROLE_TEACHER') or is_granted('ROLE_RECRUTEUR') or is_granted('ROLE_RH') or is_granted('ROLE_ADMIN') or is_granted('ROLE_SUPERADMIN')")]
     #[Route('/formation/{id}/add-students', name: 'formation_add_students', methods: ['GET', 'POST'])]
     public function addStudents(Formation $formation, Request $request, EntityManagerInterface $em): Response
     {
@@ -55,7 +55,7 @@ class FormationController extends AbstractController
     /**
      * (Optionnel) Affiche le formulaire pour créer une nouvelle formation.
      */
-    #[Security("is_granted('ROLE_RECRUTEUR') or is_granted('ROLE_RH') or is_granted('ROLE_ADMIN') or is_granted('ROLE_SUPERADMIN')")]
+    #[Security("is_granted('ROLE_TEACHER') or is_granted('ROLE_RECRUTEUR') or is_granted('ROLE_RH') or is_granted('ROLE_ADMIN') or is_granted('ROLE_SUPERADMIN')")]
     #[Route('/formation/new', name: 'formation_new', methods: ['GET', 'POST'])]
     public function new(Request $request, EntityManagerInterface $em): Response
     {

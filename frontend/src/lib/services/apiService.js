@@ -234,6 +234,13 @@ const apiService = {
     return this.get('/user-roles/roles');
   },
   
+  /**
+   * Change a user's role (for admins, superadmins, and recruiters)
+   * @param {number} userId - The user's ID
+   * @param {string} oldRoleName - The user's current role name
+   * @param {string} newRoleName - The new role name to assign
+   * @returns {Promise<Object>} - API response
+   */
   async changeUserRole(userId, oldRoleName, newRoleName) {
     return this.post('/user-roles/change-role', {
       userId,

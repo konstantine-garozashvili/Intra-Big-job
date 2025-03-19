@@ -327,17 +327,25 @@ const AppContent = () => {
                       <Route path="/settings/notifications" element={<NotificationSettings />} />
                     </Route>
                     
-                    {/* Routes pour les enseignants, administrateurs et super-administrateurs */}
-                    <Route element={<TeacherProtectedRoute />}>
-                      <Route path="/formations" element={<FormationList />} />
-                    </Route>
+                    {/* Routes pour la gestion des formations - accessible par teachers, admins, superadmins et recruiters */}
+                    <Route path="/formations" element={
+                      <RoleGuard 
+                        roles={[ROLES.TEACHER, ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.RECRUITER]} 
+                        fallback={<Navigate to="/dashboard" replace />}
+                      >
+                        <FormationList />
+                      </RoleGuard>
+                    } />
                     
-                    {/* Routes pour les recruteurs et administrateurs */}
-                    <Route element={<RecruiterProtectedRoute />}>
-                      <Route path="/recruiter">
-                        <Route path="guest-student-roles" element={<GuestStudentRoleManager />} />
-                      </Route>
-                    </Route>
+                    {/* Routes pour la gestion des rôles - accessible par recruiters, admins et superadmins */}
+                    <Route path="/recruiter/guest-student-roles" element={
+                      <RoleGuard 
+                        roles={[ROLES.RECRUITER, ROLES.ADMIN, ROLES.SUPERADMIN]} 
+                        fallback={<Navigate to="/dashboard" replace />}
+                      >
+                        <GuestStudentRoleManager />
+                      </RoleGuard>
+                    } />
                     
                     {/* Dashboards spécifiques par rôle */}
                     <Route path="/admin/dashboard" element={
