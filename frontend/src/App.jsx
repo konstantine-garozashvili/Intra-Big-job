@@ -4,6 +4,7 @@ import MainLayout from './components/MainLayout'
 import { RoleProvider, RoleDashboardRedirect } from './features/roles'
 import { showGlobalLoader, hideGlobalLoader } from './lib/utils/loadingUtils'
 import LoadingOverlay from './components/LoadingOverlay'
+import { AuthProvider } from './contexts/AuthContext'
 
 // Import différé des pages pour améliorer les performances
 const Login = lazy(() => import('./pages/Login'))
@@ -28,7 +29,9 @@ const StudentSchedule = lazy(() => import('./pages/Student/Schedule'))
 const StudentGrades = lazy(() => import('./pages/Student/Grades'))
 const StudentAbsences = lazy(() => import('./pages/Student/Absences'))
 const StudentProjects = lazy(() => import('./pages/Student/Projects'))
+const StudentAttendance = lazy(() => import('./pages/Student/Attendance'))
 const TeacherDashboard = lazy(() => import('./pages/Teacher/Dashboard'))
+const TeacherSignatureMonitoring = lazy(() => import('./pages/Teacher/SignatureMonitoring'))
 const HRDashboard = lazy(() => import('./pages/HR/Dashboard'))
 const SuperAdminDashboard = lazy(() => import('./pages/SuperAdmin/Dashboard'))
 const GuestDashboard = lazy(() => import('./pages/Guest/Dashboard'))
@@ -43,6 +46,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import PublicRoute from './components/PublicRoute'
 import ProfileLayout from '@/layouts/ProfileLayout'
 import useLoadingIndicator from './hooks/useLoadingIndicator'
+import StudentRoute from './components/StudentRoute'
 
 // Fonction optimisée pour le préchargement intelligent des pages
 // Ne charge que les pages pertinentes en fonction du contexte et du chemin actuel
@@ -90,9 +94,11 @@ const useIntelligentPreload = () => {
     else if (currentPath.includes('/student')) {
       preloadComponent(() => import('./pages/Student/Dashboard'));
       preloadComponent(() => import('./pages/Student/Schedule'));
+      preloadComponent(() => import('./pages/Student/Attendance'));
     }
     else if (currentPath.includes('/teacher')) {
       preloadComponent(() => import('./pages/Teacher/Dashboard'));
+      preloadComponent(() => import('./pages/Teacher/SignatureMonitoring'));
     }
   }, [currentPath]);
   
@@ -312,9 +318,18 @@ const AppContent = () => {
                       <Route path="grades" element={<StudentGrades />} />
                       <Route path="absences" element={<StudentAbsences />} />
                       <Route path="projects" element={<StudentProjects />} />
+                      {/* Ajout de la route d'assiduité pour étudiants */}
+                      <Route element={<StudentRoute />}>
+                        <Route path="attendance" element={<StudentAttendance />} />
+                      </Route>
                     </Route>
                     
-                    <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
+                    <Route path="/teacher">
+                      <Route path="dashboard" element={<TeacherDashboard />} />
+                      {/* Ajout de la route de surveillance des signatures */}
+                      <Route path="signature-monitoring" element={<TeacherSignatureMonitoring />} />
+                    </Route>
+                    
                     <Route path="/hr/dashboard" element={<HRDashboard />} />
                     <Route path="/superadmin/dashboard" element={<SuperAdminDashboard />} />
                     <Route path="/guest/dashboard" element={<GuestDashboard />} />
@@ -337,9 +352,11 @@ const AppContent = () => {
 // Composant App principal qui configure le Router
 const App = () => {
   return (
-    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <AppContent />
-    </Router>
+    <AuthProvider>
+      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <AppContent />
+      </Router>
+    </AuthProvider>
   );
 };
 
