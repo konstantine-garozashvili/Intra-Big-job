@@ -28,7 +28,7 @@ const MainLayout = () => {
   const [initialRender, setInitialRender] = useState(true);
 
   // Pages qui doivent être affichées en plein écran sans marges internes
-  const fullScreenPages = ['/register', '/login'];
+  const fullScreenPages = ['/register'];
   const isFullScreenPage = fullScreenPages.includes(location.pathname);
 
   // Function to calculate and set the minimum content height
@@ -116,9 +116,12 @@ const MainLayout = () => {
       calculateMinHeight();
     };
 
-    const handleLogoutSuccess = () => {
+    const handleLogoutSuccess = (event) => {
       // Show loading before any state changes
       showGlobalLoader();
+      
+      // Get redirect path from event if available
+      const redirectPath = event?.detail?.redirectTo || '/login';
       
       // Add a small delay before changing state
       setTimeout(() => {
@@ -134,6 +137,11 @@ const MainLayout = () => {
         // Keep loading visible for a consistent time
         setTimeout(() => {
           hideGlobalLoader(100);
+          
+          // Redirect to login page if not already redirected by authService
+          if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
+            window.location.href = redirectPath;
+          }
           
           // Recalculate height after transition completes
           setTimeout(() => calculateMinHeight(), 200);
@@ -284,13 +292,13 @@ const MainLayout = () => {
   return (
     <ProfileContext.Provider value={profileContextValue}>
       <div className="flex flex-col min-h-screen bg-gray-50">
-        {/* Navbar sans transition */}
-        <Navbar user={userData} />
+        {/* Navbar conditionally rendered */}
+        {!isFullScreenPage && <Navbar user={userData} />}
         
         {/* Main content with minimum height to ensure footer is below viewport */}
         <main 
-          className={`flex-grow ${isFullScreenPage ? '' : 'container mx-auto px-4 py-8'}`}
-          style={{ minHeight: isFullScreenPage ? 'auto' : minContentHeight }}
+          className={`flex-grow ${isFullScreenPage ? 'px-0 py-0' : 'container mx-auto px-4 py-8'}`}
+          style={{ minHeight: minContentHeight }}
         >
           <Outlet />
         </main>
@@ -299,8 +307,8 @@ const MainLayout = () => {
           <ProfileProgress userData={profileData} />
         )}
         
-        {/* Footer sans transition */}
-        <Footer />
+        {/* Footer conditionally rendered */}
+        {!isFullScreenPage && <Footer />}
       </div>
     </ProfileContext.Provider>
   );

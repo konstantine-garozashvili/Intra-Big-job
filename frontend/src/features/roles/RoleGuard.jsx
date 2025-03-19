@@ -10,20 +10,27 @@ import { toast } from 'sonner';
  * 
  * @param {Object} props - Component props
  * @param {React.ReactNode} props.children - Content to render if user has required roles
- * @param {string|string[]} props.roles - Required role(s) to access the content
+ * @param {React.ReactNode} props.element - Alternative way to provide content (used with route elements)
+ * @param {string|string[]} props.roles - Required role(s) to access the content (deprecated)
+ * @param {string|string[]} props.allowedRoles - Required role(s) to access the content
  * @param {boolean} props.requireAll - If true, user must have all roles; if false, any role is sufficient
  * @param {React.ReactNode} props.fallback - Content to render if user doesn't have required roles
  * @returns {React.ReactNode}
  */
 const RoleGuard = ({ 
   children, 
+  element,
   roles, 
+  allowedRoles,
   requireAll = false, 
   fallback = null 
 }) => {
   const { hasRole, hasAnyRole, hasAllRoles, isLoading } = useRoles();
   const toastShownRef = useRef(false);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  
+  // Use allowedRoles if provided, fall back to roles for backward compatibility
+  const effectiveRoles = allowedRoles || roles;
   
   // Marquer la fin du chargement initial
   useEffect(() => {
@@ -42,15 +49,27 @@ const RoleGuard = ({
     
     let hasAccess = false;
     
+    // Debug logging
+    console.log('RoleGuard checking access:', {
+      requiredRoles: effectiveRoles,
+      userRoles: (hasRole && hasAnyRole && hasAllRoles) ? 'Role functions present' : 'Role functions missing',
+      requireAll,
+      isLoading,
+      initialLoadComplete
+    });
+    
     // Handle single role case
-    if (typeof roles === 'string') {
-      hasAccess = hasRole(roles);
+    if (typeof effectiveRoles === 'string') {
+      hasAccess = hasRole(effectiveRoles);
+      console.log(`Checking single role: ${effectiveRoles}, hasAccess: ${hasAccess}`);
     } 
     // Handle multiple roles case
     else if (requireAll) {
-      hasAccess = hasAllRoles(roles);
+      hasAccess = hasAllRoles(effectiveRoles);
+      console.log(`Checking all roles: ${JSON.stringify(effectiveRoles)}, hasAccess: ${hasAccess}`);
     } else {
-      hasAccess = hasAnyRole(roles);
+      hasAccess = hasAnyRole(effectiveRoles);
+      console.log(`Checking any role: ${JSON.stringify(effectiveRoles)}, hasAccess: ${hasAccess}`);
     }
     
     // Show toast notification if access is denied and hasn't been shown yet
@@ -75,6 +94,11 @@ const RoleGuard = ({
   // Si les rôles sont encore en cours de chargement, on n'affiche rien pour éviter un flash
   if (isLoading) {
     return null;
+  }
+  
+  // If element prop is provided, use it (for use with Route element prop)
+  if (element && hasAccess) {
+    return element;
   }
   
   return hasAccess ? children : fallback;

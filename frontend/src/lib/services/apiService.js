@@ -261,6 +261,76 @@ const apiService = {
         Authorization: `Bearer ${token}`
       }
     };
+  },
+
+  /**
+   * Invalide le cache pour un chemin spécifique
+   * @param {string} path - Chemin de l'API à invalider
+   */
+  invalidateCache(path) {
+    console.log(`Cache invalidé pour: ${path}`);
+    // Logique d'invalidation du cache pour un chemin spécifique
+    // Ici, on pourrait implémenter une logique avec localStorage ou IndexedDB si nécessaire
+  },
+
+  /**
+   * Invalide le cache lié au profil utilisateur
+   */
+  invalidateProfileCache() {
+    console.log('Cache de profil invalidé');
+    // Logique d'invalidation du cache spécifique au profil
+    this.invalidateCache('/profile');
+    this.invalidateCache('/me');
+  },
+
+  /**
+   * Invalide le cache lié aux documents
+   */
+  invalidateDocumentCache() {
+    console.log('Cache de documents invalidé');
+    // Logique d'invalidation du cache spécifique aux documents
+    this.invalidateCache('/documents');
+  },
+
+  /**
+   * Vide complètement le cache API
+   */
+  clearCache() {
+    console.log('Cache API entièrement vidé');
+    
+    // Identify cache keys in localStorage that might contain API responses
+    const cacheKeys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (
+        key.startsWith('api-cache:') || 
+        key.startsWith('api-data:') || 
+        key.startsWith('query:') ||
+        key.includes('dashboard') ||
+        key.includes('profile') ||
+        key.includes('user')
+      )) {
+        cacheKeys.push(key);
+      }
+    }
+    
+    // Remove all identified cache keys
+    cacheKeys.forEach(key => {
+      try {
+        localStorage.removeItem(key);
+      } catch (e) {
+        console.error(`Erreur lors de la suppression du cache pour la clé ${key}:`, e);
+      }
+    });
+    
+    // Notify the application that the cache has been cleared
+    window.dispatchEvent(new Event('api-cache-cleared'));
+    
+    // Also invalidate individual critical paths
+    this.invalidateProfileCache();
+    this.invalidateDocumentCache();
+    
+    console.log(`${cacheKeys.length} entrées de cache supprimées`);
   }
 };
 

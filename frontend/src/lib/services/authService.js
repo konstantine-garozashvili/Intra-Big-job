@@ -309,10 +309,10 @@ export const authService = {
   
   /**
    * Déconnexion
-   * @param {string} [redirectTo='/'] - Chemin de redirection après la déconnexion
+   * @param {string} [redirectTo='/login'] - Chemin de redirection après la déconnexion
    * @returns {Promise<boolean>} - True si la déconnexion est réussie
    */
-  async logout(redirectTo = '/') {
+  async logout(redirectTo = '/login') {
     try {
       // Show global loading state
       showGlobalLoader();
@@ -384,6 +384,9 @@ export const authService = {
               return Array.isArray(key) && key[0] === 'session' && key[1] === sessionId;
             }
           });
+          
+          // Effacer complètement le cache pour éviter tout problème de données persistantes
+          clearQueryCache();
         }
       } catch (cacheError) {
         console.error('Error managing query cache:', cacheError);
@@ -416,6 +419,11 @@ export const authService = {
       }));
       window.dispatchEvent(new Event('auth-logout-success'));
       
+      // Forcer la redirection vers la page de login après un court délai
+      setTimeout(() => {
+        window.location.href = redirectTo;
+      }, 300);
+      
       // Remove loading state after a short delay
       hideGlobalLoader(300);
       
@@ -444,6 +452,11 @@ export const authService = {
         detail: { redirectTo }
       }));
       window.dispatchEvent(new Event('auth-logout-success'));
+      
+      // Forcer la redirection même en cas d'erreur
+      setTimeout(() => {
+        window.location.href = redirectTo;
+      }, 300);
       
       // Remove loading state on error
       hideGlobalLoader();

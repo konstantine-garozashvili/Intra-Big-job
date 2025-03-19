@@ -1,6 +1,8 @@
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate, Outlet, useNavigate } from 'react-router-dom'
 import { lazy, Suspense, useState, useEffect } from 'react'
 import MainLayout from './components/MainLayout'
+import LoginLayout from './components/LoginLayout'
+import RegisterLayout from './components/RegisterLayout'
 import { RoleProvider, RoleDashboardRedirect, RoleGuard, ROLES } from './features/roles'
 import { showGlobalLoader, hideGlobalLoader } from './lib/utils/loadingUtils'
 import LoadingOverlay from './components/LoadingOverlay'
@@ -238,11 +240,23 @@ const AppContent = () => {
           
           {/* Routes publiques accessibles uniquement aux utilisateurs non authentifiés */}
           <Route element={<PublicRoute />}>
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
             <Route path="/registration-success" element={<RegistrationSuccess />} />
             <Route path="/verification-success" element={<VerificationSuccess />} />
             <Route path="/verification-error" element={<VerificationError />} />
+          </Route>
+          
+          {/* Login route with MainLayout and public access control */}
+          <Route element={<MainLayout />}>
+            <Route element={<LoginLayout />}>
+              <Route path="/login" element={<Login />} />
+            </Route>
+          </Route>
+          
+          {/* Register route with MainLayout and public access control */}
+          <Route element={<MainLayout />}>
+            <Route element={<RegisterLayout />}>
+              <Route path="/register" element={<Register />} />
+            </Route>
           </Route>
           
           {/* Routes protégées accessibles uniquement aux utilisateurs authentifiés */}
@@ -253,7 +267,7 @@ const AppContent = () => {
               
               {/* Routes spécifiques aux rôles */}
               <Route path="/admin">
-                <Route path="dashboard" element={<RoleGuard allowedRoles={[ROLES.ADMIN]} element={<AdminDashboard />} />} />
+                <Route path="dashboard" element={<RoleGuard allowedRoles={[ROLES.ADMIN, ROLES.HR, ROLES.SUPERADMIN]} element={<AdminDashboard />} />} />
               </Route>
               
               <Route path="/student">
