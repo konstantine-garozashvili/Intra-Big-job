@@ -180,7 +180,8 @@ export const SearchBar = () => {
     userAutocompleteService.getSuggestions(value)
       .then((data) => {
         if (Array.isArray(data)) {
-          setSuggestions(data);
+          // Limiter les résultats à 10 maximum
+          setSuggestions(data.slice(0, 10));
           setShowSuggestions(true);
         } else {
           setSuggestions([]);
@@ -375,11 +376,18 @@ export const SearchBar = () => {
         searchSequence = ['recruteur'];
       }
       
-      // Fonction pour effectuer les recherches séquentiellement
+      // Fonction pour effectuer les recherches séquentiellement jusqu'à obtenir au moins 10 résultats
       const performSequentialSearches = async () => {
         try {
+          const MAX_RESULTS = 10; // Nombre maximum de résultats à afficher
+          
           // Effectuer chaque recherche dans la séquence
           for (const term of searchSequence) {
+            // Si on a déjà rempli notre limite maximale, on peut s'arrêter
+            if (allResults.length >= MAX_RESULTS) {
+              break;
+            }
+            
             const data = await userAutocompleteService.getSuggestions(term);
             
             if (Array.isArray(data) && data.length > 0) {
@@ -391,8 +399,93 @@ export const SearchBar = () => {
               if (newUniqueResults.length > 0) {
                 allResults = [...allResults, ...newUniqueResults];
                 // Mettre à jour les suggestions au fur et à mesure
-                setSuggestions(allResults);
+                setSuggestions(allResults.slice(0, MAX_RESULTS));
+                
+                // Log pour débogage
+                console.log(`Recherche "${term}" a trouvé ${newUniqueResults.length} nouveaux résultats. Total: ${allResults.length}`);
               }
+            }
+          }
+          
+          // Même si on n'a pas atteint 10 résultats après avoir parcouru la séquence principale,
+          // on ajoute quelques recherches génériques pour tenter de trouver plus de résultats
+          // seulement si on a trouvé moins que MAX_RESULTS utilisateurs
+          if (allResults.length < MAX_RESULTS) {
+            const fallbackTerms = ['a', 'e', 'i', 'o', 'u'];
+            
+            for (const term of fallbackTerms) {
+              // Si on a déjà rempli notre limite maximale, on peut s'arrêter
+              if (allResults.length >= MAX_RESULTS) {
+                break;
+              }
+              
+              const data = await userAutocompleteService.getSuggestions(term);
+              
+              if (Array.isArray(data) && data.length > 0) {
+                const newUniqueResults = data.filter(newUser => 
+                  !allResults.some(existingUser => existingUser.id === newUser.id)
+                );
+                
+                if (newUniqueResults.length > 0) {
+                  allResults = [...allResults, ...newUniqueResults];
+                  setSuggestions(allResults.slice(0, MAX_RESULTS));
+                  
+                  // Log pour débogage
+                  console.log(`Recherche de secours "${term}" a trouvé ${newUniqueResults.length} nouveaux résultats. Total: ${allResults.length}`);
+                }
+              }
+            }
+          }
+          
+          // Trier les résultats pour mettre en avant ceux qui correspondent au rôle de l'utilisateur
+          if (allResults.length > 0) {
+            // Selon le rôle de l'utilisateur, on définit l'ordre de priorité des rôles
+            let rolePriority = [];
+            
+            if (hasRole(ROLES.RECRUITER)) {
+              rolePriority = ['TEACHER', 'STUDENT']; // Recruteurs cherchent d'abord des formateurs puis des étudiants
+            } else if (hasRole(ROLES.TEACHER)) {
+              rolePriority = ['STUDENT', 'HR']; // Formateurs cherchent d'abord des étudiants puis des RH
+            } else if (hasRole(ROLES.STUDENT)) {
+              rolePriority = ['TEACHER', 'STUDENT', 'RECRUITER']; // Étudiants cherchent d'abord des formateurs
+            } else if (hasRole(ROLES.HR)) {
+              rolePriority = ['TEACHER', 'STUDENT', 'RECRUITER']; // RH cherchent d'abord des formateurs
+            } else if (hasRole(ROLES.GUEST)) {
+              rolePriority = ['RECRUITER']; // Invités cherchent uniquement des recruteurs
+            }
+            
+            // Si l'utilisateur a un rôle avec priorité spécifique, on trie les résultats
+            if (rolePriority.length > 0) {
+              allResults.sort((a, b) => {
+                // Vérifier si les utilisateurs ont des rôles
+                const roleA = a.roles && a.roles.length > 0 ? a.roles[0].replace(/^ROLE_/i, '') : '';
+                const roleB = b.roles && b.roles.length > 0 ? b.roles[0].replace(/^ROLE_/i, '') : '';
+                
+                // Trouver l'index de priorité pour chaque rôle
+                const priorityA = rolePriority.indexOf(roleA);
+                const priorityB = rolePriority.indexOf(roleB);
+                
+                // Si les deux rôles sont dans la liste de priorité
+                if (priorityA !== -1 && priorityB !== -1) {
+                  return priorityA - priorityB;
+                }
+                // Si seulement le premier est dans la liste de priorité
+                else if (priorityA !== -1) {
+                  return -1;
+                }
+                // Si seulement le second est dans la liste de priorité
+                else if (priorityB !== -1) {
+                  return 1;
+                }
+                // Si aucun n'est dans la liste de priorité, l'ordre reste inchangé
+                return 0;
+              });
+              
+              // Mettre à jour les suggestions avec les résultats triés, limités à MAX_RESULTS
+              setSuggestions(allResults.slice(0, MAX_RESULTS));
+            } else {
+              // S'il n'y a pas de priorité spécifique, on limite quand même à MAX_RESULTS
+              setSuggestions(allResults.slice(0, MAX_RESULTS));
             }
           }
           
