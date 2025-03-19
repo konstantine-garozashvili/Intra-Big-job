@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { GraduationCap, Plus, Trash2, X, Save, Calendar, Check, ChevronsUpDown } from 'lucide-react';
+import React, { useState, lazy, Suspense, memo } from 'react';
+import { GraduationCap, Plus, Trash2, X, Save, Calendar as CalendarIcon, Check, ChevronsUpDown } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -19,12 +19,27 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import * as roleUtils from '../../utils/roleUtils';
 import { useApiQuery, useApiMutation } from '@/hooks/useReactQuery';
+import 'react-calendar/dist/Calendar.css';
+import '@/styles/custom-calendar.css'; // Import du CSS personnalisé pour le calendrier
+
+// Chargement dynamique du calendrier pour améliorer les performances
+const Calendar = lazy(() => import('react-calendar'));
+
+// Composant de chargement pour le calendrier - Mémorisé
+const CalendarFallback = memo(() => (
+  <div className="flex items-center justify-center p-8">
+    <div className="w-8 h-8 border-t-2 border-b-2 border-[#0066ff] rounded-full animate-spin"></div>
+  </div>
+));
+
+CalendarFallback.displayName = 'CalendarFallback';
 
 const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
   const userRole = userData?.role;
   const [isAdding, setIsAdding] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [diplomaToDelete, setDiplomaToDelete] = useState(null);
+  const [calendarOpen, setCalendarOpen] = useState(false);
   
   const [newDiploma, setNewDiploma] = useState({
     diplomaId: '',
@@ -212,6 +227,19 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
     return null;
   }
 
+  // Formater la date pour l'affichage
+  const formattedObtainedDate = newDiploma.obtainedDate 
+    ? new Intl.DateTimeFormat('fr-FR').format(new Date(newDiploma.obtainedDate)) 
+    : null;
+
+  // Fonction pour gérer le changement de date
+  const handleDateChange = (date) => {
+    setNewDiploma({
+      ...newDiploma,
+      obtainedDate: format(date, 'yyyy-MM-dd')
+    });
+  };
+
   return (
     <div className="space-y-4">
       {/* Delete Confirmation Dialog */}
@@ -268,16 +296,30 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
 
           {/* Add Diploma Form */}
           {isAdding && (
-            <div className="bg-gray-50 p-4 rounded-lg space-y-4">
-              <h3 className="text-base font-medium">Ajouter un diplôme</h3>
+            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-medium text-gray-900">Ajouter un nouveau diplôme</h3>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={cancelAdd}
+                  className="h-8 w-8 rounded-full"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              
               {error && (
-                <div className="text-sm text-red-500 p-2 bg-red-50 rounded-md">
+                <div className="mb-4 p-2 bg-red-50 border border-red-200 rounded text-red-600 text-sm">
                   {error}
                 </div>
               )}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Diplôme</label>
+              
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="diploma" className="block text-sm font-medium text-gray-700 mb-1">
+                    Diplôme
+                  </label>
                   <Popover open={open} onOpenChange={setOpen}>
                     <PopoverTrigger asChild>
                       <Button
@@ -286,101 +328,139 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
                         aria-expanded={open}
                         className="w-full justify-between"
                       >
-                        <span className="truncate">
-                          {newDiploma.diplomaId
-                            ? availableDiplomas.find((diploma) => diploma.id.toString() === newDiploma.diplomaId)?.name
-                            : "Sélectionner un diplôme..."}
-                        </span>
+                        {newDiploma.diplomaId
+                          ? availableDiplomas.find(
+                              (diploma) => diploma.id.toString() === newDiploma.diplomaId.toString()
+                            )?.name
+                          : "Sélectionnez un diplôme..."}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                    <PopoverContent className="w-full p-0" align="start">
                       <Command>
                         <CommandInput placeholder="Rechercher un diplôme..." />
+                        <CommandEmpty>Aucun diplôme trouvé.</CommandEmpty>
                         <CommandList>
-                          <CommandEmpty>Aucun diplôme trouvé.</CommandEmpty>
                           <CommandGroup>
-                            {availableDiplomas.map((diploma) => {
-                              const alreadyHasDiploma = diplomas.some(
-                                userDiploma => userDiploma.diploma.id.toString() === diploma.id.toString()
-                              );
-                              
-                              return (
-                                <CommandItem
-                                  key={diploma.id}
-                                  value={diploma.name}
-                                  disabled={alreadyHasDiploma}
-                                  onSelect={() => {
-                                    setNewDiploma({ ...newDiploma, diplomaId: diploma.id.toString() });
-                                    if (error) setError('');
-                                    setOpen(false);
-                                  }}
+                            {availableDiplomas.map((diploma) => (
+                              <CommandItem
+                                key={diploma.id}
+                                onSelect={() => {
+                                  setNewDiploma({
+                                    ...newDiploma,
+                                    diplomaId: diploma.id.toString(),
+                                  });
+                                  setOpen(false);
+                                }}
+                              >
+                                <Check
                                   className={cn(
-                                    alreadyHasDiploma && "opacity-50",
-                                    "flex items-center justify-between"
+                                    "mr-2 h-4 w-4",
+                                    newDiploma.diplomaId.toString() === diploma.id.toString()
+                                      ? "opacity-100"
+                                      : "opacity-0"
                                   )}
-                                >
-                                  <div className="flex flex-col">
-                                    <span className="font-medium">{diploma.name}</span>
-                                    <span className="text-sm text-gray-500">{diploma.institution}</span>
-                                  </div>
-                                  {newDiploma.diplomaId === diploma.id.toString() && (
-                                    <Check className="h-4 w-4 shrink-0" />
-                                  )}
-                                </CommandItem>
-                              );
-                            })}
+                                />
+                                {diploma.name}
+                              </CommandItem>
+                            ))}
                           </CommandGroup>
                         </CommandList>
                       </Command>
                     </PopoverContent>
                   </Popover>
                 </div>
-                <div className="space-y-2">
-                  <label
-                    htmlFor="date-obtention"
-                    className="block text-sm font-medium text-gray-700"
-                  >
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Date d'obtention
                   </label>
-                  <input
-                    id="date-obtention"
-                    type="date"
-                    value={newDiploma.obtainedDate}
-                    onChange={(e) => {
-                      setNewDiploma({...newDiploma, obtainedDate: e.target.value});
-                      if (error) setError('');
-                    }}
-                    className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm"
-                  />
+                  <div className="relative">
+                    <div 
+                      className="w-full px-4 py-3 rounded-md border flex items-center cursor-pointer transition-colors hover:border-[#0066ff] border-gray-300"
+                      onClick={() => setCalendarOpen(true)}
+                    >
+                      {formattedObtainedDate ? (
+                        <span className="text-gray-900">
+                          {formattedObtainedDate}
+                        </span>
+                      ) : (
+                        <span className="text-gray-500">JJ/MM/AAAA</span>
+                      )}
+                      <CalendarIcon className="ml-auto h-5 w-5 text-gray-500" />
+                    </div>
+                    
+                    <Dialog open={calendarOpen} onOpenChange={setCalendarOpen}>
+                      <DialogContent className="p-0 sm:max-w-[425px] bg-white rounded-lg shadow-xl border-none overflow-hidden">
+                        <div className="p-4 pb-0">
+                          <DialogTitle className="text-xl font-semibold text-center text-gray-900">
+                            Sélectionnez la date d'obtention
+                          </DialogTitle>
+                          <DialogDescription className="text-sm text-center text-gray-500 mt-1">
+                            Choisissez la date à laquelle vous avez obtenu ce diplôme.
+                          </DialogDescription>
+                        </div>
+                        <div className="calendar-container w-full p-4">
+                          <Suspense fallback={<CalendarFallback />}>
+                            <Calendar 
+                              onChange={handleDateChange} 
+                              value={new Date(newDiploma.obtainedDate)} 
+                              locale="fr"
+                              maxDate={new Date()}
+                              minDetail="decade" 
+                              defaultView="month"
+                              minDate={new Date(1940, 0, 1)}
+                              className="modern-calendar w-full"
+                              formatShortWeekday={(locale, date) => ['L', 'M', 'M', 'J', 'V', 'S', 'D'][date.getDay()]}
+                              navigationLabel={({ date }) => 
+                                date.toLocaleString('fr', { month: 'long', year: 'numeric' }).toLowerCase()
+                              }
+                              next2Label={<span className="text-lg text-[#0066ff]">»</span>}
+                              prev2Label={<span className="text-lg text-[#0066ff]">«</span>}
+                              nextLabel={<span className="text-lg text-[#0066ff]">›</span>}
+                              prevLabel={<span className="text-lg text-[#0066ff]">‹</span>}
+                              showNeighboringMonth={false}
+                              tileClassName={({ date, view }) => {
+                                // Vérifie si la date est dans le futur
+                                const today = new Date();
+                                today.setHours(0, 0, 0, 0);
+                                
+                                if (view === 'month' && date > today) {
+                                  return 'calendar-future-date';
+                                }
+                                
+                                return null;
+                              }}
+                            />
+                          </Suspense>
+                        </div>
+                        <div className="p-4 flex justify-end">
+                          <button 
+                            className="calendar-confirm-button"
+                            onClick={() => setCalendarOpen(false)}
+                          >
+                            Confirmer
+                          </button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
                 </div>
-              </div>
-              <div className="flex justify-end gap-3 mt-4">
-                <Button 
-                  variant="outline" 
-                  onClick={cancelAdd}
-                  className="text-sm"
-                >
-                  <X className="h-4 w-4 mr-2" />
-                  Annuler
-                </Button>
-                <Button 
-                  onClick={handleAddDiploma}
-                  disabled={addDiplomaMutation.isPending}
-                  className="text-sm"
-                >
-                  {addDiplomaMutation.isPending ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      <span>Enregistrement...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Save className="h-4 w-4 mr-2" />
-                      Enregistrer
-                    </>
-                  )}
-                </Button>
+                
+                <div className="flex space-x-2 justify-end mt-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={cancelAdd}
+                  >
+                    Annuler
+                  </Button>
+                  <Button 
+                    onClick={handleAddDiploma}
+                    disabled={addDiplomaMutation.isPending}
+                  >
+                    {addDiplomaMutation.isPending ? 'Enregistrement...' : 'Sauvegarder'}
+                  </Button>
+                </div>
               </div>
             </div>
           )}
