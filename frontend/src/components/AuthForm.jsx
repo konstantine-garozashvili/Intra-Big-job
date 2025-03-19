@@ -63,7 +63,12 @@ export function AuthForm() {
 
       // Store user roles in localStorage
       if (response.roles) {
-        localStorage.setItem('userRoles', JSON.stringify(response.roles));
+        // Ensure roles are properly formatted with ROLE_ prefix if needed
+        const formattedRoles = response.roles.map(role => 
+          role.startsWith('ROLE_') ? role : `ROLE_${role.toUpperCase()}`
+        );
+        localStorage.setItem('userRoles', JSON.stringify(formattedRoles));
+        console.log('Roles stored in localStorage:', formattedRoles);
       }
       
       // Vérifier s'il y a une page de redirection stockée
