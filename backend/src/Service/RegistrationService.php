@@ -10,10 +10,13 @@ use App\Entity\Nationality;
 use App\Entity\UserRole;
 use App\Entity\Role;
 use App\Entity\Theme;
+use App\ENtity\Status;
+use App\Entity\UserStatus;
 use App\Repository\NationalityRepository;
 use App\Repository\CityRepository;
 use App\Repository\PostalCodeRepository;
 use App\Repository\RoleRepository;
+use App\Repository\StatusRepository;
 use App\Repository\ThemeRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -205,6 +208,26 @@ class RegistrationService
         
         $this->entityManager->persist($userRole);
         $user->addUserRole($userRole);
+    }
+
+    /**
+     * Ajouter le status utilisateur par défaut
+     */
+    private function addDefaultStatus(User $user): void
+    {
+        $status = $this->statusRepository->findOneBy(['name' => 'En attente']);
+
+        if (!$status) {
+            // Créer le status s'il n'existe pas
+            $status = new Status();
+            $status->setName('En attente');
+            $status->setDescription('Compte en attente de validation');
+            $this->entityManager->persist($status);
+        }
+
+        $userStatus = new UserStatus();
+        $userStatus->setUser($user);
+        $userStatus->setStatus($status);
     }
     
     /**
