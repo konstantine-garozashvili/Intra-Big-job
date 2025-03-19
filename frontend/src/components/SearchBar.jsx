@@ -346,139 +346,69 @@ export const SearchBar = () => {
       // Faire une recherche directe pour récupérer une liste d'utilisateurs
       setIsLoading(true);
       
-      // Choisir le terme de recherche en fonction du rôle
-      let searchTerm = 'a'; // Par défaut pour superadmin
-      
-      if (hasRole(ROLES.RECRUITER) && !hasRole(ROLES.SUPERADMIN)) {
-        // Pour les recruteurs : chercher les formateurs en priorité
-        searchTerm = 'formateur';
-      } else if (hasRole(ROLES.TEACHER) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN])) {
-        // Pour les formateurs : chercher les étudiants en priorité
-        searchTerm = 'étudiant';
-      } else if (hasRole(ROLES.STUDENT) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.TEACHER])) {
-        // Pour les étudiants : chercher les formateurs en priorité
-        searchTerm = 'formateur';
-      } else if (hasRole(ROLES.HR) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN])) {
-        // Pour les RH : chercher les étudiants en priorité
-        searchTerm = 'étudiant';
-      } else if (hasRole(ROLES.GUEST)) {
-        // Pour les invités : chercher uniquement des recruteurs
-        searchTerm = 'recruteur';
-      } else if (hasRole(ROLES.ADMIN) && !hasRole(ROLES.SUPERADMIN)) {
-        // Pour les admins : chercher tous les types d'utilisateurs
-        searchTerm = 'étudiant';
-      }
-      
       // Stocker les résultats cumulés pour éviter de perdre des résultats entre les appels
       let allResults = [];
       
-      userAutocompleteService.getSuggestions(searchTerm)
-        .then((data) => {
-          // Vérifier si nous avons des résultats
-          if (Array.isArray(data) && data.length > 0) {
-            // Ajouter les résultats à notre collection
-            allResults = [...data];
-            // Mettre à jour les suggestions, mais garder le panneau affiché
-            setSuggestions(allResults);
+      // Définir la séquence de recherche en fonction du rôle de l'utilisateur
+      let searchSequence = [];
+      
+      if (hasRole(ROLES.SUPERADMIN)) {
+        // SuperAdmin cherche tous les utilisateurs, commencer par 'a' est suffisant
+        searchSequence = ['a'];
+      } else if (hasRole(ROLES.ADMIN) && !hasRole(ROLES.SUPERADMIN)) {
+        // Admin cherche tous les utilisateurs sauf SuperAdmin
+        searchSequence = ['étudiant', 'formateur', 'recruteur', 'admin'];
+      } else if (hasRole(ROLES.RECRUITER) && !hasRole(ROLES.SUPERADMIN)) {
+        // Recruteur cherche formateurs et étudiants
+        searchSequence = ['formateur', 'étudiant'];
+      } else if (hasRole(ROLES.TEACHER) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN])) {
+        // Formateur cherche étudiants et RH
+        searchSequence = ['étudiant', 'ressources humaines'];
+      } else if (hasRole(ROLES.STUDENT) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.TEACHER])) {
+        // Étudiant cherche formateurs, étudiants, recruteurs et RH
+        searchSequence = ['formateur', 'étudiant', 'recruteur'];
+      } else if (hasRole(ROLES.HR) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN])) {
+        // RH cherche formateurs, étudiants et recruteurs
+        searchSequence = ['étudiant', 'formateur', 'recruteur'];
+      } else if (hasRole(ROLES.GUEST)) {
+        // Invité cherche uniquement les recruteurs
+        searchSequence = ['recruteur'];
+      }
+      
+      // Fonction pour effectuer les recherches séquentiellement
+      const performSequentialSearches = async () => {
+        try {
+          // Effectuer chaque recherche dans la séquence
+          for (const term of searchSequence) {
+            const data = await userAutocompleteService.getSuggestions(term);
+            
+            if (Array.isArray(data) && data.length > 0) {
+              // Ajouter uniquement les résultats non dupliqués
+              const newUniqueResults = data.filter(newUser => 
+                !allResults.some(existingUser => existingUser.id === newUser.id)
+              );
+              
+              if (newUniqueResults.length > 0) {
+                allResults = [...allResults, ...newUniqueResults];
+                // Mettre à jour les suggestions au fur et à mesure
+                setSuggestions(allResults);
+              }
+            }
           }
           
-          // Si pas de résultats avec le premier terme ou si nous voulons simplement plus de résultats,
-          // essayer avec un autre terme adapté au rôle (mais continuer même si nous avons déjà des résultats)
-          let nextSearchTerm = null;
-          
-          if (hasRole(ROLES.RECRUITER) && !hasRole(ROLES.SUPERADMIN)) {
-            nextSearchTerm = 'étudiant';
-          } else if (hasRole(ROLES.TEACHER) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN])) {
-            nextSearchTerm = 'ressources humaines';
-          } else if (hasRole(ROLES.STUDENT) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.TEACHER])) {
-            nextSearchTerm = 'étudiant';
-          } else if (hasRole(ROLES.HR) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN])) {
-            nextSearchTerm = 'formateur';
-          } else if (hasRole(ROLES.ADMIN) && !hasRole(ROLES.SUPERADMIN)) {
-            nextSearchTerm = 'formateur';
-          }
-          
-          if (nextSearchTerm) {
-            return userAutocompleteService.getSuggestions(nextSearchTerm).then(secondData => {
-              return { data: secondData, continueSearch: true };
-            });
-          }
-          
-          return { data: null, continueSearch: false };
-        })
-        .then((result) => {
-          if (result.data && Array.isArray(result.data) && result.data.length > 0) {
-            // Ajouter les nouveaux résultats uniques
-            const newUniqueResults = result.data.filter(newUser => 
-              !allResults.some(existingUser => existingUser.id === newUser.id)
-            );
-            allResults = [...allResults, ...newUniqueResults];
-            // Mettre à jour les suggestions avec tous les résultats accumulés
-            setSuggestions(allResults);
-          }
-          
-          // Déterminer si nous devons continuer avec une troisième recherche
-          let nextSearchTerm = null;
-          
-          if (hasRole(ROLES.HR) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN])) {
-            nextSearchTerm = 'recruteur';
-          } else if (hasRole(ROLES.ADMIN) && !hasRole(ROLES.SUPERADMIN)) {
-            nextSearchTerm = 'recruteur';
-          }
-          
-          if (nextSearchTerm && result.continueSearch) {
-            return userAutocompleteService.getSuggestions(nextSearchTerm).then(thirdData => {
-              return { data: thirdData, continueSearch: true };
-            });
-          }
-          
-          return { data: null, continueSearch: false };
-        })
-        .then((result) => {
-          if (result.data && Array.isArray(result.data) && result.data.length > 0) {
-            // Ajouter les nouveaux résultats uniques
-            const newUniqueResults = result.data.filter(newUser => 
-              !allResults.some(existingUser => existingUser.id === newUser.id)
-            );
-            allResults = [...allResults, ...newUniqueResults];
-            // Mettre à jour les suggestions avec tous les résultats accumulés
-            setSuggestions(allResults);
-          }
-          
-          // Déterminer si nous devons continuer avec une quatrième recherche
-          let nextSearchTerm = null;
-          
-          if (hasRole(ROLES.ADMIN) && !hasRole(ROLES.SUPERADMIN) && result.continueSearch) {
-            nextSearchTerm = 'admin';
-          }
-          
-          if (nextSearchTerm) {
-            return userAutocompleteService.getSuggestions(nextSearchTerm);
-          }
-          
-          return null;
-        })
-        .then((fourthData) => {
-          if (fourthData && Array.isArray(fourthData) && fourthData.length > 0) {
-            // Ajouter les nouveaux résultats uniques
-            const newUniqueResults = fourthData.filter(newUser => 
-              !allResults.some(existingUser => existingUser.id === newUser.id)
-            );
-            allResults = [...allResults, ...newUniqueResults];
-            // Mettre à jour les suggestions avec tous les résultats accumulés
-            setSuggestions(allResults);
-          }
-          
-          // S'assurer que le panneau de suggestions est toujours visible à la fin
+          // Toujours afficher le panneau de suggestions à la fin, même s'il est vide
           setShowSuggestions(true);
+        } catch (error) {
+          console.error('Error during sequential searches:', error);
+        } finally {
+          // Toujours terminer le chargement et garder le panneau visible
           setIsLoading(false);
-        })
-        .catch((error) => {
-          console.error('Error fetching suggestions:', error);
-          // Toujours garder le panneau visible, même en cas d'erreur
           setShowSuggestions(true);
-          setIsLoading(false);
-        });
+        }
+      };
+      
+      // Lancer les recherches séquentielles
+      performSequentialSearches();
     } 
     // Pour les autres utilisateurs
     else if (query.length >= 1) {
