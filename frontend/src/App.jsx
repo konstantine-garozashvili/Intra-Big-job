@@ -34,6 +34,10 @@ const SuperAdminDashboard = lazy(() => import('./pages/SuperAdmin/Dashboard'))
 const GuestDashboard = lazy(() => import('./pages/Guest/Dashboard'))
 const RecruiterDashboard = lazy(() => import('./pages/Recruiter/Dashboard'))
 
+// Nouvelles pages à importer
+const FormationList = lazy(() => import('./pages/FormationList'))
+const GuestStudentRoleManager = lazy(() => import('./pages/Recruiter/GuestStudentRoleManager'))
+
 // Import du composant HomePage 
 const HomePage = lazy(() => import('./components/HomePage'))
 
@@ -43,6 +47,8 @@ import ProtectedRoute from './components/ProtectedRoute'
 import PublicRoute from './components/PublicRoute'
 import ProfileLayout from '@/layouts/ProfileLayout'
 import useLoadingIndicator from './hooks/useLoadingIndicator'
+import TeacherProtectedRoute from './components/TeacherProtectedRoute'
+import RecruiterProtectedRoute from './components/RecruiterProtectedRoute'
 
 // Fonction optimisée pour le préchargement intelligent des pages
 // Ne charge que les pages pertinentes en fonction du contexte et du chemin actuel
@@ -300,6 +306,18 @@ const AppContent = () => {
                       <Route path="/settings/career" element={<CareerSettings />} />
                       <Route path="/settings/security" element={<SecuritySettings />} />
                       <Route path="/settings/notifications" element={<NotificationSettings />} />
+                    </Route>
+                    
+                    {/* Routes pour les enseignants, administrateurs et super-administrateurs */}
+                    <Route element={<TeacherProtectedRoute />}>
+                      <Route path="/formations" element={<FormationList />} />
+                    </Route>
+                    
+                    {/* Routes pour les recruteurs et administrateurs */}
+                    <Route element={<RecruiterProtectedRoute />}>
+                      <Route path="/recruiter">
+                        <Route path="guest-student-roles" element={<GuestStudentRoleManager />} />
+                      </Route>
                     </Route>
                     
                     {/* Dashboards spécifiques par rôle */}

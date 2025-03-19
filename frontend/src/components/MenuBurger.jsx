@@ -301,6 +301,13 @@ const MenuBurger = memo(() => {
       ],
     },
     {
+      key: 'formations_management',
+      label: 'Gestion des formations',
+      icon: <BookOpen className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER],
+      to: '/formations',
+    },
+    {
       key: 'rh',
       label: 'Ressources Humaines',
       icon: <Users className="w-5 h-5 mr-2 text-[#528eb2]" />,
@@ -338,6 +345,7 @@ const MenuBurger = memo(() => {
         { name: 'Entretiens', to: '/recruiter/interviews', roles: [ROLES.RECRUITER] },
         { name: 'Base de CV', to: '/recruiter/cv-database', roles: [ROLES.RECRUITER] },
         { name: 'Statistiques', to: '/recruiter/statistics', roles: [ROLES.RECRUITER] },
+        { name: 'Gestion des rôles', to: '/recruiter/guest-student-roles', roles: [ROLES.RECRUITER] },
       ],
     },
     {

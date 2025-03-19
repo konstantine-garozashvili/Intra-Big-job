@@ -1,6 +1,8 @@
-import axiosInstance from '@/lib/axios';
+import axios from 'axios';
 import authService from '@services/authService';
 import apiService from '@/lib/services/apiService';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 // Simple event emitter for document updates
 export const documentEvents = {
@@ -68,41 +70,6 @@ const documentCache = {
         this.documentsByType[type] = this.documentsByType[type].filter(doc => doc.id !== documentId);
       }
     });
-    
-    // Also invalidate the API service cache
-    apiService.invalidateDocumentCache();
-  },
-  
-  // Mettre à jour le cache avec des données optimistes
-  updateOptimistically(type, document) {
-    if (!this.documents) {
-      this.documents = [];
-    }
-    
-    // Ajouter le document au cache global
-    this.documents.push(document);
-    
-    // Ajouter le document au cache par type
-    const normalizedType = type.toUpperCase();
-    if (!this.documentsByType[normalizedType]) {
-      this.documentsByType[normalizedType] = [];
-    }
-    
-    this.documentsByType[normalizedType].push(document);
-  },
-  
-  // Supprimer un document du cache
-  removeDocument(documentId) {
-    if (this.documents) {
-      this.documents = this.documents.filter(doc => doc.id !== documentId);
-    }
-    
-    // Supprimer de tous les caches par type
-    Object.keys(this.documentsByType).forEach(type => {
-      if (this.documentsByType[type]) {
-        this.documentsByType[type] = this.documentsByType[type].filter(doc => doc.id !== documentId);
-      }
-    });
   }
 };
 
@@ -121,7 +88,14 @@ class DocumentService {
     }
     
     try {
-      const response = await axiosInstance.get('/documents');
+      const response = await axios.get(
+        `${API_URL}/documents`,
+        {
+          headers: {
+            'Authorization': `Bearer ${authService.getToken()}`
+          }
+        }
+      );
       
       const documents = response.data.data || [];
       
@@ -163,7 +137,17 @@ class DocumentService {
       // Ajouter le type au formData
       formData.append('type', 'CV');
       
-      const response = await axiosInstance.post('/documents/upload/cv', formData);
+      const config = {
+        headers: {
+          'Authorization': `Bearer ${authService.getToken()}`
+        }
+      };
+      
+      const response = await axios.post(
+        `${API_URL}/documents/upload/cv`, 
+        formData,
+        config
+      );
       
       // Clear cache after upload
       documentCache.clear();
@@ -173,9 +157,6 @@ class DocumentService {
       
       return response.data;
     } catch (error) {
-      // En cas d'erreur, forcer un rafraîchissement pour supprimer les documents temporaires
-      documentCache.clear();
-      documentEvents.notify();
       // En cas d'erreur, forcer un rafraîchissement pour supprimer les documents temporaires
       documentCache.clear();
       documentEvents.notify();
@@ -211,7 +192,17 @@ class DocumentService {
       // Notifier les abonnés de la mise à jour optimiste
       documentEvents.notify();
       
-      const response = await axiosInstance.post(`/documents/upload/cv/${studentId}`, formData);
+      const config = {
+        headers: {
+          'Authorization': `Bearer ${authService.getToken()}`
+        }
+      };
+      
+      const response = await axios.post(
+        `${API_URL}/documents/upload/cv/${studentId}`, 
+        formData,
+        config
+      );
       
       documentCache.clear();
       
@@ -220,9 +211,6 @@ class DocumentService {
       
       return response.data;
     } catch (error) {
-      // En cas d'erreur, forcer un rafraîchissement pour supprimer les documents temporaires
-      documentCache.clear();
-      documentEvents.notify();
       // En cas d'erreur, forcer un rafraîchissement pour supprimer les documents temporaires
       documentCache.clear();
       documentEvents.notify();
@@ -237,9 +225,15 @@ class DocumentService {
    */
   async downloadDocument(documentId) {
     try {
-      const response = await axiosInstance.get(`/documents/${documentId}/download`, {
-        responseType: 'blob'
-      });
+      const response = await axios.get(
+        `${API_URL}/documents/${documentId}/download`,
+        {
+          headers: {
+            'Authorization': `Bearer ${authService.getToken()}`
+          },
+          responseType: 'blob'
+        }
+      );
       
       return response.data;
     } catch (error) {
@@ -254,15 +248,21 @@ class DocumentService {
    */
   async deleteDocument(documentId) {
     try {
-      // Optimistically remove the document from the cache
+      // Optimistic update - supprimer du cache avant la requête
       documentCache.removeDocument(documentId);
       
-      // Notify subscribers about the optimistic update
+      // Notifier les abonnés de la mise à jour optimiste
       documentEvents.notify();
       
-      const response = await axiosInstance.delete(`/documents/${documentId}`);
+      const response = await axios.delete(
+        `${API_URL}/documents/${documentId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${authService.getToken()}`
+          }
+        }
+      );
       
-      // Clear cache after delete
       documentCache.clear();
       
       // Notify subscribers about the update
@@ -270,7 +270,7 @@ class DocumentService {
       
       return response.data;
     } catch (error) {
-      // En cas d'erreur, forcer un rafraîchissement pour supprimer les documents temporaires
+      // En cas d'erreur, forcer un rafraîchissement pour restaurer l'état correct
       documentCache.clear();
       documentEvents.notify();
       throw error;
@@ -291,7 +291,14 @@ class DocumentService {
     }
     
     try {
-      const response = await axiosInstance.get(`/documents/type/${normalizedType}`);
+      const response = await axios.get(
+        `${API_URL}/documents/type/${normalizedType}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${authService.getToken()}`
+          }
+        }
+      );
       
       const documents = response.data.data || [];
       
@@ -310,7 +317,6 @@ class DocumentService {
    */
   clearCache() {
     documentCache.clear();
-    documentEvents.notify();
     documentEvents.notify();
   }
 }
