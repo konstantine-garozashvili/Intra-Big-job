@@ -1,8 +1,9 @@
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate, Outlet, useNavigate } from 'react-router-dom'
 import { lazy, Suspense, useState, useEffect } from 'react'
 import MainLayout from './components/MainLayout'
-import { RoleProvider, RoleDashboardRedirect } from './features/roles'
-import { Spinner } from './components/ui/spinner'
+import { RoleProvider, RoleDashboardRedirect, RoleGuard, ROLES } from './features/roles'
+import { showGlobalLoader, hideGlobalLoader } from './lib/utils/loadingUtils'
+import LoadingOverlay from './components/LoadingOverlay'
 
 // Import différé des pages pour améliorer les performances
 const Login = lazy(() => import('./pages/Login'))
@@ -183,87 +184,87 @@ const PrefetchHandler = () => {
 };
 
 // Composant de chargement optimisé pour Suspense
-const SuspenseLoader = () => (
-  <div className="flex items-center justify-center min-h-screen">
-    <Spinner type="dots" size="lg" className="text-primary" />
-  </div>
-)
+const SuspenseLoader = () => {
+  // Apply app-loading class to show the global loader
+  useEffect(() => {
+    // Just use the global loader directly
+    showGlobalLoader();
+    
+    return () => {
+      // Just hide the global loader on unmount
+      hideGlobalLoader();
+    };
+  }, []);
+  
+  // No need to render anything - handled by the global loader
+  return null;
+};
 
 // Composant de contenu principal qui utilise les hooks de React Router
 const AppContent = () => {
   const [isNavigating, setIsNavigating] = useState(false);
+  const [showLoader, setShowLoader] = useState(false);
   const navigate = useNavigate();
   
   // Use the loading indicator hook to hide the browser's default loading indicator
   useLoadingIndicator();
   
-  // Add a meta tag to disable the browser's default loading indicator
-  useEffect(() => {
-    // Create a meta tag to disable the browser's default loading indicator
-    const meta = document.createElement('meta');
-    meta.name = 'theme-color';
-    meta.content = '#ffffff';
-    document.head.appendChild(meta);
-    
-    // Create a style tag to disable the browser's default loading indicator
-    const style = document.createElement('style');
-    style.textContent = `
-      /* Disable browser's default loading indicator only when our custom loader is active */
-      html.custom-loader-active, 
-      html.custom-loader-active body {
-        cursor: auto !important;
-      }
-      
-      /* Hide any progress indicators only when our custom loader is active */
-      html.custom-loader-active progress {
-        display: none !important;
-      }
-    `;
-    document.head.appendChild(style);
-    
-    // Add the custom-loader-active class initially
-    document.documentElement.classList.add('custom-loader-active');
-    
-    // Remove the class after the page has loaded
-    window.addEventListener('load', () => {
-      setTimeout(() => {
-        document.documentElement.classList.remove('custom-loader-active');
-      }, 500);
-    });
-    
-    return () => {
-      document.head.removeChild(meta);
-      document.head.removeChild(style);
-      document.documentElement.classList.remove('custom-loader-active');
-    };
-  }, []);
-
   // Écouteur d'événement pour la navigation après déconnexion
   useEffect(() => {
     const handleLogoutNavigation = (event) => {
-      const { redirectTo } = event.detail;
+      // Get redirectTo path from event detail if available, default to '/'
+      const redirectTo = event?.detail?.redirectTo || '/';
+      
+      // Show loader during navigation
+      setShowLoader(true);
       
       // Set navigating state to true
       setIsNavigating(true);
       
-      // Add a small delay to ensure auth state is cleared before navigation
+      // Reduced delay from 50ms to 20ms
       setTimeout(() => {
+        // Navigate to home or specified redirect path
         navigate(redirectTo);
-        // Reset navigating state after navigation
-        setTimeout(() => setIsNavigating(false), 100);
-      }, 100);
+        
+        // Keep loader visible for a minimum time - REDUCED from 500ms to 300ms
+        setTimeout(() => {
+          setIsNavigating(false);
+          // Hide loader after a short delay - REDUCED from 300ms to 150ms 
+          setTimeout(() => {
+            setShowLoader(false);
+          }, 150);
+        }, 300);
+      }, 20);
     };
-    
-    window.addEventListener('auth-logout-success', handleLogoutNavigation);
+
+    const handleLoginSuccess = () => {
+      // Show loader during login
+      setShowLoader(true);
+      
+      // Keep loader visible for a minimum time - REDUCED from 1000ms to 500ms
+      setTimeout(() => {
+        // Hide loader after navigation is complete
+        setShowLoader(false);
+      }, 500);
+    };
+
+    // Listen for logout navigation events
+    window.addEventListener('logout-success', handleLogoutNavigation);
+    window.addEventListener('login-success', handleLoginSuccess);
     
     return () => {
-      window.removeEventListener('auth-logout-success', handleLogoutNavigation);
+      window.removeEventListener('logout-success', handleLogoutNavigation);
+      window.removeEventListener('login-success', handleLoginSuccess);
     };
   }, [navigate]);
 
   return (
     <div className="relative font-poppins">
       <PrefetchHandler />
+      
+      {/* Guaranteed loader that will always be visible during transitions */}
+      <LoadingOverlay isVisible={showLoader} />
+      
       {/* Wrapper pour le contenu principal avec z-index positif */}
       <div className={`relative z-10 transition-opacity duration-200 ${isNavigating ? 'opacity-0' : 'opacity-100'}`}>
         <Suspense fallback={<SuspenseLoader />}>
@@ -302,22 +303,66 @@ const AppContent = () => {
                     </Route>
                     
                     {/* Dashboards spécifiques par rôle */}
-                    <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                    <Route path="/admin/dashboard" element={
+                      <RoleGuard roles={ROLES.ADMIN} fallback={<Navigate to="/dashboard" replace />}>
+                        <AdminDashboard />
+                      </RoleGuard>
+                    } />
                     
                     {/* Routes étudiantes */}
                     <Route path="/student">
-                      <Route path="dashboard" element={<StudentDashboard />} />
-                      <Route path="schedule" element={<StudentSchedule />} />
-                      <Route path="grades" element={<StudentGrades />} />
-                      <Route path="absences" element={<StudentAbsences />} />
-                      <Route path="projects" element={<StudentProjects />} />
+                      <Route path="dashboard" element={
+                        <RoleGuard roles={ROLES.STUDENT} fallback={<Navigate to="/dashboard" replace />}>
+                          <StudentDashboard />
+                        </RoleGuard>
+                      } />
+                      <Route path="schedule" element={
+                        <RoleGuard roles={ROLES.STUDENT} fallback={<Navigate to="/dashboard" replace />}>
+                          <StudentSchedule />
+                        </RoleGuard>
+                      } />
+                      <Route path="grades" element={
+                        <RoleGuard roles={ROLES.STUDENT} fallback={<Navigate to="/dashboard" replace />}>
+                          <StudentGrades />
+                        </RoleGuard>
+                      } />
+                      <Route path="absences" element={
+                        <RoleGuard roles={ROLES.STUDENT} fallback={<Navigate to="/dashboard" replace />}>
+                          <StudentAbsences />
+                        </RoleGuard>
+                      } />
+                      <Route path="projects" element={
+                        <RoleGuard roles={ROLES.STUDENT} fallback={<Navigate to="/dashboard" replace />}>
+                          <StudentProjects />
+                        </RoleGuard>
+                      } />
                     </Route>
                     
-                    <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
-                    <Route path="/hr/dashboard" element={<HRDashboard />} />
-                    <Route path="/superadmin/dashboard" element={<SuperAdminDashboard />} />
-                    <Route path="/guest/dashboard" element={<GuestDashboard />} />
-                    <Route path="/recruiter/dashboard" element={<RecruiterDashboard />} />
+                    <Route path="/teacher/dashboard" element={
+                      <RoleGuard roles={ROLES.TEACHER} fallback={<Navigate to="/dashboard" replace />}>
+                        <TeacherDashboard />
+                      </RoleGuard>
+                    } />
+                    <Route path="/hr/dashboard" element={
+                      <RoleGuard roles={ROLES.HR} fallback={<Navigate to="/dashboard" replace />}>
+                        <HRDashboard />
+                      </RoleGuard>
+                    } />
+                    <Route path="/superadmin/dashboard" element={
+                      <RoleGuard roles={ROLES.SUPERADMIN} fallback={<Navigate to="/dashboard" replace />}>
+                        <SuperAdminDashboard />
+                      </RoleGuard>
+                    } />
+                    <Route path="/guest/dashboard" element={
+                      <RoleGuard roles={ROLES.GUEST} fallback={<Navigate to="/dashboard" replace />}>
+                        <GuestDashboard />
+                      </RoleGuard>
+                    } />
+                    <Route path="/recruiter/dashboard" element={
+                      <RoleGuard roles={ROLES.RECRUITER} fallback={<Navigate to="/dashboard" replace />}>
+                        <RecruiterDashboard />
+                      </RoleGuard>
+                    } />
                   </Route>
                   
                   {/* Redirection des routes inconnues vers la page d'accueil */}

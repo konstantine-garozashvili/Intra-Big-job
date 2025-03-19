@@ -126,8 +126,10 @@ const CVUpload = memo(({ userData, onUpdate }) => {
       return;
     }
     
-    deleteCV(cvDocument.id);
+    // Close dialog immediately for fluid interaction
     setDeleteDialogOpen(false);
+    
+    deleteCV(cvDocument.id);
   }, [cvDocument, deleteCV]);
 
   // Handle document download

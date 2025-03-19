@@ -153,8 +153,6 @@ const RegisterForm = () => {
       return;
     }
     
-    console.log(`Changement à l'étape ${currentStep}`);
-    
     // Nettoyer les erreurs du contexte à chaque changement d'étape
     setErrors({});
     

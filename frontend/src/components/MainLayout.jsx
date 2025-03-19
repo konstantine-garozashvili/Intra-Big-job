@@ -6,6 +6,7 @@ import { RoleGuard, ROLES, useRoles } from '../features/roles';
 import { authService } from '../lib/services/authService';
 import { profileService } from '../pages/Global/Profile/services/profileService';
 import Footer from './Footer';
+import { showGlobalLoader, hideGlobalLoader } from '../lib/utils/loadingUtils';
 
 // Create a context for profile data and refresh function
 export const ProfileContext = createContext({
@@ -19,7 +20,7 @@ const MainLayout = () => {
   const [profileData, setProfileData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showProgress, setShowProgress] = useState(false);
-  const { hasRole } = useRoles();
+  const { hasRole, isLoading: rolesLoading } = useRoles();
   const location = useLocation();
   const [isAuthenticated, setIsAuthenticated] = useState(authService.isLoggedIn());
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -97,23 +98,47 @@ const MainLayout = () => {
   // Écouter les événements d'authentification
   useEffect(() => {
     const handleLoginSuccess = () => {
-      setIsAuthenticated(true);
-      // Rafraîchir les données utilisateur
-      fetchUserData();
+      // Show global loading immediately
+      showGlobalLoader();
+      
+      // Small delay before updating auth state
+      setTimeout(() => {
+        setIsAuthenticated(true);
+        
+        // Delay before fetching user data
+        setTimeout(() => {
+          // Fetch user data
+          fetchUserData();
+        }, 200);
+      }, 50);
+      
       // Recalculate height when authentication state changes
       calculateMinHeight();
     };
 
     const handleLogoutSuccess = () => {
-      setIsAuthenticated(false);
-      // Réinitialiser les données utilisateur
-      setUserData(null);
-      setProfileData(null);
-      // Recalculate height when authentication state changes
-      calculateMinHeight();
-      // Set a higher height temporarily to ensure footer is below viewport
-      setMinContentHeight('150vh');
-      setTimeout(() => calculateMinHeight(), 300);
+      // Show loading before any state changes
+      showGlobalLoader();
+      
+      // Add a small delay before changing state
+      setTimeout(() => {
+        setIsAuthenticated(false);
+        // Reset user data
+        setUserData(null);
+        setProfileData(null);
+        
+        // Ensure footer is positioned correctly
+        setMinContentHeight('150vh');
+        calculateMinHeight();
+        
+        // Keep loading visible for a consistent time
+        setTimeout(() => {
+          hideGlobalLoader(100);
+          
+          // Recalculate height after transition completes
+          setTimeout(() => calculateMinHeight(), 200);
+        }, 400);
+      }, 100);
     };
     
     // Fonction pour récupérer les données utilisateur
@@ -128,15 +153,23 @@ const MainLayout = () => {
           setProfileData(profileData);
           setIsLoading(false);
           // Attendre un court instant avant d'afficher le composant de progression
-          setTimeout(() => setShowProgress(true), 100);
+          setTimeout(() => {
+            setShowProgress(true);
+            // Remove loading state when everything is loaded
+            hideGlobalLoader();
+          }, 300);
           // Recalculate height after data is loaded
           calculateMinHeight();
         } catch (error) {
           console.error('Error fetching data:', error);
           setIsLoading(false);
+          // Remove loading state on error
+          hideGlobalLoader();
         }
       } else {
         setIsLoading(false);
+        // Remove loading state if not logged in
+        hideGlobalLoader();
       }
     };
 
@@ -146,11 +179,18 @@ const MainLayout = () => {
     // Charger les données utilisateur au montage
     fetchUserData();
 
+    // Handle user-data-loaded event to remove loading class
+    const handleUserDataLoaded = () => {
+      // Remove loading class after a short delay
+      hideGlobalLoader(300);
+    };
+
     // Ajouter les écouteurs d'événements
     window.addEventListener('login-success', handleLoginSuccess);
     window.addEventListener('logout-success', handleLogoutSuccess);
     window.addEventListener('auth-logout-success', handleLogoutSuccess);
     window.addEventListener('query-cache-cleared', handleLogoutSuccess);
+    window.addEventListener('user-data-loaded', handleUserDataLoaded);
 
     // Nettoyer les écouteurs d'événements
     return () => {
@@ -158,8 +198,18 @@ const MainLayout = () => {
       window.removeEventListener('logout-success', handleLogoutSuccess);
       window.removeEventListener('auth-logout-success', handleLogoutSuccess);
       window.removeEventListener('query-cache-cleared', handleLogoutSuccess);
+      window.removeEventListener('user-data-loaded', handleUserDataLoaded);
     };
   }, [calculateMinHeight]);
+
+  // Montrer le loader global pendant le chargement des rôles si l'utilisateur est authentifié
+  useEffect(() => {
+    if (isAuthenticated && rolesLoading) {
+      showGlobalLoader();
+    } else {
+      hideGlobalLoader();
+    }
+  }, [isAuthenticated, rolesLoading]);
 
   // Create a memoized context value to prevent unnecessary re-renders
   const profileContextValue = useMemo(() => ({

@@ -72,12 +72,13 @@ export const getPrimaryRole = (roles) => {
  */
 export const ROLE_ALIASES = {
   'ADMIN': ['admin', 'adm', 'administrateur'],
-  'SUPER_ADMIN': ['super admin', 'superadmin', 'super', 'super adm', 'super administrateur', 'superadministrateur'],
-  'TEACHER': ['formateur', 'forma', 'form'],
-  'STUDENT': ['étudiant', 'etudiant', 'étud', 'etud', 'student'],
-  'HR': ['rh', 'ressources humaines', 'ressources'],
-  'RECRUITER': ['recruteur', 'recru', 'rec'],
-  'GUEST': ['invité', 'invite', 'inv']
+  'SUPER_ADMIN': ['super admin', 'superadmin', 'super', 'super adm', 'super administrateur', 'superadministrateur', 'super-admin', 'super-administrateur'],
+  'SUPERADMIN': ['superadmin', 'super admin', 'super', 'super adm', 'super administrateur', 'superadministrateur', 'super-admin', 'super-administrateur'],
+  'TEACHER': ['formateur', 'forma', 'form', 'enseignant', 'prof', 'professeur'],
+  'STUDENT': ['étudiant', 'etudiant', 'étud', 'etud', 'student', 'élève', 'eleve', 'apprenant'],
+  'HR': ['rh', 'ressources humaines', 'ressources', 'hr', 'human resources'],
+  'RECRUITER': ['recruteur', 'recru', 'rec', 'recruiter'],
+  'GUEST': ['invité', 'invite', 'inv', 'guest']
 };
 
 /**
@@ -93,7 +94,13 @@ export function matchRoleFromSearchTerm(searchTerm, allowedRoles = null) {
   
   // Filter roles if allowedRoles is provided
   const rolesToCheck = allowedRoles 
-    ? Object.keys(ROLE_ALIASES).filter(role => allowedRoles.includes(role))
+    ? Object.keys(ROLE_ALIASES).filter(role => {
+        // Pour le cas spécial de SUPERADMIN/SUPER_ADMIN, si l'un des deux est dans allowedRoles,
+        // inclure également l'autre variante
+        if (role === 'SUPERADMIN' && allowedRoles.includes('SUPER_ADMIN')) return true;
+        if (role === 'SUPER_ADMIN' && allowedRoles.includes('SUPERADMIN')) return true;
+        return allowedRoles.includes(role);
+      })
     : Object.keys(ROLE_ALIASES);
   
   // Try different matching strategies in order of specificity

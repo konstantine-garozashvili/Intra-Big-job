@@ -370,18 +370,28 @@ const Navbar = memo(({ user }) => {
       // Fermer la boîte de dialogue de déconnexion
       setLogoutDialogOpen(false);
 
-      // Appeler le service de déconnexion
-      await authService.logout();
-      
-      // Mettre à jour l'état local après la déconnexion
+      // Anticiper la déconnexion en nettoyant d'abord les états UI
       setUserData(null);
       setIsAuthenticated(false);
-      setIsLoggingOut(false);
       
-      // Naviguer vers la page d'accueil
-      navigate('/');
+      // Déclencher un pré-événement de déconnexion pour que les hooks et composants puissent se préparer
+      window.dispatchEvent(new Event('logout-start'));
+      
+      // Appeler le service de déconnexion avec le chemin de redirection
+      await authService.logout('/');
+      
+      // Il n'est plus nécessaire de naviguer manuellement ici car
+      // l'événement logout-success s'en chargera via le gestionnaire dans App.jsx
+      setTimeout(() => {
+        setIsLoggingOut(false);
+      }, 100);
     } catch (error) {
       console.error('Error during logout:', error);
+      
+      // En cas d'erreur, forcer quand même la déconnexion
+      authService.logout('/');
+      setUserData(null);
+      setIsAuthenticated(false);
       setIsLoggingOut(false);
     }
   };

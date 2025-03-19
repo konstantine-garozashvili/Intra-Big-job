@@ -2,6 +2,8 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { authService } from '@/lib/services/authService';
 import { useEffect, useState, useRef } from 'react';
 import { toast } from 'sonner';
+import { useRoles } from '@/features/roles/roleContext';
+import { useRolePermissions } from '@/features/roles/useRolePermissions';
 
 /**
  * Composant pour protéger les routes nécessitant une authentification
@@ -11,8 +13,87 @@ const ProtectedRoute = () => {
   const location = useLocation();
   const [isChecking, setIsChecking] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [rolesLoaded, setRolesLoaded] = useState(false);
   const redirectedRef = useRef(false);
   const renderedOutletRef = useRef(false);
+  const { roles, hasRole, isLoading: rolesLoading } = useRoles();
+  const permissions = useRolePermissions();
+
+  // Verify that the user has the necessary roles for the requested path
+  const checkRouteAccess = () => {
+    // Ne pas vérifier les accès si les rôles ne sont pas encore chargés
+    if (!rolesLoaded || rolesLoading) {
+      return true;
+    }
+    
+    const path = location.pathname;
+    
+    // Check for role-specific paths
+    if (path.startsWith('/admin') && !permissions.isAdmin()) {
+      toast.error("Accès refusé: Vous n'avez pas les droits d'administrateur nécessaires", {
+        duration: 3000,
+        position: 'top-center',
+      });
+      return false;
+    }
+    
+    if (path.startsWith('/student') && !permissions.isStudent()) {
+      toast.error("Accès refusé: Cette page est réservée aux étudiants", {
+        duration: 3000,
+        position: 'top-center',
+      });
+      return false;
+    }
+    
+    if (path.startsWith('/teacher') && !permissions.isTeacher()) {
+      toast.error("Accès refusé: Cette page est réservée aux formateurs", {
+        duration: 3000,
+        position: 'top-center',
+      });
+      return false;
+    }
+    
+    if (path.startsWith('/hr') && !permissions.isHR()) {
+      toast.error("Accès refusé: Cette page est réservée aux ressources humaines", {
+        duration: 3000,
+        position: 'top-center',
+      });
+      return false;
+    }
+    
+    if (path.startsWith('/superadmin') && !hasRole("ROLE_SUPERADMIN")) {
+      toast.error("Accès refusé: Cette page est réservée aux super administrateurs", {
+        duration: 3000,
+        position: 'top-center',
+      });
+      return false;
+    }
+    
+    if (path.startsWith('/recruiter') && !permissions.isRecruiter()) {
+      toast.error("Accès refusé: Cette page est réservée aux recruteurs", {
+        duration: 3000,
+        position: 'top-center',
+      });
+      return false;
+    }
+    
+    if (path.startsWith('/guest') && !permissions.isGuest()) {
+      toast.error("Accès refusé: Cette page est réservée aux invités", {
+        duration: 3000,
+        position: 'top-center',
+      });
+      return false;
+    }
+    
+    return true;
+  };
+
+  // Effet pour surveiller le chargement des rôles
+  useEffect(() => {
+    if (!rolesLoading && isAuthenticated) {
+      setRolesLoaded(true);
+    }
+  }, [rolesLoading, isAuthenticated]);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -36,7 +117,7 @@ const ProtectedRoute = () => {
   }, [location.pathname]);
 
   // Pendant la vérification, on renvoie le contenu existant ou null la première fois
-  if (isChecking) {
+  if (isChecking || (isAuthenticated && rolesLoading)) {
     // Si on a déjà rendu l'Outlet auparavant et qu'on est authentifié, on continue de l'afficher
     // pour éviter un flash de chargement
     if (renderedOutletRef.current && localStorage.getItem('token')) {
@@ -62,6 +143,14 @@ const ProtectedRoute = () => {
     }
     
     return <Navigate to="/" replace />;
+  }
+  
+  // Vérifier l'accès aux routes seulement si les rôles sont chargés
+  const hasRouteAccess = checkRouteAccess();
+  
+  // If the user doesn't have access to the route, redirect to dashboard
+  if (!hasRouteAccess && rolesLoaded) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   // Si l'utilisateur est authentifié, on affiche le contenu de la route

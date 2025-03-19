@@ -17,6 +17,7 @@ const PersonalInformation = ({
   userRole,
   onSave,
   onSaveAddress,
+  onUploadIdentity,
   isLoading = false
 }) => {
   // If loading, show skeleton
@@ -102,6 +103,7 @@ const PersonalInformation = ({
           handleCancelField={handleCancelField}
           handleInputChange={handleInputChange}
           onSave={onSave}
+          onUploadIdentity={onUploadIdentity}
         />
       </div>
 

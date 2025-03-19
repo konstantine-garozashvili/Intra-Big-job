@@ -1,10 +1,31 @@
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import apiService, { normalizeApiUrl } from '@/lib/services/apiService';
+import { getSessionId } from '@/lib/services/authService';
 
 /**
  * Configuration de base pour les requêtes API
  */
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+
+// Special endpoints that need custom handling
+const SPECIAL_ENDPOINTS = {
+  profilePicture: '/api/profile/picture',
+  documents: '/api/documents',
+  documentsByType: '/api/documents/type',
+  documentUpload: '/api/documents/upload'
+};
+
+/**
+ * Préfixer les clés de requête avec l'ID de session
+ * Cette fonction permet d'isoler les requêtes entre différentes sessions d'utilisateurs
+ * @param {Array|string} queryKey - Clé de requête originale
+ * @returns {Array} - Clé de requête préfixée avec l'ID de session
+ */
+const prefixQueryKey = (queryKey) => {
+  const sessionId = getSessionId();
+  const finalQueryKey = Array.isArray(queryKey) ? queryKey : [queryKey];
+  return ['session', sessionId, ...finalQueryKey];
+};
 
 /**
  * Hook pour effectuer des requêtes GET avec mise en cache
@@ -14,14 +35,31 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
  * @returns {Object} - Résultat de useQuery
  */
 export function useApiQuery(endpoint, queryKey, options = {}) {
-  const finalQueryKey = Array.isArray(queryKey) ? queryKey : [queryKey];
+  // Préfixer la clé de requête avec l'ID de session pour isoler les données entre utilisateurs
+  const finalQueryKey = prefixQueryKey(queryKey);
+  
+  // Determine if this is a special endpoint that needs custom handling
+  const isProfilePicture = endpoint === SPECIAL_ENDPOINTS.profilePicture;
+  const isDocumentEndpoint = 
+    endpoint.startsWith(SPECIAL_ENDPOINTS.documents) || 
+    endpoint.startsWith(SPECIAL_ENDPOINTS.documentsByType);
+  
+  // Set appropriate options for special endpoints
+  if (isProfilePicture || isDocumentEndpoint) {
+    options.staleTime = 0; // Always consider stale
+    options.refetchOnMount = true;
+    options.refetchOnWindowFocus = true;
+  }
   
   return useQuery({
     queryKey: finalQueryKey,
     queryFn: async () => {
       try {
-        // Utiliser le cache amélioré du service API
-        return await apiService.get(endpoint, {}, true, options.staleTime || 5 * 60 * 1000);
+        // Add timestamp for special endpoints to prevent browser caching
+        const queryParams = (isProfilePicture || isDocumentEndpoint) ? { _t: Date.now() } : {};
+        
+        // Use the enhanced cache system from apiService
+        return await apiService.get(endpoint, { params: queryParams }, true, options.staleTime || 5 * 60 * 1000);
       } catch (error) {
         throw error;
       }
@@ -40,7 +78,21 @@ export function useApiQuery(endpoint, queryKey, options = {}) {
  */
 export function useApiMutation(endpoint, method = 'post', invalidateQueryKey, options = {}) {
   const queryClient = useQueryClient();
-  const finalInvalidateKey = Array.isArray(invalidateQueryKey) ? invalidateQueryKey : [invalidateQueryKey];
+  
+  // Préfixer la clé d'invalidation avec l'ID de session
+  let finalInvalidateKey = null;
+  if (invalidateQueryKey) {
+    finalInvalidateKey = prefixQueryKey(invalidateQueryKey);
+  }
+  
+  // Determine if this is a special endpoint
+  const isProfilePicture = typeof endpoint === 'string' && endpoint === SPECIAL_ENDPOINTS.profilePicture;
+  const isDocumentUpload = 
+    (typeof endpoint === 'string' && endpoint.includes('/documents/upload')) || 
+    (typeof endpoint === 'string' && endpoint.startsWith(SPECIAL_ENDPOINTS.documentUpload));
+  const isDocumentDelete = 
+    (typeof endpoint === 'function' && endpoint().includes('/documents/')) || 
+    (typeof endpoint === 'string' && endpoint.includes('/documents/') && method.toLowerCase() === 'delete');
   
   return useMutation({
     mutationFn: async (data) => {
@@ -58,14 +110,22 @@ export function useApiMutation(endpoint, method = 'post', invalidateQueryKey, op
           finalEndpoint = `${finalEndpoint}/${data}`;
         }
         
+        // Add timestamp for special operations to prevent caching issues
+        if (isProfilePicture || isDocumentUpload || isDocumentDelete) {
+          const timestamp = Date.now();
+          if (method.toLowerCase() === 'delete' || method.toLowerCase() === 'get') {
+            finalEndpoint = `${finalEndpoint}${finalEndpoint.includes('?') ? '&' : '?'}_t=${timestamp}`;
+          }
+        }
+        
         // Handle different HTTP methods appropriately
         let response;
         
         if (method.toLowerCase() === 'delete') {
           // Pour les requêtes DELETE
-          response = await apiService.delete(finalEndpoint, 
-            typeof data === 'object' ? data : {}
-          );
+          response = await apiService.delete(finalEndpoint, {
+            data: typeof data === 'object' ? data : {}
+          });
         } else if (method.toLowerCase() === 'get') {
           // Pour les requêtes GET
           response = await apiService.get(finalEndpoint, { params: data });
@@ -79,12 +139,70 @@ export function useApiMutation(endpoint, method = 'post', invalidateQueryKey, op
         
         return response;
       } catch (error) {
+        console.error(`Erreur lors de la requête ${method.toUpperCase()} vers ${endpoint}:`, error);
         throw error;
       }
     },
     onSuccess: (data, variables, context) => {
       // Invalider les requêtes associées pour forcer un rafraîchissement
-      queryClient.invalidateQueries({ queryKey: finalInvalidateKey });
+      if (finalInvalidateKey) {
+        // For special operations, use a more aggressive invalidation strategy
+        if (isProfilePicture) {
+          // Invalidate all profile-related queries
+          apiService.invalidateProfileCache();
+          
+          // Invalidate specific keys with immediate refetch
+          queryClient.invalidateQueries({ 
+            queryKey: finalInvalidateKey,
+            refetchType: 'all' // Force refetch even for inactive queries
+          });
+          
+          // Also invalidate any profile-related queries using the session prefix pattern
+          const sessionId = getSessionId();
+          queryClient.invalidateQueries({
+            predicate: (query) => {
+              const key = query.queryKey;
+              return Array.isArray(key) && 
+                key[0] === 'session' && 
+                key[1] === sessionId && 
+                (key.includes('profile') || 
+                 key.includes('profilePicture') || 
+                 key.includes('currentProfile'));
+            },
+            refetchType: 'all'
+          });
+        } else if (isDocumentUpload || isDocumentDelete) {
+          // Invalidate document cache
+          apiService.invalidateDocumentCache();
+          
+          // Invalidate specific keys with immediate refetch
+          queryClient.invalidateQueries({ 
+            queryKey: finalInvalidateKey,
+            refetchType: 'all'
+          });
+          
+          // Also invalidate any document-related queries using the session prefix pattern
+          const sessionId = getSessionId();
+          queryClient.invalidateQueries({
+            predicate: (query) => {
+              const key = query.queryKey;
+              return Array.isArray(key) && 
+                key[0] === 'session' && 
+                key[1] === sessionId &&
+                (key.includes('document') || 
+                 key.includes('userCVDocument') || 
+                 key.includes('documents'));
+            },
+            refetchType: 'all'
+          });
+        } else {
+          // Standard invalidation for other endpoints
+          queryClient.invalidateQueries({ 
+            queryKey: finalInvalidateKey,
+            refetchType: 'all'
+          });
+        }
+      }
       
       // Appeler onSuccess des options si défini
       if (options.onSuccess) {
@@ -104,7 +222,8 @@ export function useApiMutation(endpoint, method = 'post', invalidateQueryKey, op
  * @returns {Object} - Résultat de useInfiniteQuery
  */
 export function useApiInfiniteQuery(endpoint, queryKey, getNextPageParam, options = {}) {
-  const finalQueryKey = Array.isArray(queryKey) ? queryKey : [queryKey];
+  // Préfixer la clé de requête avec l'ID de session
+  const finalQueryKey = prefixQueryKey(queryKey);
   
   return useInfiniteQuery({
     queryKey: finalQueryKey,
@@ -131,7 +250,8 @@ export function useApiInfiniteQuery(endpoint, queryKey, getNextPageParam, option
  */
 export function usePrefetchQuery(endpoint, queryKey) {
   const queryClient = useQueryClient();
-  const finalQueryKey = Array.isArray(queryKey) ? queryKey : [queryKey];
+  // Préfixer la clé de requête avec l'ID de session
+  const finalQueryKey = prefixQueryKey(queryKey);
   
   const prefetch = async () => {
     try {

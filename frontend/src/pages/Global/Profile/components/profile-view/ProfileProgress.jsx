@@ -45,7 +45,6 @@ const ProfileProgress = ({ userData }) => {
     if (isRefreshing) {
       // Après 3 secondes, forcer la fin du rafraîchissement si toujours en cours
       timeoutId = setTimeout(() => {
-        console.log("Timeout de sécurité pour le rafraîchissement");
         setIsRefreshing(false);
         // Utiliser les dernières données disponibles
         if (profileData) {
@@ -114,7 +113,6 @@ const ProfileProgress = ({ userData }) => {
       }
       // Sinon, l'useEffect qui surveille profileData s'en chargera
     } catch (error) {
-      console.error("Erreur lors de l'actualisation des données:", error);
       setIsRefreshing(false);
     }
   };

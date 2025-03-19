@@ -24,7 +24,7 @@ const Footer = () => {
     window.addEventListener('resize', checkContentHeight);
     
     // Also check after a short delay to account for dynamic content loading
-    const timer = setTimeout(checkContentHeight, 500);
+    const timer = setTimeout(checkContentHeight, 1000);
     
     return () => {
       window.removeEventListener('resize', checkContentHeight);

@@ -1,9 +1,9 @@
 import { useRoles } from './roleContext';
 import { useRolePermissions } from './useRolePermissions';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { authService } from '../../lib/services/authService';
-import { Spinner } from '../../components/ui/spinner';
+import { toast } from 'sonner';
 
 /**
  * Component that conditionally renders content based on user roles
@@ -21,19 +21,63 @@ const RoleGuard = ({
   requireAll = false, 
   fallback = null 
 }) => {
-  const { hasRole, hasAnyRole, hasAllRoles } = useRoles();
+  const { hasRole, hasAnyRole, hasAllRoles, isLoading } = useRoles();
+  const toastShownRef = useRef(false);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   
-  // Handle single role case
-  if (typeof roles === 'string') {
-    return hasRole(roles) ? children : fallback;
+  // Marquer la fin du chargement initial
+  useEffect(() => {
+    if (!isLoading) {
+      setInitialLoadComplete(true);
+    }
+  }, [isLoading]);
+  
+  // Function to check access and show notification if needed
+  const checkAccess = () => {
+    // Pendant le chargement initial, on considère que l'accès est autorisé
+    // pour éviter de montrer des erreurs trop tôt
+    if (isLoading || !initialLoadComplete) {
+      return true;
+    }
+    
+    let hasAccess = false;
+    
+    // Handle single role case
+    if (typeof roles === 'string') {
+      hasAccess = hasRole(roles);
+    } 
+    // Handle multiple roles case
+    else if (requireAll) {
+      hasAccess = hasAllRoles(roles);
+    } else {
+      hasAccess = hasAnyRole(roles);
+    }
+    
+    // Show toast notification if access is denied and hasn't been shown yet
+    if (!hasAccess && !toastShownRef.current && initialLoadComplete) {
+      toast.error("Accès non autorisé. Vous n'avez pas les permissions nécessaires pour accéder à cette page.", {
+        duration: 4000,
+        position: 'top-center',
+      });
+      toastShownRef.current = true;
+      
+      // Reset the toast shown flag after some time to allow showing it again later
+      setTimeout(() => {
+        toastShownRef.current = false;
+      }, 10000);
+    }
+    
+    return hasAccess;
+  };
+  
+  const hasAccess = checkAccess();
+  
+  // Si les rôles sont encore en cours de chargement, on n'affiche rien pour éviter un flash
+  if (isLoading) {
+    return null;
   }
   
-  // Handle multiple roles case
-  if (requireAll) {
-    return hasAllRoles(roles) ? children : fallback;
-  } else {
-    return hasAnyRole(roles) ? children : fallback;
-  }
+  return hasAccess ? children : fallback;
 };
 
 /**
@@ -68,13 +112,9 @@ export const RoleDashboardRedirect = () => {
     refreshUserRoles();
   }, [refreshRoles]);
   
-  // Show the spinner while loading
+  // Si les rôles sont encore en chargement, on n'affiche rien
   if (isLoading || isRefreshing) {
-    return (
-      <div className="flex justify-center items-center min-h-[70vh]">
-        <Spinner type="dots" size="lg" />
-      </div>
-    );
+    return null;
   }
   
   const dashboardPath = permissions.getRoleDashboardPath();
