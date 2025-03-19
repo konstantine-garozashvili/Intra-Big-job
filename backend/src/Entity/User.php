@@ -80,6 +80,9 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     #[ORM\OneToMany(mappedBy: 'user', targetEntity: UserRole::class, orphanRemoval: true)]
     private Collection $userRoles;
 
+    #[ORM\ManyToMany(targetEntity: Formation::class, mappedBy: 'students')]
+    private Collection $formations;
+
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
     #[Groups(['user:read'])]
@@ -208,7 +211,6 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
         return $this;
     }
 
-
     public function getCreatedAt(): ?\DateTimeImmutable
     {
         return $this->createdAt;
@@ -216,7 +218,7 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
 
     public function setCreatedAt(\DateTimeImmutable $createdAt): static
     {
-        $this->createdAt = $createt;
+        $this->createdAt = $createdAt;
 
         return $this;
     }
@@ -507,5 +509,29 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
         });
         
         return $diplomas;
+    }
+    /**
+ * @return Collection<int, Formation>
+ */
+    public function getFormations(): Collection
+    {
+        return $this->formations;
+    }
+
+    public function addFormation(Formation $formation): self
+    {
+        if (!$this->formations->contains($formation)) {
+            $this->formations[] = $formation;
+            $formation->addStudent($this); 
+        }
+        return $this;
+    }
+
+    public function removeFormation(Formation $formation): self
+    {
+        if ($this->formations->removeElement($formation)) {
+            $formation->removeStudent($this);
+        }
+        return $this;
     }
 }

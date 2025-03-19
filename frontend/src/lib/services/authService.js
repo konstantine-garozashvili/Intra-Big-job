@@ -2,6 +2,7 @@ import axiosInstance from '@/lib/axios';
 import apiService from './apiService';
 import { clearQueryCache, getQueryClient } from '../utils/queryClientUtils';
 import { showGlobalLoader, hideGlobalLoader } from '../utils/loadingUtils';
+import { toast } from 'sonner';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
 
@@ -20,6 +21,25 @@ export const getSessionId = () => currentSessionId;
 let userDataPromise = null;
 
 /**
+ * Décode un token JWT
+ * @param {string} token - Le token JWT à décoder
+ * @returns {Object|null} - Le contenu décodé du token ou null si invalide
+ */
+function decodeToken(token) {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    return JSON.parse(jsonPayload);
+  } catch (error) {
+    console.error('Erreur lors du décodage du token:', error);
+    return null;
+  }
+}
+
+/**
  * Service pour l'authentification et la gestion des utilisateurs
  */
 export const authService = {
@@ -30,7 +50,10 @@ export const authService = {
    */
   async register(userData) {
     try {
+      console.log('[authService] Début de l\'inscription:', { ...userData, password: '***' });
       const response = await apiService.post('/register', userData);
+      
+      console.log('[authService] Inscription réussie:', response);
       
       // Si la réponse contient un token (certaines API peuvent fournir un token immédiatement)
       if (response && response.token) {
@@ -43,6 +66,8 @@ export const authService = {
         data: response
       };
     } catch (error) {
+      console.error('[authService] Erreur lors de l\'inscription:', error);
+      console.error('[authService] Détails:', error.response?.data || error.message);
       throw error;
     }
   },
@@ -67,15 +92,6 @@ export const authService = {
       const deviceId = getOrCreateDeviceId();
       const { deviceName, deviceType } = getDeviceInfo();
       
-      // Prepare data for the standard JWT route (/login_check)
-      const loginData = {
-        username: email, // Note the field 'username' instead of 'email' for JWT standard
-        password,
-        device_id: deviceId,
-        device_name: deviceName,
-        device_type: deviceType
-      };
-      
       // Clean up previous user data
       localStorage.removeItem('token');
       localStorage.removeItem('refresh_token');
@@ -88,6 +104,15 @@ export const authService = {
       // Show loader
       showGlobalLoader('Connexion en cours...');
       
+      // Prepare data for the standard JWT route (/login_check)
+      const loginData = {
+        username: email, // Note the field 'username' instead of 'email' for JWT standard
+        password,
+        device_id: deviceId,
+        device_name: deviceName,
+        device_type: deviceType
+      };
+      
       // Use JWT standard route directly
       const response = await apiService.post('/login_check', loginData);
       
@@ -99,6 +124,11 @@ export const authService = {
       // Store refresh token if present
       if (response.refresh_token) {
         localStorage.setItem('refresh_token', response.refresh_token);
+      }
+      
+      // Store user information if present in response
+      if (response.user) {
+        localStorage.setItem('user', JSON.stringify(response.user));
       }
       
       // Extract detailed info from JWT token for immediate use
@@ -149,8 +179,8 @@ export const authService = {
       return response;
     } catch (error) {
       hideGlobalLoader();
-      console.error('Login error:', error);
-      
+      console.error('Erreur lors de la connexion:', error);
+      console.error('Détails de l\'erreur:', error.response?.data || error.message);
       throw error;
     }
   },
@@ -267,6 +297,8 @@ export const authService = {
       
       return response;
     } catch (error) {
+      console.error('Erreur lors du rafraîchissement du token:', error);
+      console.error('Détails de l\'erreur de rafraîchissement:', error.response?.data || error.message);
       // Si le refresh token est invalide, déconnecter l'utilisateur
       if (error.response && (error.response.status === 401 || error.response.status === 403)) {
         this.logout();
@@ -288,13 +320,32 @@ export const authService = {
       // Récupérer l'ID de session avant de supprimer les données du localStorage
       const sessionId = currentSessionId;
       
+      // Try to revoke refresh token on server side
+      try {
+        const refreshToken = localStorage.getItem('refresh_token');
+        const deviceId = localStorage.getItem('device_id');
+        
+        if (refreshToken) {
+          const revokeData = {
+            refresh_token: refreshToken,
+            device_id: deviceId
+          };
+          
+          await apiService.post('/token/revoke', revokeData).catch((error) => {
+            // Ignore errors during token revocation
+            console.warn('Échec de révocation du refresh token:', error.message);
+          });
+        }
+      } catch (revokeError) {
+        console.warn('Error during token revocation:', revokeError);
+      }
+      
       // Supprimer toutes les données d'authentification et de session du localStorage
       const itemsToRemove = [
         'token',
         'refresh_token',
         'user',
         'tokenExpiration',
-        'device_id',
         'last_role',
         'session_id'
       ];
@@ -419,6 +470,8 @@ export const authService = {
       // Vider le cache React Query
       clearQueryCache();
     } catch (error) {
+      console.error('Erreur lors de la déconnexion de tous les appareils:', error);
+      console.error('Détails:', error.response?.data || error.message);
       throw error;
     }
   },
@@ -431,6 +484,8 @@ export const authService = {
       const devices = await apiService.get('/token/devices');
       return devices;
     } catch (error) {
+      console.error('Erreur lors de la récupération des appareils:', error);
+      console.error('Détails:', error.response?.data || error.message);
       throw error;
     }
   },
@@ -457,7 +512,59 @@ export const authService = {
    * @returns {boolean} - True si connecté
    */
   isLoggedIn() {
-    return !!this.getToken();
+    const token = this.getToken();
+    if (!token) return false;
+
+    try {
+      const decodedToken = decodeToken(token);
+      if (!decodedToken) return false;
+      
+      const currentTime = Date.now() / 1000;
+      return decodedToken.exp > currentTime;
+    } catch (error) {
+      return false;
+    }
+  },
+
+  /**
+   * Vérifie si l'utilisateur a un rôle spécifique
+   * @param {string} role - Le rôle à vérifier
+   * @returns {boolean} - True si l'utilisateur a le rôle
+   */
+  hasRole(role) {
+    const user = this.getUser();
+    if (!user) return false;
+    
+    // Extraire les rôles de l'utilisateur
+    let userRoles = [];
+    
+    if (Array.isArray(user.roles)) {
+      userRoles = user.roles;
+    } else if (typeof user.roles === 'object' && user.roles !== null) {
+      userRoles = Object.values(user.roles);
+    } else if (user.role) {
+      userRoles = Array.isArray(user.role) ? user.role : [user.role];
+    }
+    
+    // Vérifier si l'utilisateur a le rôle spécifié
+    return userRoles.some(userRole => {
+      // Si le rôle est une chaîne de caractères
+      if (typeof userRole === 'string') {
+        const roleLower = userRole.toLowerCase();
+        const searchRole = role.toLowerCase();
+        return roleLower.includes(searchRole) || roleLower === 'role_' + searchRole;
+      }
+      
+      // Si le rôle est un objet
+      if (typeof userRole === 'object' && userRole !== null) {
+        // Essayer d'extraire le nom du rôle de différentes propriétés possibles
+        const roleName = (userRole.name || userRole.role || userRole.roleName || '').toLowerCase();
+        const searchRole = role.toLowerCase();
+        return roleName.includes(searchRole) || roleName === 'role_' + searchRole;
+      }
+      
+      return false;
+    });
   },
 
   /**
@@ -489,7 +596,14 @@ export const authService = {
         const response = await apiService.get('/me', { ...apiService.withAuth(), ...options });
         
         // Extraire l'objet utilisateur si la réponse contient un objet "user"
-        const userData = response.user || response;
+        let userData = response;
+        if (response.user) {
+          userData = response.user;
+        } else if (response.data) {
+          userData = response.data;
+        } else if (response.success && response.user) {
+          userData = response.user;
+        }
         
         // Stocker les données utilisateur dans le localStorage
         localStorage.setItem('user', JSON.stringify(userData));
@@ -540,9 +654,32 @@ export const authService = {
     }
   },
 
+  /**
+   * Nettoie toutes les données d'authentification et redirige vers la page de connexion
+   * @param {boolean} showNotification - Indique si une notification doit être affichée
+   * @param {string} message - Message personnalisé à afficher dans la notification
+   */
+  clearAuthData(showNotification = true, message = 'Vous avez été déconnecté.') {
+    // Supprimer toutes les données d'authentification du localStorage
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('refresh_token');
+    
+    // Afficher une notification si demandé
+    if (showNotification) {
+      toast.success(message, {
+        duration: 3000,
+        position: 'top-center',
+      });
+    }
+    
+    // Rediriger vers la page de connexion
+    window.location.href = '/login';
+  },
+
   // Méthode pour déclencher manuellement une mise à jour des rôles
   triggerRoleUpdate: () => {
-    triggerRoleUpdate();
+    window.dispatchEvent(new Event('role-change'));
   }
 };
 
@@ -567,8 +704,8 @@ function getOrCreateDeviceId() {
 
 // Obtenir des informations de base sur l'appareil
 function getDeviceInfo() {
-  const userAgent = navigator.userAgent;
-  let deviceType = 'unknown';
+  const userAgent = window.navigator.userAgent;
+  let deviceType = 'web';
   let deviceName = 'Browser';
   
   // Détection simple du type d'appareil
@@ -580,13 +717,13 @@ function getDeviceInfo() {
     deviceName = 'iOS Device';
   } else if (/Windows/i.test(userAgent)) {
     deviceType = 'desktop';
-    deviceName = 'Windows PC';
+    deviceName = 'Windows Device';
   } else if (/Macintosh/i.test(userAgent)) {
     deviceType = 'desktop';
-    deviceName = 'Mac';
+    deviceName = 'Mac Device';
   } else if (/Linux/i.test(userAgent)) {
     deviceType = 'desktop';
-    deviceName = 'Linux';
+    deviceName = 'Linux Device';
   }
   
   return {
@@ -595,9 +732,4 @@ function getDeviceInfo() {
   };
 }
 
-// Fonction pour déclencher manuellement une mise à jour des rôles
-export const triggerRoleUpdate = () => {
-  window.dispatchEvent(new Event('role-change'));
-};
-
-export default authService; 
+export default authService;

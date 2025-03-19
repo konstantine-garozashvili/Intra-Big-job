@@ -41,6 +41,13 @@ export default defineConfig({
     hmr: {
       clientPort: 5173,
       overlay: true
+    },
+    proxy: {
+      '/api': {
+        target: 'http://nginx:80',
+        changeOrigin: true,
+        secure: false,
+      }
     }
   },
   build: {

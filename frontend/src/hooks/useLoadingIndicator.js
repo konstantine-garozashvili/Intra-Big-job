@@ -1,11 +1,14 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { resetLoadingState } from '../lib/utils/loadingUtils';
 
 /**
  * Hook to manage loading indicator behavior
  * Handles browser's default loading indicator and custom loading state
+ * @returns {Object} Object containing isLoading state
  */
 const useLoadingIndicator = () => {
+  const [isLoading, setIsLoading] = useState(false);
+
   useEffect(() => {
     // Reset loading state on mount
     resetLoadingState();
@@ -39,6 +42,7 @@ const useLoadingIndicator = () => {
     const handlePageLoad = () => {
       setTimeout(() => {
         document.documentElement.classList.remove('custom-loader-active');
+        setIsLoading(false);
       }, 300);
     };
     
@@ -50,8 +54,24 @@ const useLoadingIndicator = () => {
       if (document.visibilityState === 'visible') {
         // Reset loading state when page becomes visible again
         resetLoadingState();
+        setIsLoading(false);
       }
     };
+    
+    // Setup mutation observer to track loading state
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.attributeName === 'class') {
+          const isLoadingActive = document.documentElement.classList.contains('loading-active');
+          setIsLoading(isLoadingActive);
+        }
+      }
+    });
+    
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
     
     // Add visibility change event listener
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -63,8 +83,11 @@ const useLoadingIndicator = () => {
       document.documentElement.classList.remove('custom-loader-active');
       window.removeEventListener('load', handlePageLoad);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      observer.disconnect();
     };
   }, []);
+
+  return { isLoading };
 };
 
 export default useLoadingIndicator; 

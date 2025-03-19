@@ -41,7 +41,7 @@ import { Toaster } from './components/ui/sonner'
 import './index.css'
 import ProtectedRoute from './components/ProtectedRoute'
 import PublicRoute from './components/PublicRoute'
-import ProfileLayout from '@/layouts/ProfileLayout'
+import ProfileLayout from './layouts/ProfileLayout'
 import useLoadingIndicator from './hooks/useLoadingIndicator'
 
 // Fonction optimisée pour le préchargement intelligent des pages
@@ -185,204 +185,134 @@ const PrefetchHandler = () => {
 
 // Composant de chargement optimisé pour Suspense
 const SuspenseLoader = () => {
-  // Apply app-loading class to show the global loader
-  useEffect(() => {
-    // Just use the global loader directly
-    showGlobalLoader();
-    
-    return () => {
-      // Just hide the global loader on unmount
-      hideGlobalLoader();
-    };
-  }, []);
-  
-  // No need to render anything - handled by the global loader
-  return null;
-};
-
-// Composant de contenu principal qui utilise les hooks de React Router
-const AppContent = () => {
-  const [isNavigating, setIsNavigating] = useState(false);
-  const [showLoader, setShowLoader] = useState(false);
-  const navigate = useNavigate();
-  
-  // Use the loading indicator hook to hide the browser's default loading indicator
-  useLoadingIndicator();
-  
-  // Écouteur d'événement pour la navigation après déconnexion
-  useEffect(() => {
-    const handleLogoutNavigation = (event) => {
-      // Get redirectTo path from event detail if available, default to '/'
-      const redirectTo = event?.detail?.redirectTo || '/';
-      
-      // Show loader during navigation
-      setShowLoader(true);
-      
-      // Set navigating state to true
-      setIsNavigating(true);
-      
-      // Reduced delay from 50ms to 20ms
-      setTimeout(() => {
-        // Navigate to home or specified redirect path
-        navigate(redirectTo);
-        
-        // Keep loader visible for a minimum time - REDUCED from 500ms to 300ms
-        setTimeout(() => {
-          setIsNavigating(false);
-          // Hide loader after a short delay - REDUCED from 300ms to 150ms 
-          setTimeout(() => {
-            setShowLoader(false);
-          }, 150);
-        }, 300);
-      }, 20);
-    };
-
-    const handleLoginSuccess = () => {
-      // Show loader during login
-      setShowLoader(true);
-      
-      // Keep loader visible for a minimum time - REDUCED from 1000ms to 500ms
-      setTimeout(() => {
-        // Hide loader after navigation is complete
-        setShowLoader(false);
-      }, 500);
-    };
-
-    // Listen for logout navigation events
-    window.addEventListener('logout-success', handleLogoutNavigation);
-    window.addEventListener('login-success', handleLoginSuccess);
-    
-    return () => {
-      window.removeEventListener('logout-success', handleLogoutNavigation);
-      window.removeEventListener('login-success', handleLoginSuccess);
-    };
-  }, [navigate]);
-
   return (
-    <div className="relative font-poppins">
-      <PrefetchHandler />
-      
-      {/* Guaranteed loader that will always be visible during transitions */}
-      <LoadingOverlay isVisible={showLoader} />
-      
-      {/* Wrapper pour le contenu principal avec z-index positif */}
-      <div className={`relative z-10 transition-opacity duration-200 ${isNavigating ? 'opacity-0' : 'opacity-100'}`}>
-        <Suspense fallback={<SuspenseLoader />}>
-          <RoleProvider>
-            <div>
-              <Routes>
-                {/* Structure révisée: MainLayout englobe toutes les routes pour préserver la navbar */}
-                <Route element={<MainLayout />}>
-                  {/* Route racine avec redirection automatique */}
-                  <Route path="/" element={<HomePage />} />
-                  
-                  {/* Routes publiques - Accès interdit aux utilisateurs authentifiés */}
-                  <Route element={<PublicRoute />}>
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/register" element={<Register />} />
-                    <Route path="/registration-success" element={<RegistrationSuccess />} />
-                    <Route path="/verification-success" element={<VerificationSuccess />} />
-                    <Route path="/verification-error" element={<VerificationError />} />
-                  </Route>
-                  
-                  <Route element={<ProtectedRoute />}>
-                    {/* Regular protected routes */}
-                    <Route path="/dashboard" element={<RoleDashboardRedirect />} />
-                    
-                    {/* Profile view route */}
-                    <Route path="/profile" element={<ProfileView />} />
-                    <Route path="/profile/:userId" element={<ProfileView />} />
-                    
-                    {/* Settings routes avec ProfileLayout */}
-                    <Route element={<ProfileLayout />}>
-                      <Route path="/settings" element={<Navigate to="/settings/profile" replace />} />
-                      <Route path="/settings/profile" element={<SettingsProfile />} />
-                      <Route path="/settings/career" element={<CareerSettings />} />
-                      <Route path="/settings/security" element={<SecuritySettings />} />
-                      <Route path="/settings/notifications" element={<NotificationSettings />} />
-                    </Route>
-                    
-                    {/* Dashboards spécifiques par rôle */}
-                    <Route path="/admin/dashboard" element={
-                      <RoleGuard roles={ROLES.ADMIN} fallback={<Navigate to="/dashboard" replace />}>
-                        <AdminDashboard />
-                      </RoleGuard>
-                    } />
-                    
-                    {/* Routes étudiantes */}
-                    <Route path="/student">
-                      <Route path="dashboard" element={
-                        <RoleGuard roles={ROLES.STUDENT} fallback={<Navigate to="/dashboard" replace />}>
-                          <StudentDashboard />
-                        </RoleGuard>
-                      } />
-                      <Route path="schedule" element={
-                        <RoleGuard roles={ROLES.STUDENT} fallback={<Navigate to="/dashboard" replace />}>
-                          <StudentSchedule />
-                        </RoleGuard>
-                      } />
-                      <Route path="grades" element={
-                        <RoleGuard roles={ROLES.STUDENT} fallback={<Navigate to="/dashboard" replace />}>
-                          <StudentGrades />
-                        </RoleGuard>
-                      } />
-                      <Route path="absences" element={
-                        <RoleGuard roles={ROLES.STUDENT} fallback={<Navigate to="/dashboard" replace />}>
-                          <StudentAbsences />
-                        </RoleGuard>
-                      } />
-                      <Route path="projects" element={
-                        <RoleGuard roles={ROLES.STUDENT} fallback={<Navigate to="/dashboard" replace />}>
-                          <StudentProjects />
-                        </RoleGuard>
-                      } />
-                    </Route>
-                    
-                    <Route path="/teacher/dashboard" element={
-                      <RoleGuard roles={ROLES.TEACHER} fallback={<Navigate to="/dashboard" replace />}>
-                        <TeacherDashboard />
-                      </RoleGuard>
-                    } />
-                    <Route path="/hr/dashboard" element={
-                      <RoleGuard roles={ROLES.HR} fallback={<Navigate to="/dashboard" replace />}>
-                        <HRDashboard />
-                      </RoleGuard>
-                    } />
-                    <Route path="/superadmin/dashboard" element={
-                      <RoleGuard roles={ROLES.SUPERADMIN} fallback={<Navigate to="/dashboard" replace />}>
-                        <SuperAdminDashboard />
-                      </RoleGuard>
-                    } />
-                    <Route path="/guest/dashboard" element={
-                      <RoleGuard roles={ROLES.GUEST} fallback={<Navigate to="/dashboard" replace />}>
-                        <GuestDashboard />
-                      </RoleGuard>
-                    } />
-                    <Route path="/recruiter/dashboard" element={
-                      <RoleGuard roles={ROLES.RECRUITER} fallback={<Navigate to="/dashboard" replace />}>
-                        <RecruiterDashboard />
-                      </RoleGuard>
-                    } />
-                  </Route>
-                  
-                  {/* Redirection des routes inconnues vers la page d'accueil */}
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Route>
-              </Routes>
-            </div>
-          </RoleProvider>
-          <Toaster />
-        </Suspense>
-      </div>
+    <div className="flex justify-center items-center h-screen">
+      <div className="loader"></div>
     </div>
   );
 };
 
-// Composant App principal qui configure le Router
+// Composant principal de l'application avec gestion des routes
+const AppContent = () => {
+  const { isLoading } = useLoadingIndicator();
+  const navigate = useNavigate();
+  
+  // Gestion de la déconnexion avec confirmation/notification utilisateur
+  const handleLogoutNavigation = (event) => {
+    // Vérifier si l'utilisateur navigue vers une page sensible
+    if (event.location.pathname === '/logout') {
+      event.preventDefault();
+      
+      // Montrer un loader pendant la déconnexion
+      showGlobalLoader();
+      
+      // Simuler un délai de traitement pour une meilleure UX
+      setTimeout(() => {
+        // Effacer les données de session
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('session_id');
+        
+        // Masquer le loader
+        hideGlobalLoader();
+        
+        // Rediriger vers la page de connexion
+        navigate('/login', { replace: true });
+      }, 500);
+    }
+  };
+  
+  // Gestion de la connexion réussie
+  const handleLoginSuccess = () => {
+    // Implémenter une logique supplémentaire si nécessaire
+  };
+  
+  return (
+    <>
+      <PrefetchHandler />
+      {isLoading && <LoadingOverlay />}
+      <Suspense fallback={<SuspenseLoader />}>
+        <Routes>
+          {/* Page d'accueil */}
+          <Route path="/" element={<HomePage />} />
+          
+          {/* Routes publiques accessibles uniquement aux utilisateurs non authentifiés */}
+          <Route element={<PublicRoute />}>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/registration-success" element={<RegistrationSuccess />} />
+            <Route path="/verification-success" element={<VerificationSuccess />} />
+            <Route path="/verification-error" element={<VerificationError />} />
+          </Route>
+          
+          {/* Routes protégées accessibles uniquement aux utilisateurs authentifiés */}
+          <Route element={<ProtectedRoute />}>
+            <Route element={<MainLayout />}>
+              {/* Dashboard avec redirection automatique vers le dashboard spécifique au rôle */}
+              <Route path="/dashboard" element={<RoleDashboardRedirect />} />
+              
+              {/* Routes spécifiques aux rôles */}
+              <Route path="/admin">
+                <Route path="dashboard" element={<RoleGuard allowedRoles={[ROLES.ADMIN]} element={<AdminDashboard />} />} />
+              </Route>
+              
+              <Route path="/student">
+                <Route path="dashboard" element={<RoleGuard allowedRoles={[ROLES.STUDENT]} element={<StudentDashboard />} />} />
+                <Route path="schedule" element={<RoleGuard allowedRoles={[ROLES.STUDENT]} element={<StudentSchedule />} />} />
+                <Route path="grades" element={<RoleGuard allowedRoles={[ROLES.STUDENT]} element={<StudentGrades />} />} />
+                <Route path="absences" element={<RoleGuard allowedRoles={[ROLES.STUDENT]} element={<StudentAbsences />} />} />
+                <Route path="projects" element={<RoleGuard allowedRoles={[ROLES.STUDENT]} element={<StudentProjects />} />} />
+              </Route>
+              
+              <Route path="/teacher">
+                <Route path="dashboard" element={<RoleGuard allowedRoles={[ROLES.TEACHER]} element={<TeacherDashboard />} />} />
+              </Route>
+              
+              <Route path="/hr">
+                <Route path="dashboard" element={<RoleGuard allowedRoles={[ROLES.HR]} element={<HRDashboard />} />} />
+              </Route>
+              
+              <Route path="/superadmin">
+                <Route path="dashboard" element={<RoleGuard allowedRoles={[ROLES.SUPERADMIN]} element={<SuperAdminDashboard />} />} />
+              </Route>
+              
+              <Route path="/guest">
+                <Route path="dashboard" element={<RoleGuard allowedRoles={[ROLES.GUEST]} element={<GuestDashboard />} />} />
+              </Route>
+              
+              <Route path="/recruiter">
+                <Route path="dashboard" element={<RoleGuard allowedRoles={[ROLES.RECRUITER]} element={<RecruiterDashboard />} />} />
+              </Route>
+              
+              {/* Routes de profil utilisateur */}
+              <Route path="/profile" element={<ProfileLayout />}>
+                <Route index element={<ProfileView />} />
+                <Route path="settings" element={<SettingsProfile />} />
+                <Route path="security" element={<SecuritySettings />} />
+                <Route path="notifications" element={<NotificationSettings />} />
+                <Route path="career" element={<CareerSettings />} />
+              </Route>
+            </Route>
+          </Route>
+          
+          {/* Redirection vers la page d'accueil pour les routes non définies */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
+      <Toaster />
+    </>
+  );
+};
+
+// Composant App avec contexte de gestion des rôles
 const App = () => {
   return (
-    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <AppContent />
+    <Router>
+      <RoleProvider>
+        <div className="app-container">
+          <AppContent />
+        </div>
+      </RoleProvider>
     </Router>
   );
 };

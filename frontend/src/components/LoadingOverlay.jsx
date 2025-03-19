@@ -1,15 +1,15 @@
 import { useEffect } from 'react';
-import { showGlobalLoader, hideGlobalLoader } from '@/lib/utils/loadingUtils';
+import { showGlobalLoader, hideGlobalLoader } from '../lib/utils/loadingUtils';
 
 /**
  * LoadingOverlay component that shows a consistent loading indicator
  * using the global loading utilities
  * 
  * @param {Object} props Component props
- * @param {boolean} props.isVisible Whether the loading overlay should be visible
+ * @param {boolean} [props.isVisible=true] Whether the loading overlay should be visible
  * @returns {null} This component doesn't render any UI directly
  */
-export default function LoadingOverlay({ isVisible }) {
+export default function LoadingOverlay({ isVisible = true }) {
   useEffect(() => {
     if (isVisible) {
       // Show the global loader when the component becomes visible

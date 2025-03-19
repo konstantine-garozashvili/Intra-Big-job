@@ -137,10 +137,12 @@ export const RoleProvider = ({ children }) => {
       },
       hasAnyRole: (roles) => {
         if (isLoading) return null;
+        if (!roles || !Array.isArray(roles)) return false;
         return roles.some(role => userRoles?.some(r => r === role));
       },
       hasAllRoles: (roles) => {
         if (isLoading) return null;
+        if (!roles || !Array.isArray(roles)) return false;
         return roles.every(role => userRoles?.some(r => r === role));
       },
       // Add a function to refresh roles
