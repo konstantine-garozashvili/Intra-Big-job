@@ -3,14 +3,16 @@
 namespace App\Entity;
 
 use App\Repository\SignatureRepository;
-use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Collections\Collection;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: SignatureRepository::class)]
 class Signature
 {
+    public const PERIOD_MORNING = 'morning';
+    public const PERIOD_AFTERNOON = 'afternoon';
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -30,17 +32,17 @@ class Signature
     #[Groups(['signature:read'])]
     private ?string $location = null;
 
-    #[ORM\Column]
+    #[ORM\Column(type: Types::STRING, length: 10)]
     #[Groups(['signature:read'])]
-    private bool $validated = false;
+    private ?string $period = null;
 
-    #[ORM\OneToMany(mappedBy: 'signature', targetEntity: Validation::class, orphanRemoval: true)]
-    private Collection $validations;
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    #[Groups(['signature:read'])]
+    private ?string $drawing = null;
 
     public function __construct()
     {
         $this->date = new \DateTimeImmutable();
-        $this->validations = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -84,45 +86,36 @@ class Signature
         return $this;
     }
 
-    public function isValidated(): bool
+    public function getPeriod(): ?string
     {
-        return $this->validated;
+        return $this->period;
     }
 
-    public function setValidated(bool $validated): static
+    public function setPeriod(string $period): static
     {
-        $this->validated = $validated;
-
-        return $this;
-    }
-
-    /**
-     * @return Collection<int, Validation>
-     */
-    public function getValidations(): Collection
-    {
-        return $this->validations;
-    }
-
-    public function addValidation(Validation $validation): static
-    {
-        if (!$this->validations->contains($validation)) {
-            $this->validations->add($validation);
-            $validation->setSignature($this);
+        if (!in_array($period, [self::PERIOD_MORNING, self::PERIOD_AFTERNOON])) {
+            throw new \InvalidArgumentException('Invalid period');
         }
-
+        $this->period = $period;
         return $this;
     }
 
-    public function removeValidation(Validation $validation): static
+    public function getDrawing(): ?string
     {
-        if ($this->validations->removeElement($validation)) {
-            // set the owning side to null (unless already changed)
-            if ($validation->getSignature() === $this) {
-                $validation->setSignature(null);
-            }
-        }
+        return $this->drawing;
+    }
 
+    public function setDrawing(?string $drawing): static
+    {
+        $this->drawing = $drawing;
         return $this;
+    }
+
+    public static function getAvailablePeriods(): array
+    {
+        return [
+            self::PERIOD_MORNING => 'Matin (9h-12h)',
+            self::PERIOD_AFTERNOON => 'Après-midi (13h-17h)'
+        ];
     }
 }
