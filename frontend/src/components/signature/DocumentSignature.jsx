@@ -198,6 +198,37 @@ const DocumentSignature = () => {
     }
   };
   
+  // Function to clear any potentially cached signature state
+  const clearCachedSignatureState = () => {
+    try {
+      // Check if there are any localStorage keys related to signatures
+      const keys = Object.keys(localStorage);
+      const signatureKeys = keys.filter(key => 
+        key.includes('signature') || 
+        key.includes('signed') || 
+        key.includes('period')
+      );
+      
+      // Log any found keys
+      if (signatureKeys.length > 0) {
+        console.log('Found potential signature-related localStorage keys:', signatureKeys);
+        
+        // Clear these keys
+        signatureKeys.forEach(key => {
+          localStorage.removeItem(key);
+          console.log(`Removed localStorage key: ${key}`);
+        });
+      }
+    } catch (error) {
+      console.error('Error clearing cached signature state:', error);
+    }
+  };
+  
+  // Clear cache when component mounts
+  useEffect(() => {
+    clearCachedSignatureState();
+  }, []);
+  
   // Ensure user data is properly stored in localStorage
   useEffect(() => {
     const setupUserData = async () => {
@@ -213,6 +244,7 @@ const DocumentSignature = () => {
     const checkTodaySignatures = async () => {
       try {
         setIsLoading(true);
+        console.log('Checking today signatures - starting API request');
         
         // Create a failsafe timeout
         const timeoutPromise = new Promise((_, reject) => 
@@ -226,6 +258,8 @@ const DocumentSignature = () => {
         }
         
         try {
+          console.log('Fetching signature data from API...');
+          
           // Race the fetch against a timeout
           const data = await Promise.race([
             fetchDataWithRetry('http://localhost:8000/api/signatures/today', {
@@ -238,13 +272,26 @@ const DocumentSignature = () => {
             timeoutPromise
           ]);
           
-          console.log('Signature data:', data);
+          console.log('Signature data returned from API:', data);
+          console.log('Current period from API:', data?.currentPeriod);
+          console.log('Signed periods from API:', data?.signedPeriods);
           
           // Set the data even if it's partial
           if (data) {
-            if (data.currentPeriod) setCurrentPeriod(data.currentPeriod);
-            if (data.signedPeriods) setSignedPeriods(data.signedPeriods || []);
-            if (data.availablePeriods) setAvailablePeriods(data.availablePeriods);
+            if (data.currentPeriod) {
+              console.log('Setting current period to:', data.currentPeriod);
+              setCurrentPeriod(data.currentPeriod);
+            }
+            
+            if (data.signedPeriods) {
+              console.log('Setting signed periods to:', data.signedPeriods);
+              setSignedPeriods(data.signedPeriods || []);
+            }
+            
+            if (data.availablePeriods) {
+              console.log('Setting available periods to:', data.availablePeriods);
+              setAvailablePeriods(data.availablePeriods);
+            }
           } else {
             // Fallback defaults
             setCurrentPeriod('afternoon'); // Default to afternoon
@@ -435,6 +482,9 @@ const DocumentSignature = () => {
         toast.success("Succès", {
           description: `Signature enregistrée pour la période ${availablePeriods[currentPeriod]}.`
         });
+        
+        // Redirect to student dashboard immediately
+        navigate('/student/dashboard');
         
       } catch (error) {
         console.error('API request failed:', error);
