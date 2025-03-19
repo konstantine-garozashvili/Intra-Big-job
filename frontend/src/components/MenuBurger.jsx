@@ -31,42 +31,6 @@ import { useRolePermissions } from '@/features/roles/useRolePermissions';
 
 // Style personnalisé pour les animations et transitions
 const customStyles = `
-  .menu-item {
-    position: relative;
-    transition: all 0.2s ease;
-    border-radius: 0.375rem;
-    margin: 0.25rem 0.5rem;
-  }
-  
-  .menu-item:hover {
-    background-color: rgba(82, 142, 178, 0.2);
-    transform: translateX(4px);
-  }
-  
-  .menu-item.active {
-    background-color: rgba(82, 142, 178, 0.3);
-    border-left: 3px solid #528eb2;
-  }
-  
-  .submenu-item {
-    transition: all 0.2s ease;
-    border-radius: 0.375rem;
-    margin: 0.25rem 0.5rem;
-  }
-  
-  .submenu-item:hover {
-    background-color: rgba(82, 142, 178, 0.3);
-    transform: translateX(4px);
-  }
-  
-  .chevron-icon {
-    transition: transform 0.3s ease;
-  }
-  
-  .chevron-icon.open {
-    transform: rotate(90deg);
-  }
-  
   .menu-burger-button {
     position: relative;
     display: flex;
@@ -75,7 +39,7 @@ const customStyles = `
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    transition: all 0.2s ease;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     margin-right: 0.75rem;
     background-color: transparent;
     border: none;
@@ -99,16 +63,53 @@ const customStyles = `
     height: 100vh;
     background-color: #00284f;
     color: white;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
     z-index: 50;
     overflow: hidden;
     border-right: 1px solid rgba(82, 142, 178, 0.2);
+    will-change: transform;
   }
   
   @media (max-width: 768px) {
     .sidebar-menu {
       width: 80vw;
     }
+  }
+  
+  .menu-item {
+    position: relative;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 0.375rem;
+    margin: 0.25rem 0.5rem;
+  }
+  
+  .menu-item:hover {
+    background-color: rgba(82, 142, 178, 0.2);
+    transform: translateX(4px);
+  }
+  
+  .menu-item.active {
+    background-color: rgba(82, 142, 178, 0.3);
+    border-left: 3px solid #528eb2;
+  }
+  
+  .submenu-item {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 0.375rem;
+    margin: 0.25rem 0.5rem;
+  }
+  
+  .submenu-item:hover {
+    background-color: rgba(82, 142, 178, 0.3);
+    transform: translateX(4px);
+  }
+  
+  .chevron-icon {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .chevron-icon.open {
+    transform: rotate(90deg);
   }
 `;
 
@@ -238,100 +239,193 @@ const MenuBurger = memo(() => {
 
   const menuItems = [
     {
+      key: 'dashboard',
+      label: 'Tableau de bord',
+      icon: <LayoutDashboard className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.STUDENT],
+      to: '/dashboard',
+    },
+    {
+      key: 'centres_formations',
+      label: 'Centres de formations',
+      icon: <School className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.SUPERADMIN],
+      to: '/centres_formations',
+    },
+    {
       key: 'eleves',
       label: 'Élèves',
       icon: <GraduationCap className="w-5 h-5 mr-2 text-[#528eb2]" />,
-      roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.HR, ROLES.RECRUITER],
+      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.HR],
       links: [
-        { name: 'Gestion des élèves', to: '/eleves', roles: [ROLES.ADMIN, ROLES.TEACHER, ROLES.SUPER_ADMIN] },
-        { name: 'Résultats', to: '/eleves/resultats', roles: [ROLES.TEACHER, ROLES.SUPER_ADMIN] },
-        { name: 'Dossiers', to: '/eleves/dossiers', roles: [ROLES.ADMIN, ROLES.HR, ROLES.TEACHER, ROLES.SUPER_ADMIN] },
-        { name: 'Certificats et Diplômes', to: '/eleves/certificats', roles: [ROLES.ADMIN, ROLES.TEACHER, ROLES.STUDENT, ROLES.SUPER_ADMIN] },
-        { name: 'Historique des Absences', to: '/eleves/absences', roles: [ROLES.ADMIN, ROLES.TEACHER, ROLES.HR] },
+        { name: 'Gestion des élèves', to: '/eleves', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER] },
+        { name: 'Résultats', to: '/eleves/resultats', roles: [ROLES.SUPERADMIN, ROLES.TEACHER] },
+        { name: 'Dossiers', to: '/eleves/dossiers', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR, ROLES.TEACHER] },
+        { name: 'Certificats et Diplômes', to: '/eleves/certificats', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER] },
+        { name: 'Historique des Absences', to: '/eleves/absences', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.HR] },
       ],
     },
-    
     {
       key: 'formateurs',
       label: 'Formateurs',
-      icon: <User className="mr-2" />,
-      roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.HR, ROLES.RECRUITER],
+      icon: <User className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
       links: [
-        { name: 'Liste des formateurs', to: '/formateurs', roles: [ROLES.ADMIN, ROLES.HR, ROLES.TEACHER, ROLES.SUPER_ADMIN] },
-        { name: 'Statistiques et Rapports', to: '/formateurs/statistiques', roles: [ROLES.ADMIN, ROLES.HR, ROLES.TEACHER, ROLES.SUPER_ADMIN] },
-        { name: 'Gestion des Projets', to: '/formateurs/projets', roles: [ROLES.ADMIN, ROLES.TEACHER] },
-        { name: 'Commentaire', to: '/formateurs/commentaire', roles: [ROLES.ADMIN, ROLES.HR, ROLES.TEACHER, ROLES.SUPER_ADMIN] },
+        { name: 'Liste des formateurs', to: '/formateurs', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR] },
+        { name: 'Statistiques et Rapports', to: '/formateurs/statistiques', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR] },
+        { name: 'Gestion des Projets', to: '/formateurs/projets', roles: [ROLES.SUPERADMIN, ROLES.ADMIN] },
+        { name: 'Commentaires', to: '/formateurs/commentaires', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR] },
       ],
     },
     {
-      key: 'invites',
-      label: 'Invités',
-      icon: <UserPlus className="mr-2" />,
-      roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN],
+      key: 'messagerie',
+      label: 'Messagerie',
+      icon: <MessageCircle className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.STUDENT, ROLES.RECRUITER],
+      to: '/messagerie',
+    },
+    {
+      key: 'admins',
+      label: 'Administration',
+      icon: <Shield className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.SUPERADMIN],
       links: [
-        { name: 'Liste des invités', to: '/invites', roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN] },
-        { name: 'Gestion des invités', to: '/invites/', roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN] },
-        { name: "Test d'admission", to: '/invites/test_admission', roles: [ROLES.ADMIN, ROLES.HR, ROLES.SUPER_ADMIN] },
-        { name: 'Statistiques des Invités', to: '/admin/invite/statistiques', roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN] },
+        { name: 'Gestion des utilisateurs', to: '/admin/utilisateurs', roles: [ROLES.SUPERADMIN] },
+        { name: 'Gestion des Formations', to: '/admin/formations', roles: [ROLES.SUPERADMIN] },
+        { name: 'Suivi des Inscriptions', to: '/admin/inscriptions', roles: [ROLES.SUPERADMIN] },
+        { name: 'Gestion des Paiements', to: '/admin/paiements', roles: [ROLES.SUPERADMIN] },
+        { name: 'Suivi des Absences', to: '/admin/absences', roles: [ROLES.SUPERADMIN] },
+        { name: 'Statistiques Administratives', to: '/admin/statistiques', roles: [ROLES.SUPERADMIN] },
+        { name: 'Les logs', to: '/admin/logs', roles: [ROLES.SUPERADMIN] },
+        { name: 'Gestion des partenaires', to: '/admin/partenariats', roles: [ROLES.SUPERADMIN] },
       ],
     },
     {
       key: 'rh',
-      label: 'RH',
-      icon: <Users className="mr-2" />,
-      roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN],
+      label: 'Ressources Humaines',
+      icon: <Users className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
       links: [
-        { name: 'Gestion des Formateurs', to: '/rh/formateurs', roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.HR] },
-        { name: 'Gestion des Candidatures', to: '/rh/candidatures', roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.HR] },
-        { name: 'Suivi des Absences et Congés', to: '/rh/absences', roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.HR] },
-        { name: 'Planning des Formateurs', to: '/rh/planning', roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.HR] },
-        { name: 'Archivage des Dossiers', to: '/rh/archivage', roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.HR] },
-        { name: 'Suivi des Recrutements', to: '/rh/recrutement', roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.HR] },
-      ],
-    },
-    {
-      key: 'admins',
-      label: 'Admins',
-      icon: <Shield className="mr-2" />,
-      roles: [ROLES.SUPER_ADMIN],
-      links: [
-        { name: 'Gestion des utilisateurs', to: '/admin/utilisateurs', roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN] },
-        { name: 'Gestion des Formations', to: '/admin/formations', roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN] },
-        { name: 'Suivi des Inscriptions', to: '/admin/inscriptions', roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN] },
-        { name: 'Gestion des Paiements', to: '/admin/paiements', roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN] },
-        { name: 'Suivi des Absences', to: '/admin/absences', roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN] },
-        { name: 'Statistiques Administratives', to: '/admin/statistiques', roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN] }, 
-        { name: 'Les logs', to: '/admin/logs', roles: [ROLES.SUPER_ADMIN] },
-        { name: 'Gestion des partenaires', to: '/admin/partenariats', roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN] },  
+        { name: 'Gestion des Formateurs', to: '/rh/formateurs', roles: [ROLES.SUPERADMIN, ROLES.HR] },
+        { name: 'Gestion des Candidatures', to: '/rh/candidatures', roles: [ROLES.SUPERADMIN, ROLES.HR] },
+        { name: 'Suivi des Absences et Congés', to: '/rh/absences', roles: [ROLES.SUPERADMIN, ROLES.HR] },
+        { name: 'Planning des Formateurs', to: '/rh/planning', roles: [ROLES.SUPERADMIN, ROLES.HR] },
+        { name: 'Archivage des Dossiers', to: '/rh/archivage', roles: [ROLES.SUPERADMIN, ROLES.HR] },
+        { name: 'Suivi des Recrutements', to: '/rh/recrutement', roles: [ROLES.SUPERADMIN, ROLES.HR] },
       ],
     },
     {
       key: 'plannings',
       label: 'Plannings',
-      icon: <Calendar className="mr-2" />,
-      roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.HR, ROLES.RECRUITER, ROLES.STUDENT],
+      icon: <Calendar className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.HR, ROLES.STUDENT],
       links: [
-        { name: 'Evènement', to: '/plannings/évènements' },
-        { name: 'Agenda', to: '/plannings/agenda' },
-        { name: 'Réservation de salle', to: '/plannings/reservation-salle' },
-        { name: 'Réservation de matériel', to: '/plannings/reservation-materiel' }
+        { name: 'Évènements', to: '/plannings/evenements', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.HR, ROLES.STUDENT] },
+        { name: 'Agenda', to: '/plannings/agenda', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.HR, ROLES.STUDENT] },
+        { name: 'Réservation de salle', to: '/plannings/reservation-salle', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER] },
+        { name: 'Réservation de matériel', to: '/plannings/reservation-materiel', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER] },
+      ],
+    },
+    {
+      key: 'recrutement',
+      label: 'Recrutement',
+      icon: <Briefcase className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.RECRUITER],
+      links: [
+        { name: 'Tableau de bord', to: '/recruiter/dashboard', roles: [ROLES.RECRUITER] },
+        { name: 'Offres d\'emploi', to: '/recruiter/jobs', roles: [ROLES.RECRUITER] },
+        { name: 'Candidatures', to: '/recruiter/applications', roles: [ROLES.RECRUITER] },
+        { name: 'Entretiens', to: '/recruiter/interviews', roles: [ROLES.RECRUITER] },
+        { name: 'Base de CV', to: '/recruiter/cv-database', roles: [ROLES.RECRUITER] },
+        { name: 'Statistiques', to: '/recruiter/statistics', roles: [ROLES.RECRUITER] },
+      ],
+    },
+    {
+      key: 'etudiants',
+      label: 'Étudiants',
+      icon: <GraduationCap className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.RECRUITER],
+      links: [
+        { name: 'Liste des étudiants', to: '/recruiter/students', roles: [ROLES.RECRUITER] },
+        { name: 'Profils & CV', to: '/recruiter/student-profiles', roles: [ROLES.RECRUITER] },
+        { name: 'Stages & Alternances', to: '/recruiter/internships', roles: [ROLES.RECRUITER] },
+      ],
+    },
+    {
+      key: 'evenements',
+      label: 'Événements',
+      icon: <Calendar className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.RECRUITER],
+      links: [
+        { name: 'Job Dating', to: '/recruiter/job-dating', roles: [ROLES.RECRUITER] },
+        { name: 'Forums Entreprises', to: '/recruiter/career-fairs', roles: [ROLES.RECRUITER] },
+        { name: 'Présentations Entreprise', to: '/recruiter/company-presentations', roles: [ROLES.RECRUITER] },
+      ],
+    },
+    {
+      key: 'candidature',
+      label: 'Ma Candidature',
+      icon: <Clipboard className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.GUEST],
+      links: [
+        { name: 'État de ma candidature', to: '/guest/application-status', roles: [ROLES.GUEST] },
+        { name: 'Documents à fournir', to: '/guest/required-documents', roles: [ROLES.GUEST] },
+        { name: 'Compléter mon dossier', to: '/guest/complete-profile', roles: [ROLES.GUEST] },
+        { name: 'Historique des échanges', to: '/guest/communications', roles: [ROLES.GUEST] },
+      ],
+    },
+    {
+      key: 'formations',
+      label: 'Formations',
+      icon: <BookOpen className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.GUEST],
+      links: [
+        { name: 'Catalogue des formations', to: '/guest/training-catalog', roles: [ROLES.GUEST] },
+        { name: 'Détails des programmes', to: '/guest/program-details', roles: [ROLES.GUEST] },
+        { name: 'Conditions d\'admission', to: '/guest/admission-requirements', roles: [ROLES.GUEST] },
+        { name: 'FAQ Formations', to: '/guest/training-faq', roles: [ROLES.GUEST] },
+      ],
+    },
+    {
+      key: 'contact',
+      label: 'Contact & Support',
+      icon: <MessageCircle className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.GUEST],
+      links: [
+        { name: 'Contacter un recruteur', to: '/guest/contact-recruiter', roles: [ROLES.GUEST] },
+        { name: 'Questions fréquentes', to: '/guest/faq', roles: [ROLES.GUEST] },
+        { name: 'Support technique', to: '/guest/technical-support', roles: [ROLES.GUEST] },
+        { name: 'Prendre rendez-vous', to: '/guest/schedule-meeting', roles: [ROLES.GUEST] },
+      ],
+    },
+    {
+      key: 'ecole',
+      label: 'Notre École',
+      icon: <School className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.GUEST],
+      links: [
+        { name: 'Présentation', to: '/guest/school-presentation', roles: [ROLES.GUEST] },
+        { name: 'Vie étudiante', to: '/guest/student-life', roles: [ROLES.GUEST] },
+        { name: 'Témoignages', to: '/guest/testimonials', roles: [ROLES.GUEST] },
+        { name: 'Actualités', to: '/guest/news', roles: [ROLES.GUEST] },
       ],
     },
     {
       key: 'aide',
       label: "Besoin d'aide ?",
-      icon: <Calendar className="mr-2" />,
-      links: [ // Pas de `roles`, donc accessible à tout le monde
+      icon: <Calendar className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      links: [
         { name: 'FAQ', to: '/aide/faq' },
         { name: 'Forum', to: '/aide/forum' },
-        { name: 'Supports', to: '/aide/faq' },
+        { name: 'Supports', to: '/aide/supports' },
         { name: 'Contact', to: '/aide/contact' },
       ],
     },
     {
       key: 'nous_rejoindre',
       label: 'Nous rejoindre',
-      icon: <Users className="mr-2" />,
+      icon: <Users className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.GUEST],
       links: [
         { name: 'Envoyer une candidature', to: '/nous-rejoindre/candidature' },
         { name: 'Processus de recrutement', to: '/nous-rejoindre/recrutement' },
@@ -358,211 +452,148 @@ const MenuBurger = memo(() => {
 
       <AnimatePresence>
         {menuOpen && (
-          <motion.div
-            ref={menuRef}
-            initial={{ x: '-100%', opacity: 1 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: '-100%', opacity: 1 }}
-            transition={{ 
-              duration: 0.3, 
-              type: "spring", 
-              stiffness: 300, 
-              damping: 30,
-              opacity: { duration: 0 }
-            }}
-            className="sidebar-menu"
-          >
-            <div className="flex flex-col h-full">
-              {roles.length > 0 && (
-                <div className="flex items-center p-4 border-b border-blue-700 bg-gradient-to-r from-[#00284f] to-[#003a6b]">
-                  <div className="w-12 h-12 bg-white/20 rounded-full mr-3 flex items-center justify-center">
-                    <User className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <p className="font-semibold">{userData ? `${userData.firstName} ${userData.lastName}` : 'Utilisateur'}</p>
-                    <p className="text-sm text-blue-200">{translateRoleName(roles[0])}</p>
-                  </div>
-                  <button 
-                    className="ml-auto text-white p-2 rounded-full hover:bg-blue-800/50 transition-colors" 
-                    onClick={toggleMenu}
-                    aria-label="Fermer le menu"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-              )}
-              
-              {!roles.length && (
-                <div className="p-4 border-b border-blue-700 bg-gradient-to-r from-[#00284f] to-[#003a6b]">
-                  <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-xl font-semibold text-white">Bienvenue</h2>
+          <>
+            {/* Backdrop overlay with blur effect */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
+              onClick={() => setMenuOpen(false)}
+            />
+            
+            {/* Menu sidebar with improved animation */}
+            <motion.div
+              ref={menuRef}
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ 
+                type: "tween", 
+                ease: "easeInOut",
+                duration: 0.3
+              }}
+              className="sidebar-menu"
+            >
+              <div className="flex flex-col h-full">
+                {roles.length > 0 && (
+                  <div className="flex items-center p-4 border-b border-blue-700 bg-gradient-to-r from-[#00284f] to-[#003a6b]">
+                    <div className="w-12 h-12 bg-white/20 rounded-full mr-3 flex items-center justify-center">
+                      <User className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-semibold">{userData ? `${userData.firstName} ${userData.lastName}` : 'Utilisateur'}</p>
+                      <p className="text-sm text-blue-200">{translateRoleName(roles[0])}</p>
+                    </div>
                     <button 
-                      className="text-white p-2 rounded-full hover:bg-blue-800/50 transition-colors" 
+                      className="ml-auto text-white p-2 rounded-full hover:bg-blue-800/50 transition-colors" 
                       onClick={toggleMenu}
                       aria-label="Fermer le menu"
                     >
                       <X className="w-5 h-5" />
                     </button>
                   </div>
-                  <p className="text-sm text-blue-200 mb-3">Connectez-vous pour accéder à toutes les fonctionnalités</p>
-                  <Link 
-                    to="/login" 
-                    className="flex items-center justify-center w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    <User className="w-4 h-4 mr-2" />
-                    Se connecter
-                  </Link>
-                </div>
-              )}
-
-              <div className="scrollable-div overflow-y-auto flex-grow">
-                <ul className="py-2">
-                  {hasAnyRole([ROLES.STUDENT, ROLES.TEACHER, ROLES.ADMIN, ROLES.SUPER_ADMIN]) && (
-                    <li className="menu-item">
-                      <Link to={permissions.getRoleDashboardPath()} className="flex items-center px-4 py-2.5 w-full">
-                        <LayoutDashboard className="w-5 h-5 mr-2 text-[#528eb2]" />
-                        <span>Tableau de bord</span>
-                      </Link>
-                    </li>
-                  )}
-                  
-                  {hasAnyRole([ROLES.STUDENT, ROLES.TEACHER, ROLES.ADMIN, ROLES.SUPER_ADMIN]) && (
-                    <li key="messagerie" className="menu-item">
-                      <Link to="/messagerie" className="flex items-center px-4 py-2.5 w-full">
-                        <MessageCircle className="w-5 h-5 mr-2 text-[#528eb2]" />
-                        <span>Ma Messagerie</span>
-                      </Link>
-                    </li>
-                  )}
-
-                  {hasAnyRole([ROLES.STUDENT, ROLES.TEACHER]) && (
-                    <>
-                      <li key="cours" className="menu-item">
-                        <Link to="/cours" className="flex items-center px-4 py-2.5 w-full">
-                          <Clipboard className="w-5 h-5 mr-2 text-[#528eb2]" />
-                          <span>Mes Cours</span>
-                        </Link>
-                      </li>
-                      <li key="projet" className="menu-item">
-                        <Link to="/projet" className="flex items-center px-4 py-2.5 w-full">
-                          <Briefcase className="w-5 h-5 mr-2 text-[#528eb2]" />
-                          <span>Mes Projets</span>
-                        </Link>
-                      </li>
-                    </>
-                  )}
-                  
-                  {hasRole(ROLES.SUPER_ADMIN) && (
-                    <li key="centres_formations" className="menu-item">
-                      <Link to="/centres_formations" className="flex items-center px-4 py-2.5 w-full">
-                        <School className="w-5 h-5 mr-2 text-[#528eb2]" />
-                        <span>Centres de formations</span>
-                      </Link>
-                    </li>
-                  )}
-                  
-                  {hasAnyRole([ROLES.HR, ROLES.RECRUITER]) && (
-                    <li key="candidatures" className="menu-item">
-                      <Link to="/candidatures" className="flex items-center px-4 py-2.5 w-full">
-                        <Share2 className="w-5 h-5 mr-2 text-[#528eb2]" />
-                        <span>Candidatures</span>
-                      </Link>
-                    </li>
-                  )}
-                  
-                  <li key="formations" className="menu-item">
-                    <Link to="/formations" className="flex items-center px-4 py-2.5 w-full">
-                      <BookOpen className="w-5 h-5 mr-2 text-[#528eb2]" />
-                      <span>Formations</span>
+                )}
+                
+                {!roles.length && (
+                  <div className="p-4 border-b border-blue-700 bg-gradient-to-r from-[#00284f] to-[#003a6b]">
+                    <div className="flex items-center justify-between mb-3">
+                      <h2 className="text-xl font-semibold text-white">Bienvenue</h2>
+                      <button 
+                        className="text-white p-2 rounded-full hover:bg-blue-800/50 transition-colors" 
+                        onClick={toggleMenu}
+                        aria-label="Fermer le menu"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                    <p className="text-sm text-blue-200 mb-3">Connectez-vous pour accéder à toutes les fonctionnalités</p>
+                    <Link 
+                      to="/login" 
+                      className="flex items-center justify-center w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      <User className="w-4 h-4 mr-2" />
+                      Se connecter
                     </Link>
-                  </li>
-                  
-                  {menuItems.map(({ key, icon, label, roles: itemRoles, links }) =>
-                    (!itemRoles || hasAnyRole(itemRoles)) ? (
-                      <React.Fragment key={`menu-${key}`}>
-                        <li
-                          className={`menu-item ${openSubMenus[key] ? 'active' : ''}`}
-                          onClick={() => toggleSubMenu(key)}
-                        >
-                          <div className="flex items-center px-4 py-2.5 w-full cursor-pointer">
-                            {icon}
-                            <span>{label}</span>
-                            <div className="ml-auto">
-                              {openSubMenus[key] ? (
-                                <ChevronDown className="w-4 h-4 text-[#528eb2]" />
-                              ) : (
-                                <ChevronRight className={`w-4 h-4 text-[#528eb2] chevron-icon ${openSubMenus[key] ? 'open' : ''}`} />
-                              )}
-                            </div>
-                          </div>
-                        </li>
+                  </div>
+                )}
 
-                        <AnimatePresence>
-                          {openSubMenus[key] && (
-                            <motion.ul
-                              initial={{ height: 0, opacity: 0 }}
-                              animate={{ height: 'auto', opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              transition={{ duration: 0.2 }}
-                              className="pl-4 overflow-hidden"
-                            >
-                              {links
-                                .filter(link => !link.roles || hasAnyRole(link.roles))
-                                .map((link, index) => (
-                                  <li key={`${key}-${index}`} className="submenu-item">
-                                    <Link to={link.to} className="flex items-center px-4 py-2 w-full text-sm text-gray-300 hover:text-white">
-                                      <div className="w-1 h-1 bg-[#528eb2] rounded-full mr-2"></div>
-                                      {link.name}
-                                    </Link>
-                                  </li>
-                                ))}
-                            </motion.ul>
-                          )}
-                        </AnimatePresence>
-                      </React.Fragment>
-                    ) : null
-                  )}
-                  
-                  {hasRole(ROLES.STUDENT) && (
-                    <li key="justification-absence" className="menu-item">
-                      <Link to="/justification-absence" className="flex items-center px-4 py-2.5 w-full">
-                        <Clipboard className="w-5 h-5 mr-2 text-[#528eb2]" />
-                        <span>Justifier une absence</span>
-                      </Link>
-                    </li>
-                  )}
-
-                  {hasAnyRole([ROLES.STUDENT, ROLES.TEACHER, ROLES.ADMIN, ROLES.SUPER_ADMIN]) && (
-                    <li key="cagnottes" className="menu-item">
-                      <Link to="/cagnottes" className="flex items-center px-4 py-2.5 w-full">
-                        <PiggyBank className="w-5 h-5 mr-2 text-[#528eb2]" />
-                        <span>Cagnottes</span>
-                      </Link>
-                    </li>
-                  )}
-                  
-                  {hasAnyRole([ROLES.STUDENT, ROLES.TEACHER, ROLES.ADMIN, ROLES.SUPER_ADMIN]) && (
-                    <li key="sponsors" className="menu-item">
-                      <Link to="/sponsors" className="flex items-center px-4 py-2.5 w-full">
-                        <Handshake className="w-5 h-5 mr-2 text-[#528eb2]" />
-                        <span>Sponsors</span>
-                      </Link>
-                    </li>
-                  )}
-                  
-                  {hasAnyRole([ROLES.STUDENT, ROLES.TEACHER, ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.RECRUITER]) && (
-                    <li key="trombinoscope" className="menu-item">
-                      <Link to="/Trombinoscope" className="flex items-center px-4 py-2.5 w-full">
-                        <Camera className="w-5 h-5 mr-2 text-[#528eb2]" />
-                        <span>Trombinoscope</span>
-                      </Link>
-                    </li>
-                  )}
-                </ul>
+                <div className="scrollable-div overflow-y-auto flex-grow">
+                  <ul className="py-2">
+                    {menuItems.map(({ key, icon, label, roles: itemRoles, links, to }) => {
+                      // Si l'élément n'a pas de rôles définis ou si l'utilisateur a les rôles requis
+                      if (!itemRoles || hasAnyRole(itemRoles)) {
+                        return (
+                          <React.Fragment key={`menu-${key}`}>
+                            {to ? (
+                              // Élément de menu simple avec lien direct
+                              <li className="menu-item">
+                                <Link to={to} className="flex items-center px-4 py-2.5 w-full" onClick={() => setMenuOpen(false)}>
+                                  {icon}
+                                  <span>{label}</span>
+                                </Link>
+                              </li>
+                            ) : (
+                              // Élément de menu avec sous-menu
+                              <>
+                                <li
+                                  className={`menu-item ${openSubMenus[key] ? 'active' : ''}`}
+                                  onClick={() => toggleSubMenu(key)}
+                                >
+                                  <div className="flex items-center px-4 py-2.5 w-full cursor-pointer">
+                                    {icon}
+                                    <span>{label}</span>
+                                    <div className="ml-auto">
+                                      {openSubMenus[key] ? (
+                                        <ChevronDown className="w-4 h-4 text-[#528eb2]" />
+                                      ) : (
+                                        <ChevronRight className={`w-4 h-4 text-[#528eb2] chevron-icon ${openSubMenus[key] ? 'open' : ''}`} />
+                                      )}
+                                    </div>
+                                  </div>
+                                  <AnimatePresence>
+                                    {openSubMenus[key] && links && (
+                                      <motion.ul
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: 'auto', opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        transition={{ duration: 0.2 }}
+                                        className="bg-[#001f3d] pl-4"
+                                      >
+                                        {links.map((link) => {
+                                          if (!link.roles || hasAnyRole(link.roles)) {
+                                            return (
+                                              <li key={link.to} className="submenu-item">
+                                                <Link
+                                                  to={link.to}
+                                                  className="flex items-center px-4 py-2 text-sm"
+                                                  onClick={() => setMenuOpen(false)}
+                                                >
+                                                  {link.name}
+                                                </Link>
+                                              </li>
+                                            );
+                                          }
+                                          return null;
+                                        })}
+                                      </motion.ul>
+                                    )}
+                                  </AnimatePresence>
+                                </li>
+                              </>
+                            )}
+                          </React.Fragment>
+                        );
+                      }
+                      return null;
+                    })}
+                  </ul>
+                </div>
               </div>
-            </div>
-          </motion.div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </div>

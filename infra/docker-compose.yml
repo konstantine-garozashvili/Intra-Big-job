@@ -30,7 +30,12 @@ services:
       - app-network
     environment:
       REDIS_URL: redis://redis:6379
-    command: bash -c "composer install --no-interaction && sleep 10 && php bin/console doctrine:database:create --if-not-exists --no-interaction && php bin/console doctrine:migrations:migrate --no-interaction || true && exec php-fpm"
+    command: bash -c "composer install --no-interaction && 
+      sleep 15 && 
+      php bin/console doctrine:database:create --if-not-exists --no-interaction && 
+      php bin/console doctrine:schema:update --force --no-interaction && 
+      php bin/console doctrine:fixtures:load --no-interaction --append || php bin/console doctrine:fixtures:load --no-interaction && 
+      exec php-fpm"
 
   nginx:
     image: nginx:alpine
