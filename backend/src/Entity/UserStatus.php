@@ -3,8 +3,6 @@
 namespace App\Entity;
 
 use App\Repository\UserStatusRepository;
-use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
 
@@ -14,94 +12,43 @@ class UserStatus
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(['user_status:read', 'user:read'])]
+    #[Groups(['user_status:read'])]
     private ?int $id = null;
 
-    #[ORM\Column(length: 255)]
-    #[Groups(['user_status:read', 'user:read'])]
-    private ?string $name = null;
-
-    #[ORM\Column(length: 255, nullable: true)]
-    #[Groups(['user_status:read', 'user:read'])]
-    private ?string $description = null;
-
-    #[ORM\ManyToOne(targetEntity: Role::class)]
+    #[ORM\ManyToOne(inversedBy: 'userStatuses')]
     #[ORM\JoinColumn(nullable: false)]
     #[Groups(['user_status:read'])]
-    private ?Role $associatedRole = null;
+    private ?User $user = null;
 
-    #[ORM\OneToMany(mappedBy: 'status', targetEntity: UserStatusHistory::class)]
-    private Collection $statusHistories;
-
-    public function __construct()
-    {
-        $this->statusHistories = new ArrayCollection();
-    }
+    #[ORM\ManyToOne(inversedBy: 'userStatuses')]
+    #[ORM\JoinColumn(nullable: false)]
+    #[Groups(['user_status:read'])]
+    private ?Status $status = null;
 
     public function getId(): ?int
     {
         return $this->id;
     }
 
-    public function getName(): ?string
+    public function getUser(): ?User
     {
-        return $this->name;
+        return $this->user;
     }
 
-    public function setName(string $name): static
+    public function setUser(?User $user): static
     {
-        $this->name = $name;
+        $this->user = $user;
         return $this;
     }
 
-    public function getDescription(): ?string
+    public function getStatus(): ?Status
     {
-        return $this->description;
+        return $this->status;
     }
 
-    public function setDescription(?string $description): static
+    public function setStatus(?Status $status): static
     {
-        $this->description = $description;
-        return $this;
-    }
-
-    public function getAssociatedRole(): ?Role
-    {
-        return $this->associatedRole;
-    }
-
-    public function setAssociatedRole(?Role $associatedRole): static
-    {
-        $this->associatedRole = $associatedRole;
-        return $this;
-    }
-
-    /**
-     * @return Collection<int, UserStatusHistory>
-     */
-    public function getStatusHistories(): Collection
-    {
-        return $this->statusHistories;
-    }
-
-    public function addStatusHistory(UserStatusHistory $statusHistory): static
-    {
-        if (!$this->statusHistories->contains($statusHistory)) {
-            $this->statusHistories->add($statusHistory);
-            $statusHistory->setStatus($this);
-        }
-
-        return $this;
-    }
-
-    public function removeStatusHistory(UserStatusHistory $statusHistory): static
-    {
-        if ($this->statusHistories->removeElement($statusHistory)) {
-            if ($statusHistory->getStatus() === $this) {
-                $statusHistory->setStatus(null);
-            }
-        }
-
+        $this->status = $status;
         return $this;
     }
 } 
