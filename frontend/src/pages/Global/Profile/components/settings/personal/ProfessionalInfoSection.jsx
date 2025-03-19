@@ -33,11 +33,7 @@ export const ProfessionalInfoSection = ({
         field="linkedinUrl"
         label="LinkedIn"
         icon={<Linkedin className="h-4 w-4 mr-2 text-gray-500" />}
-        value={userData.linkedinUrl ? (
-          <a href={userData.linkedinUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 break-all">
-            {userData.linkedinUrl}
-          </a>
-        ) : null}
+        value={userData.linkedinUrl}
         editedValue={editedData.personal.linkedinUrl}
         type="url"
         isEditing={editMode.linkedinUrl}
@@ -53,11 +49,7 @@ export const ProfessionalInfoSection = ({
           field="portfolioUrl"
           label="Portfolio"
           icon={<Link className="h-4 w-4 mr-2 text-gray-500" />}
-          value={studentProfile?.portfolioUrl ? (
-            <a href={studentProfile.portfolioUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 break-all">
-              {studentProfile.portfolioUrl}
-            </a>
-          ) : null}
+          value={studentProfile?.portfolioUrl}
           editedValue={editedData.personal.portfolioUrl}
           type="url"
           isEditing={editMode.portfolioUrl}
