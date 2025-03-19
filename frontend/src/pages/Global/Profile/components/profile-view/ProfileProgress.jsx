@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useContext } from "react";
+import React, { useState, useEffect, useMemo, useContext, useCallback, useRef } from "react";
 import { CheckCircle2, XCircle, InfoIcon, ExternalLinkIcon, PieChart, RefreshCw } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -9,12 +9,19 @@ import {
 import { Button } from "@/components/ui/button";
 import { ProfileContext } from "@/components/MainLayout";
 import { motion, AnimatePresence } from "framer-motion";
+import { useQueryClient } from "@tanstack/react-query";
+import { profileKeys } from "../../hooks/useProfileQueries";
+import { toast } from "sonner";
+import { profileService } from "../../services/profileService";
+import apiService from "@/lib/services/apiService";
 
 const ProfileProgress = ({ userData }) => {
   const [isOpen, setIsOpen] = useState(false);
   const { refreshProfileData, isProfileLoading, profileData } = useContext(ProfileContext);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const refreshTimerRef = useRef(null);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   // État pour déterminer si la popup doit s'afficher vers le haut ou le bas
   const [popupDirection, setPopupDirection] = useState("up");
   // Toujours utiliser les données les plus récentes disponibles
@@ -58,22 +65,42 @@ const ProfileProgress = ({ userData }) => {
     }
   }, [profileData, isRefreshing, lastProfileData]);
 
+  // Rafraîchir les données périodiquement ou lors de modifications connues
+  useEffect(() => {
+    // Vérifier les modifications toutes les 30 secondes lorsque la popup est ouverte
+    let intervalId;
+    
+    if (isOpen) {
+      intervalId = setInterval(() => {
+        handleSilentRefresh();
+      }, 30000); // 30 secondes
+    }
+    
+    // Nettoyer l'intervalle lors du démontage ou lorsque la popup est fermée
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [isOpen]);
+
   // Mécanisme de secours pour s'assurer que l'état de chargement ne reste pas bloqué
   useEffect(() => {
-    let timeoutId;
     if (isRefreshing) {
-      // Après 3 secondes, forcer la fin du rafraîchissement si toujours en cours
-      timeoutId = setTimeout(() => {
+      // Après 5 secondes, forcer la fin du rafraîchissement si toujours en cours
+      refreshTimerRef.current = setTimeout(() => {
         setIsRefreshing(false);
         // Utiliser les dernières données disponibles
         if (profileData) {
           setLocalUserData(profileData);
         }
-      }, 3000);
+        console.log("Fin du rafraîchissement forcée après délai");
+      }, 5000);
     }
     
     return () => {
-      if (timeoutId) clearTimeout(timeoutId);
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = null;
+      }
     };
   }, [isRefreshing, profileData]);
 
@@ -120,22 +147,113 @@ const ProfileProgress = ({ userData }) => {
     return { completedItems: completed, completionItems: items };
   }, [localUserData]);
 
-  // Fonction pour rafraîchir manuellement les données
-  const handleRefresh = async () => {
+  // Récupère directement les données à jour sans utiliser le cache
+  const fetchFreshData = useCallback(async () => {
+    try {
+      // Faire une requête directe sans cache
+      const response = await apiService.get('/api/profil/consolidated', {}, false);
+      return response;
+    } catch (error) {
+      console.error("Erreur lors de la récupération des données fraîches:", error);
+      throw error;
+    }
+  }, []);
+
+  // Force une invalidation complète de tous les caches et récupère des données fraîches
+  const forceCompleteRefresh = useCallback(async () => {
+    try {
+      // Invalider le cache interne du profileService
+      if (typeof profileService.invalidateCache === 'function') {
+        profileService.invalidateCache();
+      }
+      
+      // Invalider le cache de l'API pour les endpoints liés au profil
+      if (typeof apiService.invalidateProfileCache === 'function') {
+        apiService.invalidateProfileCache();
+      }
+      
+      // Invalider la requête spécifique au profil actuel
+      queryClient.invalidateQueries({ queryKey: profileKeys.current() });
+      
+      // Invalider toutes les requêtes liées au profil
+      queryClient.invalidateQueries({ queryKey: profileKeys.all });
+      
+      // Récupérer les données fraîches
+      const freshData = await fetchFreshData();
+      
+      // Mettre à jour explicitement le cache React Query avec les nouvelles données
+      queryClient.setQueryData(profileKeys.current(), freshData);
+      
+      return freshData;
+    } catch (error) {
+      console.error("Erreur lors du rafraîchissement complet:", error);
+      throw error;
+    }
+  }, [queryClient, fetchFreshData]);
+
+  // Rafraîchissement silencieux sans indicateur de chargement visible
+  const handleSilentRefresh = useCallback(async () => {
     if (isRefreshing || isProfileLoading) return;
     
-    setIsRefreshing(true);
     try {
-      const newData = await refreshProfileData();
-      // Mettre à jour directement les données locales si refreshProfileData renvoie des données
+      // Forcer un rafraîchissement complet sans cache
+      const newData = await forceCompleteRefresh();
+      
+      // Mettre à jour les données locales silencieusement
       if (newData) {
         setLocalUserData(newData);
         setLastProfileData(newData);
-        setIsRefreshing(false);
       }
-      // Sinon, l'useEffect qui surveille profileData s'en chargera
     } catch (error) {
+      console.error("Erreur lors de l'actualisation silencieuse:", error);
+    }
+  }, [isRefreshing, isProfileLoading, forceCompleteRefresh]);
+
+  // Fonction pour rafraîchir manuellement les données avec un indicateur visuel - SIMPLIFIÉE
+  const handleRefresh = async () => {
+    // Protection contre les clics multiples rapides
+    if (isRefreshing || isProfileLoading) {
+      console.log("Actualisation déjà en cours, demande ignorée");
+      return;
+    }
+    
+    // Débuter le processus de rafraîchissement
+    setIsRefreshing(true);
+    console.log("Début du rafraîchissement manuel");
+    
+    try {
+      // Séquence complète de rafraîchissement
+      toast.info("Actualisation en cours...");
+      
+      // Forcer l'invalidation de tous les caches et récupérer des données fraîches
+      const freshData = await forceCompleteRefresh();
+      
+      if (freshData) {
+        // Mettre à jour l'UI avec les nouvelles données
+        setLocalUserData(freshData);
+        setLastProfileData(freshData);
+        
+        // Mettre à jour également les données de contexte global
+        refreshProfileData();
+        
+        toast.success("Informations mises à jour avec succès !");
+        console.log("Données rafraîchies avec succès");
+      } else {
+        throw new Error("Aucune donnée reçue");
+      }
+    } catch (error) {
+      console.error("Erreur lors de l'actualisation:", error);
+      toast.error("Erreur lors de l'actualisation. Veuillez réessayer.");
+    } finally {
+      // Toujours terminer l'état de rafraîchissement
       setIsRefreshing(false);
+      console.log("Fin du processus de rafraîchissement");
+      
+      // Annuler le timer de secours puisque nous avons terminé
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = null;
+      }
     }
   };
 
@@ -226,7 +344,7 @@ const ProfileProgress = ({ userData }) => {
                     <button 
                       onClick={handleRefresh}
                       disabled={isRefreshing || isProfileLoading}
-                      className="inline-flex items-center justify-center rounded-full w-6 h-6 text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
+                      className="inline-flex items-center justify-center rounded-full w-6 h-6 text-muted-foreground hover:text-primary transition-colors disabled:opacity-50 hover:bg-muted"
                       title="Actualiser"
                     >
                       <RefreshCw className={`w-4 h-4 ${isRefreshing || isProfileLoading ? 'animate-spin' : ''}`} />
