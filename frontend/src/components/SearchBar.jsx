@@ -286,6 +286,24 @@ export const SearchBar = () => {
     return getFrenchRoleDisplayName(role);
   };
 
+  const handleInputFocus = () => {
+    if (!isLoggedIn) {
+      inputRef.current.blur();
+      return;
+    }
+    setIsFocused(true);
+    
+    // Pour superadmin : directement afficher des suggestions d'utilisateurs, même avec un champ vide
+    if (hasRole(ROLES.SUPERADMIN)) {
+      // Faire une recherche avec un caractère simple pour récupérer une liste d'utilisateurs
+      fetchSuggestions('a');
+    } 
+    // Pour les autres utilisateurs
+    else if (query.length >= 1) {
+      fetchSuggestions(query);
+    }
+  };
+
   return (
     <div 
       ref={wrapperRef}
@@ -321,16 +339,7 @@ export const SearchBar = () => {
           value={query}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
-          onFocus={() => {
-            if (!isLoggedIn) {
-              inputRef.current.blur();
-              return;
-            }
-            setIsFocused(true);
-            if (query.length >= 1) {
-              fetchSuggestions(query);
-            }
-          }}
+          onFocus={handleInputFocus}
           disabled={!isLoggedIn}
         />
         
@@ -357,14 +366,11 @@ export const SearchBar = () => {
         )}
       </div>
       
-      {isFocused && query.length === 0 && isLoggedIn && (
+      {/* Message d'aide (affiché uniquement quand focusé, query vide et PAS superadmin) */}
+      {isFocused && query.length === 0 && isLoggedIn && !hasRole(ROLES.SUPERADMIN) && !showSuggestions && (
         <div className="absolute top-full left-0 w-full mt-2 px-3 py-2 text-xs text-white/70 bg-[#02284f]/90 rounded-md">
           <p>
-            {hasRole(ROLES.SUPERADMIN) ? (
-              <>En tant que Super Admin, vous pouvez rechercher tous les utilisateurs par nom ou par rôle : {allowedSearchRoles.map(role => 
-                role !== 'SUPERADMIN' ? getRoleDisplayFormat(role).toLowerCase() : null
-              ).filter(Boolean).join(', ')}</>
-            ) : hasRole(ROLES.ADMIN) ? (
+            {hasRole(ROLES.ADMIN) ? (
               <>En tant qu'Admin, vous pouvez rechercher tous les utilisateurs par nom ou par rôle, à l'exception des <strong>super admins</strong> : {allowedSearchRoles.map(role => 
                 getRoleDisplayFormat(role).toLowerCase()
               ).join(', ')}</>
@@ -539,6 +545,17 @@ export const SearchBar = () => {
                     </motion.div>
                   ))}
                 </div>
+                
+                {/* Message d'aide pour superadmin à la fin de la liste des résultats */}
+                {hasRole(ROLES.SUPERADMIN) && query.length === 0 && (
+                  <div className="px-3 py-2 bg-gray-50 border-t border-gray-100 text-xs text-gray-500">
+                    <p>
+                      En tant que Super Admin, vous pouvez rechercher tous les utilisateurs par nom ou par rôle : {allowedSearchRoles.map(role => 
+                        role !== 'SUPERADMIN' ? getRoleDisplayFormat(role).toLowerCase() : null
+                      ).filter(Boolean).join(', ')}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </motion.div>
