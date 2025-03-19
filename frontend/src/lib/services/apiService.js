@@ -1,32 +1,5 @@
+import axiosInstance from '@/lib/axios';
 import axios from 'axios';
-
-// Créer une instance axios avec des configurations par défaut
-const axiosInstance = axios.create({
-  timeout: 15000, // Increased from 1500ms to 15000ms
-  headers: {
-    'Accept': 'application/json',
-    'X-Requested-With': 'XMLHttpRequest'
-    // Remove default Content-Type header to allow axios to set it correctly for FormData
-  }
-});
-
-// Configurer des intercepteurs pour les requêtes et réponses
-axiosInstance.interceptors.request.use(request => {
-  // Ajouter le token d'authentification à toutes les requêtes si disponible
-  const token = localStorage.getItem('token');
-  if (token) {
-    request.headers.Authorization = `Bearer ${token}`;
-  }
-  
-  // Set Content-Type only for non-FormData requests
-  if (request.data && !(request.data instanceof FormData)) {
-    request.headers['Content-Type'] = 'application/json';
-  }
-  
-  return request;
-}, error => {
-  return Promise.reject(error);
-});
 
 // Ajouter un cache simple pour les requêtes GET
 const cache = new Map();
@@ -52,6 +25,40 @@ const getCacheKey = (url, params = {}) => {
   return `session_${sessionId}:${url}:${JSON.stringify(params || {})}`;
 };
 
+// Fonction pour invalider une entrée spécifique du cache
+const invalidateCache = (path) => {
+  const normalizedPath = normalizeApiUrl(path);
+  for (const [key] of cache.entries()) {
+    if (key.includes(normalizedPath)) {
+      cache.delete(key);
+    }
+  }
+};
+
+// Fonction pour invalider le cache du profil
+const invalidateProfileCache = () => {
+  for (const [key] of cache.entries()) {
+    if (key.includes('/profile') || key.includes('/me')) {
+      cache.delete(key);
+    }
+  }
+};
+
+// Fonction pour invalider le cache des documents
+const invalidateDocumentCache = () => {
+  for (const [key] of cache.entries()) {
+    if (key.includes('/documents')) {
+      cache.delete(key);
+    }
+  }
+};
+
+// Fonction pour vider complètement le cache
+const clearCache = () => {
+  cache.clear();
+};
+
+// Configurer des intercepteurs pour les réponses
 axiosInstance.interceptors.response.use(response => {
   // Mettre en cache les réponses GET
   if (response.config.method === 'get' && response.config.url) {
@@ -94,11 +101,43 @@ const retryRequest = async (requestFn, retryCount = 0, maxRetries = 3) => {
   try {
     return await requestFn();
   } catch (error) {
-    if (retryCount < maxRetries && (error.code === 'ECONNABORTED' || error.message.includes('timeout'))) {
-      console.log(`Retrying request attempt ${retryCount + 1}/${maxRetries}...`);
-      await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+    // Analyser l'erreur pour déterminer si elle est due à un timeout, une annulation ou un autre problème
+    const isTimeoutError = error.code === 'ECONNABORTED' || error.message.includes('timeout');
+    const isCanceledError = error.message && error.message.toLowerCase().includes('cancel');
+    const isNetworkError = error.message && (
+      error.message.includes('Network Error') || 
+      error.message.includes('network') ||
+      !error.response
+    );
+    
+    if (retryCount < maxRetries && (isTimeoutError || isNetworkError || isCanceledError)) {
+      // Delay exponentially increases with each retry
+      const delay = 1000 * Math.pow(2, retryCount);
+      await new Promise(resolve => setTimeout(resolve, delay));
       return retryRequest(requestFn, retryCount + 1, maxRetries);
     }
+    throw error;
+  }
+};
+
+// Add a dedicated function for authentication
+const authenticateUser = async (url, data, options = {}) => {
+  // Add specific options for authentication requests
+  const authOptions = {
+    ...options,
+    // Empêcher les annulations liées aux redirections
+    maxRedirects: 0,
+    // S'assurer que la requête ne soit pas annulée prématurément
+    cancelToken: undefined,
+    signal: undefined
+  };
+  
+  try {
+    // Utiliser directement axios au lieu de axiosInstance pour ce cas spécifique
+    // cela permet d'éviter les intercepteurs qui pourraient modifier la requête
+    const response = await axios.post(url, data, authOptions);
+    return response;
+  } catch (error) {
     throw error;
   }
 };
@@ -119,6 +158,13 @@ const apiService = {
     try {
       const url = normalizeApiUrl(path);
       const authOptions = this.withAuth(options);
+      
+      // Si pas de token et route protégée (sauf login et register), éviter la requête
+      if (!localStorage.getItem('token') && 
+          !path.includes('/login_check') && 
+          !path.includes('/register')) {
+        return null;
+      }
       
       // Check if this endpoint should never be cached
       const shouldNeverCache = CACHE_CONFIG.neverCache.some(endpoint => path.includes(endpoint));
@@ -155,6 +201,11 @@ const apiService = {
       
       return response.data;
     } catch (error) {
+      // Gérer silencieusement les erreurs d'authentification pendant la déconnexion
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        return null;
+      }
+      
       console.error(`Error in GET request to ${path}:`, error);
       throw error;
     }
@@ -171,6 +222,17 @@ const apiService = {
     try {
       const url = normalizeApiUrl(path);
       
+      // Pour le login_check, utiliser la fonction d'authentification spécialisée
+      if (path.includes('/login_check')) {
+        try {
+          const response = await authenticateUser(url, data, options);
+          return response.data;
+        } catch (authError) {
+          throw authError;
+        }
+      }
+      
+      // Pour les autres requêtes, on continue avec le traitement normal
       // Check if data is FormData
       const isFormData = data instanceof FormData;
       
@@ -189,16 +251,20 @@ const apiService = {
           ? formDataOptions 
           : this.withAuth(formDataOptions);
         
-        const response = await retryRequest(
-          () => axiosInstance.post(url, data, authOptions)
-        );
-        
-        // Invalidate related caches for profile picture operations
-        if (path.includes('/profile/picture')) {
-          this.invalidateProfileCache();
+        try {
+          const response = await retryRequest(
+            () => axiosInstance.post(url, data, authOptions)
+          );
+          
+          // Invalidate related caches for profile picture operations
+          if (path.includes('/profile/picture')) {
+            this.invalidateProfileCache();
+          }
+          
+          return response.data;
+        } catch (requestError) {
+          throw requestError;
         }
-        
-        return response.data;
       } else {
         // For regular JSON data
         // Add authentication to the request for protected routes
@@ -206,16 +272,20 @@ const apiService = {
           ? options 
           : this.withAuth(options);
         
-        const response = await retryRequest(
-          () => axiosInstance.post(url, data, authOptions)
-        );
-        
-        // Invalidate related caches for profile operations
-        if (path.includes('/profile')) {
-          this.invalidateProfileCache();
+        try {
+          const response = await retryRequest(
+            () => axiosInstance.post(url, data, authOptions)
+          );
+          
+          // Invalidate related caches for profile operations
+          if (path.includes('/profile')) {
+            this.invalidateProfileCache();
+          }
+          
+          return response.data;
+        } catch (requestError) {
+          throw requestError;
         }
-        
-        return response.data;
       }
     } catch (error) {
       console.error(`Error in POST request to ${path}:`, error);
@@ -313,58 +383,11 @@ const apiService = {
     return newOptions;
   },
   
-  /**
-   * Vide le cache
-   */
-  clearCache() {
-    // Just clear everything - safer and simpler
-    cache.clear();
-  },
-  
-  /**
-   * Supprime une entrée spécifique du cache
-   * @param {string} path - Chemin de l'API
-   * @param {Object} params - Paramètres de la requête
-   */
-  invalidateCache(path, params = {}) {
-    const url = normalizeApiUrl(path);
-    const cacheKey = getCacheKey(url, params);
-    cache.delete(cacheKey);
-  },
-  
-  /**
-   * Invalide toutes les entrées du cache liées au profil
-   */
-  invalidateProfileCache() {
-    // Get all cache keys
-    const keys = Array.from(cache.keys());
-    
-    // Filter keys related to profile
-    const profileKeys = keys.filter(key => 
-      key.includes('/profile') || 
-      key.includes('/profil')
-    );
-    
-    // Delete all profile-related cache entries
-    profileKeys.forEach(key => cache.delete(key));
-  },
-  
-  /**
-   * Invalide toutes les entrées du cache liées aux documents
-   */
-  invalidateDocumentCache() {
-    // Get all cache keys
-    const keys = Array.from(cache.keys());
-    
-    // Filter keys related to documents
-    const documentKeys = keys.filter(key => 
-      key.includes('/documents') || 
-      key.includes('/document')
-    );
-    
-    // Delete all document-related cache entries
-    documentKeys.forEach(key => cache.delete(key));
-  },
+  // Ajouter les nouvelles méthodes de gestion du cache
+  invalidateCache,
+  invalidateProfileCache,
+  invalidateDocumentCache,
+  clearCache,
   
   /**
    * Vérifie si l'entrée de cache est toujours valide
