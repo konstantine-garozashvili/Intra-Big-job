@@ -1,7 +1,5 @@
 import React, { useState, lazy, Suspense, memo } from 'react';
 import { GraduationCap, Plus, Trash2, X, Save, Calendar as CalendarIcon, Check, ChevronsUpDown } from 'lucide-react';
-import React, { useState, lazy, Suspense, memo } from 'react';
-import { GraduationCap, Plus, Trash2, X, Save, Calendar as CalendarIcon, Check, ChevronsUpDown } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -41,7 +39,6 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [diplomaToDelete, setDiplomaToDelete] = useState(null);
-  const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
   
   const [newDiploma, setNewDiploma] = useState({
@@ -221,29 +218,6 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
     });
   };
   
-  const handleDateChange = (date) => {
-    // Mettre à jour la date et formater au format yyyy-MM-dd pour l'API
-    setNewDiploma({
-      ...newDiploma, 
-      obtainedDate: format(date, 'yyyy-MM-dd')
-    });
-    if (error) setError('');
-  };
-
-  // Formater la date pour l'affichage
-  const formattedObtainedDate = newDiploma.obtainedDate ? 
-    format(new Date(newDiploma.obtainedDate), 'dd MMMM yyyy', { locale: fr }) : 
-    null;
-  
-  // Check if this component should be rendered at all
-  const shouldRenderDiplomaManager = () => {
-    return roleUtils.isAdmin(userRole) || roleUtils.isStudent(userRole) || roleUtils.isGuest(userRole);
-  };
-
-  if (!shouldRenderDiplomaManager()) {
-    return null;
-  }
-
   // Formater la date pour l'affichage
   const formattedObtainedDate = newDiploma.obtainedDate 
     ? new Intl.DateTimeFormat('fr-FR').format(new Date(newDiploma.obtainedDate)) 
@@ -257,11 +231,17 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
     });
   };
 
+  // Check if this component should be rendered at all
+  const shouldRenderDiplomaManager = () => {
+    return roleUtils.isAdmin(userRole) || roleUtils.isStudent(userRole) || roleUtils.isGuest(userRole);
+  };
+
+  if (!shouldRenderDiplomaManager()) {
+    return null;
+  }
+
   return (
     <div className="space-y-4">
-      {/* Style intégré pour le calendrier */}
-      <style dangerouslySetInnerHTML={{ __html: diplomaCalendarStyles }} />
-      
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
@@ -303,18 +283,7 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
         </div>
       ) : (
         <>
-          {/* Add Diploma Button */}
-          {roleUtils.canEditAcademic(userRole) && !isAdding && (
-            <button
-              onClick={() => setIsAdding(true)}
-              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg border-2 border-dashed border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50 transition-all"
-            >
-              <Plus className="h-5 w-5" />
-              <span>Ajouter un diplôme</span>
-            </button>
-          )}
-
-          {/* Add Diploma Form */}
+          {/* Formulaire d'ajout de diplôme */}
           {isAdding && (
             <div className="mt-4 p-4 bg-gray-50 rounded-lg">
               <div className="flex justify-between items-center mb-4">
@@ -539,6 +508,24 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
                   Ajouter un diplôme
                 </Button>
               )}
+            </div>
+          )}
+
+          {/* Bouton d'ajout */}
+          {!isAdding && (
+            <Button 
+              variant="outline" 
+              className="w-full border-dashed border-gray-300 text-gray-600 hover:text-blue-600 hover:border-blue-600 mt-2"
+              onClick={() => setIsAdding(true)}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Ajouter un diplôme
+            </Button>
+          )}
+          
+          {diplomas && diplomas.length === 0 && !isAdding && (
+            <div className="text-center p-4 bg-gray-50 rounded-lg mt-2">
+              <p className="text-gray-500 text-sm">Vous n'avez pas encore ajouté de diplôme à votre profil.</p>
             </div>
           )}
         </>
