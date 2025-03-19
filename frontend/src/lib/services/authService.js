@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axiosInstance from '@/lib/axios';
 import apiService from './apiService';
 import { clearQueryCache, getQueryClient } from '../utils/queryClientUtils';
 import { showGlobalLoader, hideGlobalLoader } from '../utils/loadingUtils';
@@ -85,6 +85,9 @@ export const authService = {
       currentSessionId = generateSessionId();
       localStorage.setItem('session_id', currentSessionId);
       
+      // Show loader
+      showGlobalLoader('Connexion en cours...');
+      
       // Use JWT standard route directly
       const response = await apiService.post('/login_check', loginData);
       
@@ -136,12 +139,18 @@ export const authService = {
         }
       }
       
+      // Hide loader
+      hideGlobalLoader();
+      
       // Initialize background loading of user data
       // but don't wait for resolution
       this.lazyLoadUserData();
       
       return response;
     } catch (error) {
+      hideGlobalLoader();
+      console.error('Login error:', error);
+      
       throw error;
     }
   },
@@ -279,12 +288,18 @@ export const authService = {
       // Récupérer l'ID de session avant de supprimer les données du localStorage
       const sessionId = currentSessionId;
       
-      // Supprimer d'abord les données d'authentification du localStorage
-      // pour éviter des requêtes authentifiées après la déconnexion
-      localStorage.removeItem('token');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('user');
-      localStorage.removeItem('tokenExpiration');
+      // Supprimer toutes les données d'authentification et de session du localStorage
+      const itemsToRemove = [
+        'token',
+        'refresh_token',
+        'user',
+        'tokenExpiration',
+        'device_id',
+        'last_role',
+        'session_id'
+      ];
+      
+      itemsToRemove.forEach(item => localStorage.removeItem(item));
       
       // Tenter de faire un appel API pour invalider le token côté serveur
       if (this.isLoggedIn()) {
@@ -295,26 +310,23 @@ export const authService = {
         }
       }
       
-      // Étape 1: Optimisé - Vider seulement les requêtes spécifiques à l'utilisateur
+      // Gestion optimisée du cache et des requêtes React Query
       try {
-        // Obtenir le client de query pour des opérations ciblées
         const queryClient = getQueryClient();
         if (queryClient) {
-          // Supprimer uniquement les requêtes liées à l'utilisateur
-          queryClient.removeQueries({ queryKey: ['user'] });
-          queryClient.removeQueries({ queryKey: ['profile'] });
-          queryClient.removeQueries({ queryKey: ['dashboard'] });
-          queryClient.removeQueries({ queryKey: ['notifications'] });
+          // Arrêter toutes les requêtes en cours
+          queryClient.cancelQueries();
           
-          // Supprimer les requêtes de la session actuelle en utilisant le pattern de préfixe
-          queryClient.removeQueries({
-            predicate: (query) => {
-              const key = query.queryKey;
-              return Array.isArray(key) && key[0] === 'session' && key[1] === sessionId;
-            }
+          // Marquer les données comme périmées sans les supprimer
+          queryClient.invalidateQueries();
+          
+          // Supprimer sélectivement certaines requêtes sensibles
+          const sensitivePaths = ['user', 'profile', 'dashboard', 'notifications'];
+          sensitivePaths.forEach(path => {
+            queryClient.removeQueries({ queryKey: [path] });
           });
           
-          // Annuler aussi toutes les requêtes en cours
+          // Supprimer les requêtes de la session actuelle
           queryClient.removeQueries({
             predicate: (query) => {
               const key = query.queryKey;
@@ -323,32 +335,34 @@ export const authService = {
           });
         }
       } catch (cacheError) {
-        console.error('Error clearing query cache:', cacheError);
+        console.error('Error managing query cache:', cacheError);
       }
       
-      // Étape 2: Vider le cache du service API de manière sélective
+      // Gestion optimisée du cache API
       try {
-        // Vider seulement les caches liés au profile et authentification
-        apiService.invalidateProfileCache();
+        // Invalider sélectivement les caches critiques
+        const criticalPaths = ['/me', '/profile', '/dashboard'];
+        criticalPaths.forEach(path => {
+          apiService.invalidateCache(path);
+        });
         
-        // Supprimer explicitement les entrées de cache liées à l'authentification
-        const authCacheKeys = ['/me', '/profile', '/dashboard'];
-        authCacheKeys.forEach(path => apiService.invalidateCache(path));
+        // Invalider les caches liés au profil et aux documents
+        apiService.invalidateProfileCache();
+        apiService.invalidateDocumentCache();
+        
+        // Vider complètement le cache pour s'assurer qu'aucune donnée sensible ne reste
+        apiService.clearCache();
       } catch (apiCacheError) {
-        console.error('Error clearing API cache:', apiCacheError);
+        console.error('Error managing API cache:', apiCacheError);
       }
       
       // Générer un nouvel identifiant de session pour la prochaine connexion
       currentSessionId = generateSessionId();
-      localStorage.setItem('session_id', currentSessionId);
       
-      // Déclencher un événement pour informer l'application de la déconnexion
-      // Utiliser CustomEvent pour passer des données supplémentaires
+      // Déclencher les événements de déconnexion
       window.dispatchEvent(new CustomEvent('logout-success', {
         detail: { redirectTo }
       }));
-      
-      // Pour la compatibilité avec d'anciens écouteurs
       window.dispatchEvent(new Event('auth-logout-success'));
       
       // Remove loading state after a short delay
@@ -358,17 +372,23 @@ export const authService = {
     } catch (error) {
       console.error('Error during logout:', error);
       
-      // Même en cas d'erreur, on force la déconnexion côté client
-      localStorage.removeItem('token');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('user');
-      localStorage.removeItem('tokenExpiration');
+      // Forcer la suppression de toutes les données même en cas d'erreur
+      const itemsToRemove = [
+        'token',
+        'refresh_token',
+        'user',
+        'tokenExpiration',
+        'device_id',
+        'last_role',
+        'session_id'
+      ];
+      
+      itemsToRemove.forEach(item => localStorage.removeItem(item));
       
       // Générer un nouvel identifiant de session
       currentSessionId = generateSessionId();
-      localStorage.setItem('session_id', currentSessionId);
       
-      // Émettre quand même les événements de déconnexion
+      // Émettre les événements de déconnexion
       window.dispatchEvent(new CustomEvent('logout-success', {
         detail: { redirectTo }
       }));
