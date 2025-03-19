@@ -112,7 +112,7 @@ class RegistrationService
         // Marquer l'email comme vérifié directement (temporairement)
         $user->setIsEmailVerified(true);
 
-        // Marquer le compte comme actif
+        // Marquer le compte comme actif par défaut
         $user->setIsUserActive(true);
         
         // Ajouter le rôle utilisateur par défaut
