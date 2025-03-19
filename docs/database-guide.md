@@ -166,7 +166,12 @@ Pour voir quelles migrations ont été appliquées:
 ```bash
 docker exec -it infra-backend-1 php bin/console doctrine:migrations:status
 ```
-
+```bash
+docker-compose exec backend php bin/console doctrine:migrations:diff
+```
+```bash
+docker-compose exec backend php bin/console doctrine:migrations:migrate
+```
 ## 🔗 Relations entre entités
 
 Doctrine permet de définir facilement des relations entre entités:
