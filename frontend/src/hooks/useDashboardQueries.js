@@ -132,14 +132,14 @@ export const useAdminDashboardData = () => {
       refetchOnReconnect: false,
       // Utiliser initialData pour éviter l'affichage de chargement si possible
       initialData: () => {
-        try {
-          // Vérifier si des données sont déjà en cache
-          const cachedData = getQueryClient().getQueryData(['admin-users', sessionId]);
+        const queryClient = getQueryClient();
+        if (queryClient) {
+          const cachedData = queryClient.getQueryData(['admin-users', sessionId]);
           if (cachedData) return cachedData;
-          return undefined;
-        } catch (e) {
-          return undefined;
+        } else {
+          console.error('[useAdminDashboardData] Query client is null.');
         }
+        return undefined;
       },
       // Always enabled to load immediately
       enabled: true,
@@ -178,6 +178,7 @@ export const useAdminDashboardData = () => {
     timeout: 4000, // Réduit de 8000ms à 4000ms
     select: (data) => {
       return data.user || data;
+
     }
   });
   

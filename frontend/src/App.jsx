@@ -23,6 +23,10 @@ const Dashboard = lazy(() => import('./pages/Dashboard'))
 // Dashboards spécifiques par rôle
 const AdminDashboard = lazy(() => import('./pages/Admin/Dashboard'))
 const StudentDashboard = lazy(() => import('./pages/Student/Dashboard'))
+
+// Pages administratives
+const SearchByRole = lazy(() => import('./pages/Admin/SearchByRole'))
+
 // Pages étudiantes
 const StudentSchedule = lazy(() => import('./pages/Student/Schedule'))
 const StudentGrades = lazy(() => import('./pages/Student/Grades'))
@@ -86,6 +90,7 @@ const useIntelligentPreload = () => {
     // Préchargement pour les routes spécifiques aux rôles
     else if (currentPath.includes('/admin')) {
       preloadComponent(() => import('./pages/Admin/Dashboard'));
+      preloadComponent(() => import('./pages/Admin/SearchByRole'));
     }
     else if (currentPath.includes('/student')) {
       preloadComponent(() => import('./pages/Student/Dashboard'));
@@ -304,6 +309,7 @@ const AppContent = () => {
                     
                     {/* Dashboards spécifiques par rôle */}
                     <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                    <Route path="/admin/searchbyrole" element={<SearchByRole />} />
                     
                     {/* Routes étudiantes */}
                     <Route path="/student">
