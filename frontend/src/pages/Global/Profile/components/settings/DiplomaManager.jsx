@@ -1,5 +1,7 @@
 import React, { useState, lazy, Suspense, memo } from 'react';
 import { GraduationCap, Plus, Trash2, X, Save, Calendar as CalendarIcon, Check, ChevronsUpDown } from 'lucide-react';
+import React, { useState, lazy, Suspense, memo } from 'react';
+import { GraduationCap, Plus, Trash2, X, Save, Calendar as CalendarIcon, Check, ChevronsUpDown } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -39,6 +41,7 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [diplomaToDelete, setDiplomaToDelete] = useState(null);
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
   
   const [newDiploma, setNewDiploma] = useState({
@@ -218,6 +221,20 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
     });
   };
   
+  const handleDateChange = (date) => {
+    // Mettre à jour la date et formater au format yyyy-MM-dd pour l'API
+    setNewDiploma({
+      ...newDiploma, 
+      obtainedDate: format(date, 'yyyy-MM-dd')
+    });
+    if (error) setError('');
+  };
+
+  // Formater la date pour l'affichage
+  const formattedObtainedDate = newDiploma.obtainedDate ? 
+    format(new Date(newDiploma.obtainedDate), 'dd MMMM yyyy', { locale: fr }) : 
+    null;
+  
   // Check if this component should be rendered at all
   const shouldRenderDiplomaManager = () => {
     return roleUtils.isAdmin(userRole) || roleUtils.isStudent(userRole) || roleUtils.isGuest(userRole);
@@ -242,6 +259,9 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
 
   return (
     <div className="space-y-4">
+      {/* Style intégré pour le calendrier */}
+      <style dangerouslySetInnerHTML={{ __html: diplomaCalendarStyles }} />
+      
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
