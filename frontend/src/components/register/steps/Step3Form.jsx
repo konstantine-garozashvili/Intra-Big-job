@@ -70,7 +70,7 @@ const Step3Form = ({ goToPrevStep, onSubmit }) => {
     const isValid = validateStep3();
     if (isValid) {
       try {
-        onSubmit(e);
+      onSubmit(e);
       } catch (error) {
         setLocalErrors({
           ...localErrors,
