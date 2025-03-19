@@ -52,7 +52,32 @@ const ProfileHeader = ({ userData, isPublicProfile = false, profilePictureUrl })
     fetchDomainData();
   }, [userData]);
 
+  // Logs pour le débogage
+  console.log("DEBUGGING HEADER - userData reçu:", userData);
+  
+  // Récupération sécurisée des propriétés utilisateur
+  const getUserProperty = (propName, defaultValue = '') => {
+    // Si la propriété existe directement dans userData
+    if (userData && userData[propName] !== undefined) {
+      return userData[propName];
+    }
+    // Si la propriété existe dans userData.user
+    if (userData && userData.user && userData.user[propName] !== undefined) {
+      return userData.user[propName];
+    }
+    // Valeur par défaut
+    return defaultValue;
+  };
+  
+  const getUserFullName = () => {
+    const firstName = getUserProperty('firstName');
+    const lastName = getUserProperty('lastName');
+    return `${firstName} ${lastName}`.trim() || 'Utilisateur';
+  };
+
   const getRoleBadgeColor = (roleName) => {
+    if (!roleName) return "from-gray-500/90 to-gray-700/90";
+    
     switch(roleName) {
       case "STUDENT": return "from-blue-500/90 to-blue-700/90";
       case "TEACHER": return "from-emerald-500/90 to-emerald-700/90";
@@ -68,6 +93,8 @@ const ProfileHeader = ({ userData, isPublicProfile = false, profilePictureUrl })
   };
 
   const translateRoleName = (roleName) => {
+    if (!roleName) return "Utilisateur";
+    
     switch(roleName) {
       case "STUDENT": return "Étudiant";
       case "TEACHER": return "Formateur";
@@ -83,9 +110,45 @@ const ProfileHeader = ({ userData, isPublicProfile = false, profilePictureUrl })
   };
 
   const getMainRole = () => {
-    if (userData.user && userData.user.roles && userData.user.roles.length > 0) {
-      return userData.user.roles[0].name;
+    const roles = getUserProperty('roles');
+    
+    if (roles) {
+      if (Array.isArray(roles) && roles.length > 0) {
+        const firstRole = roles[0];
+        // Si c'est un objet avec une propriété name
+        if (typeof firstRole === 'object' && firstRole !== null && firstRole.name) {
+          return firstRole.name;
+        }
+        // Si c'est une chaîne
+        if (typeof firstRole === 'string') {
+          return firstRole;
+        }
+      }
+      // Si roles est une chaîne
+      if (typeof roles === 'string') {
+        return roles;
+      }
     }
+    
+    // Fallback à userData.user.roles si disponible
+    if (userData && userData.user && userData.user.roles) {
+      if (Array.isArray(userData.user.roles) && userData.user.roles.length > 0) {
+        const firstRole = userData.user.roles[0];
+        // Si c'est un objet avec une propriété name
+        if (typeof firstRole === 'object' && firstRole !== null && firstRole.name) {
+          return firstRole.name;
+        }
+        // Si c'est une chaîne
+        if (typeof firstRole === 'string') {
+          return firstRole;
+        }
+      }
+      // Si roles est une chaîne
+      if (typeof userData.user.roles === 'string') {
+        return userData.user.roles;
+      }
+    }
+    
     return "USER";
   };
 
@@ -110,9 +173,14 @@ const ProfileHeader = ({ userData, isPublicProfile = false, profilePictureUrl })
     setImageLoaded(true);
   };
 
-  const hasLinkedIn = userData?.user?.linkedinUrl;
-  const hasCv = userData?.documents?.some(doc => doc?.documentType?.code === 'CV' || doc?.type === 'CV');
-  const hasDiploma = userData?.diplomas?.length > 0;
+  // Vérifications sécurisées pour les propriétés possiblement manquantes
+  const hasLinkedIn = userData?.user?.linkedinUrl ? true : false;
+  const hasCv = userData?.documents && Array.isArray(userData.documents) && 
+                userData.documents.some(doc => 
+                  doc?.documentType?.code === 'CV' || 
+                  doc?.type === 'CV'
+                );
+  const hasDiploma = userData?.diplomas && Array.isArray(userData.diplomas) && userData.diplomas.length > 0;
 
   const completedItems = [hasLinkedIn, hasCv, hasDiploma].filter(Boolean).length;
   const totalItems = 3;
@@ -142,7 +210,7 @@ const ProfileHeader = ({ userData, isPublicProfile = false, profilePictureUrl })
                 {!imageError && displayProfilePictureUrl && (
                   <AvatarImage 
                     src={displayProfilePictureUrl} 
-                    alt={`${userData.user.firstName} ${userData.user.lastName}`}
+                    alt={getUserFullName()}
                     onError={handleImageError}
                     onLoad={handleImageLoad}
                     className={`transition-opacity duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
@@ -159,17 +227,33 @@ const ProfileHeader = ({ userData, isPublicProfile = false, profilePictureUrl })
           <div className="flex-1 min-w-0 text-center sm:text-left">
             <motion.div variants={itemVariants}>
               <h1 className="text-xl sm:text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-indigo-600">
-                {userData.user.firstName} {userData.user.lastName}
+                {getUserFullName()}
               </h1>
               
-              {userData.user.specialization && (
+              {/* Affichage de la spécialisation avec vérification sécurisée */}
+              {(getUserProperty('specialization') || 
+                (userData && userData.user && userData.user.specialization)) && (
                 <div className="flex items-center justify-center sm:justify-start gap-2 mt-1">
                   <span className="text-sm text-muted-foreground">
-                    {userData.user.specialization.domain?.name || domainData?.name}
-                    {userData.user.specialization.name && (
-                      <span className="mx-1.5 opacity-40">•</span>
-                    )}
-                    {userData.user.specialization.name}
+                    {(() => {
+                      const specialization = getUserProperty('specialization') || 
+                        (userData && userData.user && userData.user.specialization) || {};
+                      
+                      const domainName = specialization.domain?.name || 
+                        domainData?.name || '';
+                      
+                      const specializationName = specialization.name || '';
+                      
+                      return (
+                        <>
+                          {domainName}
+                          {domainName && specializationName && (
+                            <span className="mx-1.5 opacity-40">•</span>
+                          )}
+                          {specializationName}
+                        </>
+                      );
+                    })()}
                   </span>
                 </div>
               )}
@@ -181,31 +265,51 @@ const ProfileHeader = ({ userData, isPublicProfile = false, profilePictureUrl })
               className="flex flex-wrap justify-center sm:justify-start gap-1.5 mt-2"
             >
               <AnimatePresence>
-                {userData.user?.roles?.map((role, index) => (
-                  <motion.div
-                    key={`${role.name}-${index}`}
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    transition={{ duration: 0.2, delay: index * 0.1 }}
-                    onHoverStart={() => setHoveredBadge(role.name)}
-                    onHoverEnd={() => setHoveredBadge(null)}
-                  >
-                    <Badge 
-                      className={`bg-gradient-to-r ${getRoleBadgeColor(role.name)} text-white px-2.5 py-0.5 text-xs rounded-full transition-all duration-300 ${
-                        hoveredBadge === role.name ? 'shadow-lg scale-105' : ''
-                      }`}
-                    >
-                      {translateRoleName(role.name)}
-                    </Badge>
-                  </motion.div>
-                )) || (
-                  <motion.div key="default-user">
-                    <Badge className={`bg-gradient-to-r ${getRoleBadgeColor("USER")} text-white px-2.5 py-0.5 text-xs rounded-full`}>
-                      {translateRoleName("USER")}
-                    </Badge>
-                  </motion.div>
-                )}
+                {(() => {
+                  // Récupérer les rôles de manière sécurisée
+                  let roles = [];
+                  if (userData.user?.roles && Array.isArray(userData.user.roles)) {
+                    roles = userData.user.roles;
+                  } else if (userData.roles && Array.isArray(userData.roles)) {
+                    roles = userData.roles;
+                  }
+                  
+                  if (roles.length > 0) {
+                    return roles.map((role, index) => {
+                      // Déterminer le nom du rôle en fonction de la structure
+                      const roleName = typeof role === 'object' && role !== null ? role.name : 
+                                    typeof role === 'string' ? role : 'USER';
+                                    
+                      return (
+                        <motion.div
+                          key={`${roleName}-${index}`}
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.8 }}
+                          transition={{ duration: 0.2, delay: index * 0.1 }}
+                          onHoverStart={() => setHoveredBadge(roleName)}
+                          onHoverEnd={() => setHoveredBadge(null)}
+                        >
+                          <Badge 
+                            className={`bg-gradient-to-r ${getRoleBadgeColor(roleName)} text-white px-2.5 py-0.5 text-xs rounded-full transition-all duration-300 ${
+                              hoveredBadge === roleName ? 'shadow-lg scale-105' : ''
+                            }`}
+                          >
+                            {translateRoleName(roleName)}
+                          </Badge>
+                        </motion.div>
+                      );
+                    });
+                  } else {
+                    return (
+                      <motion.div key="default-user">
+                        <Badge className={`bg-gradient-to-r ${getRoleBadgeColor("USER")} text-white px-2.5 py-0.5 text-xs rounded-full`}>
+                          {translateRoleName("USER")}
+                        </Badge>
+                      </motion.div>
+                    );
+                  }
+                })()}
 
                 {userData.studentProfile?.isSeekingInternship && (
                   <motion.div key="seeking-internship"

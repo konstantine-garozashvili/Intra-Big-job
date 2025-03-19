@@ -68,6 +68,41 @@ const documentCache = {
         this.documentsByType[type] = this.documentsByType[type].filter(doc => doc.id !== documentId);
       }
     });
+    
+    // Also invalidate the API service cache
+    apiService.invalidateDocumentCache();
+  },
+  
+  // Mettre à jour le cache avec des données optimistes
+  updateOptimistically(type, document) {
+    if (!this.documents) {
+      this.documents = [];
+    }
+    
+    // Ajouter le document au cache global
+    this.documents.push(document);
+    
+    // Ajouter le document au cache par type
+    const normalizedType = type.toUpperCase();
+    if (!this.documentsByType[normalizedType]) {
+      this.documentsByType[normalizedType] = [];
+    }
+    
+    this.documentsByType[normalizedType].push(document);
+  },
+  
+  // Supprimer un document du cache
+  removeDocument(documentId) {
+    if (this.documents) {
+      this.documents = this.documents.filter(doc => doc.id !== documentId);
+    }
+    
+    // Supprimer de tous les caches par type
+    Object.keys(this.documentsByType).forEach(type => {
+      if (this.documentsByType[type]) {
+        this.documentsByType[type] = this.documentsByType[type].filter(doc => doc.id !== documentId);
+      }
+    });
   }
 };
 
@@ -141,6 +176,9 @@ class DocumentService {
       // En cas d'erreur, forcer un rafraîchissement pour supprimer les documents temporaires
       documentCache.clear();
       documentEvents.notify();
+      // En cas d'erreur, forcer un rafraîchissement pour supprimer les documents temporaires
+      documentCache.clear();
+      documentEvents.notify();
       throw error;
     }
   }
@@ -182,6 +220,9 @@ class DocumentService {
       
       return response.data;
     } catch (error) {
+      // En cas d'erreur, forcer un rafraîchissement pour supprimer les documents temporaires
+      documentCache.clear();
+      documentEvents.notify();
       // En cas d'erreur, forcer un rafraîchissement pour supprimer les documents temporaires
       documentCache.clear();
       documentEvents.notify();
@@ -269,6 +310,7 @@ class DocumentService {
    */
   clearCache() {
     documentCache.clear();
+    documentEvents.notify();
     documentEvents.notify();
   }
 }

@@ -1,8 +1,9 @@
 import React from 'react';
-import { User, Calendar, Globe } from 'lucide-react';
+import { User, Calendar, Globe, FileBox } from 'lucide-react';
 import EditableField from '../personal/EditableField';
 import { StaticField } from './StaticField';
 import { formatDate } from './utils';
+import { Button } from '@/components/ui/button';
 
 export const PersonalInfoSection = ({ 
   userData, 
@@ -12,7 +13,8 @@ export const PersonalInfoSection = ({
   toggleFieldEdit, 
   handleCancelField, 
   handleInputChange, 
-  onSave 
+  onSave,
+  onUploadIdentity
 }) => {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 md:gap-6">
@@ -75,6 +77,45 @@ export const PersonalInfoSection = ({
         icon={<Globe className="h-4 w-4 mr-2 text-blue-500" />}
         value={userData.nationality?.name || 'Non renseignée'}
       />
+
+      {/* Identity Documents Section - Span full width */}
+      <div className="col-span-1 sm:col-span-2 mt-2">
+        <div className="flex flex-col space-y-2">
+          <div className="flex items-center">
+            <FileBox className="h-4 w-4 mr-2 text-blue-500" />
+            <span className="text-sm font-medium">Pièces d'identité</span>
+          </div>
+          
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 mt-1 bg-gray-50 p-3 rounded-md">
+            <div className="flex-1">
+              {userData.identityDocuments && userData.identityDocuments.length > 0 ? (
+                <div className="flex flex-col space-y-2">
+                  {userData.identityDocuments.map((doc, index) => (
+                    <div key={index} className="flex items-center justify-between bg-white p-2 rounded border">
+                      <span className="text-sm truncate">{doc.name || `Document ${index + 1}`}</span>
+                      <div className="flex space-x-2">
+                        <Button variant="outline" size="sm" className="h-7 px-2 text-xs">Voir</Button>
+                        <Button variant="destructive" size="sm" className="h-7 px-2 text-xs">Supprimer</Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">Aucune pièce d'identité n'a été téléchargée.</p>
+              )}
+            </div>
+            
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="whitespace-nowrap"
+              onClick={() => onUploadIdentity && onUploadIdentity()}
+            >
+              Ajouter un document
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }; 

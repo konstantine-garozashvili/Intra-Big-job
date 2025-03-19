@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate, Outlet, useNavigate } from 'react-router-dom'
 import { lazy, Suspense, useState, useEffect } from 'react'
 import MainLayout from './components/MainLayout'
-import { RoleProvider, RoleDashboardRedirect } from './features/roles'
+import { RoleProvider, RoleDashboardRedirect, RoleGuard, ROLES } from './features/roles'
 import { showGlobalLoader, hideGlobalLoader } from './lib/utils/loadingUtils'
 import LoadingOverlay from './components/LoadingOverlay'
 
@@ -303,22 +303,66 @@ const AppContent = () => {
                     </Route>
                     
                     {/* Dashboards spécifiques par rôle */}
-                    <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                    <Route path="/admin/dashboard" element={
+                      <RoleGuard roles={ROLES.ADMIN} fallback={<Navigate to="/dashboard" replace />}>
+                        <AdminDashboard />
+                      </RoleGuard>
+                    } />
                     
                     {/* Routes étudiantes */}
                     <Route path="/student">
-                      <Route path="dashboard" element={<StudentDashboard />} />
-                      <Route path="schedule" element={<StudentSchedule />} />
-                      <Route path="grades" element={<StudentGrades />} />
-                      <Route path="absences" element={<StudentAbsences />} />
-                      <Route path="projects" element={<StudentProjects />} />
+                      <Route path="dashboard" element={
+                        <RoleGuard roles={ROLES.STUDENT} fallback={<Navigate to="/dashboard" replace />}>
+                          <StudentDashboard />
+                        </RoleGuard>
+                      } />
+                      <Route path="schedule" element={
+                        <RoleGuard roles={ROLES.STUDENT} fallback={<Navigate to="/dashboard" replace />}>
+                          <StudentSchedule />
+                        </RoleGuard>
+                      } />
+                      <Route path="grades" element={
+                        <RoleGuard roles={ROLES.STUDENT} fallback={<Navigate to="/dashboard" replace />}>
+                          <StudentGrades />
+                        </RoleGuard>
+                      } />
+                      <Route path="absences" element={
+                        <RoleGuard roles={ROLES.STUDENT} fallback={<Navigate to="/dashboard" replace />}>
+                          <StudentAbsences />
+                        </RoleGuard>
+                      } />
+                      <Route path="projects" element={
+                        <RoleGuard roles={ROLES.STUDENT} fallback={<Navigate to="/dashboard" replace />}>
+                          <StudentProjects />
+                        </RoleGuard>
+                      } />
                     </Route>
                     
-                    <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
-                    <Route path="/hr/dashboard" element={<HRDashboard />} />
-                    <Route path="/superadmin/dashboard" element={<SuperAdminDashboard />} />
-                    <Route path="/guest/dashboard" element={<GuestDashboard />} />
-                    <Route path="/recruiter/dashboard" element={<RecruiterDashboard />} />
+                    <Route path="/teacher/dashboard" element={
+                      <RoleGuard roles={ROLES.TEACHER} fallback={<Navigate to="/dashboard" replace />}>
+                        <TeacherDashboard />
+                      </RoleGuard>
+                    } />
+                    <Route path="/hr/dashboard" element={
+                      <RoleGuard roles={ROLES.HR} fallback={<Navigate to="/dashboard" replace />}>
+                        <HRDashboard />
+                      </RoleGuard>
+                    } />
+                    <Route path="/superadmin/dashboard" element={
+                      <RoleGuard roles={ROLES.SUPERADMIN} fallback={<Navigate to="/dashboard" replace />}>
+                        <SuperAdminDashboard />
+                      </RoleGuard>
+                    } />
+                    <Route path="/guest/dashboard" element={
+                      <RoleGuard roles={ROLES.GUEST} fallback={<Navigate to="/dashboard" replace />}>
+                        <GuestDashboard />
+                      </RoleGuard>
+                    } />
+                    <Route path="/recruiter/dashboard" element={
+                      <RoleGuard roles={ROLES.RECRUITER} fallback={<Navigate to="/dashboard" replace />}>
+                        <RecruiterDashboard />
+                      </RoleGuard>
+                    } />
                   </Route>
                   
                   {/* Redirection des routes inconnues vers la page d'accueil */}

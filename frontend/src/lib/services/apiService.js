@@ -73,6 +73,17 @@ axiosInstance.interceptors.response.use(response => {
         timestamp: Date.now()
       });
     }
+    const url = response.config.url;
+    const cacheKey = getCacheKey(url, response.config.params || {});
+    
+    // Skip caching for endpoints that should never be cached
+    const shouldNeverCache = CACHE_CONFIG.neverCache.some(endpoint => url.includes(endpoint));
+    if (!shouldNeverCache) {
+      cache.set(cacheKey, {
+        data: response.data,
+        timestamp: Date.now()
+      });
+    }
   }
   return response;
 }, error => {
@@ -85,7 +96,7 @@ axiosInstance.interceptors.response.use(response => {
  * @returns {string} - L'URL complète normalisée
  */
 export const normalizeApiUrl = (path) => {
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+  const baseUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
   
   // Supprimer le "/api" à la fin de baseUrl si path commence par "/api"
   if (path.startsWith('/api')) {
@@ -186,6 +197,7 @@ const apiService = {
       
       // Vérifier si la réponse est en cache et toujours valide
       if (useCache) {
+        const cacheKey = getCacheKey(url, authOptions.params || {});
         const cacheKey = getCacheKey(url, authOptions.params || {});
         const cachedResponse = cache.get(cacheKey);
         
@@ -371,6 +383,16 @@ const apiService = {
       return options;
     }
     
+    // Create a new options object to avoid modifying the original
+    const newOptions = { ...options };
+    
+    // Ensure headers exist (avec vérification)
+    newOptions.headers = { ...(options.headers || {}) };
+    
+    // Add Authorization header
+    newOptions.headers.Authorization = `Bearer ${token}`;
+    
+    return newOptions;
     // Create a new options object to avoid modifying the original
     const newOptions = { ...options };
     

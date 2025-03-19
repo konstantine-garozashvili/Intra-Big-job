@@ -109,27 +109,41 @@ class ScheduleEventController extends AbstractController
         if (!$user) {
             return $this->json(['error' => 'Utilisateur non connecté'], 401);
         }
+        
+        try {
+            $eventParticipantRepo = $this->entityManager->getRepository(EventParticipant::class);
+            $participantEvents = $eventParticipantRepo->findBy(['user' => $user]);
 
-        $eventParticipantRepo = $this->entityManager->getRepository(EventParticipant::class);
-        $participantEvents = $eventParticipantRepo->findBy(['user' => $user]);
+            $events = [];
 
-        $events = [];
-
-        foreach ($participantEvents as $eventParticipant) {
-            $event = $eventParticipant->getEvent();
-            $events[$event->getId()] = $this->formatEventData($event);
-        }
-
-        $scheduleEventRepo = $this->entityManager->getRepository(ScheduleEvent::class);
-        $createdEvents = $scheduleEventRepo->findBy(['createdBy' => $user]);
-
-        foreach ($createdEvents as $event) {
-            if (!isset($events[$event->getId()])) {
-                $events[$event->getId()] = $this->formatEventData($event);
+            foreach ($participantEvents as $eventParticipant) {
+                $event = $eventParticipant->getEvent();
+                if ($event) {
+                    $events[$event->getId()] = $this->formatEventData($event);
+                }
             }
-        }
 
-        return $this->json(array_values($events));
+            $scheduleEventRepo = $this->entityManager->getRepository(ScheduleEvent::class);
+            $createdEvents = $scheduleEventRepo->findBy(['createdBy' => $user]);
+
+            foreach ($createdEvents as $event) {
+                if ($event && !isset($events[$event->getId()])) {
+                    $events[$event->getId()] = $this->formatEventData($event);
+                }
+            }
+
+            // Retourner un tableau vide si aucun événement
+            return $this->json(array_values($events));
+        } catch (\Exception $e) {
+            // En cas d'erreur, journaliser l'erreur et renvoyer une réponse appropriée
+            error_log($e->getMessage());
+            error_log($e->getTraceAsString());
+            
+            return $this->json([
+                'error' => 'Une erreur est survenue lors de la récupération des événements',
+                'details' => $e->getMessage()
+            ], 500);
+        }
     }
 
     private function formatEventData(ScheduleEvent $event): array
