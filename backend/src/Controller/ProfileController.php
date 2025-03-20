@@ -238,50 +238,124 @@ class ProfileController extends AbstractController
     #[Route('/consolidated', name: 'api_profil_consolidated', methods: ['GET'])]
     public function getConsolidatedProfile(): JsonResponse
     {
-        /** @var User $user */
-        $user = $this->security->getUser();
-        
-        if (!$user) {
-            return $this->json([
-                'success' => false,
-                'message' => 'Utilisateur non authentifié'
-            ], 401);
-        }
-        
-        // Récupérer l'utilisateur avec toutes ses relations chargées
-        $user = $this->userRepository->findOneWithAllRelations($user->getId());
-        
-        // Si l'utilisateur est un étudiant, récupérer son profil étudiant avec les relations
-        $studentProfile = null;
-        if ($user->getStudentProfile()) {
-            $studentProfile = $this->studentProfileRepository->findByUserWithRelations($user->getId());
-        }
-        
-        // Récupérer les documents de l'utilisateur
-        $documents = $this->documentRepository->findBy(['user' => $user]);
-        $documentsArray = [];
-        
-        foreach ($documents as $document) {
-            $documentsArray[] = [
-                'id' => $document->getId(),
-                'name' => $document->getName(),
-                'path' => $document->getPath(),
-                'type' => $document->getDocumentType() ? $document->getDocumentType()->getCode() : null,
-                'documentType' => $document->getDocumentType() ? [
-                    'id' => $document->getDocumentType()->getId(),
-                    'name' => $document->getDocumentType()->getName(),
-                    'code' => $document->getDocumentType()->getCode(),
-                ] : null,
-                'createdAt' => $document->getUploadedAt() ? $document->getUploadedAt()->format('Y-m-d H:i:s') : null,
-                'updatedAt' => $document->getUpdatedAt() ? $document->getUpdatedAt()->format('Y-m-d H:i:s') : null,
+        try {
+            /** @var User $user */
+            $user = $this->security->getUser();
+            
+            if (!$user) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Utilisateur non authentifié',
+                    'code' => 'AUTH_REQUIRED'
+                ], 401);
+            }
+            
+            // Récupérer l'utilisateur avec toutes ses relations chargées
+            $userId = $user->getId();
+            if (!$userId) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'ID utilisateur invalide',
+                    'code' => 'INVALID_USER_ID'
+                ], 400);
+            }
+            
+            try {
+                $user = $this->userRepository->findOneWithAllRelations($userId);
+            } catch (\Exception $e) {
+                error_log('Error loading user with relations: ' . $e->getMessage());
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Erreur lors du chargement des données utilisateur: ' . $e->getMessage(),
+                    'code' => 'USER_LOAD_ERROR'
+                ], 500);
+            }
+            
+            if (!$user) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Utilisateur non trouvé',
+                    'code' => 'USER_NOT_FOUND'
+                ], 404);
+            }
+            
+            // Initialize response structure
+            $response = [
+                'success' => true,
+                'data' => [
+                    'user' => [],
+                    'diplomas' => [],
+                    'addresses' => [],
+                    'documents' => [],
+                    'stats' => [
+                        'profile' => [
+                            'completionPercentage' => 0,
+                        ],
+                        'memberSince' => null,
+                        'daysSinceRegistration' => null,
+                    ]
+                ]
             ];
-        }
-        
-        // Construire la réponse complète avec toutes les données du profil
-        $response = [
-            'success' => true,
-            'data' => [
-                'user' => [
+            
+            // Si l'utilisateur est un étudiant, récupérer son profil étudiant avec les relations
+            $studentProfile = null;
+            try {
+                if ($user->getStudentProfile()) {
+                    $studentProfile = $this->studentProfileRepository->findByUserWithRelations($userId);
+                    
+                    if ($studentProfile) {
+                        $response['data']['studentProfile'] = [
+                            'id' => $studentProfile->getId(),
+                            'isSeekingInternship' => $studentProfile->isSeekingInternship(),
+                            'isSeekingApprenticeship' => $studentProfile->isSeekingApprenticeship(),
+                            'currentInternshipCompany' => $studentProfile->getCurrentInternshipCompany(),
+                            'internshipStartDate' => $studentProfile->getInternshipStartDate() ? $studentProfile->getInternshipStartDate()->format('Y-m-d') : null,
+                            'internshipEndDate' => $studentProfile->getInternshipEndDate() ? $studentProfile->getInternshipEndDate()->format('Y-m-d') : null,
+                            'portfolioUrl' => $studentProfile->getPortfolioUrl(),
+                            'situationType' => $studentProfile->getSituationType() ? [
+                                'id' => $studentProfile->getSituationType()->getId(),
+                                'name' => $studentProfile->getSituationType()->getName(),
+                                'description' => $studentProfile->getSituationType()->getDescription(),
+                            ] : null,
+                            'createdAt' => $studentProfile->getCreatedAt() ? $studentProfile->getCreatedAt()->format('Y-m-d H:i:s') : null,
+                            'updatedAt' => $studentProfile->getUpdatedAt() ? $studentProfile->getUpdatedAt()->format('Y-m-d H:i:s') : null,
+                        ];
+                    }
+                }
+            } catch (\Exception $e) {
+                error_log('Error loading student profile: ' . $e->getMessage());
+                // Continue without student profile data
+            }
+            
+            // Récupérer les documents de l'utilisateur
+            $documentsArray = [];
+            try {
+                $documents = $this->documentRepository->findBy(['user' => $user]);
+                
+                foreach ($documents as $document) {
+                    $documentsArray[] = [
+                        'id' => $document->getId(),
+                        'name' => $document->getName(),
+                        'path' => $document->getPath(),
+                        'type' => $document->getDocumentType() ? $document->getDocumentType()->getCode() : null,
+                        'documentType' => $document->getDocumentType() ? [
+                            'id' => $document->getDocumentType()->getId(),
+                            'name' => $document->getDocumentType()->getName(),
+                            'code' => $document->getDocumentType()->getCode(),
+                        ] : null,
+                        'createdAt' => $document->getUploadedAt() ? $document->getUploadedAt()->format('Y-m-d H:i:s') : null,
+                        'updatedAt' => $document->getUpdatedAt() ? $document->getUpdatedAt()->format('Y-m-d H:i:s') : null,
+                    ];
+                }
+                $response['data']['documents'] = $documentsArray;
+            } catch (\Exception $e) {
+                error_log('Error loading documents: ' . $e->getMessage());
+                // Continue without documents data
+            }
+            
+            // Construire les données utilisateur
+            try {
+                $userData = [
                     'id' => $user->getId(),
                     'firstName' => $user->getFirstName(),
                     'lastName' => $user->getLastName(),
@@ -289,12 +363,12 @@ class ProfileController extends AbstractController
                     'email' => $user->getEmail(),
                     'phoneNumber' => $user->getPhoneNumber(),
                     'linkedinUrl' => $user->getLinkedinUrl(),
+                    'profilePicturePath' => $user->getProfilePicturePath(), 
                     'birthDate' => $user->getBirthDate() ? $user->getBirthDate()->format('Y-m-d') : null,
                     'age' => $user->getBirthDate() ? (new \DateTime())->diff($user->getBirthDate())->y : null,
                     'createdAt' => $user->getCreatedAt() ? $user->getCreatedAt()->format('Y-m-d H:i:s') : null,
                     'updatedAt' => $user->getUpdatedAt() ? $user->getUpdatedAt()->format('Y-m-d H:i:s') : null,
                     'isEmailVerified' => $user->isEmailVerified(),
-                    'linkedinUrl' => $user->getLinkedinUrl(),
                     'nationality' => $user->getNationality() ? [
                         'id' => $user->getNationality()->getId(),
                         'name' => $user->getNationality()->getName(),
@@ -313,41 +387,60 @@ class ProfileController extends AbstractController
                             'name' => $user->getSpecialization()->getDomain()->getName(),
                         ] : null,
                     ] : null,
-                ],
-                'diplomas' => $this->getUserDiplomasArray($user),
-                'addresses' => $this->getUserAddressesArray($user),
-                'documents' => $documentsArray,
-                'stats' => [
+                ];
+                $response['data']['user'] = $userData;
+            } catch (\Exception $e) {
+                error_log('Error building user data: ' . $e->getMessage());
+                // Minimum user data to prevent frontend errors
+                $response['data']['user'] = [
+                    'id' => $user->getId(),
+                    'firstName' => $user->getFirstName(),
+                    'lastName' => $user->getLastName(),
+                    'email' => $user->getEmail(),
+                    'roles' => $this->getUserRolesAsArray($user),
+                ];
+            }
+            
+            // Get diplomas with separate error handling
+            try {
+                $response['data']['diplomas'] = $this->getUserDiplomasArray($user);
+            } catch (\Exception $e) {
+                error_log('Error getting diplomas: ' . $e->getMessage());
+                $response['data']['diplomas'] = [];
+            }
+            
+            // Get addresses with separate error handling
+            try {
+                $response['data']['addresses'] = $this->getUserAddressesArray($user);
+            } catch (\Exception $e) {
+                error_log('Error getting addresses: ' . $e->getMessage());
+                $response['data']['addresses'] = [];
+            }
+            
+            // Get stats with separate error handling
+            try {
+                $response['data']['stats'] = [
                     'profile' => [
                         'completionPercentage' => $this->calculateProfileCompletionPercentage($user),
                     ],
                     'memberSince' => $user->getCreatedAt() ? $user->getCreatedAt()->format('Y-m-d') : null,
                     'daysSinceRegistration' => $user->getCreatedAt() ? (new \DateTime())->diff($user->getCreatedAt())->days : null,
-                ]
-            ]
-        ];
-        
-        // Ajouter les données du profil étudiant si disponibles
-        if ($studentProfile) {
-            $response['data']['studentProfile'] = [
-                'id' => $studentProfile->getId(),
-                'isSeekingInternship' => $studentProfile->isSeekingInternship(),
-                'isSeekingApprenticeship' => $studentProfile->isSeekingApprenticeship(),
-                'currentInternshipCompany' => $studentProfile->getCurrentInternshipCompany(),
-                'internshipStartDate' => $studentProfile->getInternshipStartDate() ? $studentProfile->getInternshipStartDate()->format('Y-m-d') : null,
-                'internshipEndDate' => $studentProfile->getInternshipEndDate() ? $studentProfile->getInternshipEndDate()->format('Y-m-d') : null,
-                'portfolioUrl' => $studentProfile->getPortfolioUrl(),
-                'situationType' => $studentProfile->getSituationType() ? [
-                    'id' => $studentProfile->getSituationType()->getId(),
-                    'name' => $studentProfile->getSituationType()->getName(),
-                    'description' => $studentProfile->getSituationType()->getDescription(),
-                ] : null,
-                'createdAt' => $studentProfile->getCreatedAt() ? $studentProfile->getCreatedAt()->format('Y-m-d H:i:s') : null,
-                'updatedAt' => $studentProfile->getUpdatedAt() ? $studentProfile->getUpdatedAt()->format('Y-m-d H:i:s') : null,
-            ];
+                ];
+            } catch (\Exception $e) {
+                error_log('Error calculating stats: ' . $e->getMessage());
+                // Keep default stats values
+            }
+            
+            return $this->json($response);
+        } catch (\Exception $e) {
+            error_log('Critical error in getConsolidatedProfile: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+            return $this->json([
+                'success' => false,
+                'message' => 'Erreur lors de la récupération du profil: ' . $e->getMessage(),
+                'code' => 'SERVER_ERROR',
+                'trace' => $e->getTraceAsString() // Adding trace for debugging
+            ], 500);
         }
-        
-        return $this->json($response);
     }
     
     /**
@@ -356,66 +449,76 @@ class ProfileController extends AbstractController
     #[Route('/public/{id}', name: 'api_profil_public', methods: ['GET'])]
     public function getPublicProfile(int $id): JsonResponse
     {
-        // Vérifier si l'utilisateur existe
-        $user = $this->userRepository->findOneWithAllRelations($id);
-        
-        if (!$user) {
+        try {
+            // Vérifier si l'utilisateur existe
+            $user = $this->userRepository->findOneWithAllRelations($id);
+            
+            if (!$user) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Utilisateur non trouvé',
+                    'code' => 'USER_NOT_FOUND'
+                ], 404);
+            }
+            
+            // Récupérer le profil étudiant si disponible
+            $studentProfile = null;
+            if ($user->getStudentProfile()) {
+                $studentProfile = $this->studentProfileRepository->findByUserWithRelations($user->getId());
+            }
+            
+            // Construire la réponse avec uniquement les données publiques
+            $response = [
+                'success' => true,
+                'data' => [
+                    'user' => [
+                        'id' => $user->getId(),
+                        'firstName' => $user->getFirstName(),
+                        'lastName' => $user->getLastName(),
+                        'fullName' => $user->getFirstName() . ' ' . $user->getLastName(),
+                        'profilePicturePath' => $user->getProfilePicturePath(),
+                        'nationality' => $user->getNationality() ? [
+                            'name' => $user->getNationality()->getName(),
+                        ] : null,
+                        'specialization' => $user->getSpecialization() ? [
+                            'id' => $user->getSpecialization()->getId(),
+                            'name' => $user->getSpecialization()->getName(),
+                            'domain' => $user->getSpecialization()->getDomain() ? [
+                                'id' => $user->getSpecialization()->getDomain()->getId(),
+                                'name' => $user->getSpecialization()->getDomain()->getName(),
+                            ] : null,
+                        ] : null,
+                        'linkedinUrl' => $user->getLinkedinUrl(),
+                        'roles' => $this->getUserRolesAsArray($user),
+                    ],
+                    'diplomas' => $this->getUserDiplomasArray($user),
+                ]
+            ];
+            
+            // Ajouter les données du profil étudiant si disponibles
+            if ($studentProfile) {
+                $response['data']['studentProfile'] = [
+                    'isSeekingInternship' => $studentProfile->isSeekingInternship(),
+                    'isSeekingApprenticeship' => $studentProfile->isSeekingApprenticeship(),
+                    'currentInternshipCompany' => $studentProfile->getCurrentInternshipCompany(),
+                    'internshipStartDate' => $studentProfile->getInternshipStartDate() ? $studentProfile->getInternshipStartDate()->format('Y-m-d') : null,
+                    'internshipEndDate' => $studentProfile->getInternshipEndDate() ? $studentProfile->getInternshipEndDate()->format('Y-m-d') : null,
+                    'portfolioUrl' => $studentProfile->getPortfolioUrl(),
+                    'situationType' => $studentProfile->getSituationType() ? [
+                        'name' => $studentProfile->getSituationType()->getName(),
+                    ] : null,
+                ];
+            }
+            
+            return $this->json($response);
+        } catch (\Exception $e) {
             return $this->json([
                 'success' => false,
-                'message' => 'Utilisateur non trouvé'
-            ], 404);
+                'message' => 'Erreur lors de la récupération du profil public: ' . $e->getMessage(),
+                'code' => 'SERVER_ERROR',
+                'trace' => $e->getTraceAsString() // Adding trace for debugging
+            ], 500);
         }
-        
-        // Récupérer le profil étudiant si disponible
-        $studentProfile = null;
-        if ($user->getStudentProfile()) {
-            $studentProfile = $this->studentProfileRepository->findByUserWithRelations($user->getId());
-        }
-        
-        // Construire la réponse avec uniquement les données publiques
-        $response = [
-            'success' => true,
-            'data' => [
-                'user' => [
-                    'id' => $user->getId(),
-                    'firstName' => $user->getFirstName(),
-                    'lastName' => $user->getLastName(),
-                    'fullName' => $user->getFirstName() . ' ' . $user->getLastName(),
-                    'profilePicturePath' => $user->getProfilePicturePath(),
-                    'nationality' => $user->getNationality() ? [
-                        'name' => $user->getNationality()->getName(),
-                    ] : null,
-                    'specialization' => $user->getSpecialization() ? [
-                        'id' => $user->getSpecialization()->getId(),
-                        'name' => $user->getSpecialization()->getName(),
-                        'domain' => $user->getSpecialization()->getDomain() ? [
-                            'id' => $user->getSpecialization()->getDomain()->getId(),
-                            'name' => $user->getSpecialization()->getDomain()->getName(),
-                        ] : null,
-                    ] : null,
-                    'linkedinUrl' => $user->getLinkedinUrl(),
-                    'roles' => $this->getUserRolesAsArray($user),
-                ],
-                'diplomas' => $this->getUserDiplomasArray($user),
-            ]
-        ];
-        
-        // Ajouter les données du profil étudiant si disponibles
-        if ($studentProfile) {
-            $response['data']['studentProfile'] = [
-                'isSeekingInternship' => $studentProfile->isSeekingInternship(),
-                'isSeekingApprenticeship' => $studentProfile->isSeekingApprenticeship(),
-                'currentInternshipCompany' => $studentProfile->getCurrentInternshipCompany(),
-                'internshipStartDate' => $studentProfile->getInternshipStartDate() ? $studentProfile->getInternshipStartDate()->format('Y-m-d') : null,
-                'internshipEndDate' => $studentProfile->getInternshipEndDate() ? $studentProfile->getInternshipEndDate()->format('Y-m-d') : null,
-                'portfolioUrl' => $studentProfile->getPortfolioUrl(),
-                'situationType' => $studentProfile->getSituationType() ? [
-                    'name' => $studentProfile->getSituationType()->getName(),
-                ] : null,
-            ];
-        }
-        
-        return $this->json($response);
     }
     
     /**
@@ -615,46 +718,100 @@ class ProfileController extends AbstractController
     
     private function getUserDiplomasArray(User $user): array
     {
-        $diplomas = [];
-        foreach ($user->getDiplomas() as $diploma) {
-            $diplomas[] = [
-                'id' => $diploma->getId(),
-                'name' => $diploma->getName(),
-                'obtainedAt' => $diploma->obtainedAt ? $diploma->obtainedAt->format('Y-m-d') : null,
-            ];
-        }
-        
-        // Trier les diplômes par date d'obtention (du plus récent au plus ancien)
-        usort($diplomas, function($a, $b) {
-            if (!isset($a['obtainedAt']) || !isset($b['obtainedAt'])) {
-                return 0;
+        try {
+            $diplomas = [];
+            
+            // Check if the diplomas collection is initialized to avoid lazy loading errors
+            $diplomasCollection = $user->getDiplomas();
+            if ($diplomasCollection->isInitialized() === false) {
+                // If not initialized, we'll fetch diplomas directly from the database
+                $userDiplomas = $this->entityManager->getRepository(\App\Entity\Diploma::class)->findBy(['user' => $user]);
+                
+                foreach ($userDiplomas as $diploma) {
+                    $diplomas[] = [
+                        'id' => $diploma->getId(),
+                        'name' => $diploma->getName(),
+                        'obtainedAt' => $diploma->obtainedAt ? $diploma->obtainedAt->format('Y-m-d') : null,
+                    ];
+                }
+            } else {
+                // Otherwise, use the collection as normal
+                foreach ($diplomasCollection as $diploma) {
+                    $diplomas[] = [
+                        'id' => $diploma->getId(),
+                        'name' => $diploma->getName(),
+                        'obtainedAt' => $diploma->obtainedAt ? $diploma->obtainedAt->format('Y-m-d') : null,
+                    ];
+                }
             }
-            return strtotime($b['obtainedAt']) - strtotime($a['obtainedAt']);
-        });
-        
-        return $diplomas;
+            
+            // Trier les diplômes par date d'obtention (du plus récent au plus ancien)
+            usort($diplomas, function($a, $b) {
+                if (!isset($a['obtainedAt']) || !isset($b['obtainedAt'])) {
+                    return 0;
+                }
+                return strtotime($b['obtainedAt']) - strtotime($a['obtainedAt']);
+            });
+            
+            return $diplomas;
+        } catch (\Exception $e) {
+            // Log the error but return an empty array to avoid breaking the entire response
+            error_log('Error in getUserDiplomasArray: ' . $e->getMessage());
+            return [];
+        }
     }
     
     private function getUserAddressesArray(User $user): array
     {
-        $addresses = [];
-        foreach ($user->getAddresses() as $address) {
-            $addresses[] = [
-                'id' => $address->getId(),
-                'name' => $address->getName(),
-                'complement' => $address->getComplement(),
-                'postalCode' => $address->getPostalCode() ? [
-                    'id' => $address->getPostalCode()->getId(),
-                    'code' => $address->getPostalCode()->getCode(),
-                ] : null,
-                'city' => $address->getCity() ? [
-                    'id' => $address->getCity()->getId(),
-                    'name' => $address->getCity()->getName(),
-                ] : null,
-            ];
+        try {
+            $addresses = [];
+            
+            // Check if the addresses collection is initialized to avoid lazy loading errors
+            $addressesCollection = $user->getAddresses();
+            if ($addressesCollection->isInitialized() === false) {
+                // If not initialized, we'll fetch addresses directly from the database
+                $userAddresses = $this->entityManager->getRepository(\App\Entity\Address::class)->findBy(['user' => $user]);
+                
+                foreach ($userAddresses as $address) {
+                    $addresses[] = [
+                        'id' => $address->getId(),
+                        'name' => $address->getName(),
+                        'complement' => $address->getComplement(),
+                        'postalCode' => $address->getPostalCode() ? [
+                            'id' => $address->getPostalCode()->getId(),
+                            'code' => $address->getPostalCode()->getCode(),
+                        ] : null,
+                        'city' => $address->getCity() ? [
+                            'id' => $address->getCity()->getId(),
+                            'name' => $address->getCity()->getName(),
+                        ] : null,
+                    ];
+                }
+            } else {
+                // Otherwise, use the collection as normal
+                foreach ($addressesCollection as $address) {
+                    $addresses[] = [
+                        'id' => $address->getId(),
+                        'name' => $address->getName(),
+                        'complement' => $address->getComplement(),
+                        'postalCode' => $address->getPostalCode() ? [
+                            'id' => $address->getPostalCode()->getId(),
+                            'code' => $address->getPostalCode()->getCode(),
+                        ] : null,
+                        'city' => $address->getCity() ? [
+                            'id' => $address->getCity()->getId(),
+                            'name' => $address->getCity()->getName(),
+                        ] : null,
+                    ];
+                }
+            }
+            
+            return $addresses;
+        } catch (\Exception $e) {
+            // Log the error but return an empty array to avoid breaking the entire response
+            error_log('Error in getUserAddressesArray: ' . $e->getMessage());
+            return [];
         }
-        
-        return $addresses;
     }
     
     private function getUserStatsArray(User $user): array

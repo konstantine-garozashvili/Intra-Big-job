@@ -2,7 +2,7 @@
 
 
 namespace App\Entity;
-
+use App\Domains\Student\Entity\StudentProfile;
 use App\Repository\UserRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -77,6 +77,12 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
 
     #[ORM\ManyToMany(targetEntity: Formation::class, mappedBy: 'students')]
     private Collection $formations;
+
+    #[ORM\OneToOne(mappedBy: 'user', targetEntity: \App\Domains\Student\Entity\StudentProfile::class, cascade: ['persist', 'remove'])]
+    private ?\App\Domains\Student\Entity\StudentProfile $studentProfile = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $profilePicturePath = null;
 
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
@@ -617,6 +623,39 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
         if ($this->formations->removeElement($formation)) {
             $formation->removeStudent($this);
         }
+        return $this;
+    }
+
+    public function getStudentProfile(): ?\App\Domains\Student\Entity\StudentProfile
+    {
+        return $this->studentProfile;
+    }
+
+    public function setStudentProfile(?\App\Domains\Student\Entity\StudentProfile $studentProfile): self
+    {
+        // unset the owning side of the relation if necessary
+        if ($studentProfile === null && $this->studentProfile !== null) {
+            $this->studentProfile->setUser(null);
+        }
+
+        // set the owning side of the relation if necessary
+        if ($studentProfile !== null && $studentProfile->getUser() !== $this) {
+            $studentProfile->setUser($this);
+        }
+
+        $this->studentProfile = $studentProfile;
+
+        return $this;
+    }
+
+    public function getProfilePicturePath(): ?string
+    {
+        return $this->profilePicturePath;
+    }
+
+    public function setProfilePicturePath(?string $profilePicturePath): self
+    {
+        $this->profilePicturePath = $profilePicturePath;
         return $this;
     }
 }
