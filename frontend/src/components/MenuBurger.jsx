@@ -25,7 +25,8 @@ import {
   ChevronDown,
   ChevronRight,
   X,
-  Menu
+  Menu,
+  ClipboardCheck
 } from 'lucide-react';
 import { useRolePermissions } from '@/features/roles/useRolePermissions';
 

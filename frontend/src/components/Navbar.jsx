@@ -11,6 +11,7 @@ import {
   User,
   Bell,
   Search,
+  Clipboard,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -279,6 +280,7 @@ const Navbar = memo(({ user }) => {
   const location = useLocation();
   const permissions = useRolePermissions();
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const { isStudent, isTeacher } = useRolePermissions();
 
   // Vérifier l'état d'authentification
   const checkAuthStatus = async () => {
@@ -439,6 +441,17 @@ const Navbar = memo(({ user }) => {
 
               {/* Partie droite: Authentification */}
               <div className="flex items-center">
+                {/* Attendance button based on role */}
+                {isAuthenticated && (isStudent() || isTeacher()) && (
+                  <Link 
+                    to={isTeacher() ? "/teacher/attendance" : "/student/attendance"}
+                    className="mr-4 px-3 py-2 rounded-md bg-green-700 text-white font-medium hover:bg-green-800 transition-colors flex items-center gap-2"
+                  >
+                    <Clipboard className="w-4 h-4" />
+                    Présence
+                  </Link>
+                )}
+
                 {/* Barre de recherche mobile */}
                 {isAuthenticated && (
                   <div className="md:hidden mr-2">

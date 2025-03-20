@@ -95,41 +95,98 @@ class ProfileService {
         return profileCache.consolidatedData;
       }
       
-      const response = await apiService.get('/api/profil/consolidated');
+      // Use a timeout to prevent hanging requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
       
-      // Gérer différents formats de réponse possibles
-      let profileData;
-      
-      if (response && typeof response === 'object') {
-        if (response.data) {
-          // Si la réponse a une propriété data, l'utiliser
-          profileData = response.data;
-        } else if (response.user || response.profile) {
-          // Si la réponse contient directement les données utilisateur ou profil
-          profileData = response;
-        } else {
-          // Si la réponse est déjà le format attendu
-          profileData = response;
+      try {
+        const response = await apiService.get('/api/profil/consolidated', {
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        // Gérer différents formats de réponse possibles
+        let profileData;
+        
+        if (response && typeof response === 'object') {
+          if (response.data) {
+            // Si la réponse a une propriété data, l'utiliser
+            profileData = response.data;
+          } else if (response.user || response.profile) {
+            // Si la réponse contient directement les données utilisateur ou profil
+            profileData = response;
+          } else {
+            // Si la réponse est déjà le format attendu
+            profileData = response;
+          }
+          
+          // Mettre en cache les données
+          profileCache.consolidatedData = profileData;
+          profileCache.consolidatedDataTimestamp = now;
+          
+          return profileData;
         }
+      } catch (apiError) {
+        clearTimeout(timeoutId);
+        console.warn('API error in getAllProfileData:', apiError);
         
-        // Mettre en cache les données
-        profileCache.consolidatedData = profileData;
-        profileCache.consolidatedDataTimestamp = now;
-        
-        return profileData;
+        // Continue to fallback when API fails
       }
       
-      // Si aucun format valide n'est trouvé, retourner un objet vide mais structuré
+      // FALLBACK: Try to assemble profile data from localStorage if API fails
+      console.log('Using fallback profile data from localStorage');
+      
+      // Get user data from localStorage
+      const userData = {};
+      try {
+        const userDataStr = localStorage.getItem('user');
+        if (userDataStr) {
+          const parsedUserData = JSON.parse(userDataStr);
+          Object.assign(userData, parsedUserData);
+        }
+        
+        // Get roles
+        const userRolesStr = localStorage.getItem('userRoles');
+        if (userRolesStr) {
+          userData.roles = JSON.parse(userRolesStr);
+        }
+        
+        // Construct a fallback profile object
+        const fallbackData = {
+          user: userData,
+          profile: {
+            firstName: userData.firstName || '',
+            lastName: userData.lastName || '',
+            email: userData.email || ''
+          }
+        };
+        
+        // Cache this fallback data but with a shorter duration
+        profileCache.consolidatedData = fallbackData;
+        profileCache.consolidatedDataTimestamp = now;
+        profileCache.cacheDuration = 30 * 1000; // 30 seconds for fallback data
+        
+        return fallbackData;
+      } catch (fallbackError) {
+        console.error('Error creating fallback profile data:', fallbackError);
+      }
+      
+      // If all else fails, return a minimal structured object
       return {
-        user: null,
+        user: {
+          roles: JSON.parse(localStorage.getItem('userRoles') || '[]')
+        },
         profile: null,
-        error: 'Invalid response format'
+        error: 'Could not retrieve profile data'
       };
     } catch (error) {
       console.error('Error fetching profile data:', error);
       // Retourner un objet structuré même en cas d'erreur
       return {
-        user: null,
+        user: {
+          roles: JSON.parse(localStorage.getItem('userRoles') || '[]')
+        },
         profile: null,
         error: error.message
       };
