@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef  } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Edit, Trash2 } from 'lucide-react';
+import { Edit, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -209,9 +209,21 @@ const UserTable = () => {
     });
   };
 
+  const tableRef = useRef(null);
+
+  const scrollTable = (direction) => {
+    if (tableRef.current) {
+      const scrollAmount = 200;
+      tableRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+  };
+  
   if (isLoading) return <div className="p-4 text-center">Loading...</div>;
   if (isError) return <div className="p-4 text-center">Error: {error?.message}</div>;
-
+  
   return (
     <div className="min-h-screen bg-gray-100 p-6">
       <div className="max-w-7xl mx-auto">
@@ -234,68 +246,91 @@ const UserTable = () => {
             <Button onClick={refetch}>Actualiser la liste</Button>
           </div>
         </div>
-
-        <div className="overflow-x-auto bg-white shadow-md rounded-lg">
-          <table className="w-full">
-            <thead>
-              <tr className="text-xs font-medium tracking-wider text-left uppercase border-b bg-gray-50">
-                {USER_COLUMNS.map(col => (
-                  <th
-                    key={col.key}
-                    className="px-4 py-3 cursor-pointer select-none"
-                    onClick={() => handleSort(col.key)}
-                  >
-                    {col.label}
-                    {sortConfig.key === col.key && (
-                      <span>{sortConfig.direction === 'asc' ? ' ▲' : ' ▼'}</span>
-                    )}
-                  </th>
-                ))}
-                <th className="px-4 py-3">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {filteredAndSortedUsers.length > 0 ? (
-                filteredAndSortedUsers.map(user => (
-                  <tr key={user.id} className="hover:bg-gray-50">
-                    {USER_COLUMNS.map(col => (
-                      <td key={col.key} className="px-4 py-3 text-sm">
-                        {user[col.key] !== null && user[col.key] !== undefined
-                          ? user[col.key].toString()
-                          : ''}
+  
+        {/* Conteneur relatif pour positionner les boutons de scroll */}
+        <div className="relative">
+          {/* Bouton de scroll vers la gauche */}
+          <button 
+            onClick={() => scrollTable('left')}
+            className="absolute left-0 top-1/2 transform -translate-y-1/2 bg-gray-200 p-2 rounded-full z-10"
+            title="Scroll gauche"
+          >
+            &lt;
+          </button>
+  
+          {/* Conteneur de la table avec le ref pour le scroll */}
+          <div ref={tableRef} className="overflow-x-auto bg-white shadow-lg shadow-blue-200 rounded-lg">
+            <table className="w-full">
+              <thead>
+                <tr className="text-xs font-medium text-white tracking-wider text-left uppercase border-b bg-[#02284f]">
+                  {USER_COLUMNS.map(col => (
+                    <th
+                      key={col.key}
+                      className="px-4 py-3 cursor-pointer select-none border-2 rounded-lg"
+                      onClick={() => handleSort(col.key)}
+                    >
+                      {col.label}
+                      {sortConfig.key === col.key && (
+                        <span>{sortConfig.direction === 'asc' ? ' ▲' : ' ▼'}</span>
+                      )}
+                    </th>
+                  ))}
+                  <th className="px-4 py-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {filteredAndSortedUsers.length > 0 ? (
+                  filteredAndSortedUsers.map(user => (
+                    <tr key={user.id} className="hover:bg-blue-50">
+                      {USER_COLUMNS.map(col => (
+                        <td key={col.key} className="px-4 py-3 text-sm border-2">
+                          {user[col.key] !== null && user[col.key] !== undefined
+                            ? user[col.key].toString()
+                            : ''}
+                        </td>
+                      ))}
+                      <td className="px-4 py-3 text-sm">
+                        <div className="flex items-center space-x-2">
+                          <button
+                            className="p-1 text-blue-600 bg-blue-100 rounded hover:bg-blue-200"
+                            title="Modifier"
+                            onClick={() => handleEditClick(user)}
+                          >
+                            <Edit size={16} />
+                          </button>
+                          <button
+                            className="p-1 text-red-600 bg-red-100 rounded hover:bg-red-200"
+                            title="Supprimer"
+                            onClick={() => handleDeleteClick(user)}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
                       </td>
-                    ))}
-                    <td className="px-4 py-3 text-sm">
-                      <div className="flex items-center space-x-2">
-                        <button
-                          className="p-1 text-blue-600 bg-blue-100 rounded hover:bg-blue-200"
-                          title="Modifier"
-                          onClick={() => handleEditClick(user)}
-                        >
-                          <Edit size={16} />
-                        </button>
-                        <button
-                          className="p-1 text-red-600 bg-red-100 rounded hover:bg-red-200"
-                          title="Supprimer"
-                          onClick={() => handleDeleteClick(user)}
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={USER_COLUMNS.length + 1} className="text-center p-4">
+                      {users ? 'Aucun utilisateur trouvé' : 'Impossible de charger les utilisateurs'}
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={USER_COLUMNS.length + 1} className="text-center p-4">
-                    {users ? 'Aucun utilisateur trouvé' : 'Impossible de charger les utilisateurs'}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                )}
+              </tbody>
+            </table>
+          </div>
+  
+          {/* Bouton de scroll vers la droite */}
+          <button 
+            onClick={() => scrollTable('right')}
+            className="absolute right-0 top-1/2 transform -translate-y-1/2 bg-gray-200 p-2 rounded-full z-10"
+            title="Scroll droite"
+          >
+            &gt;
+          </button>
         </div>
       </div>
+    
 
       {/* Edit User Dialog */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
@@ -433,6 +468,19 @@ const UserTable = () => {
           </form>
         </DialogContent>
       </Dialog>
+      
+
+      {/* Flèches sous le tableau */}
+        <div className="flex justify-center items-center space-x-4 mt-3">
+          <button onClick={() => scrollTable('left')} className="bg-gray-200 p-2 rounded-full shadow-md hover:bg-gray-300">
+            <ChevronLeft size={24} />
+          </button>
+          <button onClick={() => scrollTable('right')} className="bg-gray-200 p-2 rounded-full shadow-md hover:bg-gray-300">
+            <ChevronRight size={24} />
+          </button>
+        </div>
+      
+      
 
       {/* Delete User Dialog */}
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
