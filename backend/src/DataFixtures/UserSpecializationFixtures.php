@@ -5,6 +5,8 @@ namespace App\DataFixtures;
 use App\Entity\User;
 use App\Entity\UserRole;
 use App\Entity\Role;
+use App\Entity\Status;
+use App\Entity\UserStatus;
 use App\Entity\Specialization;
 use App\Entity\Nationality;
 use App\Entity\Theme;
@@ -56,7 +58,8 @@ class UserSpecializationFixtures extends Fixture implements DependentFixtureInte
                 'birthDate' => '1999-05-15',
                 'phoneNumber' => '0600000011',
                 'specialization' => SpecializationFixtures::SPEC_UI,
-                'role' => RoleFixtures::ROLE_STUDENT
+                'role' => RoleFixtures::ROLE_STUDENT,
+                'status' => StatusFixtures::STATUS_ACTIVE
             ],
             [
                 'email' => 'student.marketing@bigproject.com',
@@ -65,7 +68,8 @@ class UserSpecializationFixtures extends Fixture implements DependentFixtureInte
                 'birthDate' => '2000-08-22',
                 'phoneNumber' => '0600000012',
                 'specialization' => SpecializationFixtures::SPEC_SEO,
-                'role' => RoleFixtures::ROLE_STUDENT
+                'role' => RoleFixtures::ROLE_STUDENT,
+                'status' => StatusFixtures::STATUS_ACTIVE
             ],
             [
                 'email' => 'student.data@bigproject.com',
@@ -74,7 +78,8 @@ class UserSpecializationFixtures extends Fixture implements DependentFixtureInte
                 'birthDate' => '1998-11-30',
                 'phoneNumber' => '0600000013',
                 'specialization' => SpecializationFixtures::SPEC_DATA_SCIENCE,
-                'role' => RoleFixtures::ROLE_STUDENT
+                'role' => RoleFixtures::ROLE_STUDENT,
+                'status' => StatusFixtures::STATUS_ACTIVE
             ],
         ];
 
@@ -102,6 +107,7 @@ class UserSpecializationFixtures extends Fixture implements DependentFixtureInte
             $user->setNationality($this->getReference(NationalityFixtures::NATIONALITY_FRENCH, Nationality::class));
             $user->setTheme($this->getReference(ThemeFixtures::THEME_LIGHT, Theme::class));
             $user->setIsEmailVerified(true);
+            $user->setIsUserActive(true);
             
             // Set specialization
             $specialization = $this->getReference($studentData['specialization'], Specialization::class);
@@ -114,6 +120,12 @@ class UserSpecializationFixtures extends Fixture implements DependentFixtureInte
             $userRole->setUser($user);
             $userRole->setRole($this->getReference($studentData['role'], Role::class));
             $manager->persist($userRole);
+
+            // Create user status
+            $userStatus = new UserStatus();
+            $userStatus->setUser($user);
+            $userStatus->setStatus($this->getReference($studentData['status'], Status::class));
+            $manager->persist($userStatus);
 
             // Create student profile
             $studentProfile = new StudentProfile();

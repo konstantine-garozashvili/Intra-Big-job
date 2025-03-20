@@ -4,8 +4,8 @@ namespace App\DataFixtures;
 
 use App\Entity\User;
 use App\Entity\UserRole;
+use App\Entity\UserStatus;
 use DateTime;
-use DateTimeImmutable;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Common\DataFixtures\DependentFixtureInterface;
 use Doctrine\Persistence\ObjectManager;
@@ -13,6 +13,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use App\Entity\Nationality;
 use App\Entity\Theme;
 use App\Entity\Role;
+use App\Entity\Status;
 use App\Domains\Student\Entity\StudentProfile;
 use App\Entity\UserSituationType;
 
@@ -27,14 +28,14 @@ class UserFixtures extends Fixture implements DependentFixtureInterface
 
     public function load(ObjectManager $manager): void
     {
-        // Création des utilisateurs pour chaque rôle
+        // Liste des utilisateurs avec leurs rôles et statuts
         $users = [
             RoleFixtures::ROLE_SUPERADMIN => [
                 'firstName' => 'Alexandre',
                 'lastName' => 'Dupont',
                 'email' => 'superadmin@bigproject.com',
                 'birthDate' => '1985-01-01',
-                'phoneNumber' => '0600000001'
+                'phoneNumber' => '0600000001',
             ],
             RoleFixtures::ROLE_ADMIN => [
                 'firstName' => 'Sophie',
@@ -62,7 +63,7 @@ class UserFixtures extends Fixture implements DependentFixtureInterface
                 'lastName' => 'Dubois',
                 'email' => 'student@bigproject.com',
                 'birthDate' => '2000-05-25',
-                'phoneNumber' => '0600000005'
+                'phoneNumber' => '0600000005',
             ],
             RoleFixtures::ROLE_RECRUITER => [
                 'firstName' => 'Lucas',
@@ -76,7 +77,8 @@ class UserFixtures extends Fixture implements DependentFixtureInterface
                 'lastName' => 'Lambert',
                 'email' => 'guest@bigproject.com',
                 'birthDate' => '1995-07-30',
-                'phoneNumber' => '0600000007'
+                'phoneNumber' => '0600000007',
+                'status' => StatusFixtures::STATUS_PENDING
             ]
         ];
 
@@ -92,13 +94,23 @@ class UserFixtures extends Fixture implements DependentFixtureInterface
             $user->setTheme($this->getReference(ThemeFixtures::THEME_LIGHT, Theme::class));
             $user->setIsEmailVerified(true);
             $manager->persist($user);
+            $user->setIsUserActive(true);
 
+
+            // Assignation du rôle
             $userRole = new UserRole();
             $userRole->setUser($user);
             $userRole->setRole($this->getReference($roleReference, Role::class));
             $manager->persist($userRole);
 
-            // Créer un profil étudiant si c'est un étudiant
+            // Assignation du statut (avec valeur par défaut si non défini)
+            $statusReference = $userData['status'] ?? StatusFixtures::STATUS_DEFAULT;
+            $userStatus = new UserStatus();
+            $userStatus->setUser($user);
+            $userStatus->setStatus($this->getReference($statusReference, Status::class));
+            $manager->persist($userStatus);
+
+            // Création d'un profil étudiant si c'est un étudiant
             if ($roleReference === RoleFixtures::ROLE_STUDENT) {
                 $studentProfile = new StudentProfile();
                 $studentProfile->setUser($user);
@@ -117,6 +129,7 @@ class UserFixtures extends Fixture implements DependentFixtureInterface
             ThemeFixtures::class,
             NationalityFixtures::class,
             UserSituationTypeFixtures::class,
+            StatusFixtures::class, // Ajout de la dépendance aux statuts
         ];
     }
-} 
+}

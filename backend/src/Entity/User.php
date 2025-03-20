@@ -559,3 +559,4 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
         return $this;
     }
 }
+
