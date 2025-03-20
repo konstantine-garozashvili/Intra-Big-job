@@ -225,7 +225,7 @@ const UserTable = () => {
   if (isError) return <div className="p-4 text-center">Error: {error?.message}</div>;
   
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
+    <div className="min-h-screen bg-gradient-to-r from-blue-100 via-blue-50 rounded-lg to-white p-6">
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-semibold text-gray-800">Liste des utilisateurs</h2>
@@ -249,14 +249,7 @@ const UserTable = () => {
   
         {/* Conteneur relatif pour positionner les boutons de scroll */}
         <div className="relative">
-          {/* Bouton de scroll vers la gauche */}
-          <button 
-            onClick={() => scrollTable('left')}
-            className="absolute left-0 top-1/2 transform -translate-y-1/2 bg-gray-200 p-2 rounded-full z-10"
-            title="Scroll gauche"
-          >
-            &lt;
-          </button>
+         
   
           {/* Conteneur de la table avec le ref pour le scroll */}
           <div ref={tableRef} className="overflow-x-auto bg-white shadow-lg shadow-blue-200 rounded-lg">
@@ -319,15 +312,6 @@ const UserTable = () => {
               </tbody>
             </table>
           </div>
-  
-          {/* Bouton de scroll vers la droite */}
-          <button 
-            onClick={() => scrollTable('right')}
-            className="absolute right-0 top-1/2 transform -translate-y-1/2 bg-gray-200 p-2 rounded-full z-10"
-            title="Scroll droite"
-          >
-            &gt;
-          </button>
         </div>
       </div>
     
@@ -472,10 +456,10 @@ const UserTable = () => {
 
       {/* Flèches sous le tableau */}
         <div className="flex justify-center items-center space-x-4 mt-3">
-          <button onClick={() => scrollTable('left')} className="bg-gray-200 p-2 rounded-full shadow-md hover:bg-gray-300">
+          <button onClick={() => scrollTable('left')} className="bg-[#5192b3] p-2 rounded-full text-white shadow-md hover:bg-gray-300">
             <ChevronLeft size={24} />
           </button>
-          <button onClick={() => scrollTable('right')} className="bg-gray-200 p-2 rounded-full shadow-md hover:bg-gray-300">
+          <button onClick={() => scrollTable('right')} className="bg-[#5192b3] p-2 rounded-full text-white shadow-md hover:bg-gray-300">
             <ChevronRight size={24} />
           </button>
         </div>
