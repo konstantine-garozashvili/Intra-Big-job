@@ -119,7 +119,7 @@ class RegistrationService
         $this->addDefaultRole($user);
 
         // Ajouter le rôle utilisateur par défaut
-        $this->addDefaultStatus($user);
+        //$this->addDefaultStatus($user);
         
         // Valider l'utilisateur avant de persister
         $errors = $this->validator->validate($user);
@@ -219,28 +219,28 @@ class RegistrationService
         $user->addUserRole($userRole);
     }
 
-    /**
-     * Ajouter le status utilisateur par défaut
-     */
-    private function addDefaultStatus(User $user): void
-    {
-        $status = $this->statusRepository->findOneBy(['name' => 'En attente']);
+    // /**
+    //  * Ajouter le status utilisateur par défaut
+    //  */
+    // private function addDefaultStatus(User $user): void
+    // {
+    //     $status = $this->statusRepository->findOneBy(['name' => 'En attente']);
 
-        if (!$status) {
-            // Créer le status s'il n'existe pas
-            $status = new Status();
-            $status->setName('En attente');
-            $status->setDescription('Compte en attente de validation');
-            $this->entityManager->persist($status);
-        }
+    //     if (!$status) {
+    //         // Créer le status s'il n'existe pas
+    //         $status = new Status();
+    //         $status->setName('En attente');
+    //         $status->setDescription('Compte en attente de validation');
+    //         $this->entityManager->persist($status);
+    //     }
 
-        $userStatus = new UserStatus();
-        $userStatus->setUser($user);
-        $userStatus->setStatus($status);
+    //     $userStatus = new UserStatus();
+    //     $userStatus->setUser($user);
+    //     $userStatus->setStatus($status);
 
-        $this->entityManager->persist($userStatus);
-        $user->addUserStatus($userStatus);
-    }
+    //     $this->entityManager->persist($userStatus);
+    //     $user->addUserStatus($userStatus);
+    // }
     
     /**
      * Crée et associe une adresse à l'utilisateur

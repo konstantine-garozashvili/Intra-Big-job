@@ -77,8 +77,7 @@ class UserFixtures extends Fixture implements DependentFixtureInterface
                 'lastName' => 'Lambert',
                 'email' => 'guest@bigproject.com',
                 'birthDate' => '1995-07-30',
-                'phoneNumber' => '0600000007',
-                'status' => StatusFixtures::STATUS_PENDING
+                'phoneNumber' => '0600000007'
             ]
         ];
 
@@ -103,13 +102,6 @@ class UserFixtures extends Fixture implements DependentFixtureInterface
             $userRole->setRole($this->getReference($roleReference, Role::class));
             $manager->persist($userRole);
 
-            // Assignation du statut (avec valeur par défaut si non défini)
-            $statusReference = $userData['status'] ?? StatusFixtures::STATUS_DEFAULT;
-            $userStatus = new UserStatus();
-            $userStatus->setUser($user);
-            $userStatus->setStatus($this->getReference($statusReference, Status::class));
-            $manager->persist($userStatus);
-
             // Création d'un profil étudiant si c'est un étudiant
             if ($roleReference === RoleFixtures::ROLE_STUDENT) {
                 $studentProfile = new StudentProfile();
@@ -129,7 +121,7 @@ class UserFixtures extends Fixture implements DependentFixtureInterface
             ThemeFixtures::class,
             NationalityFixtures::class,
             UserSituationTypeFixtures::class,
-            StatusFixtures::class, // Ajout de la dépendance aux statuts
+            StatusFixtures::class, 
         ];
     }
 }
