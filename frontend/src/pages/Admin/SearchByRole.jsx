@@ -9,19 +9,19 @@ import { useAdminDashboardData } from '@/hooks/useDashboardQueries';
 
 const USER_COLUMNS = [
   { key: 'id', label: 'ID' },
-  { key: 'profilePicturePath', label: 'Profile Picture Path' },
-  { key: 'firstName', label: 'First Name' },
-  { key: 'lastName', label: 'Last Name' },
+  { key: 'profilePicturePath', label: 'Photo' },
+  { key: 'firstName', label: 'Prénom' },
+  { key: 'lastName', label: 'Nom' },
   { key: 'email', label: 'Email' },
-  { key: 'phoneNumber', label: 'Phone Number' },
-  { key: 'birthDate', label: 'Birth Date' },
-  { key: 'createdAt', label: 'Created At' },
-  { key: 'updatedAt', label: 'Updated At' },
-  { key: 'roles', label: 'Roles' },
-  { key: 'linkedinUrl', label: 'LinkedIn URL' },
-  { key: 'specialization', label: 'Specialization' },
-  { key: 'nationality', label: 'Nationality' },
-  { key: 'diplomas', label: 'Diplomas' }
+  { key: 'phoneNumber', label: 'Téléphone' },
+  { key: 'birthDate', label: 'Date de naissance' },
+  { key: 'createdAt', label: 'Date création' },
+  { key: 'updatedAt', label: 'Dernière MAJ' },
+  { key: 'roles', label: 'Rôles' },
+  { key: 'linkedinUrl', label: 'Profil LinkedIn' },
+  { key: 'specialization', label: 'Spécialisation' },
+  { key: 'nationality', label: 'Nationalité' },
+  { key: 'diplomas', label: 'Diplômes obtenus' }
 ];
 
 const UserTable = () => {
