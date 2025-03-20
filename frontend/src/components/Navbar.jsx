@@ -82,6 +82,8 @@ const customStyles = `
     max-width: 400px;
     width: 100%;
     margin: 0 1rem;
+    isolation: isolate;
+    z-index: 90;
   }
   
   .search-container input {
@@ -107,6 +109,7 @@ const customStyles = `
     z-index: 100;
     width: 100%;
     overflow-x: hidden;
+    isolation: isolate;
   }
   
   @media (max-width: 1024px) {
