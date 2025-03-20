@@ -271,16 +271,14 @@ const UserMenu = ({ onLogout, userData, setLogoutDialogOpen }) => {
 };
 
 // Utilisation de React.memo pour éviter les rendus inutiles de la barre de navigation
-const Navbar = memo(({ user }) => {
+const Navbar = memo(() => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [userData, setUserData] = useState(null);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const permissions = useRolePermissions();
   const navigate = useNavigate();
   const location = useLocation();
-  const permissions = useRolePermissions();
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
-  const { isStudent, isTeacher } = useRolePermissions();
 
   // Vérifier l'état d'authentification
   const checkAuthStatus = async () => {
@@ -293,8 +291,8 @@ const Navbar = memo(({ user }) => {
       if (status) {
         try {
           // Si un utilisateur est passé en props, l'utiliser
-          if (user) {
-            setUserData(user);
+          if (userData) {
+            setUserData(userData);
 
             // Déclencher un événement de changement de rôle si l'état d'authentification a changé
             if (!wasAuthenticated) {
@@ -348,7 +346,7 @@ const Navbar = memo(({ user }) => {
   // Vérifier l'état d'authentification au chargement et lors des changements de route
   useEffect(() => {
     checkAuthStatus();
-  }, [location.pathname, user]);
+  }, [location.pathname, userData]);
 
   // Ajouter un écouteur d'événement pour les changements d'authentification
   useEffect(() => {
@@ -371,9 +369,6 @@ const Navbar = memo(({ user }) => {
   // Fonction de déconnexion
   const handleLogout = async () => {
     try {
-      setIsLoggingOut(true);
-
-      // Fermer la boîte de dialogue de déconnexion
       setLogoutDialogOpen(false);
 
       // Déclencher un événement de pré-déconnexion pour préparer l'interface
@@ -387,15 +382,9 @@ const Navbar = memo(({ user }) => {
         
         // Appeler le service de déconnexion avec le chemin de redirection
         authService.logout('/login');
-        
-        // Réinitialiser l'état de déconnexion après un délai
-        setTimeout(() => {
-          setIsLoggingOut(false);
-        }, 100);
       }, 50);
     } catch (error) {
       console.error('Erreur lors de la déconnexion:', error);
-      setIsLoggingOut(false);
       
       // En cas d'erreur, forcer une déconnexion propre
       authService.clearAuthData(true, 'Une erreur est survenue lors de la déconnexion.');
@@ -442,9 +431,9 @@ const Navbar = memo(({ user }) => {
               {/* Partie droite: Authentification */}
               <div className="flex items-center">
                 {/* Attendance button based on role */}
-                {isAuthenticated && (isStudent() || isTeacher()) && (
+                {isAuthenticated && (permissions.isStudent() || permissions.isTeacher()) && (
                   <Link 
-                    to={isTeacher() ? "/teacher/attendance" : "/student/attendance"}
+                    to={permissions.isTeacher() ? "/teacher/attendance" : "/student/attendance"}
                     className="mr-4 px-3 py-2 rounded-md bg-green-700 text-white font-medium hover:bg-green-800 transition-colors flex items-center gap-2"
                   >
                     <Clipboard className="w-4 h-4" />
@@ -493,7 +482,7 @@ const Navbar = memo(({ user }) => {
           {logoutDialogOpen && (
             <Dialog
               open={logoutDialogOpen}
-              onOpenChange={(open) => !isLoggingOut && setLogoutDialogOpen(open)}
+              onOpenChange={(open) => setLogoutDialogOpen(open)}
             >
               <DialogContent className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-hidden rounded-2xl border-0 shadow-xl">
                 <div className="overflow-y-auto max-h-[70vh] fade-in-up">
@@ -511,7 +500,6 @@ const Navbar = memo(({ user }) => {
                   <Button
                     variant="outline"
                     onClick={() => setLogoutDialogOpen(false)}
-                    disabled={isLoggingOut}
                     className="rounded-full border-2 hover:bg-gray-100 transition-all duration-200"
                   >
                     Annuler
@@ -519,12 +507,9 @@ const Navbar = memo(({ user }) => {
                   <Button
                     variant="destructive"
                     onClick={handleLogout}
-                    disabled={isLoggingOut}
-                    className={`rounded-full bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 transition-all duration-200 ${
-                      isLoggingOut ? "opacity-80" : ""
-                    }`}
+                    className="rounded-full bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 transition-all duration-200"
                   >
-                    {isLoggingOut ? "Déconnexion..." : "Se déconnecter"}
+                    Se déconnecter
                   </Button>
                 </DialogFooter>
               </DialogContent>

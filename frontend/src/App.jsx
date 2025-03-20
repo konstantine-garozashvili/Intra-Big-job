@@ -7,22 +7,37 @@ import LoadingOverlay from './components/LoadingOverlay'
 import { AuthProvider } from './contexts/AuthContext'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { clearChatCache } from './lib/services/chatService'
+import './index.css'
+import ProtectedRoute from './components/ProtectedRoute'
+import PublicRoute from './components/PublicRoute'
+import ProfileLayout from '@/layouts/ProfileLayout'
+import useLoadingIndicator from './hooks/useLoadingIndicator'
+import TeacherProtectedRoute from './components/TeacherProtectedRoute'
+import RecruiterProtectedRoute from './components/RecruiterProtectedRoute'
+import StudentRoute from './components/StudentRoute'
+import { Toaster } from './components/ui/sonner'
 
-// Create a custom query client for chat
-const chatQueryClient = new QueryClient({
+// Create a shared query client for the entire application
+const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 30000, // 30 seconds
+      staleTime: 5 * 60 * 1000, // 5 minutes
       cacheTime: 60 * 60 * 1000, // 1 hour
       retry: 1,
       refetchOnWindowFocus: false,
       refetchOnMount: true,
+      logging: false, // Disable query logging in console
     },
   },
+  logger: {
+    log: () => {},
+    warn: () => {},
+    error: () => {}
+  }
 });
 
-// Export chatQueryClient to be used elsewhere
-export { chatQueryClient };
+// Export queryClient to be used elsewhere
+export { queryClient };
 
 // Import différé des pages pour améliorer les performances
 const Login = lazy(() => import('./pages/Login'))
@@ -67,16 +82,6 @@ const GuestStudentRoleManager = lazy(() => import('./pages/Recruiter/GuestStuden
 
 // Import du composant HomePage 
 const HomePage = lazy(() => import('./components/HomePage'))
-
-import { Toaster } from './components/ui/sonner'
-import './index.css'
-import ProtectedRoute from './components/ProtectedRoute'
-import PublicRoute from './components/PublicRoute'
-import ProfileLayout from '@/layouts/ProfileLayout'
-import useLoadingIndicator from './hooks/useLoadingIndicator'
-import TeacherProtectedRoute from './components/TeacherProtectedRoute'
-import RecruiterProtectedRoute from './components/RecruiterProtectedRoute'
-import StudentRoute from './components/StudentRoute'
 
 // Fonction optimisée pour le préchargement intelligent des pages
 // Ne charge que les pages pertinentes en fonction du contexte et du chemin actuel
@@ -267,7 +272,7 @@ const AppContent = () => {
       const redirectTo = '/login';
       
       // Clear chat cache using the utility function
-      clearChatCache(chatQueryClient);
+      clearChatCache(queryClient);
       
       // Show loader during navigation
       setShowLoader(true);
@@ -487,7 +492,7 @@ const AppContent = () => {
 // Composant App principal qui configure le Router
 const App = () => {
   return (
-    <QueryClientProvider client={chatQueryClient}>
+    <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <RoleProvider>
           <Router>

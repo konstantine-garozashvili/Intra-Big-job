@@ -3,6 +3,16 @@ import { profileService } from '../services/profileService';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { queryClient } from '@/App';  // Import the shared queryClient
+
+// Cache keys for localStorage
+const CACHE_KEYS = {
+  PROFILE_PICTURE: 'cached_profile_picture',
+  TIMESTAMP: 'cached_profile_picture_timestamp'
+};
+
+// Cache duration in milliseconds (24 hours)
+const CACHE_DURATION = 24 * 60 * 60 * 1000;
 
 // Créer un système d'événements pour les mises à jour de photo de profil
 export const profilePictureEvents = {
@@ -28,6 +38,77 @@ export const PROFILE_QUERY_KEYS = {
 };
 
 /**
+ * Functions to manage profile picture caching in localStorage
+ */
+export const profilePictureCache = {
+  // Save profile picture to localStorage
+  saveToCache: (pictureUrl) => {
+    if (!pictureUrl) return;
+    
+    try {
+      console.log('[Debug] Saving profile picture to cache:', pictureUrl);
+      localStorage.setItem(CACHE_KEYS.PROFILE_PICTURE, pictureUrl);
+      localStorage.setItem(CACHE_KEYS.TIMESTAMP, Date.now().toString());
+      console.log('[Debug] Cache saved successfully');
+    } catch (error) {
+      console.error('[Debug] Error saving to cache:', error);
+    }
+  },
+  
+  // Get profile picture from localStorage if still valid
+  getFromCache: () => {
+    try {
+      const cachedUrl = localStorage.getItem(CACHE_KEYS.PROFILE_PICTURE);
+      const timestamp = localStorage.getItem(CACHE_KEYS.TIMESTAMP);
+      
+      console.log('[Debug] Getting from cache:', { cachedUrl, timestamp });
+      
+      if (!cachedUrl || !timestamp) {
+        console.log('[Debug] No cache found');
+        return null;
+      }
+      
+      // Check if cache is still valid
+      const isExpired = Date.now() - Number(timestamp) > CACHE_DURATION;
+      console.log('[Debug] Cache status:', { isExpired, age: Date.now() - Number(timestamp) });
+      
+      if (isExpired) {
+        console.log('[Debug] Cache expired, clearing');
+        profilePictureCache.clearCache();
+        return null;
+      }
+      
+      return cachedUrl;
+    } catch (error) {
+      console.error('[Debug] Error reading from cache:', error);
+      return null;
+    }
+  },
+  
+  // Clear profile picture cache
+  clearCache: () => {
+    try {
+      localStorage.removeItem(CACHE_KEYS.PROFILE_PICTURE);
+      localStorage.removeItem(CACHE_KEYS.TIMESTAMP);
+    } catch (error) {
+      console.error('Error clearing profile picture cache:', error);
+    }
+  },
+  
+  // Check if cache is valid
+  isCacheValid: () => {
+    try {
+      const timestamp = localStorage.getItem(CACHE_KEYS.TIMESTAMP);
+      if (!timestamp) return false;
+      
+      return Date.now() - Number(timestamp) <= CACHE_DURATION;
+    } catch (error) {
+      return false;
+    }
+  }
+};
+
+/**
  * Extract profile picture URL from API response data
  * @param {Object} data - Data received from API
  * @returns {string|null} Profile picture URL or null
@@ -38,7 +119,14 @@ function getProfilePictureUrl(data) {
   if (!data.data) return null;
   
   const { has_profile_picture, profile_picture_url } = data.data;
-  return has_profile_picture ? profile_picture_url : null;
+  const url = has_profile_picture ? profile_picture_url : null;
+  
+  // If we have a valid URL from the API, update the cache
+  if (url) {
+    profilePictureCache.saveToCache(url);
+  }
+  
+  return url;
 }
 
 /**
@@ -46,29 +134,82 @@ function getProfilePictureUrl(data) {
  * @returns {Object} Profile picture data and operations
  */
 export function useProfilePicture() {
-  const queryClient = useQueryClient();
+  // Use the shared queryClient instead of creating a new one
   const isMountedRef = useRef(true);
+  const [cachedUrl, setCachedUrl] = useState(() => {
+    const url = profilePictureCache.getFromCache();
+    console.log('[Debug] Initial cached URL:', url);
+    return url;
+  });
   
   // Reset isMountedRef on component mount/unmount
   useEffect(() => {
     isMountedRef.current = true;
+    
+    // Check if we have a valid cached URL on mount
+    const url = profilePictureCache.getFromCache();
+    if (url) {
+      setCachedUrl(url);
+    }
+    
     return () => {
       isMountedRef.current = false;
     };
   }, []);
 
-  // Query for profile picture
+  // Query for profile picture with enhanced debugging
   const profilePictureQuery = useApiQuery(
     '/api/profile/picture',
     PROFILE_QUERY_KEYS.profilePicture,
     {
-      staleTime: 0, // Always consider data stale to ensure fresh data
-      cacheTime: 10 * 60 * 1000, // Cache for 10 minutes
+      staleTime: 5 * 60 * 1000,
+      cacheTime: 10 * 60 * 1000,
       retry: 1,
-      refetchOnWindowFocus: true,
-      refetchOnMount: true
+      refetchOnWindowFocus: false,
+      refetchOnMount: profilePictureCache.isCacheValid() ? false : true,
+      refetchInterval: null,
+      onSuccess: (data) => {
+        console.log('[Debug] Query success:', data);
+        const url = getProfilePictureUrl(data);
+        if (url) {
+          console.log('[Debug] New URL from query:', url);
+          console.log('[Debug] Updating React Query cache with:', {
+            queryKey: PROFILE_QUERY_KEYS.profilePicture,
+            data: data
+          });
+          queryClient.setQueryData(PROFILE_QUERY_KEYS.profilePicture, data);
+          profilePictureCache.saveToCache(url);
+        }
+      },
+      onError: (error) => {
+        console.error('[Debug] Query error:', error);
+      },
+      placeholderData: cachedUrl ? {
+        success: true,
+        data: {
+          has_profile_picture: true,
+          profile_picture_url: cachedUrl
+        }
+      } : undefined
     }
   );
+
+  // Log detailed query state changes
+  useEffect(() => {
+    const queryData = queryClient.getQueryData(PROFILE_QUERY_KEYS.profilePicture);
+    console.log('[Debug] Detailed Query State:', {
+      isLoading: profilePictureQuery.isLoading,
+      isFetching: profilePictureQuery.isFetching,
+      isError: profilePictureQuery.isError,
+      data: profilePictureQuery.data,
+      cachedUrl,
+      queryClientCache: queryData,
+      localStorage: {
+        profilePicture: localStorage.getItem(CACHE_KEYS.PROFILE_PICTURE),
+        timestamp: localStorage.getItem(CACHE_KEYS.TIMESTAMP)
+      }
+    });
+  }, [profilePictureQuery.data, profilePictureQuery.isLoading, profilePictureQuery.isFetching, profilePictureQuery.isError, cachedUrl]);
 
   // Force refresh function
   const forceRefresh = useCallback(async () => {
@@ -119,6 +260,9 @@ export function useProfilePicture() {
               is_temp_url: true
             }
           });
+          
+          // Also update our local state with the temporary URL
+          setCachedUrl(tempUrl);
         }
         
         return { previousData };
@@ -132,11 +276,25 @@ export function useProfilePicture() {
             throw new Error('Invalid data received from server');
           }
           
+          // Clear the existing cache since we've updated the profile picture
+          profilePictureCache.clearCache();
+          
           // Update cache with server data
           queryClient.setQueryData(PROFILE_QUERY_KEYS.profilePicture, data);
           
-          // Force refresh to ensure consistency
-          await forceRefresh();
+          // Extract and cache the new URL
+          const newUrl = getProfilePictureUrl(data);
+          if (newUrl) {
+            setCachedUrl(newUrl);
+            profilePictureCache.saveToCache(newUrl);
+          }
+          
+          // Wait a moment before refreshing to ensure server has processed the upload
+          setTimeout(async () => {
+            if (isMountedRef.current) {
+              await forceRefresh();
+            }
+          }, 500);
         } catch (error) {
           // Error handled silently
         }
@@ -145,6 +303,12 @@ export function useProfilePicture() {
         // Restore previous state on error
         if (context?.previousData) {
           queryClient.setQueryData(PROFILE_QUERY_KEYS.profilePicture, context.previousData);
+          
+          // Restore cached URL from previous data
+          const prevUrl = getProfilePictureUrl(context.previousData);
+          if (prevUrl) {
+            setCachedUrl(prevUrl);
+          }
         }
       },
       onSettled: () => {
@@ -179,14 +343,25 @@ export function useProfilePicture() {
           }
         });
         
+        // Clear the cached URL
+        setCachedUrl(null);
+        profilePictureCache.clearCache();
+        
         return { previousData };
       },
       onSuccess: async () => {
         if (!isMountedRef.current) return;
         
         try {
-          // Force refresh to ensure consistency
-          await forceRefresh();
+          // Ensure the cache is cleared
+          profilePictureCache.clearCache();
+          
+          // Wait a moment before refreshing to ensure server has processed the deletion
+          setTimeout(async () => {
+            if (isMountedRef.current) {
+              await forceRefresh();
+            }
+          }, 500);
         } catch (error) {
           // Error handled silently
         }
@@ -195,15 +370,27 @@ export function useProfilePicture() {
         // Restore previous state on error
         if (context?.previousData) {
           queryClient.setQueryData(PROFILE_QUERY_KEYS.profilePicture, context.previousData);
+          
+          // Restore cached URL from previous data
+          const prevUrl = getProfilePictureUrl(context.previousData);
+          if (prevUrl) {
+            setCachedUrl(prevUrl);
+            profilePictureCache.saveToCache(prevUrl);
+          }
         }
       }
     }
   );
 
+  // Determine the profile picture URL to return, prioritizing:
+  // 1. API data if available
+  // 2. Local cached URL otherwise
+  const finalProfilePictureUrl = getProfilePictureUrl(profilePictureQuery.data) || cachedUrl;
+
   return {
     // Profile picture data
-    profilePictureUrl: getProfilePictureUrl(profilePictureQuery.data),
-    isLoading: profilePictureQuery.isLoading,
+    profilePictureUrl: finalProfilePictureUrl,
+    isLoading: profilePictureQuery.isLoading && !cachedUrl, // Not loading if we have a cached URL
     isFetching: profilePictureQuery.isFetching,
     isError: profilePictureQuery.isError,
     error: profilePictureQuery.error,

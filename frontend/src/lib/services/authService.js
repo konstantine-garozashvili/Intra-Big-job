@@ -350,7 +350,9 @@ export const authService = {
         'user',
         'tokenExpiration',
         'last_role',
-        'session_id'
+        'session_id',
+        'cached_profile_picture',
+        'cached_profile_picture_timestamp'
       ];
       
       itemsToRemove.forEach(item => localStorage.removeItem(item));
@@ -375,7 +377,7 @@ export const authService = {
           queryClient.invalidateQueries();
           
           // Supprimer sélectivement certaines requêtes sensibles
-          const sensitivePaths = ['user', 'profile', 'dashboard', 'notifications'];
+          const sensitivePaths = ['user', 'profile', 'dashboard', 'notifications', 'profilePicture'];
           sensitivePaths.forEach(path => {
             queryClient.removeQueries({ queryKey: [path] });
           });
@@ -398,7 +400,7 @@ export const authService = {
       // Gestion optimisée du cache API
       try {
         // Invalider sélectivement les caches critiques
-        const criticalPaths = ['/me', '/profile', '/dashboard'];
+        const criticalPaths = ['/me', '/profile', '/dashboard', '/profile/picture'];
         criticalPaths.forEach(path => {
           apiService.invalidateCache(path);
         });
@@ -437,7 +439,9 @@ export const authService = {
         'tokenExpiration',
         'device_id',
         'last_role',
-        'session_id'
+        'session_id',
+        'cached_profile_picture',
+        'cached_profile_picture_timestamp'
       ];
       
       itemsToRemove.forEach(item => localStorage.removeItem(item));
@@ -552,21 +556,26 @@ export const authService = {
       userRoles = Array.isArray(user.role) ? user.role : [user.role];
     }
     
+    // Normaliser le rôle recherché
+    const searchRole = role.toUpperCase().startsWith('ROLE_') ? role.toUpperCase() : `ROLE_${role.toUpperCase()}`;
+    
     // Vérifier si l'utilisateur a le rôle spécifié
     return userRoles.some(userRole => {
       // Si le rôle est une chaîne de caractères
       if (typeof userRole === 'string') {
-        const roleLower = userRole.toLowerCase();
-        const searchRole = role.toLowerCase();
-        return roleLower.includes(searchRole) || roleLower === 'role_' + searchRole;
+        const normalizedUserRole = userRole.toUpperCase().startsWith('ROLE_') ? 
+          userRole.toUpperCase() : 
+          `ROLE_${userRole.toUpperCase()}`;
+        return normalizedUserRole === searchRole;
       }
       
       // Si le rôle est un objet
       if (typeof userRole === 'object' && userRole !== null) {
-        // Essayer d'extraire le nom du rôle de différentes propriétés possibles
-        const roleName = (userRole.name || userRole.role || userRole.roleName || '').toLowerCase();
-        const searchRole = role.toLowerCase();
-        return roleName.includes(searchRole) || roleName === 'role_' + searchRole;
+        const roleName = userRole.name || userRole.role || userRole.roleName || '';
+        const normalizedRoleName = roleName.toUpperCase().startsWith('ROLE_') ? 
+          roleName.toUpperCase() : 
+          `ROLE_${roleName.toUpperCase()}`;
+        return normalizedRoleName === searchRole;
       }
       
       return false;

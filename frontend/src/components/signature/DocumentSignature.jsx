@@ -5,6 +5,8 @@ import { Loader2, MapPin, CheckCircle, AlertCircle } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '../ui/alert';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../../lib/services/authService';
+import { useRoles } from '@/features/roles/roleContext';
+import { useRolePermissions } from '@/features/roles/useRolePermissions';
 
 // Custom fallback implementation for SignatureCanvas
 const FallbackSignatureCanvas = forwardRef((props, ref) => {
@@ -150,18 +152,20 @@ const DocumentSignature = () => {
   const [availablePeriods, setAvailablePeriods] = useState({});
   const signatureRef = useRef(null);
   const [isLoading, setIsLoading] = useState(false);
+  const { hasRole } = useRoles();
+  const permissions = useRolePermissions();
   
-  // Check if user is a student or teacher
+  // Check if user is a student or teacher using proper role management
   useEffect(() => {
-    const userRoles = JSON.parse(localStorage.getItem('userRoles') || '[]');
-    if (!userRoles.includes('ROLE_STUDENT') && !userRoles.includes('ROLE_TEACHER')) {
+    const isAuthorized = hasRole('ROLE_TEACHER') || hasRole('ROLE_STUDENT');
+    if (!isAuthorized) {
       toast.error("Accès non autorisé", {
         description: "Seuls les étudiants et les enseignants peuvent accéder à cette page."
       });
-      navigate('/');
+      navigate('/dashboard');
       return;
     }
-  }, [navigate]);
+  }, [hasRole, navigate]);
   
   // Add this function near the beginning of the DocumentSignature component
   const fetchDataWithRetry = async (url, options, retries = 3) => {
@@ -483,8 +487,14 @@ const DocumentSignature = () => {
           description: `Signature enregistrée pour la période ${availablePeriods[currentPeriod]}.`
         });
         
-        // Redirect to student dashboard immediately
-        navigate('/student/dashboard');
+        const userRoles = JSON.parse(localStorage.getItem('userRoles') || '[]');
+        if (userRoles.includes('ROLE_TEACHER')) {
+          navigate('/teacher/dashboard');
+        } else if (userRoles.includes('ROLE_STUDENT')) {
+          navigate('/student/dashboard');
+        } else {
+          navigate('/dashboard');
+        }
         
       } catch (error) {
         console.error('API request failed:', error);

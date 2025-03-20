@@ -41,8 +41,18 @@ const ProfileView = () => {
   
   // Refetch profile picture when component mounts or userId changes
   useEffect(() => {
-    refetchProfilePicture();
-  }, [userId, refetchProfilePicture]);
+    // Only refetch if there's no cached URL available
+    if (!profilePictureUrl && !isLoadingProfilePicture) {
+      refetchProfilePicture();
+    }
+  }, [userId]); // Only run when userId changes, not on every render
+  
+  // Always use the latest profile picture URL when rendering
+  useEffect(() => {
+    if (data && data.user && profilePictureUrl) {
+      data.user.profilePictureUrl = profilePictureUrl;
+    }
+  }, [data, profilePictureUrl]);
   
   // Fetch documents separately
   useEffect(() => {

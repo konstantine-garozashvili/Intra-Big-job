@@ -1,7 +1,7 @@
 import { useRoles } from './roleContext';
 import { useRolePermissions } from './useRolePermissions';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { authService } from '../../lib/services/authService';
 import { toast } from 'sonner';
 
@@ -25,83 +25,86 @@ const RoleGuard = ({
   requireAll = false, 
   fallback = null 
 }) => {
-  const { hasRole, hasAnyRole, hasAllRoles, isLoading } = useRoles();
+  const { hasRole, hasAnyRole, hasAllRoles, isLoading, roles: userRoles } = useRoles();
   const toastShownRef = useRef(false);
+  const timeoutRef = useRef(null);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   
   // Use allowedRoles if provided, fall back to roles for backward compatibility
   const effectiveRoles = allowedRoles || roles;
   
-  // Marquer la fin du chargement initial
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+  
+  // Handle initial load completion
   useEffect(() => {
     if (!isLoading) {
       setInitialLoadComplete(true);
     }
   }, [isLoading]);
   
-  // Function to check access and show notification if needed
-  const checkAccess = () => {
-    // Pendant le chargement initial, on considère que l'accès est autorisé
-    // pour éviter de montrer des erreurs trop tôt
+  // Pure computation of role check result
+  const roleCheckResult = useMemo(() => {
     if (isLoading || !initialLoadComplete) {
       return true;
     }
     
-    let hasAccess = false;
-    
-    // Debug logging
-    console.log('RoleGuard checking access:', {
-      requiredRoles: effectiveRoles,
-      userRoles: (hasRole && hasAnyRole && hasAllRoles) ? 'Role functions present' : 'Role functions missing',
-      requireAll,
-      isLoading,
-      initialLoadComplete
-    });
-    
-    // Handle single role case
     if (typeof effectiveRoles === 'string') {
-      hasAccess = hasRole(effectiveRoles);
-      console.log(`Checking single role: ${effectiveRoles}, hasAccess: ${hasAccess}`);
-    } 
-    // Handle multiple roles case
-    else if (requireAll) {
-      hasAccess = hasAllRoles(effectiveRoles);
-      console.log(`Checking all roles: ${JSON.stringify(effectiveRoles)}, hasAccess: ${hasAccess}`);
-    } else {
-      hasAccess = hasAnyRole(effectiveRoles);
-      console.log(`Checking any role: ${JSON.stringify(effectiveRoles)}, hasAccess: ${hasAccess}`);
+      return hasRole(effectiveRoles);
     }
     
-    // Show toast notification if access is denied and hasn't been shown yet
-    if (!hasAccess && !toastShownRef.current && initialLoadComplete) {
+    return requireAll ? hasAllRoles(effectiveRoles) : hasAnyRole(effectiveRoles);
+  }, [effectiveRoles, hasRole, hasAnyRole, hasAllRoles, isLoading, initialLoadComplete, requireAll, userRoles]);
+  
+  // Handle side effects (toast and logging) in useEffect
+  useEffect(() => {
+    if (!roleCheckResult && !toastShownRef.current && initialLoadComplete) {
+      // Development logging
+      if (process.env.NODE_ENV === 'development') {
+        if (typeof effectiveRoles === 'string') {
+          console.log(`Checking single role: ${effectiveRoles}, hasAccess: ${roleCheckResult}`);
+        } else if (requireAll) {
+          console.log(`Checking all roles: ${JSON.stringify(effectiveRoles)}, hasAccess: ${roleCheckResult}`);
+        } else {
+          console.log(`Checking any role: ${JSON.stringify(effectiveRoles)}, hasAccess: ${roleCheckResult}`);
+        }
+      }
+      
+      // Show toast notification
       toast.error("Accès non autorisé. Vous n'avez pas les permissions nécessaires pour accéder à cette page.", {
         duration: 4000,
         position: 'top-center',
       });
+      
       toastShownRef.current = true;
       
-      // Reset the toast shown flag after some time to allow showing it again later
-      setTimeout(() => {
+      // Reset toast flag after delay
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      
+      timeoutRef.current = setTimeout(() => {
         toastShownRef.current = false;
+        timeoutRef.current = null;
       }, 10000);
     }
-    
-    return hasAccess;
-  };
+  }, [roleCheckResult, effectiveRoles, requireAll, initialLoadComplete]);
   
-  const hasAccess = checkAccess();
-  
-  // Si les rôles sont encore en cours de chargement, on n'affiche rien pour éviter un flash
   if (isLoading) {
     return null;
   }
   
-  // If element prop is provided, use it (for use with Route element prop)
-  if (element && hasAccess) {
+  if (element && roleCheckResult) {
     return element;
   }
   
-  return hasAccess ? children : fallback;
+  return roleCheckResult ? children : fallback;
 };
 
 /**
@@ -116,34 +119,39 @@ export const RoleDashboardRedirect = () => {
   const navigate = useNavigate();
   const [isRefreshing, setIsRefreshing] = useState(false);
   
-  // Force a refresh of roles when this component mounts to ensure we have the latest data
   useEffect(() => {
+    let mounted = true;
+    
     const refreshUserRoles = async () => {
-      if (authService.isLoggedIn() && !isRefreshing) {
-        setIsRefreshing(true);
-        try {
-          // Force refresh user data and roles
-          await authService.getCurrentUser(true);
+      if (!authService.isLoggedIn() || isRefreshing) return;
+      
+      setIsRefreshing(true);
+      try {
+        await authService.getCurrentUser(true);
+        if (mounted) {
           refreshRoles();
-        } catch (error) {
-          console.error('Error refreshing user roles:', error);
-        } finally {
+        }
+      } catch (error) {
+        console.error('Error refreshing user roles:', error);
+      } finally {
+        if (mounted) {
           setIsRefreshing(false);
         }
       }
     };
     
     refreshUserRoles();
-  }, [refreshRoles]);
+    
+    return () => {
+      mounted = false;
+    };
+  }, [refreshRoles, isRefreshing]);
   
-  // Si les rôles sont encore en chargement, on n'affiche rien
   if (isLoading || isRefreshing) {
     return null;
   }
   
   const dashboardPath = permissions.getRoleDashboardPath();
-  
-  // Store the current dashboard path in localStorage for debugging
   if (dashboardPath) {
     localStorage.setItem('dashboard_path', dashboardPath);
   }
