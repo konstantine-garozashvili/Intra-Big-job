@@ -10,7 +10,7 @@ use App\Entity\Nationality;
 use App\Entity\UserRole;
 use App\Entity\Role;
 use App\Entity\Theme;
-use App\ENtity\Status;
+use App\Entity\Status;
 use App\Entity\UserStatus;
 use App\Repository\NationalityRepository;
 use App\Repository\CityRepository;
@@ -111,6 +111,9 @@ class RegistrationService
         
         // Marquer l'email comme vérifié directement (temporairement)
         $user->setIsEmailVerified(true);
+
+        // Marquer le compte comme actif par défaut
+        $user->setIsUserActive(true);
         
         // Ajouter le rôle utilisateur par défaut
         $this->addDefaultRole($user);
