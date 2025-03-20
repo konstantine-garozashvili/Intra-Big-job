@@ -30,6 +30,21 @@ const signatureService = {
       console.error('Erreur lors de la récupération des signatures du jour:', error);
       throw error;
     }
+  },
+
+  /**
+   * Crée une nouvelle signature
+   * @param {Object} data - Données de la signature (location, drawing)
+   * @returns {Promise<Object>} Réponse du serveur
+   */
+  createSignature: async (data) => {
+    try {
+      const response = await apiService.post('/api/signatures', data);
+      return response;
+    } catch (error) {
+      console.error('Erreur lors de la création de la signature:', error);
+      throw error;
+    }
   }
 };
 

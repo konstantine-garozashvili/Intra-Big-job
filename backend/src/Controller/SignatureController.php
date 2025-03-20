@@ -33,6 +33,19 @@ class SignatureController extends AbstractController
     {
         return new \DateTimeImmutable('now', new \DateTimeZone('Europe/Paris'));
     }
+    
+    /**
+     * Get the date range for today (from start of day to start of tomorrow)
+     * @return array with 'start' and 'end' keys containing DateTimeImmutable objects
+     */
+    private function getTodayDateRange(): array
+    {
+        $timezone = new \DateTimeZone('Europe/Paris');
+        return [
+            'start' => new \DateTimeImmutable('today', $timezone),
+            'end' => new \DateTimeImmutable('tomorrow', $timezone)
+        ];
+    }
 
     #[Route('/today', methods: ['GET'])]
     public function checkTodaySignature(): JsonResponse
@@ -43,10 +56,11 @@ class SignatureController extends AbstractController
                 return $this->json(['message' => 'User not authenticated'], Response::HTTP_UNAUTHORIZED);
             }
 
-            // Get today's date (start and end of day) in Paris timezone
+            // Get today's date range and current time
             $currentTime = $this->getCurrentTime();
-            $today = $currentTime->setTime(0, 0);
-            $tomorrow = $today->modify('+1 day');
+            $dateRange = $this->getTodayDateRange();
+            $today = $dateRange['start'];
+            $tomorrow = $dateRange['end'];
 
             // Log the time values for debugging
             error_log('Current time (Paris): ' . $currentTime->format('Y-m-d H:i:s'));
@@ -212,6 +226,15 @@ class SignatureController extends AbstractController
                 ], Response::HTTP_BAD_REQUEST);
             }
 
+            // Get today's date range
+            $dateRange = $this->getTodayDateRange();
+            $startOfDay = $dateRange['start'];
+            $endOfDay = $dateRange['end'];
+            
+            // Log the time values for debugging
+            error_log('Checking for existing signatures between: ' . $startOfDay->format('Y-m-d H:i:s') . ' and ' . $endOfDay->format('Y-m-d H:i:s'));
+            error_log('For user ID: ' . $user->getId() . ' and period: ' . $period);
+            
             // Check if user has already signed for this period today
             $existingSignature = $this->signatureRepository->createQueryBuilder('s')
                 ->where('s.user = :user')
@@ -219,13 +242,14 @@ class SignatureController extends AbstractController
                 ->andWhere('s.date < :tomorrow')
                 ->andWhere('s.period = :period')
                 ->setParameter('user', $user)
-                ->setParameter('today', $currentTime->setTime(0, 0))
-                ->setParameter('tomorrow', $currentTime->setTime(0, 0)->modify('+1 day'))
+                ->setParameter('today', $startOfDay)
+                ->setParameter('tomorrow', $endOfDay)
                 ->setParameter('period', $period)
                 ->getQuery()
                 ->getOneOrNullResult();
-
+                
             if ($existingSignature) {
+                error_log('Found existing signature ID: ' . $existingSignature->getId());
                 return $this->json([
                     'message' => 'You have already signed for the ' . $period . ' period today'
                 ], Response::HTTP_BAD_REQUEST);
@@ -266,6 +290,44 @@ class SignatureController extends AbstractController
             return $this->json([
                 'success' => false,
                 'message' => 'Error creating signature: ' . $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    #[Route('/{id}/validate', methods: ['POST'])]
+    public function validate(int $id): JsonResponse
+    {
+        try {
+            $user = $this->getUser();
+            if (!$user) {
+                return $this->json(['message' => 'User not authenticated'], Response::HTTP_UNAUTHORIZED);
+            }
+
+            // Check if user is a teacher
+            $isTeacher = in_array('ROLE_TEACHER', $user->getRoles());
+            if (!$isTeacher) {
+                return $this->json(['message' => 'Only teachers can validate signatures'], Response::HTTP_FORBIDDEN);
+            }
+
+            $signature = $this->signatureRepository->find($id);
+            if (!$signature) {
+                return $this->json(['message' => 'Signature not found'], Response::HTTP_NOT_FOUND);
+            }
+
+            // Set the signature as validated
+            $signature->setValidated(true);
+            $this->entityManager->flush();
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Signature validated successfully'
+            ]);
+        } catch (\Exception $e) {
+            error_log('Error in validate: ' . $e->getMessage());
+            error_log('Stack trace: ' . $e->getTraceAsString());
+            return $this->json([
+                'success' => false,
+                'message' => 'Error validating signature: ' . $e->getMessage()
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }

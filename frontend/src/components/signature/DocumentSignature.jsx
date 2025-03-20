@@ -151,12 +151,12 @@ const DocumentSignature = () => {
   const signatureRef = useRef(null);
   const [isLoading, setIsLoading] = useState(false);
   
-  // Check if user is a student
+  // Check if user is a student or teacher
   useEffect(() => {
     const userRoles = JSON.parse(localStorage.getItem('userRoles') || '[]');
-    if (!userRoles.includes('ROLE_STUDENT')) {
+    if (!userRoles.includes('ROLE_STUDENT') && !userRoles.includes('ROLE_TEACHER')) {
       toast.error("Accès non autorisé", {
-        description: "Seuls les étudiants peuvent accéder à cette page."
+        description: "Seuls les étudiants et les enseignants peuvent accéder à cette page."
       });
       navigate('/');
       return;

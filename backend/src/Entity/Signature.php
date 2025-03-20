@@ -40,6 +40,10 @@ class Signature
     #[Groups(['signature:read'])]
     private ?string $drawing = null;
 
+    #[ORM\Column(type: Types::BOOLEAN, options: ['default' => false])]
+    #[Groups(['signature:read'])]
+    private bool $validated = false;
+
     public function __construct()
     {
         $this->date = new \DateTimeImmutable();
@@ -108,6 +112,17 @@ class Signature
     public function setDrawing(?string $drawing): static
     {
         $this->drawing = $drawing;
+        return $this;
+    }
+
+    public function isValidated(): bool
+    {
+        return $this->validated;
+    }
+
+    public function setValidated(bool $validated): static
+    {
+        $this->validated = $validated;
         return $this;
     }
 

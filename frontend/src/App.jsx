@@ -50,6 +50,7 @@ const StudentProjects = lazy(() => import('./pages/Student/Projects'))
 const StudentAttendance = lazy(() => import('./pages/Student/Attendance'))
 const TeacherDashboard = lazy(() => import('./pages/Teacher/Dashboard'))
 const TeacherSignatureMonitoring = lazy(() => import('./pages/Teacher/SignatureMonitoring'))
+const TeacherAttendance = lazy(() => import('./pages/Teacher/Attendance'))
 const HRDashboard = lazy(() => import('./pages/HR/Dashboard'))
 const SuperAdminDashboard = lazy(() => import('./pages/SuperAdmin/Dashboard'))
 const GuestDashboard = lazy(() => import('./pages/Guest/Dashboard'))
@@ -117,6 +118,7 @@ const useIntelligentPreload = () => {
     else if (currentPath.includes('/teacher')) {
       preloadComponent(() => import('./pages/Teacher/Dashboard'));
       preloadComponent(() => import('./pages/Teacher/SignatureMonitoring'));
+      preloadComponent(() => import('./pages/Teacher/Attendance'));
     }
   }, [currentPath]);
   
@@ -347,6 +349,8 @@ const AppContent = () => {
                     
                     <Route path="/teacher">
                       <Route path="dashboard" element={<TeacherDashboard />} />
+                      {/* Ajout de la route d'émargement pour les enseignants */}
+                      <Route path="attendance" element={<TeacherAttendance />} />
                       {/* Ajout de la route de surveillance des signatures */}
                       <Route path="signature-monitoring" element={<TeacherSignatureMonitoring />} />
                     </Route>

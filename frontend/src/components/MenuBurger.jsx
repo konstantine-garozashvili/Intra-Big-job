@@ -254,6 +254,13 @@ const MenuBurger = memo(() => {
       to: '/student/attendance',
     },
     {
+      key: 'teacher_attendance',
+      label: 'Emargement',
+      icon: <Clipboard className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.TEACHER],
+      to: '/teacher/attendance',
+    },
+    {
       key: 'signature_monitoring',
       label: 'Suivi des signatures',
       icon: <ClipboardCheck className="w-5 h-5 mr-2 text-[#528eb2]" />,
