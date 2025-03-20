@@ -1,5 +1,6 @@
 <?php
 
+
 namespace App\Entity;
 
 use App\Repository\UserRepository;
@@ -103,6 +104,12 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     #[Groups(['user:read'])]
     private ?Specialization $specialization = null;
 
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $linkedinUrl = null;
+
+    #[ORM\OneToMany(mappedBy: 'user', targetEntity: UserDiploma::class, orphanRemoval: true)]
+    private Collection $userDiplomas;
+
     public function __construct()
     {
         $this->createdAt = new \DateTimeImmutable();
@@ -112,6 +119,8 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
         $this->signatures = new ArrayCollection();
         $this->createdGroups = new ArrayCollection();
         $this->groups = new ArrayCollection();
+        $this->userDiplomas = new ArrayCollection();
+        $this->formations = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -318,10 +327,34 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     }
 
     /**
-     * @return Collection<int, Diploma>
+     * Get user diplomas, optionally processed with obtained dates
+     * 
+     * @return Collection<int, Diploma>|array
      */
-    public function getDiplomas(): Collection
+    public function getDiplomas(): Collection|array
     {
+        if (func_num_args() > 0) {
+            // When called with arguments, return the processed diplomas array
+            $diplomas = [];
+            foreach ($this->userDiplomas as $userDiploma) {
+                $diploma = $userDiploma->getDiploma();
+                // Add the obtained date to the diploma object
+                $diploma->obtainedAt = $userDiploma->getObtainedDate();
+                $diplomas[] = $diploma;
+            }
+            
+            // Trier les diplômes par date d'obtention (du plus récent au plus ancien)
+            usort($diplomas, function($a, $b) {
+                if (!$a->obtainedAt || !$b->obtainedAt) {
+                    return 0;
+                }
+                return $b->obtainedAt <=> $a->obtainedAt;
+            });
+            
+            return $diplomas;
+        }
+        
+        // When called without arguments, return the collection
         return $this->diplomas;
     }
 
@@ -563,33 +596,8 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     }
 
     /**
-     * Get all diplomas associated with this user
-     * 
-     * @return array An array of diploma objects with their obtained dates
+     * @return Collection<int, Formation>
      */
-    public function getDiplomas(): array
-    {
-        $diplomas = [];
-        foreach ($this->userDiplomas as $userDiploma) {
-            $diploma = $userDiploma->getDiploma();
-            // Add the obtained date to the diploma object
-            $diploma->obtainedAt = $userDiploma->getObtainedDate();
-            $diplomas[] = $diploma;
-        }
-        
-        // Trier les diplômes par date d'obtention (du plus récent au plus ancien)
-        usort($diplomas, function($a, $b) {
-            if (!$a->obtainedAt || !$b->obtainedAt) {
-                return 0;
-            }
-            return $b->obtainedAt <=> $a->obtainedAt;
-        });
-        
-        return $diplomas;
-    }
-    /**
- * @return Collection<int, Formation>
- */
     public function getFormations(): Collection
     {
         return $this->formations;

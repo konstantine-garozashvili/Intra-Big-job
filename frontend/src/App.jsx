@@ -381,7 +381,7 @@ const AppContent = () => {
                       </RoleGuard>
                     } />
                     
-                    {/* Dashboards spécifiques par rôle */}
+                    {/* Routes Admin */}
                     <Route path="/admin/dashboard" element={
                       <RoleGuard roles={ROLES.ADMIN} fallback={<Navigate to="/dashboard" replace />}>
                         <AdminDashboard />
@@ -415,56 +415,60 @@ const AppContent = () => {
                           <StudentProjects />
                         </RoleGuard>
                       } />
+                      {/* Ajout de la route d'assiduité pour étudiants */}
+                      <Route element={<StudentRoute />}>
+                        <Route path="attendance" element={<StudentAttendance />} />
+                      </Route>
                     </Route>
                     
-                    <Route path="/teacher/dashboard" element={
-                      <RoleGuard roles={ROLES.TEACHER} fallback={<Navigate to="/dashboard" replace />}>
-                        <TeacherDashboard />
-                      </RoleGuard>
-                    } />
+                    {/* Routes enseignantes */}
+                    <Route path="/teacher">
+                      <Route path="dashboard" element={
+                        <RoleGuard roles={ROLES.TEACHER} fallback={<Navigate to="/dashboard" replace />}>
+                          <TeacherDashboard />
+                        </RoleGuard>
+                      } />
+                      {/* Ajout de la route d'émargement pour les enseignants */}
+                      <Route path="attendance" element={
+                        <RoleGuard roles={ROLES.TEACHER} fallback={<Navigate to="/dashboard" replace />}>
+                          <TeacherAttendance />
+                        </RoleGuard>
+                      } />
+                      {/* Ajout de la route de surveillance des signatures */}
+                      <Route path="signature-monitoring" element={
+                        <RoleGuard roles={ROLES.TEACHER} fallback={<Navigate to="/dashboard" replace />}>
+                          <TeacherSignatureMonitoring />
+                        </RoleGuard>
+                      } />
+                    </Route>
+                    
+                    {/* Routes HR */}
                     <Route path="/hr/dashboard" element={
                       <RoleGuard roles={ROLES.HR} fallback={<Navigate to="/dashboard" replace />}>
                         <HRDashboard />
                       </RoleGuard>
                     } />
+                    
+                    {/* Routes Super Admin */}
                     <Route path="/superadmin/dashboard" element={
                       <RoleGuard roles={ROLES.SUPERADMIN} fallback={<Navigate to="/dashboard" replace />}>
                         <SuperAdminDashboard />
                       </RoleGuard>
                     } />
+                    
+                    {/* Routes Guest */}
                     <Route path="/guest/dashboard" element={
                       <RoleGuard roles={ROLES.GUEST} fallback={<Navigate to="/dashboard" replace />}>
                         <GuestDashboard />
                       </RoleGuard>
                     } />
+                    
+                    {/* Routes Recruiter */}
                     <Route path="/recruiter/dashboard" element={
                       <RoleGuard roles={ROLES.RECRUITER} fallback={<Navigate to="/dashboard" replace />}>
                         <RecruiterDashboard />
                       </RoleGuard>
                     } />
-                      <Route path="dashboard" element={<StudentDashboard />} />
-                      <Route path="schedule" element={<StudentSchedule />} />
-                      <Route path="grades" element={<StudentGrades />} />
-                      <Route path="absences" element={<StudentAbsences />} />
-                      <Route path="projects" element={<StudentProjects />} />
-                      {/* Ajout de la route d'assiduité pour étudiants */}
-                      <Route element={<StudentRoute />}>
-                      <Route path="attendance" element={<StudentAttendance />} />
-                      </Route>
-                    </Route>
-                    
-                    <Route path="/teacher">
-                      <Route path="dashboard" element={<TeacherDashboard />} />
-                      {/* Ajout de la route d'émargement pour les enseignants */}
-                      <Route path="attendance" element={<TeacherAttendance />} />
-                      {/* Ajout de la route de surveillance des signatures */}
-                      <Route path="signature-monitoring" element={<TeacherSignatureMonitoring />} />
-                    </Route>
-                    
-                    <Route path="/hr/dashboard" element={<HRDashboard />} />
-                    <Route path="/superadmin/dashboard" element={<SuperAdminDashboard />} />
-                    <Route path="/guest/dashboard" element={<GuestDashboard />} />
-                    <Route path="/recruiter/dashboard" element={<RecruiterDashboard />} />
                   </Route>
                   
                   {/* Redirection des routes inconnues vers la page d'accueil */}
