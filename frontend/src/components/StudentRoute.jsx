@@ -1,8 +1,7 @@
 import { Outlet } from 'react-router-dom';
 
-// Temporarily bypass all student route checks
+// Since the parent route already has RoleGuard, we don't need to check roles here
 const StudentRoute = () => {
-  // Simply render the child routes without any protection
   return <Outlet />;
 };
 
