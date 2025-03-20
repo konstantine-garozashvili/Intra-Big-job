@@ -8,22 +8,20 @@ use Doctrine\Persistence\ObjectManager;
 
 class StatusFixtures extends Fixture
 {
-    public const STATUS_ACTIVE = 'status-active';
+    public const STATUS_ACCEPTED = 'status-accepted';
     public const STATUS_PENDING = 'status-pending';
     public const STATUS_BLOCKED = 'status-blocked';
     public const STATUS_ARCHIVED = 'status-archived';
     public const STATUS_GRADUATED = 'status-graduated';
     public const STATUS_ON_LEAVE = 'status-on-leave';
-    public const STATUS_DISABLED = 'status-disabled'; 
+    public const STATUS_DENIED = 'status-denied'; 
 
-    public const STATUS_DEFAULT = self::STATUS_ACTIVE; 
 
     public function load(ObjectManager $manager): void
     {
         $statuses = [
-            self::STATUS_ACTIVE => [
-                'name' => 'Actif',
-                'description' => 'Utilisateur actif avec accès complet'
+            self::STATUS_ACCEPTED => [
+                'name' => 'Accepté'
             ],
             self::STATUS_PENDING => [
                 'name' => 'En attente',
@@ -45,16 +43,19 @@ class StatusFixtures extends Fixture
                 'name' => 'En congé',
                 'description' => 'Utilisateur temporairement absent'
             ],
-            self::STATUS_DISABLED => [ // Ajout du statut désactivé
-                'name' => 'Désactivé',
-                'description' => 'Compte désactivé - accès refusé'
+            self::STATUS_DENIED => [ 
+                'name' => 'Refusé'
             ],
         ];
 
         foreach ($statuses as $reference => $data) {
             $status = new Status();
             $status->setName($data['name']);
-            $status->setDescription($data['description']);
+
+            if (isset($data['description'])) {
+                $status->setDescription($data['description']);
+            }
+            
             $manager->persist($status);
             $this->addReference($reference, $status);
         }

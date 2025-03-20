@@ -59,7 +59,7 @@ class UserSpecializationFixtures extends Fixture implements DependentFixtureInte
                 'phoneNumber' => '0600000011',
                 'specialization' => SpecializationFixtures::SPEC_UI,
                 'role' => RoleFixtures::ROLE_STUDENT,
-                'status' => StatusFixtures::STATUS_ACTIVE
+                'status' => StatusFixtures::STATUS_ACCEPTED
             ],
             [
                 'email' => 'student.marketing@bigproject.com',
@@ -69,7 +69,7 @@ class UserSpecializationFixtures extends Fixture implements DependentFixtureInte
                 'phoneNumber' => '0600000012',
                 'specialization' => SpecializationFixtures::SPEC_SEO,
                 'role' => RoleFixtures::ROLE_STUDENT,
-                'status' => StatusFixtures::STATUS_ACTIVE
+                'status' => StatusFixtures::STATUS_ACCEPTED
             ],
             [
                 'email' => 'student.data@bigproject.com',
@@ -79,7 +79,7 @@ class UserSpecializationFixtures extends Fixture implements DependentFixtureInte
                 'phoneNumber' => '0600000013',
                 'specialization' => SpecializationFixtures::SPEC_DATA_SCIENCE,
                 'role' => RoleFixtures::ROLE_STUDENT,
-                'status' => StatusFixtures::STATUS_ACTIVE
+                'status' => StatusFixtures::STATUS_ACCEPTED
             ],
         ];
 
