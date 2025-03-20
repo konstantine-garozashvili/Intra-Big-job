@@ -55,16 +55,29 @@ class MessageRepository extends ServiceEntityRepository
      */
     public function findPrivateMessagesBetweenUsers(int $user1Id, int $user2Id, int $limit = 50)
     {
-        return $this->createQueryBuilder('m')
-            ->andWhere('m.isGlobal = :isGlobal')
-            ->andWhere('(m.sender = :user1Id AND m.recipient = :user2Id) OR (m.sender = :user2Id AND m.recipient = :user1Id)')
-            ->setParameter('isGlobal', false)
-            ->setParameter('user1Id', $user1Id)
-            ->setParameter('user2Id', $user2Id)
-            ->orderBy('m.createdAt', 'ASC')
-            ->setMaxResults($limit)
-            ->getQuery()
-            ->getResult();
+        $qb = $this->createQueryBuilder('m');
+        $qb->join('m.sender', 's')
+           ->join('m.recipient', 'r')
+           ->andWhere('m.isGlobal = :isGlobal')
+           ->andWhere(
+               $qb->expr()->orX(
+                   $qb->expr()->andX(
+                       $qb->expr()->eq('s.id', ':user1'),
+                       $qb->expr()->eq('r.id', ':user2')
+                   ),
+                   $qb->expr()->andX(
+                       $qb->expr()->eq('s.id', ':user2'),
+                       $qb->expr()->eq('r.id', ':user1')
+                   )
+               )
+           )
+           ->setParameter('isGlobal', false)
+           ->setParameter('user1', $user1Id)
+           ->setParameter('user2', $user2Id)
+           ->orderBy('m.createdAt', 'ASC')
+           ->setMaxResults($limit);
+        
+        return $qb->getQuery()->getResult();
     }
 
     /**
