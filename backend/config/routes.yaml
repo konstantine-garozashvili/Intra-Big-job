@@ -29,3 +29,10 @@ api_token_devices:
 
 document_routes:
     resource: './routes/document.yaml'
+
+when@dev:
+    dev_tools:
+        resource:
+            path: ../src/Controller/DevToolsController.php
+            namespace: App\Controller
+        type: attribute

@@ -88,6 +88,12 @@ services:
         tags:
             - { name: kernel.event_listener, event: lexik_jwt_authentication.on_authentication_success, method: onAuthenticationSuccess }
 
+    # Service de gestion du profiler
+    App\Service\ProfilerToggleService:
+        arguments:
+            $parameterBag: '@parameter_bag'
+            $cacheDir: '%kernel.cache_dir%'
+
     # Notre écouteur d'exception API pour retourner des erreurs en JSON
     App\EventListener\ApiExceptionListener:
         tags:

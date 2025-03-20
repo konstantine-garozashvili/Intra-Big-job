@@ -1,32 +1,35 @@
-# Guide de dépannage pour le Projet BigProject
+### Symfony profiler
 
-Ce guide vous aidera à résoudre les problèmes courants que vous pourriez rencontrer lors du développement du projet BigProject.
 
-## 🔄 Problèmes généraux de Docker
+Pour activer :
+```bash
+docker exec -it infra-backend-1 php bin/toggle-profiler --enable && 
+docker exec -it infra-backend-1 php bin/console cache:clear
+```
+
+Pour désactiver :
+```bash
+docker exec -it infra-backend-1 php bin/toggle-profiler && docker exec -it infra-backend-1 php bin/console cache:clear
+
+
+```
 
 ### 🐞 Les conteneurs ne démarrent pas
 
-**Symptôme**: Après avoir exécuté `docker-compose -f infra/docker-compose.yml up -d`, certains ou tous les conteneurs ne démarrent pas.
-
-**Solutions possibles**:
-
-1. **Vérifier les logs pour identifier le problème**:
-   ```bash
-   docker-compose -f infra/docker-compose.yml logs
-   ```
-
 2. **Ports déjà utilisés**:
+
    ```bash
    # Sur Windows
    netstat -ano | findstr :8000
    netstat -ano | findstr :5173
    netstat -ano | findstr :8080
    netstat -ano | findstr :3306
-   
+
    # Arrêter Laragon ou tout autre serveur local
    ```
 
 3. **Permissions insuffisantes**:
+
    ```bash
    # Sous Linux/Mac, essayez avec sudo
    sudo docker-compose -f infra/docker-compose.yml up -d
@@ -46,24 +49,27 @@ Ce guide vous aidera à résoudre les problèmes courants que vous pourriez renc
 **Solutions possibles**:
 
 1. **Vérifier les logs du conteneur spécifique**:
+
    ```bash
    docker-compose -f infra/docker-compose.yml logs <nom-du-service>
    ```
 
 2. **Pour le conteneur frontend**:
+
    ```bash
    # Vérifier que le package.json est valide
    docker-compose -f infra/docker-compose.yml exec frontend cat package.json
-   
+
    # Réinstaller les dépendances
    docker-compose -f infra/docker-compose.yml exec frontend npm install
    ```
 
 3. **Pour le conteneur backend**:
+
    ```bash
    # Vérifier que le composer.json est valide
    docker-compose -f infra/docker-compose.yml exec backend cat composer.json
-   
+
    # Réinstaller les dépendances
    docker-compose -f infra/docker-compose.yml exec backend composer install
    ```
@@ -79,6 +85,7 @@ Ce guide vous aidera à résoudre les problèmes courants que vous pourriez renc
 1. **Vider le cache du navigateur** (Ctrl+F5 ou Cmd+Shift+R)
 
 2. **Redémarrer le conteneur frontend**:
+
    ```bash
    docker-compose -f infra/docker-compose.yml restart frontend
    ```
@@ -96,11 +103,13 @@ Ce guide vous aidera à résoudre les problèmes courants que vous pourriez renc
 **Solutions possibles**:
 
 1. **Installer les dépendances avec --legacy-peer-deps**:
+
    ```bash
    docker exec -it infra-frontend-1 npm install --legacy-peer-deps
    ```
 
 2. **Vérifier l'importation des styles Tailwind**:
+
    ```jsx
    // Vérifier que ces lignes sont dans src/index.css ou équivalent
    @tailwind base;
@@ -120,15 +129,17 @@ Ce guide vous aidera à résoudre les problèmes courants que vous pourriez renc
 **Solutions possibles**:
 
 1. **Vérifier que le backend est en cours d'exécution**:
+
    ```bash
    docker-compose -f infra/docker-compose.yml ps
    ```
 
 2. **Vérifier les URL d'API**:
+
    ```jsx
    // Vérifier que l'URL de base est correcte
    const api = axios.create({
-     baseURL: 'http://localhost:8000/api', // Doit correspondre à votre backend
+     baseURL: "http://localhost:8000/api", // Doit correspondre à votre backend
    });
    ```
 
@@ -147,11 +158,13 @@ Ce guide vous aidera à résoudre les problèmes courants que vous pourriez renc
 **Solutions possibles**:
 
 1. **Vérifier les logs Symfony**:
+
    ```bash
    docker exec -it infra-backend-1 tail -f var/log/dev.log
    ```
 
 2. **Vider le cache Symfony**:
+
    ```bash
    docker exec -it infra-backend-1 php bin/console cache:clear
    ```
@@ -168,12 +181,14 @@ Ce guide vous aidera à résoudre les problèmes courants que vous pourriez renc
 **Solutions possibles**:
 
 1. **Mettre à jour le schéma de la base de données**:
+
    ```bash
    # Exécuter les migrations
    docker exec -it infra-backend-1 php bin/console doctrine:migrations:migrate
    ```
 
 2. **Réinitialiser complètement la base de données** (⚠️ perte de données):
+
    ```bash
    docker exec -it infra-backend-1 php bin/console doctrine:schema:drop --force
    docker exec -it infra-backend-1 php bin/console doctrine:migrations:migrate
@@ -191,6 +206,7 @@ Ce guide vous aidera à résoudre les problèmes courants que vous pourriez renc
 **Solutions possibles**:
 
 1. **Régénérer l'autoloader**:
+
    ```bash
    docker exec -it infra-backend-1 composer dump-autoload
    ```
@@ -210,16 +226,19 @@ Ce guide vous aidera à résoudre les problèmes courants que vous pourriez renc
 **Solutions possibles**:
 
 1. **Vérifier que le conteneur MySQL est en cours d'exécution**:
+
    ```bash
    docker-compose -f infra/docker-compose.yml ps database
    ```
 
 2. **Vérifier les logs du conteneur MySQL**:
+
    ```bash
    docker-compose -f infra/docker-compose.yml logs database
    ```
 
 3. **Vérifier les informations de connexion**:
+
    ```bash
    docker exec -it infra-backend-1 cat .env | grep DATABASE_URL
    ```
@@ -236,11 +255,13 @@ Ce guide vous aidera à résoudre les problèmes courants que vous pourriez renc
 **Solutions possibles**:
 
 1. **Vérifier l'état des migrations**:
+
    ```bash
    docker exec -it infra-backend-1 php bin/console doctrine:migrations:status
    ```
 
 2. **Réexécuter la dernière migration**:
+
    ```bash
    docker exec -it infra-backend-1 php bin/console doctrine:migrations:execute --up 'DoctrineMigrations\Version20240101123456'
    ```
@@ -261,11 +282,13 @@ Ce guide vous aidera à résoudre les problèmes courants que vous pourriez renc
 **Solutions possibles**:
 
 1. **Vérifier que les clés JWT sont générées**:
+
    ```bash
    docker exec -it infra-backend-1 ls -la config/jwt/
    ```
 
 2. **Générer de nouvelles clés JWT**:
+
    ```bash
    docker exec -it infra-backend-1 php bin/console lexik:jwt:generate-keypair --overwrite
    ```
@@ -321,7 +344,8 @@ Si vous ne parvenez toujours pas à résoudre votre problème, contactez l'équi
 3. **Ticket GitHub**: Créez une issue dans le projet
 
 Quand vous demandez de l'aide, fournissez toujours:
+
 - Une description claire du problème
 - Les étapes pour reproduire le problème
 - Les logs pertinents
-- Votre environnement (OS, version Docker, etc.) 
+- Votre environnement (OS, version Docker, etc.)
