@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Briefcase } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { ROLES } from '../features/roles/roleContext';
-import { getRoleDisplayFormat } from '../lib/utils/roleDisplay';
+import { getRoleDisplayFormat } from '../lib/utils/roleDisplay.jsx';
 import { SearchSuggestionItem } from './SearchSuggestionItem';
 
 export const SearchSuggestionsList = ({ 

@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom';
 import userAutocompleteService from '../lib/services/autocompleteService';
 import authService from '../lib/services/authService';
 import { useRoles, ROLES } from '../features/roles/roleContext';
-import { getPrimaryRole, matchRoleFromSearchTerm, getFrenchRoleDisplayName, ROLE_ALIASES } from '../lib/utils/roleUtils';
+import { getPrimaryRole, matchRoleFromSearchTerm, ROLE_ALIASES } from '../lib/utils/roleUtils';
+import { getRoleDisplayFormat } from '../lib/utils/roleDisplay.jsx';
 import { Search, User, X, UserCircle2, Briefcase } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../lib/utils';
@@ -11,24 +12,6 @@ import { useNavigate } from 'react-router-dom';
 import { useSearchRoles } from '../lib/hooks/useSearchRoles';
 import { useSearchSuggestions } from '../lib/hooks/useSearchSuggestions';
 import { SearchSuggestionsList } from './SearchSuggestionsList';
-
-// Convert role constants to display format for allowed search roles
-const getRoleDisplayFormat = (roleConstant) => {
-  // Normaliser le rôle en retirant le préfixe ROLE_ s'il existe
-  const normalizedRole = roleConstant.replace(/^ROLE_/i, '');
-  
-  switch (normalizedRole.toUpperCase()) {
-    case 'ADMIN': return 'Admin';
-    case 'SUPER_ADMIN': 
-    case 'SUPERADMIN': return 'Super Admin';
-    case 'TEACHER': return 'Formateur';
-    case 'STUDENT': return 'Étudiant';
-    case 'RECRUITER': return 'Recruteur';
-    case 'HR': return 'Ressources Humaines';
-    case 'GUEST': return 'Invité';
-    default: return roleConstant;
-  }
-};
 
 export const SearchBar = () => {
   // Références et state

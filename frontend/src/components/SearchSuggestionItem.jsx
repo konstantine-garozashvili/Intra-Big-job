@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { User, Search } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { getRoleIcon, getRoleColor, getFrenchRoleDisplayName } from '../lib/utils/roleDisplay';
+import { getRoleIcon, getRoleColor, getFrenchRoleDisplayName } from '../lib/utils/roleDisplay.jsx';
 
 export const SearchSuggestionItem = ({ user, index, activeSuggestion, handleSuggestionClick, setActiveSuggestion }) => {
   return (
