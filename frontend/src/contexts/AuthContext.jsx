@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import { authService } from '../lib/services/authService';
+import { toast } from 'sonner';
 
 // Create the auth context
 const AuthContext = createContext();
@@ -13,78 +14,168 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshingToken, setRefreshingToken] = useState(false);
   const [error, setError] = useState(null);
 
-  // Check if user is already logged in on component mount
+  // Function to check if token is expired or about to expire
+  const isTokenExpired = () => {
+    const token = localStorage.getItem('token');
+    if (!token) return true;
+
+    try {
+      // Get payload from token
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      // Get expiration time
+      const exp = payload.exp;
+      // Get current time
+      const now = Date.now() / 1000;
+      // Check if token is expired or will expire in the next 5 minutes
+      return exp - now < 300; // 300 seconds = 5 minutes
+    } catch (error) {
+      console.error('Error checking token expiration:', error);
+      return true;
+    }
+  };
+
+  // Function to refresh token
+  const refreshToken = async () => {
+    try {
+      setRefreshingToken(true);
+      await authService.refreshToken();
+      return true;
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      return false;
+    } finally {
+      setRefreshingToken(false);
+    }
+  };
+
+  // Function to load user data
+  const loadUserData = async () => {
+    try {
+      setLoading(true);
+      const userData = await authService.getCurrentUser();
+      setUser(userData);
+      return userData;
+    } catch (error) {
+      console.error('Failed to load user data:', error);
+      setUser(null);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Check authentication status on component mount
   useEffect(() => {
     const checkAuthStatus = async () => {
       try {
-        const token = localStorage.getItem('token');
+        setLoading(true);
         
-        if (token) {
-          // Set default auth header for all requests
-          axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-          
-          // Fetch current user data
-          const response = await axios.get('/api/user/me');
-          setUser(response.data);
+        // If no token exists, user is not authenticated
+        if (!localStorage.getItem('token')) {
+          setUser(null);
+          setLoading(false);
+          return;
         }
-      } catch (err) {
-        console.error('Authentication check failed:', err);
-        // Clear invalid token
-        localStorage.removeItem('token');
-        axios.defaults.headers.common['Authorization'] = '';
+        
+        // Check if token is expired or about to expire
+        if (isTokenExpired()) {
+          console.log('Token is expired or about to expire, attempting refresh');
+          const refreshSuccessful = await refreshToken();
+          
+          if (!refreshSuccessful) {
+            // If refresh failed, logout
+            console.log('Token refresh failed, logging out');
+            logout();
+            return;
+          }
+        }
+        
+        // Load user data
+        await loadUserData();
+      } catch (error) {
+        console.error('Authentication check failed:', error);
+        // Clear tokens and user data
+        logout();
       } finally {
         setLoading(false);
       }
     };
 
     checkAuthStatus();
+    
+    // Set up token refresh interval
+    const tokenRefreshInterval = setInterval(() => {
+      if (localStorage.getItem('token') && isTokenExpired()) {
+        console.log('Refreshing token from interval');
+        refreshToken().catch(error => {
+          console.error('Token refresh interval failed:', error);
+          logout();
+        });
+      }
+    }, 4 * 60 * 1000); // Check every 4 minutes
+    
+    return () => {
+      clearInterval(tokenRefreshInterval);
+    };
   }, []);
 
   // Login function
   const login = async (email, password) => {
     try {
       setError(null);
-      const response = await axios.post('/api/login', { email, password });
+      setLoading(true);
       
-      // Save token to localStorage
-      localStorage.setItem('token', response.data.token);
+      const response = await authService.login(email, password);
       
-      // Set default auth header
-      axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
-      
-      // Set user data
-      setUser(response.data.user);
-      
-      return response.data;
+      if (response && response.token) {
+        // Load user data
+        await loadUserData();
+        toast.success('Connexion réussie');
+        return response;
+      } else {
+        throw new Error('Login failed - No token received');
+      }
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed');
+      const errorMessage = err.response?.data?.message || 'Échec de la connexion';
+      setError(errorMessage);
+      toast.error(errorMessage);
       throw err;
+    } finally {
+      setLoading(false);
     }
   };
 
   // Logout function
-  const logout = () => {
-    // Remove token from localStorage
-    localStorage.removeItem('token');
-    
-    // Remove auth header
-    axios.defaults.headers.common['Authorization'] = '';
-    
-    // Clear user data
-    setUser(null);
+  const logout = async (redirectTo = '/login') => {
+    try {
+      setLoading(true);
+      await authService.logout(redirectTo);
+    } catch (err) {
+      console.error('Logout error:', err);
+    } finally {
+      setUser(null);
+      setLoading(false);
+    }
   };
 
   // Register function
   const register = async (userData) => {
     try {
       setError(null);
-      const response = await axios.post('/api/register', userData);
-      return response.data;
+      setLoading(true);
+      const response = await authService.register(userData);
+      toast.success('Inscription réussie');
+      return response;
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed');
+      const errorMessage = err.response?.data?.message || 'Échec de l\'inscription';
+      setError(errorMessage);
+      toast.error(errorMessage);
       throw err;
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -92,10 +183,13 @@ export const AuthProvider = ({ children }) => {
   const value = {
     user,
     loading,
+    refreshingToken,
     error,
     login,
     logout,
     register,
+    refreshToken,
+    loadUserData,
     isAuthenticated: !!user,
   };
 
