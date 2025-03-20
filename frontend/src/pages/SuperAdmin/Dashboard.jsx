@@ -1,9 +1,33 @@
 import React, { useMemo, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useUserData } from '@/hooks/useDashboardQueries';
 import { authService } from '@/lib/services/authService';
 import DashboardHeader from '@/components/shared/DashboardHeader';
-import { ShieldAlert } from 'lucide-react';
+import { ShieldAlert, Users, Book, ChevronRight } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: { 
+    opacity: 1,
+    transition: { 
+      staggerChildren: 0.08,
+      delayChildren: 0.1
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { y: 15, opacity: 0 },
+  visible: { 
+    y: 0, 
+    opacity: 1,
+    transition: { type: "spring", stiffness: 400, damping: 25 }
+  }
+};
 
 /**
  * Tableau de bord spécifique pour les Super Administrateurs
@@ -42,15 +66,25 @@ const SuperAdminDashboard = () => {
     refreshUserData();
   }, []);
 
-  // Récupérer les données brutes du localStorage pour le débogage
-  const rawUserData = useMemo(() => {
-    try {
-      const userData = localStorage.getItem('user');
-      return userData ? JSON.parse(userData) : null;
-    } catch (error) {
-      return null;
+  // Définir les cartes pour les accès rapides
+  const quickAccessCards = [
+    {
+      title: 'Gestion des rôles',
+      description: 'Gérer les rôles des étudiants invités',
+      icon: Users,
+      color: 'from-blue-500 to-blue-600',
+      textColor: 'text-blue-50',
+      link: '/recruiter/guest-student-roles',
+    },
+    {
+      title: 'Formations',
+      description: 'Gérer et consulter les formations',
+      icon: Book,
+      color: 'from-purple-500 to-purple-600',
+      textColor: 'text-purple-50',
+      link: '/formations',
     }
-  }, []);
+  ];
 
   return (
     <DashboardLayout 
@@ -63,17 +97,46 @@ const SuperAdminDashboard = () => {
           icon={ShieldAlert}
           roleTitle="Tableau de bord super administrateur"
         />
-        
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <h1 className="mb-8 text-3xl font-bold text-gray-800">
-            Bienvenue {user?.firstName} {user?.lastName}
-          </h1>
-          <div className="mb-6 p-4 bg-blue-50 border-l-4 border-blue-500 rounded-md">
-            <p className="text-lg text-blue-800">
-              <span className="font-semibold">Rôle:</span> {roleAlias}
-            </p>
-          </div>
-        </div>
+
+        <Card className="border-0 shadow-md mb-6">
+          <CardContent className="p-6">
+            <h2 className="text-xl font-semibold text-gray-800 mb-6">Accès rapide</h2>
+            
+            <motion.div 
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+              className="grid grid-cols-1 md:grid-cols-2 gap-5"
+            >
+              {quickAccessCards.map((card, index) => (
+                <motion.div key={index} variants={itemVariants} className="h-full">
+                  <Link to={card.link} className="block h-full">
+                    <div className="relative h-full overflow-hidden rounded-xl shadow-sm hover:shadow-md transition-all duration-300 group">
+                      <div className={`absolute inset-0 bg-gradient-to-br ${card.color} opacity-90 group-hover:opacity-100 transition-opacity`}></div>
+                      <div className="relative p-5 h-full flex flex-col">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="p-2.5 rounded-lg bg-white/20 backdrop-blur-sm">
+                            <card.icon className="w-5 h-5 text-white" />
+                          </div>
+                          <div className="p-1.5 rounded-full bg-white/20 backdrop-blur-sm">
+                            <ChevronRight className="w-4 h-4 text-white" />
+                          </div>
+                        </div>
+                        
+                        <h2 className="text-xl font-semibold text-white mb-1">
+                          {card.title}
+                        </h2>
+                        <p className="text-white/80 text-sm mb-4">
+                          {card.description}
+                        </p>
+                      </div>
+                    </div>
+                  </Link>
+                </motion.div>
+              ))}
+            </motion.div>
+          </CardContent>
+        </Card>
       </div>
     </DashboardLayout>
   );

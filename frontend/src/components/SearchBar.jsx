@@ -44,6 +44,26 @@ export const SearchBar = () => {
   const navigate = useNavigate();
   const [containerWidth, setContainerWidth] = useState(0);
 
+  // Update container width on mount and resize
+  useEffect(() => {
+    const updateWidth = () => {
+      if (wrapperRef.current) {
+        setContainerWidth(wrapperRef.current.offsetWidth);
+      }
+    };
+    
+    // Initial update
+    updateWidth();
+    
+    // Add resize listener
+    window.addEventListener('resize', updateWidth);
+    
+    // Clean up
+    return () => {
+      window.removeEventListener('resize', updateWidth);
+    };
+  }, [showSuggestions]);
+
   // Vérifier si l'utilisateur est connecté
   useEffect(() => {
     const loggedIn = authService.isLoggedIn();
@@ -131,11 +151,28 @@ export const SearchBar = () => {
     };
   }, []);
 
+  // Additional effect to update dropdown position when it becomes visible
+  useEffect(() => {
+    if (showSuggestions) {
+      const updateDropdownPosition = () => {
+        // Force a rerender to update the position of the dropdown
+        setContainerWidth(wrapperRef.current?.offsetWidth || 0);
+      };
+      
+      // Update position immediately
+      updateDropdownPosition();
+      
+      // And also after a short delay to handle any layout shifts
+      const timer = setTimeout(updateDropdownPosition, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [showSuggestions]);
+
   // Ajouter un effet pour débugger le comportement des suggestions
   useEffect(() => {
     if (hasRole(ROLES.RECRUITER) || hasRole(ROLES.TEACHER) || hasRole(ROLES.STUDENT) || 
         hasRole(ROLES.HR) || hasRole(ROLES.GUEST) || hasRole(ROLES.ADMIN)) {
-      console.log('Suggestions visibility changed:', showSuggestions);
+      // Removing console log for cleaner output
     }
   }, [showSuggestions, hasRole]);
 
@@ -246,9 +283,10 @@ export const SearchBar = () => {
     setSuggestions([]);
     setShowSuggestions(false);
     
-    // Rediriger vers la page de profil de l'utilisateur sélectionné
-    console.log(`Navigating to profile of user with ID: ${suggestion.id}`);
-    navigate(`/profile/${suggestion.id}`);
+    // Use setTimeout to ensure the UI updates before navigation
+    setTimeout(() => {
+      navigate(`/profile/${suggestion.id}`);
+    }, 100);
   };
 
   const handleKeyDown = (e) => {
@@ -401,9 +439,6 @@ export const SearchBar = () => {
                 allResults = [...allResults, ...newUniqueResults];
                 // Mettre à jour les suggestions au fur et à mesure
                 setSuggestions(allResults.slice(0, MAX_RESULTS));
-                
-                // Log pour débogage
-                console.log(`Recherche "${term}" a trouvé ${newUniqueResults.length} nouveaux résultats. Total: ${allResults.length}`);
               }
             }
           }
@@ -430,9 +465,6 @@ export const SearchBar = () => {
                 if (newUniqueResults.length > 0) {
                   allResults = [...allResults, ...newUniqueResults];
                   setSuggestions(allResults.slice(0, MAX_RESULTS));
-                  
-                  // Log pour débogage
-                  console.log(`Recherche de secours "${term}" a trouvé ${newUniqueResults.length} nouveaux résultats. Total: ${allResults.length}`);
                 }
               }
             }
@@ -610,15 +642,15 @@ export const SearchBar = () => {
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
             transition={{ duration: 0.2, type: "spring", stiffness: 500, damping: 30 }}
             className={cn(
-              "absolute top-full left-0 w-full mt-2 overflow-hidden bg-white rounded-xl shadow-xl border border-gray-100",
+              "fixed top-auto mt-2 overflow-hidden bg-white rounded-xl shadow-xl border border-gray-100",
               "max-h-[60vh] md:max-h-[70vh]"
             )}
             style={{ 
               boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
               zIndex: 9999,
-              position: 'fixed',
-              transform: 'translateY(calc(2.5rem + 8px))',
-              width: containerWidth + 'px'
+              width: containerWidth > 0 ? containerWidth : '100%',
+              left: wrapperRef.current ? wrapperRef.current.getBoundingClientRect().left : 0,
+              top: wrapperRef.current ? wrapperRef.current.getBoundingClientRect().bottom + 8 : 0
             }}
           >
             {suggestions.length === 0 ? (
