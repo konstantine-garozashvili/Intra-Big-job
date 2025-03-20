@@ -5,6 +5,24 @@ import { RoleProvider, RoleDashboardRedirect } from './features/roles'
 import { showGlobalLoader, hideGlobalLoader } from './lib/utils/loadingUtils'
 import LoadingOverlay from './components/LoadingOverlay'
 import { AuthProvider } from './contexts/AuthContext'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { clearChatCache } from './lib/services/chatService'
+
+// Create a custom query client for chat
+const chatQueryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30000, // 30 seconds
+      cacheTime: 60 * 60 * 1000, // 1 hour
+      retry: 1,
+      refetchOnWindowFocus: false,
+      refetchOnMount: true,
+    },
+  },
+});
+
+// Export chatQueryClient to be used elsewhere
+export { chatQueryClient };
 
 // Import différé des pages pour améliorer les performances
 const Login = lazy(() => import('./pages/Login'))
@@ -221,6 +239,9 @@ const AppContent = () => {
       // Get redirectTo path from event detail if available, default to '/'
       const redirectTo = event?.detail?.redirectTo || '/';
       
+      // Clear chat cache using the utility function
+      clearChatCache(chatQueryClient);
+      
       // Show loader during navigation
       setShowLoader(true);
       
@@ -352,11 +373,17 @@ const AppContent = () => {
 // Composant App principal qui configure le Router
 const App = () => {
   return (
-    <AuthProvider>
-      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <AppContent />
-      </Router>
-    </AuthProvider>
+    <QueryClientProvider client={chatQueryClient}>
+      <AuthProvider>
+        <RoleProvider>
+          <Router>
+            <Suspense fallback={<SuspenseLoader />}>
+              <AppContent />
+            </Suspense>
+          </Router>
+        </RoleProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 };
 

@@ -3,75 +3,51 @@ import apiService from '../../lib/services/apiService';
 import { authService } from '../../lib/services/authService';
 import ChatMessages from './ChatMessages';
 import UsersList from './UsersList';
+import chatService from '../../lib/services/chatService';
 
 const ChatSidebar = ({ isOpen, onClose, onNewMessage = () => {} }) => {
   const [activeTab, setActiveTab] = useState('global');
-  const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
-  const [loading, setLoading] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
-  const [error, setError] = useState(null);
   const [user, setUser] = useState(null);
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
-  const [privateChats, setPrivateChats] = useState({});
   const [activeChat, setActiveChat] = useState('global');
   const [selectedUser, setSelectedUser] = useState(null);
   const messagesEndRef = useRef(null);
-  const intervalRef = useRef(null);
-  const [recentlySent, setRecentlySent] = useState(false);
-  const [sendingMessage, setSendingMessage] = useState(false);
-  const sentMessagesCache = useRef(new Map());
-  const localMessagesRef = useRef([]);
   const prevMessagesRef = useRef([]);
+
+  // Use global messages hook from chatService
+  const {
+    messages: globalMessages,
+    isLoading: isLoadingGlobal,
+    error: globalError,
+    refetch: refetchGlobalMessages,
+    sendMessage: sendGlobalMessage,
+    isSending: isSendingGlobal
+  } = chatService.useGlobalMessages();
+
+  // Use private messages hook if a user is selected
+  const {
+    messages: privateMessages,
+    isLoading: isLoadingPrivate,
+    error: privateError,
+    refetch: refetchPrivateMessages,
+    sendMessage: sendPrivateMessage,
+    isSending: isSendingPrivate
+  } = chatService.usePrivateMessages(selectedUser?.id);
+
+  // Computed values based on active chat
+  const messages = activeChat === 'global' ? globalMessages : privateMessages;
+  const isLoading = activeChat === 'global' ? isLoadingGlobal : isLoadingPrivate;
+  const error = activeChat === 'global' ? globalError : privateError;
+  const isSending = activeChat === 'global' ? isSendingGlobal : isSendingPrivate;
 
   // Get current user when component mounts
   useEffect(() => {
     const userData = authService.getUser();
     setUser(userData);
   }, []);
-
-  // Store the current messages in the ref whenever they change
-  useEffect(() => {
-    localMessagesRef.current = messages;
-  }, [messages]);
-
-  // Fetch messages when component mounts or when activeTab/activeChat changes
-  useEffect(() => {
-    if (isOpen) {
-      // Clear any existing interval when dependencies change
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-
-      if (activeTab === 'global' && activeChat === 'global') {
-        // Initial fetch with loading indicator
-        fetchMessages();
-        
-        // DO NOT set up polling - this is intentional to prevent messages from disappearing
-        // Users can use the manual refresh button when they want new messages
-        
-        return () => {
-          if (intervalRef.current) clearInterval(intervalRef.current);
-        };
-      } else if (activeTab === 'global' && activeChat !== 'global' && selectedUser) {
-        // For private chats, fetch but do not set up polling
-        fetchPrivateMessages(selectedUser.id);
-        
-        return () => {
-          if (intervalRef.current) clearInterval(intervalRef.current);
-        };
-      }
-    }
-  }, [isOpen, activeTab, activeChat, selectedUser]);
-
-  // Fetch users when component mounts or when switching to users tab
-  useEffect(() => {
-    if (isOpen && activeTab === 'users') {
-      fetchUsers();
-    }
-  }, [isOpen, activeTab]);
 
   // Scroll to bottom whenever messages change
   useEffect(() => {
@@ -80,7 +56,7 @@ const ChatSidebar = ({ isOpen, onClose, onNewMessage = () => {} }) => {
 
   // Add a new useEffect to check for new messages and trigger the callback
   useEffect(() => {
-    if (messages.length > prevMessagesRef.current.length) {
+    if (messages?.length > 0 && prevMessagesRef.current?.length > 0 && messages.length > prevMessagesRef.current.length) {
       // Find messages that weren't in previous state
       const newMessages = messages.filter(msg => {
         // Check if this message exists in prevMessages by ID
@@ -100,265 +76,18 @@ const ChatSidebar = ({ isOpen, onClose, onNewMessage = () => {} }) => {
     }
     
     // Update previous messages reference
-    prevMessagesRef.current = messages;
+    prevMessagesRef.current = messages || [];
   }, [messages, user, onNewMessage]);
+
+  // Fetch users when component mounts or when switching to users tab
+  useEffect(() => {
+    if (isOpen && activeTab === 'users') {
+      fetchUsers();
+    }
+  }, [isOpen, activeTab]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const fetchMessages = async () => {
-    if (isInitialLoad) {
-      setLoading(true);
-    }
-    
-    // Always load from localStorage first to ensure we never lose messages
-    const storedMessages = loadMessagesFromStorage('global');
-    if (storedMessages && storedMessages.length > 0) {
-      // Always use stored messages as our base set
-      setMessages(storedMessages);
-      setLoading(false);
-    }
-    
-    try {
-      // Use the get method with withAuth to ensure the request is authenticated
-      const response = await apiService.get('/messages/recent', apiService.withAuth());
-      
-      // Get server messages
-      const serverMessages = response.messages || [];
-      
-      // IMPORTANT: We combine local and server messages with preference to local
-      // Start with current state + localStorage (already set above)
-      const currentMessages = storedMessages.length > 0 ? storedMessages : messages;
-      
-      // Only add messages from server that don't exist in our local set
-      let hasNewMessages = false;
-      const combinedMessages = [...currentMessages];
-      
-      serverMessages.forEach(serverMsg => {
-        // Check if this server message is already in our local messages
-        const existsLocally = combinedMessages.some(localMsg => 
-          // Match by ID if possible
-          (serverMsg.id && localMsg.id && serverMsg.id === localMsg.id) ||
-          // Otherwise try to match by content + sender
-          (serverMsg.content === localMsg.content && 
-           serverMsg.sender?.id === localMsg.sender?.id)
-        );
-        
-        // If not exists locally, add it
-        if (!existsLocally) {
-          combinedMessages.push(serverMsg);
-          hasNewMessages = true;
-        }
-      });
-      
-      // Only update state if we have new messages
-      if (hasNewMessages || combinedMessages.length > currentMessages.length) {
-        // Sort by creation time
-        const sortedMessages = combinedMessages.sort((a, b) => 
-          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-        );
-        
-        setMessages(sortedMessages);
-        saveMessagesToStorage('global', sortedMessages);
-      }
-      
-      setLoading(false);
-      setIsInitialLoad(false);
-    } catch (err) {
-      console.error('Error fetching messages:', err);
-      setError('Failed to load messages');
-      setLoading(false);
-    }
-  };
-
-  const fetchPrivateMessages = async (userId) => {
-    if (isInitialLoad) {
-      setLoading(true);
-    }
-    
-    // Always load from localStorage first to ensure we never lose messages
-    const storedMessages = loadMessagesFromStorage(`private_${userId}`);
-    if (storedMessages && storedMessages.length > 0) {
-      setPrivateChats(prev => ({
-        ...prev,
-        [userId]: storedMessages
-      }));
-      
-      if (activeChat === userId) {
-        setMessages(storedMessages);
-      }
-      
-      setLoading(false);
-    }
-    
-    try {
-      // This endpoint will need to be implemented in the backend
-      const response = await apiService.get(`/messages/private/${userId}`, apiService.withAuth());
-      
-      // Make sure we have a valid response with messages
-      const serverMessages = response.messages || [];
-      
-      // IMPORTANT: We combine local and server messages with preference to local
-      // Start with current state + localStorage (already set above)
-      const currentMessages = storedMessages.length > 0 ? storedMessages : 
-        (privateChats[userId] || []);
-      
-      // Only add messages from server that don't exist in our local set
-      let hasNewMessages = false;
-      const combinedMessages = [...currentMessages];
-      
-      serverMessages.forEach(serverMsg => {
-        // Check if this server message is already in our local messages
-        const existsLocally = combinedMessages.some(localMsg => 
-          // Match by ID if possible
-          (serverMsg.id && localMsg.id && serverMsg.id === localMsg.id) ||
-          // Otherwise try to match by content + sender
-          (serverMsg.content === localMsg.content && 
-           serverMsg.sender?.id === localMsg.sender?.id)
-        );
-        
-        // If not exists locally, add it
-        if (!existsLocally) {
-          combinedMessages.push(serverMsg);
-          hasNewMessages = true;
-        }
-      });
-      
-      // Only update state if we have new messages
-      if (hasNewMessages || combinedMessages.length > currentMessages.length) {
-        // Sort by creation time
-        const sortedMessages = combinedMessages.sort((a, b) => 
-          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-        );
-        
-        setPrivateChats(prev => ({
-          ...prev,
-          [userId]: sortedMessages
-        }));
-        
-        if (activeChat === userId) {
-          setMessages(sortedMessages);
-        }
-        
-        saveMessagesToStorage(`private_${userId}`, sortedMessages);
-      }
-      
-      setLoading(false);
-      setIsInitialLoad(false);
-    } catch (err) {
-      console.error(`Error fetching private messages with user ${userId}:`, err);
-      setError('Failed to load private messages');
-      setLoading(false);
-      
-      // If we failed to fetch from server but have stored messages, keep using those
-      if (messages.length === 0 && activeChat === userId && storedMessages && storedMessages.length > 0) {
-        setMessages(storedMessages);
-      }
-    }
-  };
-
-  const silentRefreshPrivateMessages = async (userId) => {
-    // Skip refresh if we just sent a message or are currently sending one
-    if (recentlySent || sendingMessage) return;
-    
-    try {
-      // Store current set of messages to be able to detect changes
-      const currentMessages = [...messages];
-      const pendingMessages = currentMessages.filter(msg => msg.isSending || !msg.id.toString().startsWith('temp-'));
-      
-      // This endpoint will need to be implemented in the backend
-      const response = await apiService.get(`/messages/private/${userId}`, apiService.withAuth());
-      
-      // Make sure we have a valid response with messages
-      const serverMessages = response.messages || [];
-      
-      // Check if we have any temporary messages that need to be preserved
-      const tempMessages = currentMessages.filter(msg => 
-        msg.isSending || 
-        msg.id.toString().startsWith('temp-') || 
-        msg.sendFailed ||
-        !serverMessages.some(srvMsg => srvMsg.id === msg.id)
-      );
-      
-      // Filter cached messages for this private chat
-      const cachedMessages = Array.from(sentMessagesCache.current.values())
-        .filter(msg => 
-          (msg.recipientId === userId && msg.sender?.id === user?.id) || 
-          (msg.recipientId === user?.id && msg.sender?.id === userId)
-        );
-      
-      if (tempMessages.length > 0 || cachedMessages.length > 0) {
-        // Combine with temp messages
-        const allCachedMessages = [...tempMessages, ...cachedMessages];
-        
-        // Merge everything
-        const mergedMessages = mergeSentMessagesWithServer(serverMessages, allCachedMessages);
-        
-        // Update the private chat messages for this user
-        setPrivateChats(prev => ({
-          ...prev,
-          [userId]: mergedMessages
-        }));
-        saveMessagesToStorage(`private_${userId}`, mergedMessages);
-        
-        // Update the current messages display if this is the active chat
-        if (activeChat === userId) {
-          setMessages(mergedMessages);
-        }
-      } else {
-        // No special messages to preserve, just use server response
-        setPrivateChats(prev => ({
-          ...prev,
-          [userId]: serverMessages
-        }));
-        saveMessagesToStorage(`private_${userId}`, serverMessages);
-        
-        // Update the current messages display if this is the active chat
-        if (activeChat === userId) {
-          setMessages(serverMessages);
-        }
-      }
-    } catch (err) {
-      console.error(`Error silently refreshing private messages with user ${userId}:`, err);
-      // Don't modify the message state if refresh fails
-    }
-  };
-
-  // Helper function to merge server messages with sent messages
-  const mergeSentMessagesWithServer = (serverMessages, cachedMessages) => {
-    const mergedMessages = [...serverMessages];
-    
-    // Process each cached message
-    cachedMessages.forEach(cachedMsg => {
-      // Try to find a matching message on the server (by content and approximate time)
-      const matchedServerMsg = serverMessages.find(serverMsg => {
-        // First try perfect content match (most reliable)
-        if (serverMsg.content === cachedMsg.content) {
-          // If sender IDs match or one is undefined
-          if (!serverMsg.sender?.id || !cachedMsg.sender?.id || 
-              serverMsg.sender?.id === cachedMsg.sender?.id) {
-            // Don't worry about time - content match is enough
-            return true;
-          }
-        }
-        return false;
-      });
-      
-      // If no match found, add the cached message to the result
-      if (!matchedServerMsg) {
-        // Add cached message (it hasn't been saved to the server yet)
-        mergedMessages.push({
-          ...cachedMsg,
-          confirmed: false // Mark as not confirmed by server
-        });
-      }
-    });
-    
-    // Sort by createdAt to maintain chronological order
-    return mergedMessages.sort((a, b) => 
-      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-    );
   };
 
   const fetchUsers = async () => {
@@ -375,213 +104,38 @@ const ChatSidebar = ({ isOpen, onClose, onNewMessage = () => {} }) => {
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!newMessage.trim() || sendingMessage) return;
-
-    // Clear any existing interval
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
+    if (!newMessage.trim() || isSending) return;
     
-    // Flag that we're sending a message and recently sent one
-    setSendingMessage(true);
-    setRecentlySent(true);
-    
-    // Add permanent ID for this message to make it easier to find later
+    // Generate unique ID for this message
     const tempId = `perm-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
     
-    // Create a temporary message with our permanent ID
-    const tempMessage = {
-      id: tempId,
-      content: newMessage,
-      sender: user,
-      createdAt: new Date().toISOString(),
-      isSending: true, // Flag to show sending indicator
-      permanent: true, // Mark as permanent - should never be removed
-      // Add recipient ID for private messages
-      ...(activeChat !== 'global' && { recipientId: selectedUser.id })
-    };
-    
-    // Create a key for this message in the cache
-    const cacheKey = `${newMessage}_${tempId}`;
-    sentMessagesCache.current.set(cacheKey, tempMessage);
-    
-    // Update UI immediately with the sending message
-    let updatedMessages = [];
-    
     if (activeChat === 'global') {
-      // Use functional update to ensure we're working with latest state
-      setMessages(prevMessages => {
-        updatedMessages = [...prevMessages, tempMessage];
-        // Save to storage immediately
-        saveMessagesToStorage('global', updatedMessages);
-        return updatedMessages;
+      // Send global message
+      sendGlobalMessage({
+        content: newMessage,
+        user,
+        tempId
       });
     } else if (selectedUser) {
-      // Use functional update to ensure we're working with latest state
-      setMessages(prevMessages => {
-        updatedMessages = [...prevMessages, tempMessage];
-        // Save to storage immediately
-        saveMessagesToStorage(`private_${selectedUser.id}`, updatedMessages);
-        return updatedMessages;
-      });
-      
-      setPrivateChats(prev => {
-        const prevUserMessages = prev[selectedUser.id] || [];
-        const updatedPrivateChat = [...prevUserMessages, tempMessage];
-        
-        // Save immediately
-        saveMessagesToStorage(`private_${selectedUser.id}`, updatedPrivateChat);
-        
-        return {
-          ...prev,
-          [selectedUser.id]: updatedPrivateChat
-        };
+      // Send private message
+      sendPrivateMessage({
+        content: newMessage,
+        user,
+        recipientId: selectedUser.id,
+        tempId
       });
     }
-
-    // Also save to sessionStorage as extra backup
-    try {
-      sessionStorage.setItem(`last_sent_message_${activeChat}`, JSON.stringify(tempMessage));
-    } catch (err) {
-      console.error('Error saving to session storage:', err);
-    }
-
-    try {
-      let response;
-      
-      if (activeChat === 'global') {
-        // Send global message
-        response = await apiService.post('/messages', { content: newMessage }, apiService.withAuth());
-      } else if (selectedUser) {
-        // Send private message
-        response = await apiService.post('/messages/private', { 
-          content: newMessage,
-          recipientId: selectedUser.id
-        }, apiService.withAuth());
-      }
-      
-      // Get the confirmed message from server
-      const confirmedMessage = response && response.data;
-      
-      if (confirmedMessage) {
-        // Update the message in our cache with the server-confirmed version
-        sentMessagesCache.current.delete(cacheKey);
-        
-        // Update the message in our UI to show as confirmed
-        // Use functional updates to ensure we're working with latest state
-        if (activeChat === 'global') {
-          setMessages(prevMessages => {
-            const updatedMessages = prevMessages.map(msg => 
-              msg.id === tempId 
-                ? { 
-                    ...confirmedMessage, 
-                    confirmed: true, 
-                    permanent: true, // Keep the permanent flag
-                    sender: confirmedMessage.sender || user 
-                  }
-                : msg
-            );
-            saveMessagesToStorage('global', updatedMessages);
-            return updatedMessages;
-          });
-        } else if (selectedUser) {
-          setMessages(prevMessages => {
-            const updatedMessages = prevMessages.map(msg => 
-              msg.id === tempId 
-                ? { 
-                    ...confirmedMessage, 
-                    confirmed: true, 
-                    permanent: true, // Keep the permanent flag
-                    sender: confirmedMessage.sender || user 
-                  }
-                : msg
-            );
-            saveMessagesToStorage(`private_${selectedUser.id}`, updatedMessages);
-            return updatedMessages;
-          });
-          
-          setPrivateChats(prev => {
-            const updatedPrivateChat = (prev[selectedUser.id] || []).map(msg => 
-              msg.id === tempId 
-                ? { 
-                    ...confirmedMessage, 
-                    confirmed: true, 
-                    permanent: true, // Keep the permanent flag
-                    sender: confirmedMessage.sender || user 
-                  }
-                : msg
-            );
-            
-            saveMessagesToStorage(`private_${selectedUser.id}`, updatedPrivateChat);
-            
-            return {
-              ...prev,
-              [selectedUser.id]: updatedPrivateChat
-            };
-          });
-        }
-      }
-      
-      // Clear the input
-      setNewMessage('');
-    } catch (err) {
-      console.error('Error sending message:', err);
-      
-      // Mark the message as failed - but still keep it!
-      if (activeChat === 'global') {
-        setMessages(prevMessages => {
-          const failedMessages = prevMessages.map(msg => 
-            msg.id === tempId 
-              ? { ...msg, isSending: false, sendFailed: true, permanent: true }
-              : msg
-          );
-          saveMessagesToStorage('global', failedMessages);
-          return failedMessages;
-        });
-      } else if (selectedUser) {
-        setMessages(prevMessages => {
-          const failedMessages = prevMessages.map(msg => 
-            msg.id === tempId 
-              ? { ...msg, isSending: false, sendFailed: true, permanent: true }
-              : msg
-          );
-          saveMessagesToStorage(`private_${selectedUser.id}`, failedMessages);
-          return failedMessages;
-        });
-        
-        setPrivateChats(prev => {
-          const updatedPrivateChat = (prev[selectedUser.id] || []).map(msg => 
-            msg.id === tempId 
-              ? { ...msg, isSending: false, sendFailed: true, permanent: true }
-              : msg
-          );
-          
-          saveMessagesToStorage(`private_${selectedUser.id}`, updatedPrivateChat);
-          
-          return {
-            ...prev,
-            [selectedUser.id]: updatedPrivateChat
-          };
-        });
-      }
-      
-      setError('Failed to send message');
-    } finally {
-      // Reset sending state
-      setSendingMessage(false);
-      
-      // DO NOT restart polling - this is intentional
-      // We only want manual refreshes from now on
-    }
+    
+    // Clear the input
+    setNewMessage('');
   };
 
   // Handle manually refreshing the messages
   const handleManualRefresh = () => {
     if (activeChat === 'global') {
-      fetchMessages();
+      refetchGlobalMessages();
     } else if (selectedUser) {
-      fetchPrivateMessages(selectedUser.id);
+      refetchPrivateMessages();
     }
   };
 
@@ -594,7 +148,7 @@ const ChatSidebar = ({ isOpen, onClose, onNewMessage = () => {} }) => {
       setActiveChat('global');
       setSelectedUser(null);
       setIsInitialLoad(true); // Reset initial load state
-      fetchMessages();
+      refetchGlobalMessages();
     }
     
     // If switching to users tab and no users loaded yet, fetch them
@@ -610,46 +164,16 @@ const ChatSidebar = ({ isOpen, onClose, onNewMessage = () => {} }) => {
     setSelectedUser(user); // Store the selected user
     setIsInitialLoad(true); // Reset initial load state
     
-    // Check if we already have messages for this user
-    if (privateChats[user.id]) {
-      setMessages(privateChats[user.id]);
-      setIsInitialLoad(false); // If we already have messages, it's not an initial load
-    } else {
-      // Only fetch if we don't have messages yet
-      fetchPrivateMessages(user.id);
-    }
+    // Refetch private messages for this user
+    setTimeout(() => refetchPrivateMessages(), 0);
   };
 
   // Handle returning to global chat
   const handleReturnToGlobalChat = () => {
     setActiveChat('global');
     setSelectedUser(null);
-    setIsInitialLoad(true); // Reset initial load state
-    fetchMessages();
-  };
-
-  // Function to save all messages to localStorage
-  const saveMessagesToStorage = (chatId, messages) => {
-    try {
-      // Store up to 100 most recent messages per chat
-      const messagesToStore = [...messages].slice(-100);
-      localStorage.setItem(`chat_messages_${chatId}`, JSON.stringify(messagesToStore));
-    } catch (err) {
-      console.error('Error saving messages to storage:', err);
-    }
-  };
-
-  // Function to load messages from localStorage
-  const loadMessagesFromStorage = (chatId) => {
-    try {
-      const storedMessages = localStorage.getItem(`chat_messages_${chatId}`);
-      if (storedMessages) {
-        return JSON.parse(storedMessages);
-      }
-    } catch (err) {
-      console.error('Error loading messages from storage:', err);
-    }
-    return [];
+    setIsInitialLoad(true);
+    refetchGlobalMessages();
   };
 
   return (
@@ -724,10 +248,10 @@ const ChatSidebar = ({ isOpen, onClose, onNewMessage = () => {} }) => {
               <ChatMessages 
                 messages={messages} 
                 user={user} 
-                loading={loading} 
+                loading={isLoading} 
                 error={error} 
                 messagesEndRef={messagesEndRef}
-                messageContainerLoading={sendingMessage}
+                messageContainerLoading={isSending}
                 onManualRefresh={handleManualRefresh}
               />
             </div>
@@ -740,18 +264,18 @@ const ChatSidebar = ({ isOpen, onClose, onNewMessage = () => {} }) => {
                 onChange={(e) => setNewMessage(e.target.value)}
                 placeholder={`Écrivez votre message${activeChat !== 'global' ? ` à ${selectedUser?.firstName}` : ''}...`}
                 className="flex-1 border border-gray-300 rounded-l-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                disabled={sendingMessage}
+                disabled={isSending}
               />
               <button 
                 type="submit" 
-                disabled={sendingMessage}
+                disabled={isSending}
                 className={`text-white px-3 py-2 rounded-r-lg focus:outline-none ${
-                  sendingMessage 
+                  isSending 
                     ? 'bg-blue-400 cursor-not-allowed' 
                     : 'bg-blue-600 hover:bg-blue-700'
                 }`}
               >
-                {sendingMessage ? (
+                {isSending ? (
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                 ) : (
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
