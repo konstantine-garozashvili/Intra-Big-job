@@ -332,9 +332,19 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
                 'birthDate' => $user->getBirthDate() ? $user->getBirthDate()->format('Y-m-d') : null,
                 'createdAt' => $user->getCreatedAt() ? $user->getCreatedAt()->format('Y-m-d H:i:s') : null,
                 'updatedAt' => $user->getUpdatedAt() ? $user->getUpdatedAt()->format('Y-m-d H:i:s') : null,
-                'roles' => $roles
+                'roles' => $roles,
+                'profilePicturePath' => $user->getProfilePicturePath(),
+                'linkedinUrl' => $user->getLinkedinUrl(),
+                'specialization' => $user->getSpecialization() ? $user->getSpecialization()->getName() : null,
+                // [Error] 'studentProfile' => $user->getStudentProfile() ? $user->getStudentProfile()->getProfileData() : null,
+                'nationality' => $user->getNationality() ? $user->getNationality()->getName() : null,
+                'diplomas' => array_map(function($diploma) {
+                    return [
+                        'name' => $diploma->getName(),
+                        'obtainedAt' => $diploma->obtainedAt ? $diploma->obtainedAt->format('Y-m-d') : null
+                    ];
+                }, $user->getDiplomas())
             ];
-            
             $result[] = $userData;
         }
         
