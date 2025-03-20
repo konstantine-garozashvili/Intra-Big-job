@@ -77,7 +77,8 @@ class UserFixtures extends Fixture implements DependentFixtureInterface
                 'lastName' => 'Lambert',
                 'email' => 'guest@bigproject.com',
                 'birthDate' => '1995-07-30',
-                'phoneNumber' => '0600000007'
+                'phoneNumber' => '0600000007',
+                'status' => StatusFixtures::STATUS_PENDING
             ]
         ];
 
@@ -93,6 +94,8 @@ class UserFixtures extends Fixture implements DependentFixtureInterface
             $user->setTheme($this->getReference(ThemeFixtures::THEME_LIGHT, Theme::class));
             $user->setIsEmailVerified(true);
             $manager->persist($user);
+            $user->setIsUserActive(true);
+
 
             // Assignation du rôle
             $userRole = new UserRole();

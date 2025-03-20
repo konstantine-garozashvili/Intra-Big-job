@@ -14,10 +14,9 @@ class StatusFixtures extends Fixture
     public const STATUS_ARCHIVED = 'status-archived';
     public const STATUS_GRADUATED = 'status-graduated';
     public const STATUS_ON_LEAVE = 'status-on-leave';
+    public const STATUS_DISABLED = 'status-disabled'; 
 
-    // Ajout du statut par défaut
     public const STATUS_DEFAULT = self::STATUS_ACTIVE; 
-
 
     public function load(ObjectManager $manager): void
     {
@@ -46,6 +45,10 @@ class StatusFixtures extends Fixture
                 'name' => 'En congé',
                 'description' => 'Utilisateur temporairement absent'
             ],
+            self::STATUS_DISABLED => [ // Ajout du statut désactivé
+                'name' => 'Désactivé',
+                'description' => 'Compte désactivé - accès refusé'
+            ],
         ];
 
         foreach ($statuses as $reference => $data) {
@@ -53,7 +56,8 @@ class StatusFixtures extends Fixture
             $status->setName($data['name']);
             $status->setDescription($data['description']);
             $manager->persist($status);
-            $this->addReference($reference, $status);        }
+            $this->addReference($reference, $status);
+        }
 
         $manager->flush();
     }
