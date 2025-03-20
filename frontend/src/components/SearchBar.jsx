@@ -99,6 +99,7 @@ export const SearchBar = () => {
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+        // Toujours fermer les suggestions quand on clique à l'extérieur
         setShowSuggestions(false);
         setIsFocused(false);
       }
@@ -129,6 +130,14 @@ export const SearchBar = () => {
     };
   }, []);
 
+  // Ajouter un effet pour débugger le comportement des suggestions
+  useEffect(() => {
+    if (hasRole(ROLES.RECRUITER) || hasRole(ROLES.TEACHER) || hasRole(ROLES.STUDENT) || 
+        hasRole(ROLES.HR) || hasRole(ROLES.GUEST) || hasRole(ROLES.ADMIN)) {
+      console.log('Suggestions visibility changed:', showSuggestions);
+    }
+  }, [showSuggestions, hasRole]);
+
   const checkForRoleSearch = (value) => {
     // Use the centralized function to check for role matches
     const matchResult = matchRoleFromSearchTerm(value, allowedSearchRoles);
@@ -146,10 +155,23 @@ export const SearchBar = () => {
       return;
     }
     
+    // Special case for users who should always see suggestions panel
+    const shouldAlwaysShowSuggestions = 
+      hasRole(ROLES.SUPERADMIN) || 
+      hasRole(ROLES.RECRUITER) || 
+      hasRole(ROLES.TEACHER) || 
+      hasRole(ROLES.STUDENT) ||
+      hasRole(ROLES.HR) ||
+      hasRole(ROLES.GUEST) ||
+      hasRole(ROLES.ADMIN);
+    
     // Only fetch when query is 1 or more characters
     if (value.length < 1) {
       setSuggestions([]);
-      setShowSuggestions(false);
+      // Ne pas masquer les suggestions pour certains rôles spéciaux
+      if (!shouldAlwaysShowSuggestions) {
+        setShowSuggestions(false);
+      }
       setIsLoading(false);
       return;
     }
@@ -158,18 +180,25 @@ export const SearchBar = () => {
     userAutocompleteService.getSuggestions(value)
       .then((data) => {
         if (Array.isArray(data)) {
-          setSuggestions(data);
+          // Limiter les résultats à 10 maximum
+          setSuggestions(data.slice(0, 10));
           setShowSuggestions(true);
         } else {
           setSuggestions([]);
-          setShowSuggestions(false);
+          // Ne pas masquer les suggestions pour certains rôles spéciaux
+          if (!shouldAlwaysShowSuggestions) {
+            setShowSuggestions(false);
+          }
         }
         setIsLoading(false);
       })
       .catch((error) => {
         console.error('Error fetching suggestions:', error);
         setSuggestions([]);
-        setShowSuggestions(false);
+        // Ne pas masquer les suggestions pour certains rôles spéciaux
+        if (!shouldAlwaysShowSuggestions) {
+          setShowSuggestions(false);
+        }
         setIsLoading(false);
       });
   };
@@ -188,6 +217,21 @@ export const SearchBar = () => {
     // Clear any existing timeout
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
+    }
+
+    // Special case for users who should always see suggestions panel
+    const shouldAlwaysShowSuggestions = 
+      hasRole(ROLES.SUPERADMIN) || 
+      hasRole(ROLES.RECRUITER) || 
+      hasRole(ROLES.TEACHER) || 
+      hasRole(ROLES.STUDENT) ||
+      hasRole(ROLES.HR) ||
+      hasRole(ROLES.GUEST) ||
+      hasRole(ROLES.ADMIN);
+    
+    // Pour ces rôles, assurons-nous que le panneau reste affiché
+    if (shouldAlwaysShowSuggestions && !showSuggestions) {
+      setShowSuggestions(true);
     }
 
     // Debounce the search to avoid too many requests
@@ -286,6 +330,185 @@ export const SearchBar = () => {
     return getFrenchRoleDisplayName(role);
   };
 
+  const handleInputFocus = () => {
+    if (!isLoggedIn) {
+      inputRef.current.blur();
+      return;
+    }
+    setIsFocused(true);
+    
+    // Pour les rôles spéciaux : directement afficher des suggestions d'utilisateurs, même avec un champ vide
+    if (hasRole(ROLES.SUPERADMIN) || hasRole(ROLES.RECRUITER) || hasRole(ROLES.TEACHER) || 
+        hasRole(ROLES.STUDENT) || hasRole(ROLES.HR) || hasRole(ROLES.GUEST) || hasRole(ROLES.ADMIN)) {
+      // TOUJOURS afficher le panneau de suggestions immédiatement, même vide
+      setSuggestions([]);
+      setShowSuggestions(true);
+      
+      // Faire une recherche directe pour récupérer une liste d'utilisateurs
+      setIsLoading(true);
+      
+      // Stocker les résultats cumulés pour éviter de perdre des résultats entre les appels
+      let allResults = [];
+      
+      // Définir la séquence de recherche en fonction du rôle de l'utilisateur
+      let searchSequence = [];
+      
+      if (hasRole(ROLES.SUPERADMIN)) {
+        // SuperAdmin cherche tous les utilisateurs, commencer par 'a' est suffisant
+        searchSequence = ['a'];
+      } else if (hasRole(ROLES.ADMIN) && !hasRole(ROLES.SUPERADMIN)) {
+        // Admin cherche tous les utilisateurs sauf SuperAdmin
+        searchSequence = ['étudiant', 'formateur', 'recruteur', 'admin'];
+      } else if (hasRole(ROLES.RECRUITER) && !hasRole(ROLES.SUPERADMIN)) {
+        // Recruteur cherche formateurs et étudiants
+        searchSequence = ['formateur', 'étudiant'];
+      } else if (hasRole(ROLES.TEACHER) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN])) {
+        // Formateur cherche étudiants et RH
+        searchSequence = ['étudiant', 'ressources humaines'];
+      } else if (hasRole(ROLES.STUDENT) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.TEACHER])) {
+        // Étudiant cherche formateurs, étudiants, recruteurs et RH
+        searchSequence = ['formateur', 'étudiant', 'recruteur'];
+      } else if (hasRole(ROLES.HR) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN])) {
+        // RH cherche formateurs, étudiants et recruteurs
+        searchSequence = ['étudiant', 'formateur', 'recruteur'];
+      } else if (hasRole(ROLES.GUEST)) {
+        // Invité cherche uniquement les recruteurs
+        searchSequence = ['recruteur'];
+      }
+      
+      // Fonction pour effectuer les recherches séquentiellement jusqu'à obtenir au moins 10 résultats
+      const performSequentialSearches = async () => {
+        try {
+          const MAX_RESULTS = 10; // Nombre maximum de résultats à afficher
+          
+          // Effectuer chaque recherche dans la séquence
+          for (const term of searchSequence) {
+            // Si on a déjà rempli notre limite maximale, on peut s'arrêter
+            if (allResults.length >= MAX_RESULTS) {
+              break;
+            }
+            
+            const data = await userAutocompleteService.getSuggestions(term);
+            
+            if (Array.isArray(data) && data.length > 0) {
+              // Ajouter uniquement les résultats non dupliqués
+              const newUniqueResults = data.filter(newUser => 
+                !allResults.some(existingUser => existingUser.id === newUser.id)
+              );
+              
+              if (newUniqueResults.length > 0) {
+                allResults = [...allResults, ...newUniqueResults];
+                // Mettre à jour les suggestions au fur et à mesure
+                setSuggestions(allResults.slice(0, MAX_RESULTS));
+                
+                // Log pour débogage
+                console.log(`Recherche "${term}" a trouvé ${newUniqueResults.length} nouveaux résultats. Total: ${allResults.length}`);
+              }
+            }
+          }
+          
+          // Même si on n'a pas atteint 10 résultats après avoir parcouru la séquence principale,
+          // on ajoute quelques recherches génériques pour tenter de trouver plus de résultats
+          // seulement si on a trouvé moins que MAX_RESULTS utilisateurs
+          if (allResults.length < MAX_RESULTS) {
+            const fallbackTerms = ['a', 'e', 'i', 'o', 'u'];
+            
+            for (const term of fallbackTerms) {
+              // Si on a déjà rempli notre limite maximale, on peut s'arrêter
+              if (allResults.length >= MAX_RESULTS) {
+                break;
+              }
+              
+              const data = await userAutocompleteService.getSuggestions(term);
+              
+              if (Array.isArray(data) && data.length > 0) {
+                const newUniqueResults = data.filter(newUser => 
+                  !allResults.some(existingUser => existingUser.id === newUser.id)
+                );
+                
+                if (newUniqueResults.length > 0) {
+                  allResults = [...allResults, ...newUniqueResults];
+                  setSuggestions(allResults.slice(0, MAX_RESULTS));
+                  
+                  // Log pour débogage
+                  console.log(`Recherche de secours "${term}" a trouvé ${newUniqueResults.length} nouveaux résultats. Total: ${allResults.length}`);
+                }
+              }
+            }
+          }
+          
+          // Trier les résultats pour mettre en avant ceux qui correspondent au rôle de l'utilisateur
+          if (allResults.length > 0) {
+            // Selon le rôle de l'utilisateur, on définit l'ordre de priorité des rôles
+            let rolePriority = [];
+            
+            if (hasRole(ROLES.RECRUITER)) {
+              rolePriority = ['TEACHER', 'STUDENT']; // Recruteurs cherchent d'abord des formateurs puis des étudiants
+            } else if (hasRole(ROLES.TEACHER)) {
+              rolePriority = ['STUDENT', 'HR']; // Formateurs cherchent d'abord des étudiants puis des RH
+            } else if (hasRole(ROLES.STUDENT)) {
+              rolePriority = ['TEACHER', 'STUDENT', 'RECRUITER']; // Étudiants cherchent d'abord des formateurs
+            } else if (hasRole(ROLES.HR)) {
+              rolePriority = ['TEACHER', 'STUDENT', 'RECRUITER']; // RH cherchent d'abord des formateurs
+            } else if (hasRole(ROLES.GUEST)) {
+              rolePriority = ['RECRUITER']; // Invités cherchent uniquement des recruteurs
+            }
+            
+            // Si l'utilisateur a un rôle avec priorité spécifique, on trie les résultats
+            if (rolePriority.length > 0) {
+              allResults.sort((a, b) => {
+                // Vérifier si les utilisateurs ont des rôles
+                const roleA = a.roles && a.roles.length > 0 ? a.roles[0].replace(/^ROLE_/i, '') : '';
+                const roleB = b.roles && b.roles.length > 0 ? b.roles[0].replace(/^ROLE_/i, '') : '';
+                
+                // Trouver l'index de priorité pour chaque rôle
+                const priorityA = rolePriority.indexOf(roleA);
+                const priorityB = rolePriority.indexOf(roleB);
+                
+                // Si les deux rôles sont dans la liste de priorité
+                if (priorityA !== -1 && priorityB !== -1) {
+                  return priorityA - priorityB;
+                }
+                // Si seulement le premier est dans la liste de priorité
+                else if (priorityA !== -1) {
+                  return -1;
+                }
+                // Si seulement le second est dans la liste de priorité
+                else if (priorityB !== -1) {
+                  return 1;
+                }
+                // Si aucun n'est dans la liste de priorité, l'ordre reste inchangé
+                return 0;
+              });
+              
+              // Mettre à jour les suggestions avec les résultats triés, limités à MAX_RESULTS
+              setSuggestions(allResults.slice(0, MAX_RESULTS));
+            } else {
+              // S'il n'y a pas de priorité spécifique, on limite quand même à MAX_RESULTS
+              setSuggestions(allResults.slice(0, MAX_RESULTS));
+            }
+          }
+          
+          // Toujours afficher le panneau de suggestions à la fin, même s'il est vide
+          setShowSuggestions(true);
+        } catch (error) {
+          console.error('Error during sequential searches:', error);
+        } finally {
+          // Toujours terminer le chargement et garder le panneau visible
+          setIsLoading(false);
+          setShowSuggestions(true);
+        }
+      };
+      
+      // Lancer les recherches séquentielles
+      performSequentialSearches();
+    } 
+    // Pour les autres utilisateurs
+    else if (query.length >= 1) {
+      fetchSuggestions(query);
+    }
+  };
+
   return (
     <div 
       ref={wrapperRef}
@@ -321,16 +544,7 @@ export const SearchBar = () => {
           value={query}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
-          onFocus={() => {
-            if (!isLoggedIn) {
-              inputRef.current.blur();
-              return;
-            }
-            setIsFocused(true);
-            if (query.length >= 1) {
-              fetchSuggestions(query);
-            }
-          }}
+          onFocus={handleInputFocus}
           disabled={!isLoggedIn}
         />
         
@@ -357,24 +571,16 @@ export const SearchBar = () => {
         )}
       </div>
       
-      {isFocused && query.length === 0 && isLoggedIn && (
+      {/* Message d'aide (affiché uniquement quand focusé, query vide et PAS un rôle spécial) */}
+      {isFocused && query.length === 0 && isLoggedIn && 
+       !hasRole(ROLES.SUPERADMIN) && !hasRole(ROLES.RECRUITER) && 
+       !hasRole(ROLES.TEACHER) && !hasRole(ROLES.STUDENT) &&
+       !hasRole(ROLES.HR) && !hasRole(ROLES.GUEST) && 
+       !hasRole(ROLES.ADMIN) &&
+       !showSuggestions && (
         <div className="absolute top-full left-0 w-full mt-2 px-3 py-2 text-xs text-white/70 bg-[#02284f]/90 rounded-md">
           <p>
-            {hasRole(ROLES.SUPERADMIN) ? (
-              <>En tant que Super Admin, vous pouvez rechercher tous les utilisateurs par nom ou par rôle : {allowedSearchRoles.map(role => 
-                role !== 'SUPERADMIN' ? getRoleDisplayFormat(role).toLowerCase() : null
-              ).filter(Boolean).join(', ')}</>
-            ) : hasRole(ROLES.ADMIN) ? (
-              <>En tant qu'Admin, vous pouvez rechercher tous les utilisateurs par nom ou par rôle, à l'exception des <strong>super admins</strong> : {allowedSearchRoles.map(role => 
-                getRoleDisplayFormat(role).toLowerCase()
-              ).join(', ')}</>
-            ) : hasRole(ROLES.TEACHER) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN]) ? (
-              <>En tant que Formateur, vous pouvez uniquement rechercher des <strong>étudiants</strong> et des personnes des <strong>ressources humaines</strong> par nom ou par rôle</>
-            ) : hasRole(ROLES.RECRUITER) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.HR, ROLES.TEACHER]) ? (
-              <>En tant que Recruteur, vous pouvez uniquement rechercher des <strong>étudiants</strong> et des <strong>formateurs</strong> par nom ou par rôle</>
-            ) : hasRole(ROLES.HR) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN]) ? (
-              <>En tant que RH, vous pouvez uniquement rechercher des <strong>étudiants</strong>, des <strong>formateurs</strong> et des <strong>recruteurs</strong> par nom ou par rôle</>
-            ) : allowedSearchRoles.length > 0 ? (
+            {allowedSearchRoles.length > 0 ? (
               allowedSearchRoles.length === 1 ? (
                 <>Vous pouvez rechercher des <strong>{getRoleDisplayFormat(allowedSearchRoles[0]).toLowerCase()}</strong> par nom</>
               ) : (
@@ -387,6 +593,7 @@ export const SearchBar = () => {
         </div>
       )}
       
+      {/* Message d'aide pour les utilisateurs non connectés */}
       {!isLoggedIn && isFocused && (
         <div className="absolute top-full left-0 w-full mt-2 px-3 py-2 text-xs text-white/70 bg-[#02284f]/90 rounded-md">
           <p>Vous devez être connecté pour effectuer une recherche.</p>
@@ -539,6 +746,37 @@ export const SearchBar = () => {
                     </motion.div>
                   ))}
                 </div>
+                
+                {/* Message d'aide pour tous les rôles spéciaux à la fin de la liste des résultats */}
+                {(hasRole(ROLES.SUPERADMIN) || hasRole(ROLES.RECRUITER) || hasRole(ROLES.TEACHER) || 
+                  hasRole(ROLES.STUDENT) || hasRole(ROLES.HR) || hasRole(ROLES.GUEST) || 
+                  hasRole(ROLES.ADMIN)) && query.length === 0 && (
+                  <div className="px-3 py-2 bg-gray-50 border-t border-gray-100 text-xs text-gray-500">
+                    <p>
+                      {hasRole(ROLES.SUPERADMIN) ? (
+                        <>En tant que Super Admin, vous pouvez rechercher tous les utilisateurs par nom ou par rôle : {allowedSearchRoles.map(role => 
+                          role !== 'SUPERADMIN' ? getRoleDisplayFormat(role).toLowerCase() : null
+                        ).filter(Boolean).join(', ')}</>
+                      ) : hasRole(ROLES.ADMIN) ? (
+                        <>En tant qu'Admin, vous pouvez rechercher tous les utilisateurs par nom ou par rôle, à l'exception des <strong>super admins</strong> : {allowedSearchRoles.map(role => 
+                          getRoleDisplayFormat(role).toLowerCase()
+                        ).filter(Boolean).join(', ')}</>
+                      ) : hasRole(ROLES.RECRUITER) && !hasRole(ROLES.SUPERADMIN) ? (
+                        <>En tant que Recruteur, vous pouvez uniquement rechercher des <strong>étudiants</strong> et des <strong>formateurs</strong> par nom ou par rôle</>
+                      ) : hasRole(ROLES.TEACHER) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN]) ? (
+                        <>En tant que Formateur, vous pouvez uniquement rechercher des <strong>étudiants</strong> et des personnes des <strong>ressources humaines</strong> par nom ou par rôle</>
+                      ) : hasRole(ROLES.STUDENT) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.TEACHER]) ? (
+                        <>En tant qu'Étudiant, vous pouvez rechercher des <strong>formateurs</strong>, <strong>étudiants</strong>, <strong>recruteurs</strong>, et <strong>ressources humaines</strong> par nom ou par rôle</>
+                      ) : hasRole(ROLES.HR) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN]) ? (
+                        <>En tant que RH, vous pouvez uniquement rechercher des <strong>étudiants</strong>, des <strong>formateurs</strong> et des <strong>recruteurs</strong> par nom ou par rôle</>
+                      ) : hasRole(ROLES.GUEST) ? (
+                        <>En tant qu'Invité, vous pouvez uniquement rechercher des <strong>recruteurs</strong> par nom ou par rôle</>
+                      ) : (
+                        <>Vous pouvez rechercher par nom ou par rôle</>
+                      )}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </motion.div>

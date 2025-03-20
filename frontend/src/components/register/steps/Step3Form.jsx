@@ -69,8 +69,35 @@ const Step3Form = ({ goToPrevStep, onSubmit }) => {
     
     const isValid = validateStep3();
     if (isValid) {
+      try {
       onSubmit(e);
+      } catch (error) {
+        setLocalErrors({
+          ...localErrors,
+          addressName: "Erreur lors de la validation de l'adresse. Veuillez réessayer."
+        });
+      }
     }
+  };
+
+  // Validation manuelle de l'adresse si nécessaire
+  const manuallyValidateAddress = () => {
+    if (!addressName || !city || !postalCode) {
+      return false;
+    }
+    return true;
+  };
+  
+  // Gestion spécifique pour la sélection d'adresse
+  const onAddressSelected = (addressData) => {
+    handleAddressSelect(addressData);
+    // Vérifier si nous avons tous les champs nécessaires
+    setLocalErrors({
+      ...localErrors,
+      addressName: null,
+      city: null,
+      postalCode: null
+    });
   };
 
   // Vérifier si une erreur doit être affichée
@@ -116,14 +143,20 @@ const Step3Form = ({ goToPrevStep, onSubmit }) => {
             id="addressName"
             value={addressName}
             onChange={(e) => setAddressName(e.target.value)}
-            onAddressSelect={handleAddressSelect}
-            error={null} // Important: ne pas passer d'erreur ici pour éviter les doublons
+            onAddressSelect={(data) => {
+              handleAddressSelect(data);
+              // Nettoyer les erreurs après sélection d'une adresse valide
+              setLocalErrors({
+                ...localErrors,
+                addressName: null,
+                city: null,
+                postalCode: null
+              });
+            }}
+            error={shouldShowError('addressName') ? getErrorMessage('addressName') : null}
             className=""
             inputClassName={`w-full px-4 py-3 rounded-md border ${shouldShowError('addressName') ? 'border-red-500' : 'border-gray-300'}`}
           />
-          {shouldShowError('addressName') && (
-            <p className="text-red-500 text-xs mt-1">{getErrorMessage('addressName')}</p>
-          )}
         </div>
         
         {/* Complément d'adresse */}
