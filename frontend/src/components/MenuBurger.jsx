@@ -258,7 +258,7 @@ const MenuBurger = memo(() => {
       icon: <GraduationCap className="w-5 h-5 mr-2 text-[#528eb2]" />,
       roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.HR],
       links: [
-        { name: 'Gestion des élèves', to: '/eleves', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER] },
+        { name: 'Gestion des élèves', to: '/admin/searchbyrole?role=student', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER] },
         { name: 'Résultats', to: '/eleves/resultats', roles: [ROLES.SUPERADMIN, ROLES.TEACHER] },
         { name: 'Dossiers', to: '/eleves/dossiers', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR, ROLES.TEACHER] },
         { name: 'Certificats et Diplômes', to: '/eleves/certificats', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER] },
@@ -271,7 +271,7 @@ const MenuBurger = memo(() => {
       icon: <User className="w-5 h-5 mr-2 text-[#528eb2]" />,
       roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
       links: [
-        { name: 'Liste des formateurs', to: '/formateurs', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR] },
+        { name: 'Liste des formateurs', to: '/admin/searchbyrole?role=teacher', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR] },
         { name: 'Statistiques et Rapports', to: '/formateurs/statistiques', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR] },
         { name: 'Gestion des Projets', to: '/formateurs/projets', roles: [ROLES.SUPERADMIN, ROLES.ADMIN] },
         { name: 'Commentaires', to: '/formateurs/commentaires', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR] },
@@ -290,7 +290,7 @@ const MenuBurger = memo(() => {
       icon: <Shield className="w-5 h-5 mr-2 text-[#528eb2]" />,
       roles: [ROLES.SUPERADMIN],
       links: [
-        { name: 'Gestion des utilisateurs', to: '/admin/utilisateurs', roles: [ROLES.SUPERADMIN] },
+        { name: 'Gestion des utilisateurs', to: '/admin/searchbyrole', roles: [ROLES.SUPERADMIN] },
         { name: 'Gestion des Formations', to: '/admin/formations', roles: [ROLES.SUPERADMIN] },
         { name: 'Suivi des Inscriptions', to: '/admin/inscriptions', roles: [ROLES.SUPERADMIN] },
         { name: 'Gestion des Paiements', to: '/admin/paiements', roles: [ROLES.SUPERADMIN] },
@@ -306,12 +306,12 @@ const MenuBurger = memo(() => {
       icon: <Users className="w-5 h-5 mr-2 text-[#528eb2]" />,
       roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
       links: [
-        { name: 'Gestion des Formateurs', to: '/rh/formateurs', roles: [ROLES.SUPERADMIN, ROLES.HR] },
-        { name: 'Gestion des Candidatures', to: '/rh/candidatures', roles: [ROLES.SUPERADMIN, ROLES.HR] },
-        { name: 'Suivi des Absences et Congés', to: '/rh/absences', roles: [ROLES.SUPERADMIN, ROLES.HR] },
-        { name: 'Planning des Formateurs', to: '/rh/planning', roles: [ROLES.SUPERADMIN, ROLES.HR] },
-        { name: 'Archivage des Dossiers', to: '/rh/archivage', roles: [ROLES.SUPERADMIN, ROLES.HR] },
-        { name: 'Suivi des Recrutements', to: '/rh/recrutement', roles: [ROLES.SUPERADMIN, ROLES.HR] },
+        { name: 'Gestion des RH', to: '/admin/searchbyrole?role=hr', roles: [ROLES.SUPERADMIN, ROLES.HR, ROLES.ADMIN] },
+        { name: 'Gestion des Candidatures', to: '/rh/candidatures', roles: [ROLES.SUPERADMIN, ROLES.HR, ROLES.ADMIN] },
+        { name: 'Suivi des Absences et Congés', to: '/rh/absences', roles: [ROLES.SUPERADMIN, ROLES.HR, ROLES.ADMIN] },
+        { name: 'Planning des Formateurs', to: '/rh/planning', roles: [ROLES.SUPERADMIN, ROLES.HR, ROLES.ADMIN] },
+        { name: 'Archivage des Dossiers', to: '/rh/archivage', roles: [ROLES.SUPERADMIN, ROLES.HR, ROLES.ADMIN] },
+        { name: 'Suivi des Recrutements', to: '/rh/recrutement', roles: [ROLES.SUPERADMIN, ROLES.HR, ROLES.ADMIN] },
       ],
     },
     {
