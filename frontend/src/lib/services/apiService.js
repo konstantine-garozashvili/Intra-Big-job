@@ -109,6 +109,7 @@ axios.interceptors.response.use(response => {
 
 // Configuration de base pour axios
 axios.defaults.withCredentials = true;
+axios.defaults.timeout = 15000; // Augmenter le délai d'attente global à 15 secondes
 
 // Create a simple in-memory request cache with expiration
 const apiCache = new Map();
@@ -197,53 +198,97 @@ const apiService = {
       }
       
       // Is this a non-critical profile request?
-      const isProfileRequest = path.includes('/profile/') || path.includes('/me');
-      const isLowPerf = isLowPerformanceMode();
+      const isProfileRequest = path.includes('/profile') || path.includes('/me');
+      const isMessagesRequest = path.includes('/messages');
       
-      // Configure axios request with optimized timeout
+      // Configure axios request with appropriate timeouts
       const requestConfig = {
         ...options,
-        timeout: options.timeout || getDefaultTimeout(isProfileRequest)
+        timeout: options.timeout || (isProfileRequest ? 5000 : (isMessagesRequest ? 8000 : 15000))
       };
       
-      // For older devices, set priority hints if supported
-      if (isLowPerf && 'importance' in requestConfig) {
-        requestConfig.importance = isProfileRequest ? 'low' : 'auto';
+      // Implement retries for profile and messages requests
+      const maxRetries = options.retries || (isProfileRequest || isMessagesRequest ? 2 : 0);
+      let retries = 0;
+      let lastError = null;
+      
+      while (retries <= maxRetries) {
+        try {
+          const response = await axios.get(url, requestConfig);
+          
+          // Cache the response if caching is not disabled
+          if (!options.noCache) {
+            const cacheKey = generateCacheKey('GET', url, options.params);
+            const ttl = options.cacheTTL || DEFAULT_CACHE_TTL;
+            
+            apiCache.set(cacheKey, {
+              data: response.data,
+              expiry: Date.now() + ttl
+            });
+          }
+          
+          return response.data;
+        } catch (error) {
+          lastError = error;
+          
+          // Only retry on timeout or network errors
+          if (error.code === 'ECONNABORTED' || error.message.includes('Network Error')) {
+            retries++;
+            if (retries <= maxRetries) {
+              // Exponential backoff - wait longer between each retry
+              const delay = retries * 500; // 500ms, 1000ms, 1500ms...
+              console.warn(`Retry ${retries}/${maxRetries} for ${path} after ${delay}ms`);
+              await new Promise(resolve => setTimeout(resolve, delay));
+              continue;
+            }
+          } else {
+            // For other errors, don't retry
+            break;
+          }
+        }
       }
       
-      const response = await axios.get(url, requestConfig);
+      // If we got here, all retries failed or it wasn't a retryable error
+      throw lastError;
       
-      // Cache the response if caching is not disabled
-      if (!options.noCache) {
-        const cacheKey = generateCacheKey('GET', url, options.params);
-        const ttl = options.cacheTTL || DEFAULT_CACHE_TTL;
-        
-        apiCache.set(cacheKey, {
-          data: response.data,
-          expiry: Date.now() + ttl
-        });
-        
-        // Cleanup cache if necessary
-        cleanupCache();
-      }
-      
-      return response.data;
     } catch (error) {
       // Only log detailed errors for non-profile requests
-      const isProfileRequest = path.includes('/profile/') || path.includes('/me');
+      const isProfileRequest = path.includes('/profile') || path.includes('/me');
+      const isMessagesRequest = path.includes('/messages');
       
-      if (!isProfileRequest) {
+      if (!isProfileRequest && !isMessagesRequest) {
         console.error(`Erreur API GET ${path}:`, error);
         console.error(`[apiService] Détails de l'erreur:`, error.response || error.message);
       } else {
-        // For profile requests, just log a simpler message
+        // For profile/messages requests, log less verbosely
+        console.error(`Erreur API (GET): ${path} Statut: ${error.response?.status || 'réseau'}`, error.message);
+      }
+      
+      // For client-side timeout errors, use more appropriate error message
+      if (error.code === 'ECONNABORTED') {
         console.warn(`Profile data fetch failed: ${path} - ${error.message}`);
+        
+        // Check if we have cached data we can return instead
+        if (!options.noCache) {
+          const cacheKey = generateCacheKey('GET', url, options.params);
+          const cached = apiCache.get(cacheKey);
+          
+          if (cached) {
+            console.info(`Returning cached data for ${path} due to timeout`);
+            return cached.data;
+          }
+        }
       }
       
       // Gestion spécifique des erreurs CORS
       if (error.message && error.message.includes('Network Error')) {
         console.error('Erreur réseau possible - Problème CORS');
-        return { success: false, message: 'Erreur de communication avec le serveur' };
+        throw error; // Throw the error for proper propagation
+      }
+      
+      // Pour les requêtes de profil, propager l'erreur au lieu de retourner un objet formaté
+      if (isProfileRequest || isMessagesRequest) {
+        throw error;
       }
       
       // Retourner une réponse formatée en cas d'erreur pour éviter les crashes
@@ -405,7 +450,7 @@ const apiService = {
     console.log('Cache de profil invalidé');
     // Logique d'invalidation du cache spécifique au profil
     this.invalidateCache('/profile');
-    this.invalidateCache('/me');
+    this.invalidateCache('/api/me');
   },
 
   /**
