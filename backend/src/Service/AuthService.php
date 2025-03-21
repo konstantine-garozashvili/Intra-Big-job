@@ -107,4 +107,21 @@ class AuthService
         
         return true;
     }
+
+    /**
+     * Désactive le compte d'un utilisateur
+     * 
+     * @param User $user L'utilisateur à désactiver
+     * @return User L'utilisateur avec le compte désactivé
+     */
+    public function deactivateUser(User $user): User
+    {
+        // Désactiver le compte
+        $user->setIsUserActive(false);
+        
+        // Persister les changements
+        $this->entityManager->flush();
+        
+        return $user;
+    }
 } 
