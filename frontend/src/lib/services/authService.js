@@ -207,25 +207,29 @@ export const authService = {
     if (!cachedUser) return null;
     
     try {
-      // Create a timeout promise with much shorter timeout (2 seconds)
+      // Create a timeout promise with increased timeout (5 seconds)
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => {
           reject(new Error('User data fetch timeout'));
-        }, 2000);
+        }, 5000); // Increased from 2000ms to 5000ms for better reliability
       });
       
       // Try the correct endpoint format - simplify the path construction
       const correctApiPath = '/api/profile';
       
       // Fetch user data from API with the corrected path
-      const dataPromise = apiService.get('/profile', { 
+      const dataPromise = apiService.get(correctApiPath, { 
         noCache: false,    // Use cache if available
-        retries: 0,        // Don't retry on failure
-        timeout: 2000      // Short timeout
+        retries: 1,        // Allow 1 retry on failure
+        timeout: 5000      // Increased from 2000ms to 5000ms for better reliability
       });
       
       // Race between data fetch and timeout
-      const userData = await Promise.race([dataPromise, timeoutPromise]);
+      const userData = await Promise.race([dataPromise, timeoutPromise]).catch(error => {
+        console.warn('Failed to fetch profile data:', error.message);
+        // Return the cached user data as fallback
+        return cachedUser;
+      });
       
       if (userData && userData.success !== false) {
         // Update localStorage with complete user data
@@ -697,6 +701,85 @@ export const authService = {
     } catch (error) {
       console.error('Error ensuring user data:', error);
       return false;
+    }
+  },
+
+  /**
+   * Add a global helper to diagnose and fix profile data issues
+   * This can be called if users encounter profile data errors
+   */
+  async fixProfileDataIssues() {
+    try {
+      console.log('Attempting to fix profile data issues...');
+      
+      // Check if user is logged in
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.warn('No authentication token found. User is not logged in.');
+        return { success: false, message: 'Not authenticated' };
+      }
+      
+      // Clear any cached profile data
+      const queryClient = getQueryClient();
+      if (queryClient) {
+        queryClient.invalidateQueries({ queryKey: ['user'] });
+        queryClient.invalidateQueries({ queryKey: ['profile'] });
+      }
+      
+      // Try to fetch fresh profile data
+      try {
+        const correctApiPath = '/api/profile';
+        const userData = await apiService.get(correctApiPath, {
+          noCache: true,
+          retries: 2,
+          timeout: 10000
+        });
+        
+        if (userData) {
+          // Update localStorage with fresh data
+          localStorage.setItem('user', JSON.stringify(userData));
+          console.log('Profile data fixed successfully');
+          
+          // Update React Query cache
+          if (queryClient) {
+            queryClient.setQueryData(['user', 'current'], userData);
+          }
+          
+          return { success: true, message: 'Profile data fixed successfully' };
+        }
+      } catch (apiError) {
+        console.error('Error fetching fresh profile data:', apiError);
+      }
+      
+      // If we couldn't fetch fresh data, create minimal profile data
+      // Based on data from token
+      try {
+        const token = localStorage.getItem('token');
+        if (token) {
+          const decodedToken = decodeToken(token);
+          if (decodedToken) {
+            const minimalUser = {
+              id: decodedToken.id || '1',
+              email: decodedToken.username || 'user@example.com',
+              roles: decodedToken.roles || ['ROLE_USER'],
+              _fixedAt: Date.now()
+            };
+            
+            localStorage.setItem('user', JSON.stringify(minimalUser));
+            localStorage.setItem('userRoles', JSON.stringify(minimalUser.roles));
+            
+            console.log('Created minimal profile data from token');
+            return { success: true, message: 'Created minimal profile data' };
+          }
+        }
+      } catch (tokenError) {
+        console.error('Error creating fallback profile data:', tokenError);
+      }
+      
+      return { success: false, message: 'Could not fix profile data' };
+    } catch (error) {
+      console.error('Error in fixProfileDataIssues:', error);
+      return { success: false, message: error.message };
     }
   }
 };

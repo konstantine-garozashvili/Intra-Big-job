@@ -205,6 +205,21 @@ export function AuthForm() {
       
       window.addEventListener('user-data-loaded', handleUserDataLoaded)
       
+      // After successful login, add some additional error handling for profile data issues
+      const fixProfileIfNeeded = setTimeout(async () => {
+        try {
+          // Check if we can access the user data
+          const user = authService.getUser();
+          if (!user || Object.keys(user).length === 0) {
+            console.warn('User data missing after login, attempting to fix...');
+            await authService.fixProfileDataIssues();
+          }
+        } catch (profileError) {
+          console.error('Error handling profile data after login:', profileError);
+          // No need to show this error to user as login was successful
+        }
+      }, 2000);
+      
     } catch (error) {
       // Remove loading state on error after a brief delay
       setTimeout(() => {
