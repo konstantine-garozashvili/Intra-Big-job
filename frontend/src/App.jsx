@@ -91,18 +91,23 @@ const useIntelligentPreload = () => {
   
   useEffect(() => {
     // Fonction pour précharger des composants spécifiques
+    // Seulement si nous ne sommes pas en train de nous connecter
     const preloadComponent = (getComponent) => {
-      // Précharger immédiatement sans délai
-      getComponent();
+      // Ne pas précharger pendant la connexion pour éviter de ralentir le processus
+      if (sessionStorage.getItem('login_in_progress') === 'true') {
+        return;
+      }
+      
+      // Précharger avec un délai pour prioriser le rendu initial
+      setTimeout(() => {
+        getComponent();
+      }, 300);
     };
     
     // Préchargement basé sur le chemin actuel
     if (currentPath.includes('/login') || currentPath === '/') {
-      // Sur la page de login, précharger le dashboard et l'enregistrement
+      // Sur la page de login, précharger uniquement le dashboard
       preloadComponent(() => import('./pages/Dashboard'));
-      preloadComponent(() => import('./pages/Register'));
-      // Précharger les composants de réinitialisation de mot de passe
-      preloadComponent(() => import('./components/auth/ResetPasswordRequest'));
     } 
     else if (currentPath.includes('/register')) {
       // Sur la page d'enregistrement, précharger la confirmation
@@ -112,39 +117,12 @@ const useIntelligentPreload = () => {
       // Précharger les composants de réinitialisation de mot de passe
       if (currentPath === '/reset-password') {
         preloadComponent(() => import('./components/auth/ResetPasswordConfirmation'));
-      } else if (currentPath.includes('/reset-password/confirmation')) {
-        preloadComponent(() => import('./components/auth/ResetPassword'));
       }
     }
-    else if (currentPath.includes('/profile')) {
-      // Sur le profil, précharger les sous-pages de profil
-      const profilePath = currentPath.split('/').pop();
-      
-      // Préchargement contextuel des vues de profil
-      if (profilePath === 'settings') {
-        preloadComponent(() => import('./pages/Global/Profile/views/SecuritySettings'));
-      } 
-      else if (profilePath === 'security') {
-        preloadComponent(() => import('./pages/Global/Profile/views/NotificationSettings'));
-      }
-      else {
-        // Précharger la page de paramètres par défaut
-        preloadComponent(() => import('./pages/Global/Profile/views/SettingsProfile'));
-      }
-    }
-    // Préchargement pour les routes spécifiques aux rôles
-    else if (currentPath.includes('/admin')) {
-      preloadComponent(() => import('./pages/Admin/Dashboard'));
-    }
-    else if (currentPath.includes('/student')) {
-      preloadComponent(() => import('./pages/Student/Dashboard'));
-      preloadComponent(() => import('./pages/Student/Schedule'));
-      preloadComponent(() => import('./pages/Student/Attendance'));
-    }
-    else if (currentPath.includes('/teacher')) {
-      preloadComponent(() => import('./pages/Teacher/Dashboard'));
-      preloadComponent(() => import('./pages/Teacher/SignatureMonitoring'));
-      preloadComponent(() => import('./pages/Teacher/Attendance'));
+    // Préchargement pour les routes spécifiques aux rôles après connexion réussie
+    else if (currentPath.includes('/dashboard')) {
+      // Déjà sur un dashboard, ne pas précharger d'autres dashboards
+      // pour éviter de ralentir les performances
     }
   }, [currentPath]);
   
@@ -157,30 +135,22 @@ const PrefetchHandler = () => {
   const location = useLocation();
   
   useEffect(() => {
-    // Précharger les données utilisateur dès que l'utilisateur est authentifié
-    if (localStorage.getItem('token')) {
-      Promise.all([
-        import('./hooks/useDashboardQueries'),
-        import('./lib/services/queryClient'),
-        import('./lib/services/authService')
-      ]).then(([dashboardModule, queryClientModule, authModule]) => {
-        const { getQueryClient } = queryClientModule;
+    // Précharger les données utilisateur seulement si on n'est pas en train de se connecter
+    if (localStorage.getItem('token') && sessionStorage.getItem('login_in_progress') !== 'true') {
+      // Importer dynamiquement le module authService uniquement
+      import('./lib/services/authService').then(authModule => {
         const { getSessionId } = authModule;
-        const qc = getQueryClient();
         const sessionId = getSessionId();
         
-        if (qc) {
-          // Précharger les données utilisateur
-          qc.prefetchQuery({
-            queryKey: ['user-data', 'anonymous', sessionId],
-            queryFn: async () => {
-              const { default: apiService } = await import('./lib/services/apiService');
-              return await apiService.get('/me', {}, true, 30 * 60 * 1000);
-            },
-            staleTime: 30 * 60 * 1000,
-            cacheTime: 60 * 60 * 1000
+        // Précharger les données utilisateur de façon optimisée et sans bloquer l'interface
+        setTimeout(() => {
+          import('./lib/services/apiService').then(({ default: apiService }) => {
+            apiService.get('/me', { noCache: false, timeout: 2000 })
+              .catch(() => {
+                // Ignorer les erreurs silencieusement
+              });
           });
-        }
+        }, 500); // Délai pour donner la priorité au rendu initial
       });
     }
   }, [location.pathname]);

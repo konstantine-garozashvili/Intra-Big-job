@@ -138,78 +138,75 @@ export function AuthForm() {
         localStorage.removeItem('rememberedEmail')
       }
       
-      // Dispatch login success event
-      window.dispatchEvent(new Event('login-success'))
-      
       // Get the return URL if it exists
       const returnTo = sessionStorage.getItem('returnTo')
       
-      // Add small delay before navigation - REDUCED from 300ms to 150ms
-      setTimeout(() => {
-        if (returnTo) {
-          sessionStorage.removeItem('returnTo')
-          navigate(returnTo)
-        } else {
-          // Get role from token directly to determine dashboard path
-          const token = localStorage.getItem('token')
-          let dashboardPath = '/dashboard'
-          
-          if (token) {
-            try {
-              const tokenParts = token.split('.')
-              if (tokenParts.length === 3) {
-                const payload = JSON.parse(atob(tokenParts[1]))
-                if (payload.roles && payload.roles.length > 0) {
-                  // Determine dashboard path based on role
-                  const mainRole = payload.roles[0]
-                  switch (mainRole) {
-                    case 'ROLE_ADMIN':
-                      dashboardPath = '/admin/dashboard'
-                      break
-                    case 'ROLE_SUPERADMIN':
-                      dashboardPath = '/superadmin/dashboard'
-                      break
-                    case 'ROLE_TEACHER':
-                      dashboardPath = '/teacher/dashboard'
-                      break
-                    case 'ROLE_STUDENT':
-                      dashboardPath = '/student/dashboard'
-                      break
-                    case 'ROLE_HR':
-                      dashboardPath = '/hr/dashboard'
-                      break
-                    default:
-                      dashboardPath = '/dashboard'
-                  }
+      // Process navigation immediately without delay
+      if (returnTo) {
+        sessionStorage.removeItem('returnTo')
+        navigate(returnTo)
+      } else {
+        // Get role from token directly to determine dashboard path
+        const token = localStorage.getItem('token')
+        let dashboardPath = '/dashboard'
+        
+        if (token) {
+          try {
+            const tokenParts = token.split('.')
+            if (tokenParts.length === 3) {
+              const payload = JSON.parse(atob(tokenParts[1]))
+              if (payload.roles && payload.roles.length > 0) {
+                // Determine dashboard path based on role
+                const mainRole = payload.roles[0]
+                switch (mainRole) {
+                  case 'ROLE_ADMIN':
+                    dashboardPath = '/admin/dashboard'
+                    break
+                  case 'ROLE_SUPERADMIN':
+                    dashboardPath = '/superadmin/dashboard'
+                    break
+                  case 'ROLE_TEACHER':
+                    dashboardPath = '/teacher/dashboard'
+                    break
+                  case 'ROLE_STUDENT':
+                    dashboardPath = '/student/dashboard'
+                    break
+                  case 'ROLE_HR':
+                    dashboardPath = '/hr/dashboard'
+                    break
+                  case 'ROLE_RECRUITER':
+                    dashboardPath = '/recruiter/dashboard'
+                    break
+                  default:
+                    dashboardPath = '/dashboard'
                 }
               }
-            } catch (error) {
-              console.error('Error parsing token:', error)
             }
+          } catch (error) {
+            console.error('Error parsing token:', error)
           }
-          
-          // Navigate directly to role-specific dashboard
-          navigate(dashboardPath)
         }
         
-        // Show success toast after navigation
+        // Navigate directly to role-specific dashboard without delay
+        navigate(dashboardPath)
+      }
+      
+      // Show success toast immediately - no need to wait until after navigation
+      setTimeout(() => {
         toast.success("Connexion réussie")
-      }, 150)
+      }, 50)
       
       // Listen for when full user data is loaded
       const handleUserDataLoaded = () => {
         refreshRoles()
         window.removeEventListener('user-data-loaded', handleUserDataLoaded)
-        // Loading will be handled by global loading utilities now
       }
       
       window.addEventListener('user-data-loaded', handleUserDataLoaded)
       
     } catch (error) {
-      // Remove loading state on error after a brief delay
-      setTimeout(() => {
-        hideGlobalLoader()
-      }, 200)
+      // Remove loading state on error immediately
+      hideGlobalLoader()
       
       if (error.response) {
         const { data } = error.response

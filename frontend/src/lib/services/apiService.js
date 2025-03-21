@@ -153,13 +153,18 @@ const apiService = {
         }
       }
       
-      // Is this a non-critical profile request?
+      // Set optimized timeouts based on request type
       const isProfileRequest = path.includes('/profile') || path.includes('/me');
+      const isAuthRequest = path.includes('/login') || path.includes('/token');
       
-      // Configure axios request
+      // Configure axios request with optimized settings
       const requestConfig = {
         ...options,
-        timeout: options.timeout || (isProfileRequest ? 2000 : 30000) // Short timeout for profile requests
+        timeout: options.timeout || (
+          isAuthRequest ? 3000 : // Auth requests need to be fast
+          isProfileRequest ? 1500 : // Profile requests with very short timeout
+          10000 // Standard timeout for regular requests (reduced from 30000ms)
+        )
       };
       
       const response = await axios.get(url, requestConfig);
@@ -184,8 +189,8 @@ const apiService = {
         console.error(`Erreur API GET ${path}:`, error);
         console.error(`[apiService] Détails de l'erreur:`, error.response || error.message);
       } else {
-        // For profile requests, log the error with more detailed information
-        console.error(`Erreur API (GET): ${path} Statut: ${error.response?.status || 'réseau'}`, error.message);
+        // For profile requests, log minimal error information
+        console.error(`Erreur API (GET): ${path} Statut: ${error.response?.status || 'réseau'}`);
       }
       
       // Gestion spécifique des erreurs CORS
@@ -217,16 +222,20 @@ const apiService = {
    */
   async post(path, data = {}, options = {}) {
     try {
-      console.log(`[apiService] POST ${path}:`, { data });
       const url = normalizeApiUrl(path);
-      const response = await axios.post(url, data, options);
+      
+      // Optimize login requests specifically
+      const isLoginRequest = path.includes('login_check') || path.includes('/login');
+      
+      // Configure request
+      const requestConfig = {
+        ...options,
+        timeout: options.timeout || (isLoginRequest ? 3000 : 10000)
+      };
+      
+      const response = await axios.post(url, data, requestConfig);
       return response.data;
     } catch (error) {
-      console.error(
-        `POST ${path} ${error.response?.status || 'error'}`,
-        error
-      );
-      
       // Pour login_check, on ne doit PAS transformer l'erreur, mais la rejeter
       // afin que le composant d'authentification puisse la traiter correctement
       if (path.includes('login_check')) {

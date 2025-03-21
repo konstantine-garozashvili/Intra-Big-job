@@ -141,7 +141,8 @@ const displayLoader = () => {
   // Force a reflow to ensure the display change is applied before opacity transition
   overlay.offsetHeight;
   
-  // Fade in
+  // Fade in - immediate show with minimal transition
+  overlay.style.transition = 'opacity 0.15s ease-in-out';
   overlay.style.opacity = '1';
 };
 
@@ -152,7 +153,8 @@ const hideLoader = () => {
   const overlay = document.getElementById('global-page-transition-overlay');
   if (!overlay) return;
   
-  // Fade out
+  // Fade out quickly
+  overlay.style.transition = 'opacity 0.15s ease-in-out';
   overlay.style.opacity = '0';
   
   // After transition, hide completely
@@ -160,7 +162,7 @@ const hideLoader = () => {
     if (activeLoadingCount === 0) {
       overlay.style.display = 'none';
     }
-  }, 200);
+  }, 150); // Reduced from 200ms
 };
 
 /**
@@ -207,10 +209,10 @@ export const hideGlobalLoader = (delay = 0) => {
       clearTimeout(loaderHideTimeout);
     }
     
-    // Calculate minimum display time
+    // Calculate minimum display time - reduced to improve perceived performance
     const currentTime = Date.now();
     const timeSinceNavigation = currentTime - lastNavigationTime;
-    const minLoadingTime = 300; // Reduced from 600ms to 300ms for faster transitions
+    const minLoadingTime = 150; // Reduced from 300ms to 150ms for faster transitions
     
     // Calculate final delay
     let finalDelay = delay;

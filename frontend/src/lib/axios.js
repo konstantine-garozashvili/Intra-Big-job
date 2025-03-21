@@ -1,9 +1,27 @@
 import axios from 'axios';
 
+// Cache the token in memory to avoid constantly reading from localStorage
+let cachedToken = null;
+
+// Function to get token that uses in-memory cache when possible
+const getAuthToken = () => {
+  if (!cachedToken) {
+    cachedToken = localStorage.getItem('token');
+  }
+  return cachedToken;
+};
+
+// Reset cached token when token changes
+window.addEventListener('storage', (event) => {
+  if (event.key === 'token') {
+    cachedToken = event.newValue;
+  }
+});
+
 // Configuration de base
 const axiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
-  timeout: 15000, // 15 secondes
+  timeout: 10000, // Reduced from 15 seconds to 10 seconds
   headers: {
     'Accept': 'application/json',
     'X-Requested-With': 'XMLHttpRequest'
@@ -24,7 +42,7 @@ const axiosInstance = axios.create({
 // Configurer des intercepteurs pour les requêtes
 axiosInstance.interceptors.request.use(request => {
   // Ajouter le token d'authentification à toutes les requêtes si disponible
-  const token = localStorage.getItem('token');
+  const token = getAuthToken();
   if (token) {
     request.headers.Authorization = `Bearer ${token}`;
   }
@@ -41,7 +59,7 @@ axiosInstance.interceptors.request.use(request => {
 
 // Configure external API instance (for third-party APIs)
 export const externalAxiosInstance = axios.create({
-  timeout: 10000,
+  timeout: 5000, // Reduced from 10000 to 5000
   headers: {
     'Accept': 'application/json'
   }
@@ -50,7 +68,7 @@ export const externalAxiosInstance = axios.create({
 // Create API address service instance
 export const addressApiInstance = axios.create({
   baseURL: 'https://api-adresse.data.gouv.fr',
-  timeout: 5000,
+  timeout: 3000, // Reduced from 5000 to 3000
   headers: {
     'Accept': 'application/json'
   }

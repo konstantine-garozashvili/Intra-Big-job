@@ -108,15 +108,15 @@ export const authService = {
       
       // Prepare data for the standard JWT route (/login_check)
       const loginData = {
-        username: email, // Note the field 'username' instead of 'email' for JWT standard
+        username: email,
         password,
         device_id: deviceId,
         device_name: deviceName,
         device_type: deviceType
       };
       
-      // Use JWT standard route directly
-      const response = await apiService.post('/login_check', loginData);
+      // Use JWT standard route directly with a shorter timeout for faster response
+      const response = await apiService.post('/login_check', loginData, { timeout: 5000 });
       
       // Store JWT token in localStorage
       if (response.token) {
@@ -126,11 +126,6 @@ export const authService = {
       // Store refresh token if present
       if (response.refresh_token) {
         localStorage.setItem('refresh_token', response.refresh_token);
-      }
-      
-      // Store user information if present in response
-      if (response.user) {
-        localStorage.setItem('user', JSON.stringify(response.user));
       }
       
       // Extract detailed info from JWT token for immediate use
@@ -145,18 +140,14 @@ export const authService = {
               const enhancedUser = {
                 username: payload.username,
                 roles: payload.roles,
-                // Extract additional information if available
                 id: payload.id,
                 email: payload.username,
                 firstName: payload.firstName,
                 lastName: payload.lastName,
-                // Add token extraction timestamp for tracking freshness
                 _extractedAt: Date.now()
               };
               
               localStorage.setItem('user', JSON.stringify(enhancedUser));
-              
-              // IMPORTANT: Also store roles separately in localStorage
               localStorage.setItem('userRoles', JSON.stringify(payload.roles));
               
               // Pre-populate cache with this minimal data to speed up initial rendering
@@ -169,22 +160,22 @@ export const authService = {
             }
           }
         } catch (tokenError) {
-          // Silently handle token parsing errors
           console.error('Error parsing token:', tokenError);
         }
       }
       
-      // Initiate user data loading in the background without awaiting or delaying navigation
+      // Initiate user data loading in the background *after* navigation
+      // Do not block the UI or navigation waiting for this data
       setTimeout(() => {
         this.lazyLoadUserData().catch(() => {
-          // Silently ignore any errors in background loading
+          // Silently ignore errors in background loading
         });
         
         // Clear login in progress flag after background operations complete
         setTimeout(() => {
           sessionStorage.removeItem('login_in_progress');
-        }, 1000);
-      }, 500);
+        }, 500);
+      }, 100); // Reduced from 500ms to 100ms
       
       return response;
     } catch (error) {
@@ -207,21 +198,18 @@ export const authService = {
     if (!cachedUser) return null;
     
     try {
-      // Create a timeout promise with much shorter timeout (2 seconds)
+      // Create a timeout promise with much shorter timeout (1.5 seconds)
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => {
           reject(new Error('User data fetch timeout'));
-        }, 2000);
+        }, 1500);
       });
       
-      // Try the correct endpoint format - simplify the path construction
-      const correctApiPath = '/api/profile';
-      
-      // Fetch user data from API with the corrected path
+      // Use correct API endpoint format
       const dataPromise = apiService.get('/profile', { 
         noCache: false,    // Use cache if available
         retries: 0,        // Don't retry on failure
-        timeout: 2000      // Short timeout
+        timeout: 1500      // Shorter timeout (reduced from 2000ms)
       });
       
       // Race between data fetch and timeout
@@ -241,6 +229,9 @@ export const authService = {
         const queryClient = getQueryClient();
         if (queryClient) {
           queryClient.setQueryData(['user', 'current'], enhancedUser);
+          
+          // Dispatch event that user data is loaded
+          window.dispatchEvent(new Event('user-data-loaded'));
         }
         
         return enhancedUser;
@@ -249,12 +240,8 @@ export const authService = {
       // If we reach here, something went wrong but we have cached user data
       return cachedUser;
     } catch (error) {
-      console.warn('Failed to load complete user data:', error.message || 'Unknown error');
-      
-      // Ensure login in progress flag is cleared on error
-      sessionStorage.removeItem('login_in_progress');
-      
-      // Still return cached user data if available
+      console.error('Error in lazyLoadUserData:', error.message);
+      // Return cached user data as fallback
       return cachedUser;
     }
   },
