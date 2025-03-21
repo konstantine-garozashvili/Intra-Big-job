@@ -45,6 +45,12 @@ export const getPrimaryRole = (roles) => {
     return null;
   }
 
+  // Normaliser tous les rôles pour la comparaison (mettre en majuscules et s'assurer qu'ils ont le préfixe ROLE_)
+  const normalizedRoles = roles.map(role => {
+    const upperRole = role.toUpperCase();
+    return upperRole.startsWith('ROLE_') ? upperRole : `ROLE_${upperRole}`;
+  });
+
   // Ordre de priorité des rôles (du plus prioritaire au moins prioritaire)
   const rolePriority = [
     'ROLE_SUPERADMIN',
@@ -58,7 +64,7 @@ export const getPrimaryRole = (roles) => {
 
   // Trouver le rôle avec la plus haute priorité
   for (const priorityRole of rolePriority) {
-    if (roles.includes(priorityRole)) {
+    if (normalizedRoles.includes(priorityRole)) {
       return priorityRole;
     }
   }

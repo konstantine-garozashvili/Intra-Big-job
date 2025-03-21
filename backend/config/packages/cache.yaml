@@ -18,6 +18,19 @@ framework:
         #pools:
             #my.dedicated.cache: null
 
+        # Utiliser APCu pour tous les environnements
+        app: cache.adapter.apcu
+        system: cache.adapter.apcu
+        
+        # Configurer des pools de cache spécifiques pour Doctrine
+        pools:
+            doctrine.result_cache_pool:
+                adapter: cache.app
+            doctrine.system_cache_pool:
+                adapter: cache.system
+            doctrine.metadata_cache_pool:
+                adapter: cache.system
+
 when@dev:
     framework:
         cache:

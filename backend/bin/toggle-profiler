@@ -7,21 +7,31 @@ use Symfony\Component\Yaml\Yaml;
 
 // Parse command line arguments
 $enableProfiler = false;
-$onlyExceptions = true;
+$onlyExceptions = true; // Default value
 
 foreach ($argv as $arg) {
     if ($arg === '--enable' || $arg === '-e') {
         $enableProfiler = true;
+        // When profiler is enabled, always set only_exceptions to false
+        $onlyExceptions = false;
     } elseif ($arg === '--all-requests' || $arg === '-a') {
         $onlyExceptions = false;
     } elseif ($arg === '--help' || $arg === '-h') {
         echo "Usage: php bin/toggle-profiler [options]\n";
         echo "Options:\n";
         echo "  --enable, -e          Enable the profiler (default: disabled)\n";
-        echo "  --all-requests, -a    Collect data on all requests, not just exceptions (default: only exceptions)\n";
+        echo "  --all-requests, -a    Collect data on all requests, not just exceptions\n";
         echo "  --help, -h            Display this help message\n";
+        echo "\n";
+        echo "Note: When profiler is enabled, it will automatically collect data on all requests by default.\n";
+        echo "      When profiler is disabled, it will be set to only collect on exceptions.\n";
         exit(0);
     }
+}
+
+// If profiler is disabled, always set only_exceptions to true
+if (!$enableProfiler) {
+    $onlyExceptions = true;
 }
 
 // Create or update profiler settings file
@@ -43,9 +53,7 @@ file_put_contents($profilerFile, $content);
 
 // Status message
 echo "Symfony Profiler: " . ($enableProfiler ? "ENABLED" : "DISABLED") . "\n";
-if ($enableProfiler) {
-    echo "Data collection: " . ($onlyExceptions ? "Only on exceptions" : "On all requests") . "\n";
-}
+echo "Data collection: " . ($onlyExceptions ? "Only on exceptions" : "On all requests") . "\n";
 echo "Configuration updated in config/packages/profiler.yaml\n";
 echo "Please clear the cache for changes to take effect.\n";
 echo "Run: php bin/console cache:clear\n"; 

@@ -50,12 +50,11 @@ class DevToolsController extends AbstractController
             throw $this->createAccessDeniedException('This endpoint is only available in the dev environment');
         }
 
-        // Get request parameters
+        // Get request parameter for enable/disable
         $enable = $request->request->getBoolean('enable', false);
-        $onlyExceptions = $request->request->getBoolean('only_exceptions', true);
-
-        // Use the service to toggle profiler
-        $this->profilerToggleService->toggleProfiler($enable, $onlyExceptions);
+        
+        // Use the service to toggle profiler (only_exceptions is now managed by the service)
+        $this->profilerToggleService->toggleProfiler($enable);
         
         // Clear the cache
         $this->profilerToggleService->clearCache();
@@ -64,7 +63,8 @@ class DevToolsController extends AbstractController
         $this->addFlash(
             'success',
             'Profiler settings updated successfully. ' . 
-            ($enable ? 'Profiler is now ENABLED' : 'Profiler is now DISABLED')
+            ($enable ? 'Profiler is now ENABLED and will collect data on all requests.' : 
+                    'Profiler is now DISABLED and will only collect data on exceptions.')
         );
 
         // Redirect back to the profiler page

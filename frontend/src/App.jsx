@@ -12,8 +12,6 @@ import ProtectedRoute from './components/ProtectedRoute'
 import PublicRoute from './components/PublicRoute'
 import ProfileLayout from '@/layouts/ProfileLayout'
 import useLoadingIndicator from './hooks/useLoadingIndicator'
-import TeacherProtectedRoute from './components/TeacherProtectedRoute'
-import RecruiterProtectedRoute from './components/RecruiterProtectedRoute'
 import StudentRoute from './components/StudentRoute'
 import { Toaster } from './components/ui/sonner'
 
@@ -21,8 +19,8 @@ import { Toaster } from './components/ui/sonner'
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      cacheTime: 60 * 60 * 1000, // 1 hour
+      staleTime: 3 * 60 * 1000, // 3 minutes
+      cacheTime: 30 * 60 * 1000, // 30 minutes
       retry: 1,
       refetchOnWindowFocus: false,
       refetchOnMount: true,
@@ -202,6 +200,13 @@ const PrefetchHandler = () => {
           // Invalider toutes les requêtes liées à l'utilisateur
           qc.invalidateQueries({ queryKey: ['user-data'] });
           
+          // Invalider explicitement les requêtes de rôles
+          qc.invalidateQueries({ queryKey: ['userRoles'] });
+          qc.removeQueries({ queryKey: ['userRoles'] });
+          
+          // Forcer l'actualisation des rôles
+          qc.refetchQueries({ queryKey: ['userRoles'] });
+          
           // Invalider également les requêtes de dashboard
           qc.invalidateQueries({ queryKey: ['teacher-dashboard'] });
           qc.invalidateQueries({ queryKey: ['admin-users'] });
@@ -377,14 +382,10 @@ const AppContent = () => {
                     } />
                     
                     {/* Routes pour la gestion des rôles - accessible par recruiters, admins et superadmins */}
-                    <Route path="/recruiter/guest-student-roles" element={
-                      <RoleGuard 
-                        roles={[ROLES.RECRUITER, ROLES.ADMIN, ROLES.SUPERADMIN]} 
-                        fallback={<Navigate to="/dashboard" replace />}
-                      >
-                        <GuestStudentRoleManager />
-                      </RoleGuard>
-                    } />
+                    <Route path="/recruiter" element={<ProtectedRoute />}>
+                      <Route path="dashboard" element={<RecruiterDashboard />} />
+                      <Route path="role-manager" element={<GuestStudentRoleManager />} />
+                    </Route>
                     
                     {/* Routes Admin */}
                     <Route path="/admin/dashboard" element={
@@ -427,24 +428,10 @@ const AppContent = () => {
                     </Route>
                     
                     {/* Routes enseignantes */}
-                    <Route path="/teacher">
-                      <Route path="dashboard" element={
-                        <RoleGuard roles={ROLES.TEACHER} fallback={<Navigate to="/dashboard" replace />}>
-                          <TeacherDashboard />
-                        </RoleGuard>
-                      } />
-                      {/* Ajout de la route d'émargement pour les enseignants */}
-                      <Route path="attendance" element={
-                        <RoleGuard roles={ROLES.TEACHER} fallback={<Navigate to="/dashboard" replace />}>
-                          <TeacherAttendance />
-                        </RoleGuard>
-                      } />
-                      {/* Ajout de la route de surveillance des signatures */}
-                      <Route path="signature-monitoring" element={
-                        <RoleGuard roles={ROLES.TEACHER} fallback={<Navigate to="/dashboard" replace />}>
-                          <TeacherSignatureMonitoring />
-                        </RoleGuard>
-                      } />
+                    <Route path="/teacher" element={<ProtectedRoute />}>
+                      <Route path="dashboard" element={<TeacherDashboard />} />
+                      <Route path="signature-monitoring" element={<TeacherSignatureMonitoring />} />
+                      <Route path="attendance" element={<TeacherAttendance />} />
                     </Route>
                     
                     {/* Routes HR */}
@@ -465,13 +452,6 @@ const AppContent = () => {
                     <Route path="/guest/dashboard" element={
                       <RoleGuard roles={ROLES.GUEST} fallback={<Navigate to="/dashboard" replace />}>
                         <GuestDashboard />
-                      </RoleGuard>
-                    } />
-                    
-                    {/* Routes Recruiter */}
-                    <Route path="/recruiter/dashboard" element={
-                      <RoleGuard roles={ROLES.RECRUITER} fallback={<Navigate to="/dashboard" replace />}>
-                        <RecruiterDashboard />
                       </RoleGuard>
                     } />
                   </Route>

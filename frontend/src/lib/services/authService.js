@@ -311,7 +311,7 @@ export const authService = {
   },
   
   /**
-   * Déconnexion
+   * Déconnecte l'utilisateur en supprimant ses informations d'authentification
    * @param {string} [redirectTo='/login'] - Chemin de redirection après la déconnexion
    * @returns {Promise<boolean>} - True si la déconnexion est réussie
    */
@@ -348,23 +348,16 @@ export const authService = {
         'token',
         'refresh_token',
         'user',
-        'tokenExpiration',
+        'userRoles',
         'last_role',
-        'session_id',
-        'cached_profile_picture',
-        'cached_profile_picture_timestamp'
+        'dashboard_path',
+        'permissions'
       ];
       
       itemsToRemove.forEach(item => localStorage.removeItem(item));
       
-      // Tenter de faire un appel API pour invalider le token côté serveur
-      if (this.isLoggedIn()) {
-        try {
-          await apiService.post('/api/auth/logout');
-        } catch (logoutApiError) {
-          // Ignorer les erreurs d'API lors de la déconnexion
-        }
-      }
+      // Effacer les autres données de session potentiellement liées à l'utilisateur
+      sessionStorage.removeItem('returnTo');
       
       // Gestion optimisée du cache et des requêtes React Query
       try {
@@ -436,9 +429,9 @@ export const authService = {
         'token',
         'refresh_token',
         'user',
-        'tokenExpiration',
-        'device_id',
+        'userRoles',
         'last_role',
+        'device_id',
         'session_id',
         'cached_profile_picture',
         'cached_profile_picture_timestamp'
@@ -778,6 +771,28 @@ export const authService = {
       console.error('Error ensuring user data:', error);
       return false;
     }
+  },
+
+  /**
+   * Nettoie spécifiquement le cache des rôles utilisateur
+   * Utile pour forcer un rechargement des rôles après un changement
+   */
+  clearRoleCache() {
+    // Supprimer les rôles du localStorage
+    localStorage.removeItem('userRoles');
+    localStorage.removeItem('last_role');
+    
+    // Invalider les requêtes React Query liées aux rôles
+    const queryClient = getQueryClient();
+    if (queryClient) {
+      queryClient.invalidateQueries({ queryKey: ['userRoles'] });
+      queryClient.removeQueries({ queryKey: ['userRoles'] });
+      // Forcer un rechargement des rôles
+      queryClient.refetchQueries({ queryKey: ['userRoles'] });
+    }
+    
+    // Déclencher un événement pour informer les composants du changement de rôle
+    window.dispatchEvent(new Event('role-change'));
   }
 };
 

@@ -80,6 +80,16 @@ export const RoleProvider = ({ children }) => {
       queryClient.setQueryData(['userRoles'], []);
       // Also remove the queries completely
       queryClient.removeQueries(['userRoles']);
+      // Invalider toutes les requêtes liées à l'utilisateur ou aux rôles
+      queryClient.invalidateQueries({ queryKey: ['user-data'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['student-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['teacher-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['hr-dashboard'] });
+      
+      // S'assurer que localStorage est nettoyé des données de rôle
+      localStorage.removeItem('userRoles');
+      localStorage.removeItem('last_role');
     };
     
     const handleRoleChange = () => {
@@ -123,8 +133,8 @@ export const RoleProvider = ({ children }) => {
       return [];
     },
     enabled: !!user,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    cacheTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 0, // Considérer immédiatement les données comme obsolètes
+    cacheTime: 60 * 1000, // 1 minute seulement
     onError: () => {
       return [];
     }

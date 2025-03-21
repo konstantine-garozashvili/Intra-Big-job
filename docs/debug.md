@@ -1,17 +1,12 @@
-### Symfony profiler
+### Symfony profiler (Activer/Désactiver)
 
 
-Pour activer :
 ```bash
-docker exec -it infra-backend-1 php bin/toggle-profiler --enable && 
-docker exec -it infra-backend-1 php bin/console cache:clear
-```
+# Activer le profiler (collectera des données sur toutes les requêtes)
+php bin/toggle-profiler --enable
 
-Pour désactiver :
-```bash
-docker exec -it infra-backend-1 php bin/toggle-profiler && docker exec -it infra-backend-1 php bin/console cache:clear
-
-
+# Désactiver le profiler (ne collectera des données que sur les exceptions)
+php bin/toggle-profiler
 ```
 
 ### 🐞 Les conteneurs ne démarrent pas

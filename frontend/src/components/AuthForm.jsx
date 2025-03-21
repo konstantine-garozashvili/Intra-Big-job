@@ -7,6 +7,7 @@ import { useRolePermissions } from "@/features/roles/useRolePermissions"
 import { useRoles } from "@/features/roles/roleContext"
 import QuickLoginButtons from './QuickLoginButtons'
 import { showGlobalLoader, hideGlobalLoader } from "@/lib/utils/loadingUtils"
+import { getPrimaryRole, getDashboardPathByRole } from "@/lib/utils/roleUtils"
 
 // Separate input component to prevent re-renders of the entire form
 const FormInput = React.memo(({ 
@@ -138,6 +139,9 @@ export function AuthForm() {
         localStorage.removeItem('rememberedEmail')
       }
       
+      // Nettoyer le cache des rôles pour s'assurer d'avoir les bons rôles
+      authService.clearRoleCache();
+      
       // Dispatch login success event
       window.dispatchEvent(new Event('login-success'))
       
@@ -160,27 +164,20 @@ export function AuthForm() {
               if (tokenParts.length === 3) {
                 const payload = JSON.parse(atob(tokenParts[1]))
                 if (payload.roles && payload.roles.length > 0) {
-                  // Determine dashboard path based on role
-                  const mainRole = payload.roles[0]
-                  switch (mainRole) {
-                    case 'ROLE_ADMIN':
-                      dashboardPath = '/admin/dashboard'
-                      break
-                    case 'ROLE_SUPERADMIN':
-                      dashboardPath = '/superadmin/dashboard'
-                      break
-                    case 'ROLE_TEACHER':
-                      dashboardPath = '/teacher/dashboard'
-                      break
-                    case 'ROLE_STUDENT':
-                      dashboardPath = '/student/dashboard'
-                      break
-                    case 'ROLE_HR':
-                      dashboardPath = '/hr/dashboard'
-                      break
-                    default:
-                      dashboardPath = '/dashboard'
-                  }
+                  // Importer les fonctions utilitaires de gestion des rôles
+                  import('@/lib/utils/roleUtils').then(({ getPrimaryRole, getDashboardPathByRole }) => {
+                    // Déterminer le rôle principal selon l'ordre de priorité
+                    const primaryRole = getPrimaryRole(payload.roles);
+                    // Obtenir le chemin du dashboard en fonction du rôle principal
+                    dashboardPath = getDashboardPathByRole(primaryRole);
+                    // Naviguer vers le dashboard spécifique au rôle
+                    navigate(dashboardPath);
+                  }).catch(() => {
+                    // Fallback en cas d'erreur d'importation
+                    console.error('Erreur lors de l\'importation des utilitaires de rôle, utilisation de la redirection par défaut');
+                    navigate(dashboardPath);
+                  });
+                  return; // Sortir pour éviter la double navigation
                 }
               }
             } catch (error) {
@@ -188,7 +185,7 @@ export function AuthForm() {
             }
           }
           
-          // Navigate directly to role-specific dashboard
+          // Cas de fallback si l'importation dynamique échoue ou si aucun rôle n'est trouvé
           navigate(dashboardPath)
         }
         

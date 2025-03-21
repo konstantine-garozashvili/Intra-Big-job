@@ -8,6 +8,7 @@ import { useRolePermissions } from '@/features/roles/useRolePermissions';
 /**
  * Composant pour protéger les routes nécessitant une authentification
  * Redirige vers la racine si l'utilisateur n'est pas connecté
+ * Vérifie l'accès aux routes en fonction des rôles de l'utilisateur
  */
 const ProtectedRoute = () => {
   const location = useLocation();
@@ -16,7 +17,8 @@ const ProtectedRoute = () => {
   const [rolesLoaded, setRolesLoaded] = useState(false);
   const redirectedRef = useRef(false);
   const renderedOutletRef = useRef(false);
-  const { roles, hasRole, isLoading: rolesLoading } = useRoles();
+  const notificationShownRef = useRef(false);
+  const { roles, hasRole, isLoading: rolesLoading, refreshRoles } = useRoles();
   const permissions = useRolePermissions();
 
   // Verify that the user has the necessary roles for the requested path
@@ -63,7 +65,7 @@ const ProtectedRoute = () => {
       },
       {
         path: '/recruiter',
-        check: () => permissions.isRecruiter() || permissions.isAdmin() || permissions.isSuperAdmin(),
+        check: () => permissions.isRecruiter(),
         message: "Accès refusé: Cette page est réservée aux recruteurs"
       },
       {
@@ -77,10 +79,13 @@ const ProtectedRoute = () => {
     const matchingRole = roleChecks.find(role => path.startsWith(role.path));
     if (matchingRole) {
       if (!matchingRole.check()) {
-        toast.error(matchingRole.message, {
-          duration: 3000,
-          position: 'top-center',
-        });
+        if (!notificationShownRef.current) {
+          toast.error(matchingRole.message, {
+            duration: 3000,
+            position: 'top-center',
+          });
+          notificationShownRef.current = true;
+        }
         return false;
       }
     }
@@ -93,7 +98,10 @@ const ProtectedRoute = () => {
     if (!rolesLoading && isAuthenticated) {
       setRolesLoaded(true);
     }
-  }, [rolesLoading, isAuthenticated]);
+    
+    // Réinitialiser la notification à chaque changement de route
+    notificationShownRef.current = false;
+  }, [rolesLoading, isAuthenticated, location.pathname]);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -101,11 +109,25 @@ const ProtectedRoute = () => {
       
       if (!isLoggedIn) {
         // Afficher une notification seulement si l'utilisateur essaie d'accéder à une page protégée
-        if (location.pathname !== '/' && location.pathname !== '/login' && location.pathname !== '/register') {
+        if (location.pathname !== '/' && location.pathname !== '/login' && location.pathname !== '/register' && !notificationShownRef.current) {
           toast.error('Veuillez vous connecter pour accéder à cette page', {
             duration: 3000,
             position: 'top-center',
           });
+          notificationShownRef.current = true;
+        }
+      } else {
+        // Si l'utilisateur est connecté, rafraîchir ses rôles pour garantir des vérifications à jour
+        try {
+          // Utiliser la fonction refreshRoles pour actualiser les rôles
+          refreshRoles();
+          
+          // Également nettoyer explicitement le cache des rôles en cas de problème
+          if (localStorage.getItem('token')) {
+            authService.clearRoleCache();
+          }
+        } catch (error) {
+          console.error('Erreur lors du rafraîchissement des rôles:', error);
         }
       }
       
@@ -114,7 +136,7 @@ const ProtectedRoute = () => {
     };
 
     checkAuth();
-  }, [location.pathname]);
+  }, [location.pathname, refreshRoles]);
 
   // Pendant la vérification, on renvoie le contenu existant ou null la première fois
   if (isChecking || (isAuthenticated && rolesLoading)) {
@@ -150,7 +172,9 @@ const ProtectedRoute = () => {
   
   // If the user doesn't have access to the route, redirect to dashboard
   if (!hasRouteAccess && rolesLoaded) {
-    return <Navigate to="/dashboard" replace />;
+    // Récupérer le chemin approprié en fonction du rôle
+    const dashboardPath = permissions.getRoleDashboardPath();
+    return <Navigate to={dashboardPath} replace />;
   }
 
   // Si l'utilisateur est authentifié, on affiche le contenu de la route

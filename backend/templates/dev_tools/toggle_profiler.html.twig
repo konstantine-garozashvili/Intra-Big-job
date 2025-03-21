@@ -129,7 +129,9 @@
                 <div class="status {% if profiler_enabled %}enabled{% else %}disabled{% endif %}">
                     Profiler is currently <strong>{% if profiler_enabled %}ENABLED{% else %}DISABLED{% endif %}</strong>
                     {% if profiler_enabled %}
-                        <br>Data collection: <strong>{% if profiler_only_exceptions %}Only on exceptions{% else %}On all requests{% endif %}</strong>
+                        <br>Data collection: <strong>On all requests</strong>
+                    {% else %}
+                        <br>Data collection: <strong>Only on exceptions</strong>
                     {% endif %}
                 </div>
             </div>
@@ -144,11 +146,10 @@
                 </div>
                 
                 <div class="form-group">
-                    <label for="only_exceptions">Collect Data Only On Exceptions</label>
-                    <label class="switch">
-                        <input type="checkbox" id="only_exceptions" name="only_exceptions" {% if profiler_only_exceptions %}checked{% endif %}>
-                        <span class="slider"></span>
-                    </label>
+                    <p class="note">
+                        <strong>Note:</strong> When profiler is enabled, it will automatically collect data on all requests.
+                        When profiler is disabled, it will only collect data on exceptions.
+                    </p>
                 </div>
                 
                 <button type="submit">Update Profiler Settings</button>
