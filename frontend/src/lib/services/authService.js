@@ -214,18 +214,15 @@ export const authService = {
         }, 5000); // Increased from 2000ms to 5000ms for better reliability
       });
       
-      // Try the correct endpoint format - simplify the path construction
-      const correctApiPath = '/profile';
-      
-      // Fetch user data from API with the corrected path
-      const dataPromise = apiService.get(correctApiPath, { 
-        noCache: false,    // Use cache if available
-        retries: 1,        // Allow 1 retry on failure
-        timeout: 5000      // Increased from 2000ms to 5000ms for better reliability
-      });
-      
-      // Race between data fetch and timeout
-      const userData = await Promise.race([dataPromise, timeoutPromise]).catch(error => {
+      // Use the correct endpoint format for user data
+      const userData = await Promise.race([
+        apiService.get('/profile/me', { 
+          noCache: false,    // Use cache if available
+          retries: 2,        // Allow more retries for reliability
+          timeout: 5000      // 5 seconds timeout
+        }),
+        timeoutPromise
+      ]).catch(error => {
         console.warn('Failed to fetch profile data:', error.message);
         // Return the cached user data as fallback
         return cachedUser;

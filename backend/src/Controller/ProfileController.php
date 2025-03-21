@@ -523,6 +523,51 @@ class ProfileController extends AbstractController
     }
     
     /**
+     * Récupère les données du profil de l'utilisateur actuellement connecté (short-hand)
+     */
+    #[Route('/me', name: 'api_profil_me', methods: ['GET'])]
+    public function getMyProfile(): JsonResponse
+    {
+        /** @var User $user */
+        $user = $this->security->getUser();
+        
+        if (!$user) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Utilisateur non authentifié'
+            ], 401);
+        }
+        
+        try {
+            // Récupérer l'utilisateur avec toutes ses relations chargées
+            $user = $this->userRepository->findOneWithAllRelations($user->getId());
+            
+            // Utiliser la même structure que getConsolidatedProfile mais en version simplifiée
+            $response = [
+                'success' => true,
+                'data' => [
+                    'user' => [
+                        'id' => $user->getId(),
+                        'firstName' => $user->getFirstName(),
+                        'lastName' => $user->getLastName(),
+                        'email' => $user->getEmail(),
+                        'profilePicturePath' => $user->getProfilePicturePath(),
+                        'roles' => $this->getUserRolesAsArray($user),
+                    ]
+                ]
+            ];
+            
+            return $this->json($response);
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Erreur lors de la récupération du profil: ' . $e->getMessage(),
+                'code' => 'SERVER_ERROR'
+            ], 500);
+        }
+    }
+    
+    /**
      * Met à jour l'adresse de l'utilisateur
      */
     #[Route('/address', name: 'api_profil_address_update', methods: ['PUT'])]

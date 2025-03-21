@@ -113,7 +113,7 @@ export const useGlobalMessages = () => {
       
       try {
         // Fetch from API with enhanced error handling
-        const response = await apiService.get('/messages/recent', {
+        const response = await apiService.get('/api/messages/recent', {
           ...apiService.withAuth(),
           timeout: 8000,   // Augmenter le timeout à 8 secondes
           retries: 2,      // Permettre 2 tentatives
@@ -159,7 +159,7 @@ export const useGlobalMessages = () => {
   // Mutation for sending a message
   const sendMessageMutation = useMutation({
     mutationFn: async ({ content, tempId }) => {
-      const response = await apiService.post('/messages', { content }, apiService.withAuth());
+      const response = await apiService.post('/api/messages', { content }, apiService.withAuth());
       return { 
         serverMessage: response.data,
         tempId
@@ -259,7 +259,7 @@ export const usePrivateMessages = (userId) => {
       
       try {
         // Fetch from API with enhanced error handling
-        const response = await apiService.get(`/messages/private/${userId}`, {
+        const response = await apiService.get(`/api/messages/private/${userId}`, {
           ...apiService.withAuth(),
           timeout: 8000,  // Augmenter le timeout à 8 secondes
           retries: 2,     // Permettre 2 tentatives
@@ -306,7 +306,7 @@ export const usePrivateMessages = (userId) => {
   // Mutation for sending a private message
   const sendMessageMutation = useMutation({
     mutationFn: async ({ content, recipientId, tempId }) => {
-      const response = await apiService.post('/messages/private', 
+      const response = await apiService.post('/api/messages/private', 
         { content, recipientId }, 
         apiService.withAuth()
       );

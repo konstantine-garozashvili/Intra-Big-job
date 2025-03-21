@@ -21,7 +21,7 @@ class ProfileService {
         return profileCache.userData;
       }
       
-      const response = await apiService.get('/api/profile/user-data');
+      const response = await apiService.get('/profile/user-data');
       
       // Mettre en cache les données
       profileCache.userData = response.data;
@@ -37,7 +37,7 @@ class ProfileService {
     try {
       // If portfolioUrl is present, use the student profile endpoint
       if (profileData.portfolioUrl !== undefined) {
-        const response = await apiService.put('/api/student/profile/portfolio-url', {
+        const response = await apiService.put('/student/profile/portfolio-url', {
           portfolioUrl: profileData.portfolioUrl
         });
         
@@ -48,7 +48,7 @@ class ProfileService {
       }
       
       // Otherwise use the regular profile update endpoint
-      const response = await apiService.put('/api/profile', profileData);
+      const response = await apiService.put('/profile', profileData);
       
       // Invalider le cache après une mise à jour
       this.invalidateCache();
@@ -61,7 +61,7 @@ class ProfileService {
 
   async getDiplomas() {
     try {
-      const response = await apiService.get('/api/profile/diplomas');
+      const response = await apiService.get('/profile/diplomas');
       return response.data;
     } catch (error) {
       throw error;
@@ -70,7 +70,7 @@ class ProfileService {
 
   async getAddresses() {
     try {
-      const response = await apiService.get('/api/profile/addresses');
+      const response = await apiService.get('/profile/addresses');
       return response.data;
     } catch (error) {
       throw error;
@@ -79,7 +79,7 @@ class ProfileService {
 
   async getStats() {
     try {
-      const response = await apiService.get('/api/profile/stats');
+      const response = await apiService.get('/profile/stats');
       return response.data;
     } catch (error) {
       throw error;
@@ -101,7 +101,9 @@ class ProfileService {
       
       try {
         const response = await apiService.get('/profile/consolidated', {
-          signal: controller.signal
+          signal: controller.signal,
+          retries: 2, // Allow 2 retries
+          timeout: 6000 // 6 second timeout
         });
         
         clearTimeout(timeoutId);
@@ -200,7 +202,7 @@ class ProfileService {
     }
     
     try {
-      const response = await apiService.get(`/api/profile/public/${userId}`);
+      const response = await apiService.get(`/profile/public/${userId}`);
       return response.data;
     } catch (error) {
       throw error;
@@ -210,7 +212,7 @@ class ProfileService {
   // Profile picture methods
   async getProfilePicture() {
     try {
-      const response = await apiService.get('/api/profile/picture');
+      const response = await apiService.get('/profile/picture');
       return response;
     } catch (error) {
       throw error;
@@ -222,7 +224,7 @@ class ProfileService {
       const formData = new FormData();
       formData.append('profile_picture', file);
       
-      const response = await apiService.post('/api/profile/picture', formData, {
+      const response = await apiService.post('/profile/picture', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -244,7 +246,7 @@ class ProfileService {
     try {
       // Ajouter un timestamp pour éviter les problèmes de cache
       const timestamp = new Date().getTime();
-      const response = await apiService.delete(`/api/profile/picture?t=${timestamp}`);
+      const response = await apiService.delete(`/profile/picture?t=${timestamp}`);
       
       // Invalider le cache après une mise à jour
       this.invalidateCache();
@@ -260,7 +262,7 @@ class ProfileService {
   
   async updateAddress(addressData) {
     try {
-      const response = await apiService.put('/api/profile/address', addressData);
+      const response = await apiService.put('/profile/address', addressData);
       
       // Invalider le cache après une mise à jour
       this.invalidateCache();

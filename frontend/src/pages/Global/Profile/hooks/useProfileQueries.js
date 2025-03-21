@@ -3,6 +3,7 @@ import { profileService } from '../services/profileService';
 import documentService from '../services/documentService';
 import axiosInstance from '@/lib/axios';
 import authService from '@services/authService';
+import apiService from '@/lib/services/apiService';
 
 // API URL
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
@@ -128,19 +129,21 @@ export const useUserCV = (userId = null) => {
       try {
         // If userId is provided, we need to fetch the CV for that specific user
         if (userId) {
-          // This assumes there's an endpoint to get documents by user ID and type
-          const response = await axiosInstance.get(`/documents/user/${userId}/type/CV`);
-          return response.data;
+          // Use the documented endpoint for getting documents by type
+          const response = await apiService.get(`/documents/type/CV`);
+          return response.data || { success: true, data: [] };
         } else {
           // For current user, use the existing method
           const documents = await documentService.getDocumentByType('CV');
           return { success: true, data: documents };
         }
       } catch (error) {
-        // console.error('Error fetching CV document:', error);
-        return { success: false, error: error.message };
+        console.warn('Error fetching CV document:', error.message);
+        return { success: false, error: error.message, data: [] };
       }
     },
     enabled: true,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: false, // Don't retry on error since we handle errors gracefully
   });
 }; 

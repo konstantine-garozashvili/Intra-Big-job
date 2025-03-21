@@ -150,15 +150,17 @@ export const normalizeApiUrl = (path) => {
     return trimmedPath;
   }
   
-  // Simplify handling of the /api prefix
-  // This ensures we don't end up with /api/api/...
-  const apiPath = trimmedPath.replace(/^\/api\//, '/');
+  // Check if the path already has the /api prefix
+  if (trimmedPath.startsWith('/api/')) {
+    return trimmedPath;
+  }
   
-  // Now add /api prefix if it doesn't already start with it
-  if (apiPath.startsWith('/')) {
-    return `/api${apiPath}`;
+  // Simplify handling of the /api prefix
+  // Add /api prefix if it's not already there
+  if (trimmedPath.startsWith('/')) {
+    return `/api${trimmedPath}`;
   } else {
-    return `/api/${apiPath}`;
+    return `/api/${trimmedPath}`;
   }
 };
 
