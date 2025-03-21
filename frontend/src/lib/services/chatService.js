@@ -45,6 +45,54 @@ const loadFromStorage = (key) => {
   }
 };
 
+// Create mock messages for when API is unavailable
+const createMockMessages = () => {
+  const now = new Date();
+  return [
+    {
+      id: 'mock-1',
+      content: "Welcome to the messaging system!",
+      createdAt: new Date(now.getTime() - 86400000).toISOString(), // 1 day ago
+      sender: {
+        id: 'system',
+        firstName: 'System',
+        lastName: 'Notification',
+      },
+      isSystem: true
+    },
+    {
+      id: 'mock-2',
+      content: "This is a placeholder message while the messaging API is being connected.",
+      createdAt: new Date(now.getTime() - 3600000).toISOString(), // 1 hour ago
+      sender: {
+        id: 'system',
+        firstName: 'System',
+        lastName: 'Notification',
+      },
+      isSystem: true
+    }
+  ];
+};
+
+// Create mock private messages for a specific user
+const createMockPrivateMessages = (userId) => {
+  const now = new Date();
+  return [
+    {
+      id: `private-mock-${userId}-1`,
+      content: "Welcome to your private conversation!",
+      createdAt: new Date(now.getTime() - 86400000).toISOString(), // 1 day ago
+      sender: {
+        id: 'system',
+        firstName: 'System',
+        lastName: 'Notification',
+      },
+      recipientId: userId,
+      isSystem: true
+    }
+  ];
+};
+
 // Global chat hooks
 export const useGlobalMessages = () => {
   const queryClient = useQueryClient();
@@ -55,6 +103,13 @@ export const useGlobalMessages = () => {
     queryFn: async () => {
       // First try to load from localStorage
       const storedMessages = loadFromStorage('global_chat_messages');
+      
+      // Check if we're in the login flow by looking for a special flag
+      const isLoginProcess = sessionStorage.getItem('login_in_progress') === 'true';
+      if (isLoginProcess) {
+        console.info('Login in progress, skipping messages API call');
+        return storedMessages || createMockMessages();
+      }
       
       try {
         // Fetch from API
@@ -67,7 +122,7 @@ export const useGlobalMessages = () => {
         // Add fallback for missing or malformed response
         if (!response || response.success === false) {
           console.warn('API returned invalid messages response, using local cache');
-          return storedMessages || [];
+          return storedMessages || createMockMessages();
         }
         
         const serverMessages = response.messages || [];
@@ -84,11 +139,11 @@ export const useGlobalMessages = () => {
         return serverMessages;
       } catch (err) {
         console.error('Failed to fetch global messages:', err);
-        // Return stored messages as fallback if available
-        return storedMessages || [];
+        // Return stored messages as fallback if available, otherwise use mock data
+        return storedMessages || createMockMessages();
       }
     },
-    initialData: () => loadFromStorage('global_chat_messages') || [],
+    initialData: () => loadFromStorage('global_chat_messages') || createMockMessages(),
     staleTime: 30000, // 30 seconds
   });
   
@@ -186,6 +241,13 @@ export const usePrivateMessages = (userId) => {
       // First try to load from localStorage
       const storedMessages = loadFromStorage(storageKey);
       
+      // Check if we're in the login flow by looking for a special flag
+      const isLoginProcess = sessionStorage.getItem('login_in_progress') === 'true';
+      if (isLoginProcess) {
+        console.info('Login in progress, skipping private messages API call');
+        return storedMessages || createMockPrivateMessages(userId);
+      }
+      
       try {
         // Fetch from API
         const response = await apiService.get(`/messages/private/${userId}`, {
@@ -197,7 +259,7 @@ export const usePrivateMessages = (userId) => {
         // Add fallback for missing or malformed response
         if (!response || response.success === false) {
           console.warn('API returned invalid private messages response, using local cache');
-          return storedMessages || [];
+          return storedMessages || createMockPrivateMessages(userId);
         }
         
         const serverMessages = response.messages || [];
@@ -215,10 +277,10 @@ export const usePrivateMessages = (userId) => {
       } catch (err) {
         console.error(`Failed to fetch private messages for user ${userId}:`, err);
         // Return stored messages as fallback if available
-        return storedMessages || [];
+        return storedMessages || createMockPrivateMessages(userId);
       }
     },
-    initialData: () => loadFromStorage(storageKey) || [],
+    initialData: () => loadFromStorage(storageKey) || createMockPrivateMessages(userId),
     enabled: !!userId, // Only run query if userId is provided
     staleTime: 30000, // 30 seconds
   });

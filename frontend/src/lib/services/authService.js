@@ -87,6 +87,9 @@ export const authService = {
         queryClient.invalidateQueries({ queryKey: ['profile'] });
       }
       
+      // Set login in progress flag to prevent non-critical API calls
+      sessionStorage.setItem('login_in_progress', 'true');
+      
       // Obtain device ID and info
       const deviceId = getOrCreateDeviceId();
       const { deviceName, deviceType } = getDeviceInfo();
@@ -176,10 +179,18 @@ export const authService = {
         this.lazyLoadUserData().catch(() => {
           // Silently ignore any errors in background loading
         });
+        
+        // Clear login in progress flag after background operations complete
+        setTimeout(() => {
+          sessionStorage.removeItem('login_in_progress');
+        }, 1000);
       }, 500);
       
       return response;
     } catch (error) {
+      // Clear login in progress flag on error
+      sessionStorage.removeItem('login_in_progress');
+      
       hideGlobalLoader();
       console.error('Erreur lors de la connexion:', error);
       console.error('Détails de l\'erreur:', error.response?.data || error.message);
