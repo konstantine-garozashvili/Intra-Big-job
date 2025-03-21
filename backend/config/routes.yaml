@@ -1,0 +1,31 @@
+controllers:
+    resource:
+        path: ../src/Controller/
+        namespace: App\Controller
+    type: attribute
+
+api_login_check:
+    path: /api/login_check
+
+api_token_refresh:
+    path: /api/token/refresh
+    methods: ['POST']
+    controller: App\Controller\RefreshTokenController::refresh
+
+api_token_revoke:
+    path: /api/token/revoke
+    methods: ['POST']
+    controller: App\Controller\RefreshTokenController::revoke
+
+api_token_revoke_all:
+    path: /api/token/revoke-all
+    methods: ['POST']
+    controller: App\Controller\RefreshTokenController::revokeAll
+
+api_token_devices:
+    path: /api/token/devices
+    methods: ['GET']
+    controller: App\Controller\RefreshTokenController::listDevices
+
+document_routes:
+    resource: './routes/document.yaml'
