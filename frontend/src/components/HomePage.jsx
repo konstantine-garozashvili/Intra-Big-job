@@ -25,35 +25,33 @@ const HomePage = () => {
           // Déterminer le chemin du tableau de bord en fonction du rôle
           const roleDashboardPath = permissions.getRoleDashboardPath();
           setDashboardPath(roleDashboardPath);
+          // Navigation proactive vers le dashboard spécifique au rôle
+          navigate(roleDashboardPath, { replace: true });
+        } else {
+          // Si non connecté, rediriger vers la page de connexion
+          setDashboardPath('/login');
+          // Navigation proactive pour éviter la double redirection
+          navigate('/login', { replace: true });
         }
       } catch (error) {
-        // console.error('Erreur lors de la vérification de l\'authentification:', error);
+        console.error('Erreur lors de la vérification de l\'authentification:', error);
+        // En cas d'erreur, rediriger vers login
+        navigate('/login', { replace: true });
       } finally {
         setIsChecking(false);
       }
     };
 
     checkAuth();
-  }, [permissions]);
+  }, [permissions, navigate]);
 
-  // Modification: Ajouter un délai avant la redirection pour éviter les cascades
-  useEffect(() => {
-    if (!isChecking && !isAuthenticated) {
-      // Attendre un court instant avant de rediriger vers /login
-      // pour éviter une redirection immédiate qui pourrait interférer
-      // avec d'autres processus de redirection
-      const timer = setTimeout(() => {
-        // Ne rediriger que si nous sommes sur la page d'accueil exactement
-        if (window.location.pathname === '/') {
-          navigate('/login');
-        }
-      }, 50);
-      return () => clearTimeout(timer);
-    }
-  }, [isChecking, isAuthenticated]);
+  // Pendant la vérification, ne rien afficher
+  if (isChecking) {
+    return null;
+  }
 
-  // Redirection en fonction de l'état d'authentification
-  return <Navigate to={isAuthenticated ? dashboardPath : '/login'} replace />;
+  // Ce return ne sera jamais atteint car nous utilisons navigate() directement
+  return null;
 };
 
-export default HomePage; 
+export default HomePage;

@@ -1,4 +1,4 @@
-import axiosInstance from '@/lib/axios';
+import axios from '@/lib/axios';
 import apiService from './apiService';
 import { clearQueryCache, getQueryClient } from '../utils/queryClientUtils';
 import { showGlobalLoader, hideGlobalLoader } from '../utils/loadingUtils';
@@ -43,6 +43,11 @@ function decodeToken(token) {
  * Service pour l'authentification et la gestion des utilisateurs
  */
 export const authService = {
+  /**
+   * Récupère l'identifiant de session actuel
+   */
+  getSessionId: () => currentSessionId,
+
   /**
    * Inscription d'un nouvel utilisateur
    * @param {Object} userData - Données de l'utilisateur
@@ -311,155 +316,86 @@ export const authService = {
   },
   
   /**
-   * Déconnexion
-   * @param {string} [redirectTo='/login'] - Chemin de redirection après la déconnexion
-   * @returns {Promise<boolean>} - True si la déconnexion est réussie
+   * Déconnecte l'utilisateur et nettoie toutes les données de session
+   * @returns {Promise<void>}
    */
-  async logout(redirectTo = '/login') {
+  async logout() {
     try {
-      // Show global loading state
-      showGlobalLoader();
+      // Récupérer le token avant de le supprimer pour l'envoyer dans la requête
+      const token = localStorage.getItem('token');
       
-      // Récupérer l'ID de session avant de supprimer les données du localStorage
-      const sessionId = currentSessionId;
-      
-      // Try to revoke refresh token on server side
-      try {
-        const refreshToken = localStorage.getItem('refresh_token');
-        const deviceId = localStorage.getItem('device_id');
+      if (token) {
+        // Nettoyer le localStorage avant la requête pour éviter les problèmes d'autorisation
+        // si la requête échoue
+        this._clearLocalStorage();
         
-        if (refreshToken) {
-          const revokeData = {
-            refresh_token: refreshToken,
-            device_id: deviceId
-          };
-          
-          await apiService.post('/token/revoke', revokeData).catch((error) => {
-            // Ignore errors during token revocation
-            console.warn('Échec de révocation du refresh token:', error.message);
-          });
-        }
-      } catch (revokeError) {
-        console.warn('Error during token revocation:', revokeError);
-      }
-      
-      // Supprimer toutes les données d'authentification et de session du localStorage
-      const itemsToRemove = [
-        'token',
-        'refresh_token',
-        'user',
-        'tokenExpiration',
-        'last_role',
-        'session_id',
-        'cached_profile_picture',
-        'cached_profile_picture_timestamp'
-      ];
-      
-      itemsToRemove.forEach(item => localStorage.removeItem(item));
-      
-      // Tenter de faire un appel API pour invalider le token côté serveur
-      if (this.isLoggedIn()) {
+        // Déclencher immédiatement les événements pour informer l'application
+        this._triggerUserChangeEvents();
+        
         try {
-          await apiService.post('/api/auth/logout');
-        } catch (logoutApiError) {
-          // Ignorer les erreurs d'API lors de la déconnexion
-        }
-      }
-      
-      // Gestion optimisée du cache et des requêtes React Query
-      try {
-        const queryClient = getQueryClient();
-        if (queryClient) {
-          // Arrêter toutes les requêtes en cours
-          queryClient.cancelQueries();
-          
-          // Marquer les données comme périmées sans les supprimer
-          queryClient.invalidateQueries();
-          
-          // Supprimer sélectivement certaines requêtes sensibles
-          const sensitivePaths = ['user', 'profile', 'dashboard', 'notifications', 'profilePicture'];
-          sensitivePaths.forEach(path => {
-            queryClient.removeQueries({ queryKey: [path] });
-          });
-          
-          // Supprimer les requêtes de la session actuelle
-          queryClient.removeQueries({
-            predicate: (query) => {
-              const key = query.queryKey;
-              return Array.isArray(key) && key[0] === 'session' && key[1] === sessionId;
+          // Essayer d'invalider le token côté serveur
+          await axios.post(`${API_URL}/api/v1/auth/logout`, {}, {
+            headers: {
+              'Authorization': `Bearer ${token}`
             }
           });
-          
-          // Effacer complètement le cache pour éviter tout problème de données persistantes
-          clearQueryCache();
+        } catch (error) {
+          // Ne pas lever d'erreur si la requête de logout échoue
+          // car l'utilisateur est déjà déconnecté côté client
+          console.warn('Erreur lors de la déconnexion côté serveur:', error);
         }
-      } catch (cacheError) {
-        console.error('Error managing query cache:', cacheError);
+      } else {
+        // Si pas de token, juste nettoyer le localStorage
+        this._clearLocalStorage();
+        
+        // Déclencher les événements même sans token
+        this._triggerUserChangeEvents();
       }
       
-      // Gestion optimisée du cache API
-      try {
-        // Invalider sélectivement les caches critiques
-        const criticalPaths = ['/me', '/profile', '/dashboard', '/profile/picture'];
-        criticalPaths.forEach(path => {
-          apiService.invalidateCache(path);
-        });
-        
-        // Invalider les caches liés au profil et aux documents
-        apiService.invalidateProfileCache();
-        apiService.invalidateDocumentCache();
-        
-        // Vider complètement le cache pour s'assurer qu'aucune donnée sensible ne reste
-        apiService.clearCache();
-      } catch (apiCacheError) {
-        console.error('Error managing API cache:', apiCacheError);
-      }
-      
-      // Générer un nouvel identifiant de session pour la prochaine connexion
-      currentSessionId = generateSessionId();
-      
-      // MODIFICATION: Ne déclencher qu'un seul événement de déconnexion
-      // et supprimer la redirection forcée via window.location.href
-      window.dispatchEvent(new CustomEvent('logout-success', {
-        detail: { redirectTo }
-      }));
-      
-      // Remove loading state after a short delay
-      hideGlobalLoader(100);
-      
-      return true;
+      return { success: true };
     } catch (error) {
-      console.error('Error during logout:', error);
+      console.error('Erreur lors de la déconnexion:', error);
+      // Même en cas d'erreur, nettoyer le localStorage
+      this._clearLocalStorage();
       
-      // Forcer la suppression de toutes les données même en cas d'erreur
-      const itemsToRemove = [
-        'token',
-        'refresh_token',
-        'user',
-        'tokenExpiration',
-        'device_id',
-        'last_role',
-        'session_id',
-        'cached_profile_picture',
-        'cached_profile_picture_timestamp'
-      ];
+      // Et déclencher les événements
+      this._triggerUserChangeEvents();
       
-      itemsToRemove.forEach(item => localStorage.removeItem(item));
-      
-      // Générer un nouvel identifiant de session
-      currentSessionId = generateSessionId();
-      
-      // MODIFICATION: Ne déclencher qu'un seul événement de déconnexion
-      // et supprimer la redirection forcée via window.location.href
-      window.dispatchEvent(new CustomEvent('logout-success', {
-        detail: { redirectTo }
-      }));
-      
-      // Remove loading state on error
-      hideGlobalLoader();
-      
-      return false;
+      throw error;
     }
+  },
+  
+  /**
+   * Méthode privée pour nettoyer le localStorage
+   * @private
+   */
+  _clearLocalStorage() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('userRoles');
+    localStorage.removeItem('last_role');
+    localStorage.removeItem('sessionId');
+  },
+  
+  /**
+   * Méthode privée pour déclencher tous les événements liés au changement d'utilisateur
+   * @private
+   */
+  _triggerUserChangeEvents() {
+    // Déclencher les événements dans un délai pour permettre aux autres opérations de se terminer
+    setTimeout(() => {
+      // Informer l'application du changement d'utilisateur
+      window.dispatchEvent(new Event('user-change'));
+      
+      // Informer spécifiquement du changement de rôle
+      window.dispatchEvent(new Event('role-change'));
+      
+      // Informer de la déconnexion réussie
+      window.dispatchEvent(new Event('logout-success'));
+      
+      // Demander un nettoyage du cache global
+      window.dispatchEvent(new Event('cache-clear'));
+    }, 50);
   },
   
   /**
@@ -777,6 +713,64 @@ export const authService = {
     } catch (error) {
       console.error('Error ensuring user data:', error);
       return false;
+    }
+  },
+
+  /**
+   * Force le rechargement complet des données de rôle et nettoie le cache
+   * Solution rapide pour éviter les problèmes de rôle lors des changements d'utilisateur
+   * @returns {Promise<void>}
+   */
+  async forceRoleRefresh() {
+    try {
+      // 1. Supprimer les données de rôle du localStorage
+      localStorage.removeItem('userRoles');
+      localStorage.removeItem('last_role');
+      
+      // 2. Nettoyer le cache React Query de manière plus agressive
+      const queryClient = getQueryClient();
+      if (queryClient) {
+        // Supprimer complètement toutes les requêtes liées aux rôles
+        queryClient.removeQueries(['userRoles']);
+        queryClient.removeQueries(['user']);
+        queryClient.removeQueries(['user-data']);
+        
+        // Invalider et rafraîchir toutes les requêtes liées à l'utilisateur
+        queryClient.invalidateQueries();
+        
+        // Vider explicitement les caches pour assurer une mise à jour propre
+        queryClient.clear();
+      }
+      
+      // 3. Éviter les requêtes parallèles en ajoutant un court délai
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // 4. Forcer une récupération des données utilisateur fraîches
+      const userData = await this.getCurrentUser(true);
+      
+      // 5. S'assurer que les rôles sont bien enregistrés dans localStorage
+      if (userData && userData.roles && Array.isArray(userData.roles)) {
+        localStorage.setItem('userRoles', JSON.stringify(userData.roles));
+        if (userData.roles.length > 0) {
+          localStorage.setItem('last_role', userData.roles[0]);
+        }
+      }
+      
+      // 6. Déclencher l'événement de mise à jour des rôles avec un délai
+      await new Promise(resolve => {
+        setTimeout(() => {
+          window.dispatchEvent(new Event('role-change'));
+          window.dispatchEvent(new Event('roles-updated'));
+          resolve();
+        }, 100);
+      });
+      
+      return userData;
+    } catch (error) {
+      console.error('Erreur lors du rafraîchissement forcé des rôles:', error);
+      // Même en cas d'erreur, déclencher l'événement pour informer l'UI
+      window.dispatchEvent(new Event('role-change'));
+      throw error;
     }
   }
 };

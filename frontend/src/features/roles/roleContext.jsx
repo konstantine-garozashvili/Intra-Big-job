@@ -67,26 +67,60 @@ export const RoleProvider = ({ children }) => {
     
     // Listen for authentication events
     const handleLoginSuccess = () => {
-      fetchUser(true).then(() => {
-        // Invalidate the userRoles query to force a refetch
-        queryClient.invalidateQueries(['userRoles']);
-      });
+      // Nettoyer immédiatement toutes les données existantes
+      queryClient.removeQueries(['userRoles']);
+      queryClient.removeQueries(['user']);
+      queryClient.removeQueries(['user-data']);
+      queryClient.setQueryData(['userRoles'], []);
+      
+      // Réinitialiser l'état local
+      setUser(null);
+      setLastRole(null);
+      
+      // Forcer le rafraîchissement des données utilisateur avec un court délai pour éviter les conditions de course
+      setTimeout(() => {
+        fetchUser(true).then(() => {
+          // Invalider toutes les requêtes liées aux rôles et utilisateur
+          queryClient.invalidateQueries();
+          queryClient.refetchQueries(['userRoles']);
+          
+          // Déclencher un événement pour indiquer que les rôles sont mis à jour
+          window.dispatchEvent(new Event('roles-updated'));
+        });
+      }, 200);
     };
     
     const handleLogoutSuccess = () => {
+      // Nettoyer l'état local
       setUser(null);
       setLastRole(null);
-      // Clear the userRoles query data
+      
+      // Nettoyer toutes les données en cache
       queryClient.setQueryData(['userRoles'], []);
-      // Also remove the queries completely
       queryClient.removeQueries(['userRoles']);
+      queryClient.removeQueries(['user']);
+      queryClient.removeQueries(['user-data']);
+      
+      // Nettoyer localStorage
+      localStorage.removeItem('userRoles');
+      localStorage.removeItem('last_role');
+      
+      // Vider complètement le cache pour assurer une session propre
+      queryClient.clear();
     };
     
     const handleRoleChange = () => {
-      fetchUser(true).then(() => {
-        // Invalidate all role-related queries
-        queryClient.invalidateQueries(['userRoles']);
-      });
+      // Nettoyer d'abord les données en cache
+      queryClient.removeQueries(['userRoles']);
+      
+      // Puis rafraîchir avec un délai
+      setTimeout(() => {
+        fetchUser(true).then(() => {
+          // Invalider les requêtes liées aux rôles
+          queryClient.invalidateQueries(['userRoles']);
+          queryClient.invalidateQueries(['user-data']);
+        });
+      }, 100);
     };
     
     // Add event listeners
@@ -123,8 +157,8 @@ export const RoleProvider = ({ children }) => {
       return [];
     },
     enabled: !!user,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    cacheTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 0, // Toujours considérer les données comme obsolètes
+    cacheTime: 60 * 1000, // 1 minute seulement
     onError: () => {
       return [];
     }

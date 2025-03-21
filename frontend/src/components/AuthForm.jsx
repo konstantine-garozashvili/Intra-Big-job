@@ -138,13 +138,21 @@ export function AuthForm() {
         localStorage.removeItem('rememberedEmail')
       }
       
+      // Forcer le rafraîchissement complet des rôles pour corriger les problèmes de cache
+      try {
+        await authService.forceRoleRefresh();
+      } catch (error) {
+        console.error('Erreur lors du rafraîchissement des rôles:', error);
+      }
+      
       // Dispatch login success event
       window.dispatchEvent(new Event('login-success'))
       
       // Get the return URL if it exists
       const returnTo = sessionStorage.getItem('returnTo')
       
-      // Add small delay before navigation - REDUCED from 300ms to 150ms
+      // Add small delay before navigation - INCREASED from 150ms to 500ms
+      // Cela donne plus de temps pour que le cache des rôles soit actualisé
       setTimeout(() => {
         if (returnTo) {
           sessionStorage.removeItem('returnTo')
@@ -160,27 +168,26 @@ export function AuthForm() {
               if (tokenParts.length === 3) {
                 const payload = JSON.parse(atob(tokenParts[1]))
                 if (payload.roles && payload.roles.length > 0) {
-                  // Determine dashboard path based on role
-                  const mainRole = payload.roles[0]
-                  switch (mainRole) {
-                    case 'ROLE_ADMIN':
-                      dashboardPath = '/admin/dashboard'
-                      break
-                    case 'ROLE_SUPERADMIN':
-                      dashboardPath = '/superadmin/dashboard'
-                      break
-                    case 'ROLE_TEACHER':
-                      dashboardPath = '/teacher/dashboard'
-                      break
-                    case 'ROLE_STUDENT':
-                      dashboardPath = '/student/dashboard'
-                      break
-                    case 'ROLE_HR':
-                      dashboardPath = '/hr/dashboard'
-                      break
-                    default:
-                      dashboardPath = '/dashboard'
-                  }
+                  // Force le nettoyage du cache des rôles une seconde fois juste avant la redirection
+                  localStorage.removeItem('userRoles');
+                  
+                  // Importer les fonctions utilitaires
+                  import('@/lib/utils/roleUtils').then(({ getPrimaryRole, getDashboardPathByRole }) => {
+                    // Déterminer le rôle principal selon l'ordre de priorité
+                    const primaryRole = getPrimaryRole(payload.roles);
+                    // Obtenir le chemin du dashboard en fonction du rôle principal
+                    dashboardPath = getDashboardPathByRole(primaryRole);
+                    // Naviguer vers le dashboard spécifique au rôle
+                    navigate(dashboardPath);
+                    
+                    // Show success toast after navigation
+                    toast.success("Connexion réussie");
+                  }).catch(() => {
+                    // Fallback en cas d'erreur
+                    navigate(dashboardPath);
+                    toast.success("Connexion réussie");
+                  });
+                  return; // Sortir pour éviter la navigation par défaut
                 }
               }
             } catch (error) {
@@ -188,13 +195,11 @@ export function AuthForm() {
             }
           }
           
-          // Navigate directly to role-specific dashboard
+          // Navigation par défaut si le code ci-dessus échoue
           navigate(dashboardPath)
+          toast.success("Connexion réussie")
         }
-        
-        // Show success toast after navigation
-        toast.success("Connexion réussie")
-      }, 150)
+      }, 500)
       
       // Listen for when full user data is loaded
       const handleUserDataLoaded = () => {

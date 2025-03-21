@@ -7,6 +7,8 @@ import LoadingOverlay from './components/LoadingOverlay'
 import { AuthProvider } from './contexts/AuthContext'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { clearChatCache } from './lib/services/chatService'
+import { getQueryClient } from './lib/services/queryClient'
+import { authService } from './lib/services/authService'
 import './index.css'
 import ProtectedRoute from './components/ProtectedRoute'
 import PublicRoute from './components/PublicRoute'
@@ -155,82 +157,97 @@ const useIntelligentPreload = () => {
 const PrefetchHandler = () => {
   useIntelligentPreload();
   const location = useLocation();
+  const queryClient = getQueryClient ? getQueryClient() : queryClient;
   
+  // Précharger les données utilisateur
   useEffect(() => {
     // Précharger les données utilisateur dès que l'utilisateur est authentifié
-    if (localStorage.getItem('token')) {
-      Promise.all([
-        import('./hooks/useDashboardQueries'),
-        import('./lib/services/queryClient'),
-        import('./lib/services/authService')
-      ]).then(([dashboardModule, queryClientModule, authModule]) => {
-        const { getQueryClient } = queryClientModule;
-        const { getSessionId } = authModule;
-        const qc = getQueryClient();
-        const sessionId = getSessionId();
-        
-        if (qc) {
-          // Précharger les données utilisateur
-          qc.prefetchQuery({
-            queryKey: ['user-data', 'anonymous', sessionId],
-            queryFn: async () => {
-              const { default: apiService } = await import('./lib/services/apiService');
-              return await apiService.get('/me', {}, true, 30 * 60 * 1000);
-            },
-            staleTime: 30 * 60 * 1000,
-            cacheTime: 60 * 60 * 1000
-          });
-        }
+    if (localStorage.getItem('token') && queryClient) {
+      const sessionId = authService.getSessionId();
+      
+      // Précharger les données utilisateur
+      queryClient.prefetchQuery({
+        queryKey: ['user-data', 'anonymous', sessionId],
+        queryFn: async () => {
+          const apiService = (await import('./lib/services/apiService')).default;
+          return await apiService.get('/me', {}, true, 30 * 60 * 1000);
+        },
+        staleTime: 30 * 60 * 1000,
+        cacheTime: 60 * 60 * 1000
       });
     }
-  }, [location.pathname]);
+  }, [location.pathname, queryClient]);
   
-  // Ajouter un écouteur d'événement pour forcer l'actualisation des données utilisateur lors d'un changement d'utilisateur
+  // Handle user changes - more reliable now with debounce to prevent race conditions
   useEffect(() => {
-    const handleUserChange = () => {
-      // Importer dynamiquement les modules nécessaires
-      Promise.all([
-        import('./lib/services/queryClient'),
-        import('./lib/services/authService')
-      ]).then(([queryClientModule, authModule]) => {
-        const { getQueryClient } = queryClientModule;
-        const { getSessionId } = authModule;
-        const qc = getQueryClient();
-        const sessionId = getSessionId();
+    // Import services needed for user change handling
+    const handleUserChange = async () => {
+      try {
+        // Utiliser les imports en haut du fichier plutôt que des imports dynamiques
+        console.log('User change detected');
         
-        if (qc) {
-          // Invalider toutes les requêtes liées à l'utilisateur
-          qc.invalidateQueries({ queryKey: ['user-data'] });
-          
-          // Invalider également les requêtes de dashboard
-          qc.invalidateQueries({ queryKey: ['teacher-dashboard'] });
-          qc.invalidateQueries({ queryKey: ['admin-users'] });
-          qc.invalidateQueries({ queryKey: ['admin-dashboard'] });
-          qc.invalidateQueries({ queryKey: ['student-dashboard'] });
-          qc.invalidateQueries({ queryKey: ['hr-dashboard'] });
+        if (!queryClient) {
+          console.error('QueryClient not available');
+          return;
         }
-      });
+        
+        // Invalidate user-related queries
+        queryClient.invalidateQueries({ queryKey: ['user-data'] });
+        queryClient.invalidateQueries({ queryKey: ['user'] });
+        queryClient.invalidateQueries({ queryKey: ['userRoles'] });
+        
+        // Invalidate role-specific dashboards
+        queryClient.invalidateQueries({ queryKey: ['admin-dashboard'] });
+        queryClient.invalidateQueries({ queryKey: ['student-dashboard'] });
+        queryClient.invalidateQueries({ queryKey: ['teacher-dashboard'] });
+        queryClient.invalidateQueries({ queryKey: ['hr-dashboard'] });
+        queryClient.invalidateQueries({ queryKey: ['recruiter-dashboard'] });
+        
+        // Forcer la mise à jour des rôles sans recharger toute la page
+        try {
+          await authService.forceRoleRefresh();
+        } catch (error) {
+          console.error('Error refreshing roles:', error);
+        }
+      } catch (error) {
+        console.error('Error in handleUserChange:', error);
+      }
     };
-    
-    // Fonction pour gérer le nettoyage complet du cache
-    const handleCacheCleared = () => {
-      // Forcer un rafraîchissement complet des données
-      // Cette approche est plus radicale mais garantit que les anciennes données ne persistent pas
-      window.location.reload();
+
+    // Implement a debounced version to prevent multiple rapid triggers
+    let debounceTimer;
+    const debouncedUserChange = () => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(handleUserChange, 100);
     };
-    
-    // Ajouter les écouteurs d'événements
-    window.addEventListener('login-success', handleUserChange);
-    window.addEventListener('role-change', handleUserChange);
-    window.addEventListener('query-cache-cleared', handleCacheCleared);
-    
-    // Nettoyer les écouteurs d'événements
+
+    // Function for complete cache clear - avoiding window.location.reload()
+    const handleCacheClear = () => {
+      console.log('Cache clear requested');
+      
+      if (!queryClient) {
+        console.error('QueryClient not available');
+        return;
+      }
+      
+      // Force a complete data refresh
+      queryClient.clear();
+      
+      // Instead of forcing a full page reload, trigger a user change event
+      // which will refresh all relevant queries
+      window.dispatchEvent(new Event('user-change'));
+      window.dispatchEvent(new Event('role-change'));
+    };
+
+    window.addEventListener('user-change', debouncedUserChange);
+    window.addEventListener('cache-clear', handleCacheClear);
+
     return () => {
-      window.removeEventListener('login-success', handleUserChange);
-      window.removeEventListener('role-change', handleUserChange);
-      window.removeEventListener('query-cache-cleared', handleCacheCleared);
+      clearTimeout(debounceTimer);
+      window.removeEventListener('user-change', debouncedUserChange);
+      window.removeEventListener('cache-clear', handleCacheClear);
     };
-  }, []);
+  }, [queryClient]);
   
   return null;
 };

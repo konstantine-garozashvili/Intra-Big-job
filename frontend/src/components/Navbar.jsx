@@ -290,25 +290,16 @@ const Navbar = memo(() => {
       // Si l'utilisateur est connecté, charger ses données
       if (status) {
         try {
-          // Si un utilisateur est passé en props, l'utiliser
-          if (userData) {
-            setUserData(userData);
+          // Forcer le rafraîchissement des données utilisateur depuis l'API
+          const userData = await authService.getCurrentUser(true);
+          setUserData(userData);
 
-            // Déclencher un événement de changement de rôle si l'état d'authentification a changé
-            if (!wasAuthenticated) {
-              window.dispatchEvent(new Event("role-change"));
-            }
-          } else {
-            // Sinon, essayer de récupérer les données depuis l'API
-            const userData = await authService.getCurrentUser();
-            setUserData(userData);
-
-            // Déclencher un événement de changement de rôle si l'état d'authentification a changé
-            if (!wasAuthenticated) {
-              window.dispatchEvent(new Event("role-change"));
-            }
+          // Déclencher un événement de changement de rôle si l'état d'authentification a changé
+          if (!wasAuthenticated) {
+            window.dispatchEvent(new Event("role-change"));
           }
         } catch (userError) {
+          console.warn("Erreur lors de la récupération des données utilisateur:", userError);
           // Fallback: essayer de récupérer les données du profil
           try {
             const profileData = await profileService.getAllProfileData();
@@ -320,16 +311,13 @@ const Navbar = memo(() => {
             } else {
               setUserData(profileData);
             }
-
-            // Déclencher un événement de changement de rôle si l'état d'authentification a changé
-            if (!wasAuthenticated) {
-              window.dispatchEvent(new Event("role-change"));
-            }
           } catch (profileError) {
-            // Gestion silencieuse de l'erreur
+            console.warn("Erreur lors de la récupération du profil:", profileError);
+            setUserData(null);
           }
         }
       } else {
+        // Si non authentifié, s'assurer que userData est null
         setUserData(null);
 
         // Déclencher un événement de changement de rôle si l'état d'authentification a changé
@@ -338,6 +326,7 @@ const Navbar = memo(() => {
         }
       }
     } catch (error) {
+      console.error("Erreur lors de la vérification de l'authentification:", error);
       setIsAuthenticated(false);
       setUserData(null);
     }
@@ -346,7 +335,7 @@ const Navbar = memo(() => {
   // Vérifier l'état d'authentification au chargement et lors des changements de route
   useEffect(() => {
     checkAuthStatus();
-  }, [location.pathname, userData]);
+  }, [location.pathname]); // Retirer userData de la dépendance pour éviter des boucles infinies
 
   // Ajouter un écouteur d'événement pour les changements d'authentification
   useEffect(() => {
@@ -354,15 +343,33 @@ const Navbar = memo(() => {
     const handleAuthChange = () => {
       checkAuthStatus();
     };
+    
+    // Fonction spécifique pour gérer la déconnexion
+    const handleLogoutSuccess = () => {
+      // Réinitialiser explicitement l'état local pour s'assurer que le dropdown est vidé
+      setIsAuthenticated(false);
+      setUserData(null);
+      
+      // Planifier une vérification de l'état d'authentification après la réinitialisation du localStorage
+      setTimeout(() => {
+        checkAuthStatus();
+      }, 100);
+    };
 
     // Ajouter des écouteurs d'événements personnalisés
     window.addEventListener("login-success", handleAuthChange);
-    window.addEventListener("logout-success", handleAuthChange);
+    window.addEventListener("logout-success", handleLogoutSuccess);
+    window.addEventListener("user-change", handleAuthChange);
+    window.addEventListener("role-change", handleAuthChange);
+    window.addEventListener("cache-clear", handleLogoutSuccess);
 
     // Nettoyage lors du démontage du composant
     return () => {
       window.removeEventListener("login-success", handleAuthChange);
-      window.removeEventListener("logout-success", handleAuthChange);
+      window.removeEventListener("logout-success", handleLogoutSuccess);
+      window.removeEventListener("user-change", handleAuthChange);
+      window.removeEventListener("role-change", handleAuthChange);
+      window.removeEventListener("cache-clear", handleLogoutSuccess);
     };
   }, []);
 
@@ -381,7 +388,7 @@ const Navbar = memo(() => {
         setIsAuthenticated(false);
         
         // Appeler le service de déconnexion avec le chemin de redirection
-        authService.logout('/login');
+        authService.logout();
       }, 50);
     } catch (error) {
       console.error('Erreur lors de la déconnexion:', error);

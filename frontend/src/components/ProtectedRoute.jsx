@@ -23,6 +23,7 @@ const ProtectedRoute = () => {
   const checkRouteAccess = () => {
     // Ne pas vérifier les accès si les rôles ne sont pas encore chargés
     if (!rolesLoaded || rolesLoading) {
+      console.log('Rôles pas encore chargés, autorisation temporaire');
       return true;
     }
     
@@ -48,27 +49,27 @@ const ProtectedRoute = () => {
       },
       {
         path: '/teacher',
-        check: () => permissions.isTeacher(),
+        check: () => permissions.isTeacher() || permissions.isAdmin() || hasRole('ROLE_SUPERADMIN'),
         message: "Accès refusé: Cette page est réservée aux formateurs"
       },
       {
         path: '/student',
-        check: () => permissions.isStudent(),
+        check: () => permissions.isStudent() || permissions.isAdmin() || hasRole('ROLE_SUPERADMIN'),
         message: "Accès refusé: Cette page est réservée aux étudiants"
       },
       {
         path: '/hr',
-        check: () => permissions.isHR(),
+        check: () => permissions.isHR() || permissions.isAdmin() || hasRole('ROLE_SUPERADMIN'),
         message: "Accès refusé: Cette page est réservée aux ressources humaines"
       },
       {
         path: '/recruiter',
-        check: () => permissions.isRecruiter() || permissions.isAdmin() || permissions.isSuperAdmin(),
+        check: () => permissions.isRecruiter() || permissions.isAdmin() || hasRole('ROLE_SUPERADMIN'),
         message: "Accès refusé: Cette page est réservée aux recruteurs"
       },
       {
         path: '/guest',
-        check: () => permissions.isGuest(),
+        check: () => permissions.isGuest() || permissions.isAdmin() || hasRole('ROLE_SUPERADMIN'),
         message: "Accès refusé: Cette page est réservée aux invités"
       }
     ];
@@ -77,10 +78,17 @@ const ProtectedRoute = () => {
     const matchingRole = roleChecks.find(role => path.startsWith(role.path));
     if (matchingRole) {
       if (!matchingRole.check()) {
-        toast.error(matchingRole.message, {
-          duration: 3000,
-          position: 'top-center',
-        });
+        // Utiliser un court délai avant d'afficher l'erreur pour éviter les faux positifs
+        // pendant le chargement des rôles
+        setTimeout(() => {
+          // Vérifier à nouveau avant d'afficher l'erreur
+          if (!matchingRole.check()) {
+            toast.error(matchingRole.message, {
+              duration: 3000,
+              position: 'top-center',
+            });
+          }
+        }, 300);
         return false;
       }
     }
@@ -97,11 +105,15 @@ const ProtectedRoute = () => {
 
   useEffect(() => {
     const checkAuth = async () => {
+      // Ajouter un délai avant de vérifier l'authentification pour éviter les redirections multiples
+      // et laisser le temps aux autres composants de se charger correctement
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
       const isLoggedIn = authService.isLoggedIn();
       
       if (!isLoggedIn) {
-        // Afficher une notification seulement si l'utilisateur essaie d'accéder à une page protégée
-        if (location.pathname !== '/' && location.pathname !== '/login' && location.pathname !== '/register') {
+        // Éviter de montrer des toasts pendant le chargement initial
+        if (location.pathname !== '/' && location.pathname !== '/login' && location.pathname !== '/register' && !redirectedRef.current) {
           toast.error('Veuillez vous connecter pour accéder à cette page', {
             duration: 3000,
             position: 'top-center',
@@ -142,6 +154,7 @@ const ProtectedRoute = () => {
       sessionStorage.setItem('returnTo', returnTo);
     }
     
+    // Rediriger vers la page d'accueil qui gère elle-même la redirection vers login si nécessaire
     return <Navigate to="/" replace />;
   }
   
@@ -150,7 +163,16 @@ const ProtectedRoute = () => {
   
   // If the user doesn't have access to the route, redirect to dashboard
   if (!hasRouteAccess && rolesLoaded) {
-    return <Navigate to="/dashboard" replace />;
+    // Éviter les redirections multiples
+    if (redirectedRef.current) {
+      return null;
+    }
+    
+    redirectedRef.current = true;
+    
+    // Récupérer le chemin approprié en fonction du rôle
+    const dashboardPath = permissions.getRoleDashboardPath();
+    return <Navigate to={dashboardPath} replace />;
   }
 
   // Si l'utilisateur est authentifié, on affiche le contenu de la route
