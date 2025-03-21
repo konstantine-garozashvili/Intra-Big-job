@@ -486,6 +486,31 @@ export const authService = {
   // Méthode pour déclencher manuellement une mise à jour des rôles
   triggerRoleUpdate: () => {
     triggerRoleUpdate();
+  },
+
+  /**
+   * Désactive le compte de l'utilisateur connecté
+   * @returns {Promise<Object>} - La réponse du serveur
+   */
+  deactivateAccount: async () => {
+    try {
+      // Ajout d'en-têtes d'authentification pour l'API
+      const response = await apiService.post('/deactivate-account', {}, apiService.withAuth());
+      
+      // Si la désactivation est réussie, on déconnecte l'utilisateur
+      if (response && response.success) {
+        // Utiliser un délai court pour permettre au toast de s'afficher avant la déconnexion
+        setTimeout(() => {
+          // Déconnexion et redirection vers la page de connexion
+          authService.logout('/login');
+        }, 1500);
+      }
+      
+      return response;
+    } catch (error) {
+      console.error('Erreur lors de la désactivation du compte:', error);
+      throw error;
+    }
   }
 };
 

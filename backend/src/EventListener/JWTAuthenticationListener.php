@@ -21,6 +21,11 @@ class JWTAuthenticationListener
             return;
         }
 
+        // Vérifier si le compte de l'utilisateur est actif
+        if (!$user->isUserActive()) {
+            throw new AuthenticationException('Votre compte a été désactivé. Veuillez contacter l\'administrateur pour plus d\'informations.');
+        }
+
         // Temporairement désactivé : Vérification de l'email
         /*if (!$user->isEmailVerified()) {
             // Empêcher l'authentification en jetant une exception

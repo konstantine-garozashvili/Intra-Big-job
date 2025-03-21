@@ -259,4 +259,37 @@ class AuthController extends AbstractController
             ]
         ];
     }
+
+    /**
+     * Désactive le compte de l'utilisateur actuellement connecté
+     * Les données sont conservées mais l'utilisateur ne pourra plus se connecter
+     */
+    #[Route('/deactivate-account', name: 'api_deactivate_account', methods: ['POST'])]
+    public function deactivateAccount(): JsonResponse
+    {
+        try {
+            $user = $this->getUser();
+            
+            if (!$user) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Utilisateur non authentifié'
+                ], Response::HTTP_UNAUTHORIZED);
+            }
+            
+            // Désactiver le compte utilisateur
+            $this->authService->deactivateUser($user);
+            
+            return $this->json([
+                'success' => true,
+                'message' => 'Votre compte a été désactivé avec succès. Vos données sont toujours sauvegardées.'
+            ]);
+        } catch (\Exception $e) {
+            $this->logger->error('Erreur lors de la désactivation du compte: ' . $e->getMessage());
+            return $this->json([
+                'success' => false,
+                'message' => 'Une erreur est survenue lors de la désactivation de votre compte'
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
 } 
