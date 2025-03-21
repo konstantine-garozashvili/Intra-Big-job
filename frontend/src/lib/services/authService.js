@@ -204,7 +204,7 @@ export const authService = {
       });
       
       // Try the correct endpoint format - removing the /api prefix if it's already in the URL
-      const apiPath = '/profile/current'.replace(/^\/api\//, '/');
+      const apiPath = '/profile'.replace(/^\/api\//, '/');
       const correctApiPath = apiPath.startsWith('/') ? `/api${apiPath}` : `/api/${apiPath}`;
       
       // Fetch user data from API with the corrected path

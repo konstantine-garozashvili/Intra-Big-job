@@ -58,7 +58,18 @@ export const useGlobalMessages = () => {
       
       try {
         // Fetch from API
-        const response = await apiService.get('/messages/recent', apiService.withAuth());
+        const response = await apiService.get('/messages/recent', {
+          ...apiService.withAuth(),
+          timeout: 5000,  // Set an explicit timeout of 5 seconds
+          retries: 2     // Allow 2 retries
+        });
+        
+        // Add fallback for missing or malformed response
+        if (!response || response.success === false) {
+          console.warn('API returned invalid messages response, using local cache');
+          return storedMessages || [];
+        }
+        
         const serverMessages = response.messages || [];
         
         // Merge with stored messages if available, giving preference to local
@@ -177,7 +188,18 @@ export const usePrivateMessages = (userId) => {
       
       try {
         // Fetch from API
-        const response = await apiService.get(`/messages/private/${userId}`, apiService.withAuth());
+        const response = await apiService.get(`/messages/private/${userId}`, {
+          ...apiService.withAuth(),
+          timeout: 5000,  // Set an explicit timeout of 5 seconds
+          retries: 2     // Allow 2 retries
+        });
+        
+        // Add fallback for missing or malformed response
+        if (!response || response.success === false) {
+          console.warn('API returned invalid private messages response, using local cache');
+          return storedMessages || [];
+        }
+        
         const serverMessages = response.messages || [];
         
         // Merge with stored messages if available, giving preference to local
