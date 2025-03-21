@@ -80,12 +80,11 @@ export const authService = {
    */
   async login(email, password) {
     try {
-      // Vider le cache existant de manière sélective avant la connexion
-      // Ne supprimer que les caches pertinents pour l'authentification
+      // Only invalidate instead of removing queries - faster operation
       const queryClient = getQueryClient();
       if (queryClient) {
-        queryClient.removeQueries({ queryKey: ['user'] });
-        queryClient.removeQueries({ queryKey: ['profile'] });
+        queryClient.invalidateQueries({ queryKey: ['user'] });
+        queryClient.invalidateQueries({ queryKey: ['profile'] });
       }
       
       // Obtain device ID and info
@@ -101,8 +100,8 @@ export const authService = {
       currentSessionId = generateSessionId();
       localStorage.setItem('session_id', currentSessionId);
       
-      // Show loader
-      showGlobalLoader('Connexion en cours...');
+      // Show loader with no delay
+      showGlobalLoader();
       
       // Prepare data for the standard JWT route (/login_check)
       const loginData = {
@@ -162,8 +161,8 @@ export const authService = {
                 queryClient.setQueryData(['user', 'current'], enhancedUser);
               }
               
-              // Trigger role update event
-              window.dispatchEvent(new Event('role-change'));
+              // Trigger the login success event immediately
+              window.dispatchEvent(new Event('login-success'));
             }
           }
         } catch (tokenError) {
@@ -172,12 +171,12 @@ export const authService = {
         }
       }
       
-      // Hide loader
-      hideGlobalLoader();
-      
-      // Initialize background loading of user data
-      // but don't wait for resolution
-      this.lazyLoadUserData();
+      // Initiate user data loading in the background without awaiting or delaying navigation
+      setTimeout(() => {
+        this.lazyLoadUserData().catch(() => {
+          // Silently ignore any errors in background loading
+        });
+      }, 500);
       
       return response;
     } catch (error) {
@@ -190,81 +189,66 @@ export const authService = {
 
   /**
    * Charge les données utilisateur en arrière-plan
-   * @returns {Promise<Object>} - Données de l'utilisateur
+   * @returns {Promise<Object>} - Données utilisateur complètes
    */
-  lazyLoadUserData() {
-    // Si une promesse existe déjà, la retourner
-    if (userDataPromise) return userDataPromise;
+  async lazyLoadUserData() {
+    const cachedUser = this.getUser();
+    if (!cachedUser) return null;
     
-    // Créer une promesse avec timeout
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => {
-        reject(new Error('User data fetch timeout'));
-      }, 15000); // Increased from 1500ms to 15000ms for better reliability
-    });
-    
-    // Sinon, créer une nouvelle promesse
-    const fetchPromise = this.getCurrentUser()
-      .then(userData => {
-        if (!userData) {
-          throw new Error('No user data received');
-        }
-        localStorage.setItem('user', JSON.stringify(userData));
-        window.dispatchEvent(new Event('user-data-loaded'));
-        return userData;
-      })
-      .catch(error => {
-        console.error('Error fetching user data:', error);
-        // Try to use cached data if available
-        const cachedUser = localStorage.getItem('user');
-        if (cachedUser) {
-          try {
-            return JSON.parse(cachedUser);
-          } catch (e) {
-            // Invalid cached data
-            localStorage.removeItem('user');
-          }
-        }
-        throw error;
+    try {
+      // Create a timeout promise with much shorter timeout (1 second instead of 5)
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('User data fetch timeout'));
+        }, 2000); // Reduced timeout from 5s to 1s
       });
-    
-    // Race between fetch and timeout
-    userDataPromise = Promise.race([fetchPromise, timeoutPromise])
-      .catch(error => {
-        userDataPromise = null; // Réinitialiser en cas d'erreur
+      
+      // Try the correct endpoint format - removing the /api prefix if it's already in the URL
+      const apiPath = '/profile/current'.replace(/^\/api\//, '/');
+      const correctApiPath = apiPath.startsWith('/') ? `/api${apiPath}` : `/api/${apiPath}`;
+      
+      // Fetch user data from API with the corrected path
+      const dataPromise = apiService.get(correctApiPath, { 
+        noCache: false,    // Use cache if available
+        retries: 0,        // Don't retry on failure
+        timeout: 2000      // Short timeout
+      });
+      
+      // Race between data fetch and timeout
+      const userData = await Promise.race([dataPromise, timeoutPromise]);
+      
+      if (userData && !userData.success === false) {
+        // Update localStorage with complete user data
+        const enhancedUser = {
+          ...cachedUser,
+          ...userData,
+          _updatedAt: Date.now()
+        };
         
-        // Even if we timeout, dispatch the event to unblock UI
-        window.dispatchEvent(new Event('user-data-loaded'));
+        localStorage.setItem('user', JSON.stringify(enhancedUser));
         
-        // Try to extract more detailed user data from token as fallback
-        try {
-          const token = localStorage.getItem('token');
-          if (token) {
-            const tokenParts = token.split('.');
-            if (tokenParts.length === 3) {
-              const payload = JSON.parse(atob(tokenParts[1]));
-              if (payload.username) {
-                const minimalUser = {
-                  username: payload.username,
-                  roles: payload.roles || [],
-                  id: payload.id,
-                  email: payload.username,
-                  firstName: payload.firstName,
-                  lastName: payload.lastName,
-                  _fromToken: true // Flag to indicate this is minimal data
-                };
-                return minimalUser;
-              }
-            }
-          }
-        } catch (tokenError) {
-          console.error('Error parsing token:', tokenError);
+        // Update React Query cache if available
+        const queryClient = getQueryClient();
+        if (queryClient) {
+          queryClient.setQueryData(['user', 'current'], enhancedUser);
         }
         
-        throw error;
-      });
-    
-    return userDataPromise;
+        return enhancedUser;
+      }
+      
+      // If we reach here, something went wrong but we have cached user data
+      console.warn('Using cached user data due to API issue');
+      return cachedUser;
+    } catch (error) {
+      // Don't log the full error stack to console - just a warning
+      console.warn('Background user data loading failed, using cached data');
+      
+      // Critical: immediately trigger login-success event if it hasn't been triggered
+      // This ensures navigation continues even if profile fetch fails
+      window.dispatchEvent(new Event('login-success'));
+      
+      return cachedUser;
+    }
   },
 
   /**
@@ -317,11 +301,16 @@ export const authService = {
    */
   async logout(redirectTo = '/login') {
     try {
-      // Show global loading state
+      // Set global navigation flags
+      window.__isLoggingOut = true;
+      window.__isNavigating = true;
+      
+      // Show global loading state immediately without animation
       showGlobalLoader();
       
-      // Récupérer l'ID de session avant de supprimer les données du localStorage
-      const sessionId = currentSessionId;
+      // Clear all localStorage data in one step - do this before API calls
+      localStorage.clear();
+      sessionStorage.clear();
       
       // Try to revoke refresh token on server side
       try {
@@ -334,129 +323,52 @@ export const authService = {
             device_id: deviceId
           };
           
-          await apiService.post('/token/revoke', revokeData).catch((error) => {
+          await apiService.post('/token/revoke', revokeData).catch(() => {
             // Ignore errors during token revocation
-            console.warn('Échec de révocation du refresh token:', error.message);
           });
         }
-      } catch (revokeError) {
-        console.warn('Error during token revocation:', revokeError);
+      } catch (error) {
+        // Ignore errors during logout API calls
       }
       
-      // Supprimer toutes les données d'authentification et de session du localStorage
-      const itemsToRemove = [
-        'token',
-        'refresh_token',
-        'user',
-        'tokenExpiration',
-        'last_role',
-        'session_id',
-        'cached_profile_picture',
-        'cached_profile_picture_timestamp'
-      ];
-      
-      itemsToRemove.forEach(item => localStorage.removeItem(item));
-      
-      // Tenter de faire un appel API pour invalider le token côté serveur
-      if (this.isLoggedIn()) {
-        try {
-          await apiService.post('/api/auth/logout');
-        } catch (logoutApiError) {
-          // Ignorer les erreurs d'API lors de la déconnexion
-        }
-      }
-      
-      // Gestion optimisée du cache et des requêtes React Query
+      // Clear all API and query caches
       try {
+        // Clear React Query cache
         const queryClient = getQueryClient();
         if (queryClient) {
-          // Arrêter toutes les requêtes en cours
           queryClient.cancelQueries();
-          
-          // Marquer les données comme périmées sans les supprimer
-          queryClient.invalidateQueries();
-          
-          // Supprimer sélectivement certaines requêtes sensibles
-          const sensitivePaths = ['user', 'profile', 'dashboard', 'notifications', 'profilePicture'];
-          sensitivePaths.forEach(path => {
-            queryClient.removeQueries({ queryKey: [path] });
-          });
-          
-          // Supprimer les requêtes de la session actuelle
-          queryClient.removeQueries({
-            predicate: (query) => {
-              const key = query.queryKey;
-              return Array.isArray(key) && key[0] === 'session' && key[1] === sessionId;
-            }
-          });
-          
-          // Effacer complètement le cache pour éviter tout problème de données persistantes
+          queryClient.removeQueries();
           clearQueryCache();
         }
-      } catch (cacheError) {
-        console.error('Error managing query cache:', cacheError);
-      }
-      
-      // Gestion optimisée du cache API
-      try {
-        // Invalider sélectivement les caches critiques
-        const criticalPaths = ['/me', '/profile', '/dashboard', '/profile/picture'];
-        criticalPaths.forEach(path => {
-          apiService.invalidateCache(path);
-        });
         
-        // Invalider les caches liés au profil et aux documents
-        apiService.invalidateProfileCache();
-        apiService.invalidateDocumentCache();
-        
-        // Vider complètement le cache pour s'assurer qu'aucune donnée sensible ne reste
+        // Clear API cache
         apiService.clearCache();
-      } catch (apiCacheError) {
-        console.error('Error managing API cache:', apiCacheError);
+      } catch (error) {
+        // Ignore cache clearing errors
       }
       
-      // Générer un nouvel identifiant de session pour la prochaine connexion
+      // Create a new session ID for next login
       currentSessionId = generateSessionId();
       
-      // MODIFICATION: Ne déclencher qu'un seul événement de déconnexion
-      // et supprimer la redirection forcée via window.location.href
+      // Trigger the logout success event
       window.dispatchEvent(new CustomEvent('logout-success', {
         detail: { redirectTo }
       }));
       
-      // Remove loading state after a short delay
-      hideGlobalLoader(100);
+      // Use the window.location.replace method for a cleaner page transition
+      // This replaces the current history entry instead of adding a new one
+      setTimeout(() => {
+        window.location.replace(redirectTo || '/login');
+      }, 10);
       
       return true;
     } catch (error) {
-      console.error('Error during logout:', error);
+      // Force localStorage cleanup even on error
+      localStorage.clear();
+      sessionStorage.clear();
       
-      // Forcer la suppression de toutes les données même en cas d'erreur
-      const itemsToRemove = [
-        'token',
-        'refresh_token',
-        'user',
-        'tokenExpiration',
-        'device_id',
-        'last_role',
-        'session_id',
-        'cached_profile_picture',
-        'cached_profile_picture_timestamp'
-      ];
-      
-      itemsToRemove.forEach(item => localStorage.removeItem(item));
-      
-      // Générer un nouvel identifiant de session
-      currentSessionId = generateSessionId();
-      
-      // MODIFICATION: Ne déclencher qu'un seul événement de déconnexion
-      // et supprimer la redirection forcée via window.location.href
-      window.dispatchEvent(new CustomEvent('logout-success', {
-        detail: { redirectTo }
-      }));
-      
-      // Remove loading state on error
-      hideGlobalLoader();
+      // Redirect even on error
+      window.location.replace('/login');
       
       return false;
     }

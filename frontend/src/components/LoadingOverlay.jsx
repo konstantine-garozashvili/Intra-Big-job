@@ -14,16 +14,30 @@ export default function LoadingOverlay({ isVisible = true }) {
     if (isVisible) {
       // Show the global loader when the component becomes visible
       showGlobalLoader();
+      
+      // Mark that we're in a navigation state
+      window.__isNavigating = true;
     } else {
-      // Hide the global loader with a small delay for smoothness
-      hideGlobalLoader(50);
+      // Only hide the loader if we're not in another navigation process
+      if (!window.__isLoggingOut) {
+        // Reset navigation state when hiding
+        window.__isNavigating = false;
+        
+        // Hide the global loader with a small delay for smoothness
+        hideGlobalLoader(100);
+      }
     }
 
     // Clean up when component unmounts
     return () => {
-      if (isVisible) {
-        // If it was visible when unmounting, hide it without delay
-        hideGlobalLoader(0);
+      // Don't hide or change navigation state if we're in the middle of logging out
+      if (!window.__isLoggingOut) {
+        window.__isNavigating = false;
+        
+        if (isVisible) {
+          // If it was visible when unmounting, hide it without delay
+          hideGlobalLoader(0);
+        }
       }
     };
   }, [isVisible]);

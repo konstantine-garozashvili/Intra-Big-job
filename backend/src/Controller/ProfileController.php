@@ -18,6 +18,7 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Serializer\SerializerInterface;
+use App\Entity\UserDiploma;
 
 
 #[Route('/api/profil')]
@@ -721,31 +722,20 @@ class ProfileController extends AbstractController
         try {
             $diplomas = [];
             
-            // Check if the diplomas collection is initialized to avoid lazy loading errors
-            $diplomasCollection = $user->getDiplomas();
-            if ($diplomasCollection->isInitialized() === false) {
-                // If not initialized, we'll fetch diplomas directly from the database
-                $userDiplomas = $this->entityManager->getRepository(\App\Entity\Diploma::class)->findBy(['user' => $user]);
-                
-                foreach ($userDiplomas as $diploma) {
-                    $diplomas[] = [
-                        'id' => $diploma->getId(),
-                        'name' => $diploma->getName(),
-                        'obtainedAt' => $diploma->obtainedAt ? $diploma->obtainedAt->format('Y-m-d') : null,
-                    ];
-                }
-            } else {
-                // Otherwise, use the collection as normal
-                foreach ($diplomasCollection as $diploma) {
-                    $diplomas[] = [
-                        'id' => $diploma->getId(),
-                        'name' => $diploma->getName(),
-                        'obtainedAt' => $diploma->obtainedAt ? $diploma->obtainedAt->format('Y-m-d') : null,
-                    ];
-                }
+            // Get diplomas through UserDiploma join entity
+            $userDiplomas = $this->entityManager->getRepository(UserDiploma::class)
+                ->findByUserWithRelations($user);
+            
+            foreach ($userDiplomas as $userDiploma) {
+                $diplomas[] = [
+                    'id' => $userDiploma->getDiploma()->getId(),
+                    'name' => $userDiploma->getDiploma()->getName(),
+                    'institution' => $userDiploma->getDiploma()->getInstitution(),
+                    'obtainedAt' => $userDiploma->getObtainedDate()->format('Y-m-d')
+                ];
             }
             
-            // Trier les diplômes par date d'obtention (du plus récent au plus ancien)
+            // Sort diplomas by obtained date (newest first)
             usort($diplomas, function($a, $b) {
                 if (!isset($a['obtainedAt']) || !isset($b['obtainedAt'])) {
                     return 0;

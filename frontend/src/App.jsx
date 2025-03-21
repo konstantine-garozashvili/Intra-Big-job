@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate, Outlet, useNavigate } from 'react-router-dom'
-import { lazy, Suspense, useState, useEffect } from 'react'
+import { lazy, Suspense, useState, useEffect, useRef, useCallback } from 'react'
 import MainLayout from './components/MainLayout'
 import { RoleProvider, RoleDashboardRedirect, RoleGuard, ROLES } from './features/roles'
 import { showGlobalLoader, hideGlobalLoader } from './lib/utils/loadingUtils'
@@ -239,12 +239,20 @@ const PrefetchHandler = () => {
 const SuspenseLoader = () => {
   // Apply app-loading class to show the global loader
   useEffect(() => {
+    // Reset any lingering navigation flags
+    window.__isNavigating = false;
+    window.__isLoggingOut = false;
+    
     // Just use the global loader directly
     showGlobalLoader();
     
     return () => {
       // Just hide the global loader on unmount
       hideGlobalLoader();
+      
+      // Ensure navigation flags are reset when the loader is removed
+      window.__isNavigating = false;
+      window.__isLoggingOut = false;
     };
   }, []);
   
@@ -254,79 +262,135 @@ const SuspenseLoader = () => {
 
 // Composant de contenu principal qui utilise les hooks de React Router
 const AppContent = () => {
-  const [isNavigating, setIsNavigating] = useState(false);
-  const [showLoader, setShowLoader] = useState(false);
   const navigate = useNavigate();
+  const navigationTimeoutRef = useRef(null);
+  const isProcessingRef = useRef(false);
+  const mountedRef = useRef(true);
   
   // Use the loading indicator hook to hide the browser's default loading indicator
   useLoadingIndicator();
   
-  // Écouteur d'événement pour la navigation après déconnexion
+  // Cache for navigation decisions to avoid redundant token parsing
+  const roleCache = useRef({
+    lastToken: null,
+    dashboardPath: '/dashboard'
+  });
+  
   useEffect(() => {
-    const handleLogoutNavigation = (event) => {
-      // Référence pour éviter les déclenchements multiples
-      if (window.__isLoggingOut) return;
-      window.__isLoggingOut = true;
-      
-      // Toujours rediriger vers /login
-      const redirectTo = '/login';
-      
-      // Clear chat cache using the utility function
-      clearChatCache(queryClient);
-      
-      // Show loader during navigation
-      setShowLoader(true);
-      
-      // Set navigating state to true
-      setIsNavigating(true);
-      
-      // Utiliser la redirection avec replace pour éviter l'historique
-      navigate(redirectTo, { replace: true });
-      
-      // Attendre que la navigation soit terminée avant de masquer le loader
-      setTimeout(() => {
-        setIsNavigating(false);
-        setTimeout(() => {
-          setShowLoader(false);
-          
-          // Réinitialiser le flag après un délai suffisant
-          setTimeout(() => {
-            window.__isLoggingOut = false;
-          }, 500);
-        }, 100);
-      }, 300);
+    // Show loader initially, then hide it when content is ready
+    const timer = setTimeout(() => {
+      if (!window.__isLoggingOut && !window.__isNavigating) {
+        hideGlobalLoader();
+      }
+    }, 200);
+    
+    return () => clearTimeout(timer);
+  }, []);
+  
+  // Get dashboard route by role, with caching
+  const getDashboardByRole = useCallback(() => {
+    const token = localStorage.getItem('token');
+    
+    // Return cached result if token hasn't changed
+    if (token === roleCache.current.lastToken && roleCache.current.dashboardPath) {
+      return roleCache.current.dashboardPath;
+    }
+    
+    // Default dashboard path
+    let dashboardPath = '/dashboard';
+    
+    if (token) {
+      try {
+        const tokenParts = token.split('.');
+        if (tokenParts.length === 3) {
+          const payload = JSON.parse(atob(tokenParts[1]));
+          if (payload.roles && payload.roles.length > 0) {
+            const mainRole = payload.roles[0];
+            switch (mainRole) {
+              case 'ROLE_ADMIN': dashboardPath = '/admin/dashboard'; break;
+              case 'ROLE_SUPERADMIN': dashboardPath = '/superadmin/dashboard'; break;
+              case 'ROLE_TEACHER': dashboardPath = '/teacher/dashboard'; break;
+              case 'ROLE_STUDENT': dashboardPath = '/student/dashboard'; break;
+              case 'ROLE_HR': dashboardPath = '/hr/dashboard'; break;
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error parsing token:', error);
+      }
+    }
+    
+    // Cache the result
+    roleCache.current = {
+      lastToken: token,
+      dashboardPath
     };
-
+    
+    return dashboardPath;
+  }, []);
+  
+  // Event listeners for authentication events
+  useEffect(() => {
+    const handleLogoutNavigation = () => {
+      if (isProcessingRef.current || !mountedRef.current) return;
+      isProcessingRef.current = true;
+      
+      // Clear any pending navigation first
+      if (navigationTimeoutRef.current) {
+        clearTimeout(navigationTimeoutRef.current);
+      }
+      
+      // Fast navigation - don't rely on the event system here
+      navigationTimeoutRef.current = setTimeout(() => {
+        if (!mountedRef.current) return;
+        isProcessingRef.current = false;
+        navigate('/login', { replace: true });
+      }, 10); // Immediately schedule navigation
+    };
+    
     const handleLoginSuccess = () => {
-      // Show loader during login
-      setShowLoader(true);
+      if (isProcessingRef.current || !mountedRef.current) return;
+      isProcessingRef.current = true;
       
-      // Keep loader visible for a minimum time
-      setTimeout(() => {
-        // Hide loader after navigation is complete
-        setShowLoader(false);
-      }, 500);
+      // Clear any pending navigation first
+      if (navigationTimeoutRef.current) {
+        clearTimeout(navigationTimeoutRef.current);
+      }
+      
+      navigationTimeoutRef.current = setTimeout(() => {
+        if (!mountedRef.current) return;
+        isProcessingRef.current = false;
+        
+        const returnTo = sessionStorage.getItem('returnTo');
+        if (returnTo) {
+          sessionStorage.removeItem('returnTo');
+          navigate(returnTo, { replace: true });
+        } else {
+          // Use cached dashboard path for faster navigation
+          navigate(getDashboardByRole(), { replace: true });
+        }
+      }, 10); // Immediately schedule navigation
     };
 
-    // Listen for logout navigation events
     window.addEventListener('logout-success', handleLogoutNavigation);
     window.addEventListener('login-success', handleLoginSuccess);
     
     return () => {
+      mountedRef.current = false;
       window.removeEventListener('logout-success', handleLogoutNavigation);
       window.removeEventListener('login-success', handleLoginSuccess);
+      if (navigationTimeoutRef.current) {
+        clearTimeout(navigationTimeoutRef.current);
+      }
     };
-  }, [navigate]);
+  }, [navigate, getDashboardByRole]);
 
   return (
     <div className="relative font-poppins">
       <PrefetchHandler />
       
-      {/* Guaranteed loader that will always be visible during transitions */}
-      <LoadingOverlay isVisible={showLoader} />
-      
-      {/* Wrapper pour le contenu principal avec z-index positif */}
-      <div className={`relative z-10 transition-opacity duration-200 ${isNavigating ? 'opacity-0' : 'opacity-100'}`}>
+      {/* Wrapper for the main content */}
+      <div className="relative z-10">
         <Suspense fallback={<SuspenseLoader />}>
           <RoleProvider>
             <div>

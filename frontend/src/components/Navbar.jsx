@@ -290,23 +290,22 @@ const Navbar = memo(() => {
       // Si l'utilisateur est connecté, charger ses données
       if (status) {
         try {
-          // Si un utilisateur est passé en props, l'utiliser
-          if (userData) {
-            setUserData(userData);
-
-            // Déclencher un événement de changement de rôle si l'état d'authentification a changé
-            if (!wasAuthenticated) {
-              window.dispatchEvent(new Event("role-change"));
+          // Nettoyer le cache avant de recharger les données utilisateur
+          if (!wasAuthenticated) {
+            const queryClient = window.queryClient || authService.getQueryClient();
+            if (queryClient) {
+              queryClient.invalidateQueries({ queryKey: ['user'] });
+              queryClient.invalidateQueries({ queryKey: ['profile'] });
             }
-          } else {
-            // Sinon, essayer de récupérer les données depuis l'API
-            const userData = await authService.getCurrentUser();
-            setUserData(userData);
+          }
+          
+          // Toujours forcer une nouvelle requête pour obtenir les données utilisateur à jour
+          const userData = await authService.getCurrentUser(true);
+          setUserData(userData);
 
-            // Déclencher un événement de changement de rôle si l'état d'authentification a changé
-            if (!wasAuthenticated) {
-              window.dispatchEvent(new Event("role-change"));
-            }
+          // Déclencher un événement de changement de rôle si l'état d'authentification a changé
+          if (!wasAuthenticated) {
+            window.dispatchEvent(new Event("role-change"));
           }
         } catch (userError) {
           // Fallback: essayer de récupérer les données du profil
@@ -338,8 +337,7 @@ const Navbar = memo(() => {
         }
       }
     } catch (error) {
-      setIsAuthenticated(false);
-      setUserData(null);
+      console.error('Erreur lors de la vérification de l\'authentification:', error);
     }
   };
 
@@ -348,41 +346,34 @@ const Navbar = memo(() => {
     checkAuthStatus();
   }, [location.pathname, userData]);
 
-  // Ajouter un écouteur d'événement pour les changements d'authentification
+  // Ajouter un écouteur pour l'événement de connexion réussie
   useEffect(() => {
-    // Fonction pour gérer l'événement de connexion
-    const handleAuthChange = () => {
+    const handleLoginSuccess = () => {
+      // Forcer un re-chargement des données utilisateur
       checkAuthStatus();
     };
-
-    // Ajouter des écouteurs d'événements personnalisés
-    window.addEventListener("login-success", handleAuthChange);
-    window.addEventListener("logout-success", handleAuthChange);
-
-    // Nettoyage lors du démontage du composant
+    
+    window.addEventListener('login-success', handleLoginSuccess);
+    
     return () => {
-      window.removeEventListener("login-success", handleAuthChange);
-      window.removeEventListener("logout-success", handleAuthChange);
+      window.removeEventListener('login-success', handleLoginSuccess);
     };
   }, []);
 
   // Fonction de déconnexion
   const handleLogout = async () => {
     try {
+      // Close the logout dialog
       setLogoutDialogOpen(false);
-
+      
+      // Prevent duplicate logout attempts
+      if (window.__isLoggingOut) return;
+      
       // Déclencher un événement de pré-déconnexion pour préparer l'interface
       window.dispatchEvent(new Event('logout-start'));
       
-      // Masquer l'interface utilisateur et afficher le loader
-      setTimeout(() => {
-        // Anticiper la déconnexion en nettoyant d'abord les états UI
-        setUserData(null);
-        setIsAuthenticated(false);
-        
-        // Appeler le service de déconnexion avec le chemin de redirection
-        authService.logout('/login');
-      }, 50);
+      // Call the logout service directly - no need for timeout
+      authService.logout('/login');
     } catch (error) {
       console.error('Erreur lors de la déconnexion:', error);
       

@@ -3,6 +3,9 @@
  */
 
 let activeLoadingCount = 0;
+let lastNavigationTime = 0;
+let loaderHideTimeout = null;
+let enforceMinimumTimeoutId = null;
 
 /**
  * Injects a style tag to hide scrollbars in all browsers
@@ -62,18 +65,130 @@ const injectScrollbarHidingStyles = () => {
 // Run this immediately
 injectScrollbarHidingStyles();
 
+// Create a full-screen overlay directly in the DOM on script load
+const createPermanentLoader = () => {
+  // Check if we're in a browser environment
+  if (typeof document === 'undefined') return;
+  
+  // Check if the loader already exists
+  if (document.getElementById('global-page-transition-overlay')) return;
+  
+  // Create the overlay container
+  const overlay = document.createElement('div');
+  overlay.id = 'global-page-transition-overlay';
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: white;
+    z-index: 9999;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+  `;
+  
+  // Create the spinner
+  const spinner = document.createElement('div');
+  spinner.style.cssText = `
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 3px solid rgba(0, 40, 79, 0.1);
+    border-top-color: #02284f;
+    animation: loader-spin 1s infinite linear;
+  `;
+  
+  // Add animation keyframes
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes loader-spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  `;
+  
+  // Append elements
+  overlay.appendChild(spinner);
+  document.head.appendChild(style);
+  
+  // Append to body when DOM is ready
+  if (document.body) {
+    document.body.appendChild(overlay);
+  } else {
+    window.addEventListener('DOMContentLoaded', () => {
+      document.body.appendChild(overlay);
+    });
+  }
+};
+
+// Create the loader element
+createPermanentLoader();
+
+/**
+ * Actually shows the loader overlay
+ */
+const displayLoader = () => {
+  const overlay = document.getElementById('global-page-transition-overlay');
+  if (!overlay) return;
+  
+  // Show immediately
+  overlay.style.display = 'flex';
+  
+  // Force a reflow to ensure the display change is applied before opacity transition
+  overlay.offsetHeight;
+  
+  // Fade in
+  overlay.style.opacity = '1';
+};
+
+/**
+ * Actually hides the loader overlay
+ */
+const hideLoader = () => {
+  const overlay = document.getElementById('global-page-transition-overlay');
+  if (!overlay) return;
+  
+  // Fade out
+  overlay.style.opacity = '0';
+  
+  // After transition, hide completely
+  setTimeout(() => {
+    if (activeLoadingCount === 0) {
+      overlay.style.display = 'none';
+    }
+  }, 200);
+};
+
 /**
  * Show the global loading state
  */
 export const showGlobalLoader = () => {
+  // Clear any pending hide operation
+  if (loaderHideTimeout) {
+    clearTimeout(loaderHideTimeout);
+    loaderHideTimeout = null;
+  }
+  
+  // Clear any minimum time enforcement
+  if (enforceMinimumTimeoutId) {
+    clearTimeout(enforceMinimumTimeoutId);
+  }
+  
+  // Record the time when navigation starts
+  lastNavigationTime = Date.now();
+  
   // Increment the active loading count
   activeLoadingCount++;
   
-  // Add loading-active class to the html element
-  document.documentElement.classList.add('loading-active');
+  // Show the loader overlay
+  displayLoader();
   
-  // Ensure scrollbars are hidden
-  injectScrollbarHidingStyles();
+  // Set a flag to prevent flickering during page loads
+  window.__loaderVisible = true;
 };
 
 /**
@@ -85,21 +200,33 @@ export const hideGlobalLoader = (delay = 0) => {
     activeLoadingCount--;
   }
   
-  // Only remove the class if there are no active loading calls
+  // Only proceed with hiding if there are no active loading calls
   if (activeLoadingCount === 0) {
-    const hideAction = () => {
-      document.documentElement.classList.remove('loading-active');
-    };
-    
-    if (delay > 0) {
-      setTimeout(() => {
-        if (activeLoadingCount === 0) {
-          hideAction();
-        }
-      }, delay);
-    } else {
-      hideAction();
+    // Clear any existing timeout
+    if (loaderHideTimeout) {
+      clearTimeout(loaderHideTimeout);
     }
+    
+    // Calculate minimum display time
+    const currentTime = Date.now();
+    const timeSinceNavigation = currentTime - lastNavigationTime;
+    const minLoadingTime = 300; // Reduced from 600ms to 300ms for faster transitions
+    
+    // Calculate final delay
+    let finalDelay = delay;
+    if (timeSinceNavigation < minLoadingTime) {
+      finalDelay = Math.max(delay, minLoadingTime - timeSinceNavigation);
+    }
+    
+    // Set timeout to hide loader
+    loaderHideTimeout = setTimeout(() => {
+      // Only hide if we're not in another loading operation
+      if (activeLoadingCount === 0) {
+        window.__loaderVisible = false;
+        hideLoader();
+      }
+      loaderHideTimeout = null;
+    }, finalDelay);
   }
 };
 
@@ -107,8 +234,25 @@ export const hideGlobalLoader = (delay = 0) => {
  * Reset loading state (use with caution)
  */
 export const resetLoadingState = () => {
+  // Clear all timeouts
+  if (loaderHideTimeout) {
+    clearTimeout(loaderHideTimeout);
+    loaderHideTimeout = null;
+  }
+  
+  if (enforceMinimumTimeoutId) {
+    clearTimeout(enforceMinimumTimeoutId);
+    enforceMinimumTimeoutId = null;
+  }
+  
+  // Reset counters and flags
   activeLoadingCount = 0;
-  document.documentElement.classList.remove('loading-active');
+  window.__loaderVisible = false;
+  window.__isLoggingOut = false;
+  window.__isNavigating = false;
+  
+  // Hide the loader
+  hideLoader();
 };
 
 /**
@@ -135,8 +279,10 @@ export const withLoading = async (fn, options = {}) => {
 // Force loading screen to show for minimum time
 export const forceLoadingFor = (minimumTime) => {
   showGlobalLoader();
-  setTimeout(() => {
+  
+  enforceMinimumTimeoutId = setTimeout(() => {
     hideGlobalLoader();
+    enforceMinimumTimeoutId = null;
   }, minimumTime);
 };
 

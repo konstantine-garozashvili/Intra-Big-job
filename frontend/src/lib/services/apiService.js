@@ -85,22 +85,48 @@ axios.interceptors.response.use(response => {
 // Configuration de base pour axios
 axios.defaults.withCredentials = true;
 
+// Create a simple in-memory request cache with expiration
+const apiCache = new Map();
+const DEFAULT_CACHE_TTL = 60000; // 1 minute
+
 /**
  * Normalise une URL d'API en gérant les doublons de "/api"
  * @param {string} path - Le chemin de l'API
  * @returns {string} - L'URL complète normalisée
  */
 export const normalizeApiUrl = (path) => {
-  // Pour utiliser le proxy Vite, on garde simplement le chemin /api
-  // Au lieu d'utiliser l'URL complète avec le port
+  // Handle null or undefined paths
+  if (!path) return '/api';
   
-  // Si le chemin commence déjà par /api, on le renvoie tel quel
-  if (path.startsWith('/api')) {
-    return path;
+  // Remove trailing slashes for consistency
+  const trimmedPath = path.replace(/\/+$/, '');
+  
+  // If the path starts with http:// or https://, it's an absolute URL - return it as is
+  if (trimmedPath.match(/^https?:\/\//)) {
+    return trimmedPath;
   }
   
-  // Sinon, on ajoute le préfixe /api
-  return `/api${path.startsWith('/') ? '' : '/'}${path}`;
+  // Simplify handling of the /api prefix
+  // This ensures we don't end up with /api/api/...
+  const apiPath = trimmedPath.replace(/^\/api\//, '/');
+  
+  // Now add /api prefix if it doesn't already start with it
+  if (apiPath.startsWith('/')) {
+    return `/api${apiPath}`;
+  } else {
+    return `/api/${apiPath}`;
+  }
+};
+
+/**
+ * Generates a cache key for a request
+ * @param {string} method - HTTP method
+ * @param {string} url - Request URL
+ * @param {Object} params - Query parameters
+ * @returns {string} - Cache key
+ */
+export const generateCacheKey = (method, url, params = {}) => {
+  return `${method}:${url}:${JSON.stringify(params)}`;
 };
 
 /**
@@ -116,11 +142,51 @@ const apiService = {
   async get(path, options = {}) {
     try {
       const url = normalizeApiUrl(path);
-      const response = await axios.get(url, options);
+      
+      // Check for in-memory cache if caching is not disabled
+      if (!options.noCache) {
+        const cacheKey = generateCacheKey('GET', url, options.params);
+        const cached = apiCache.get(cacheKey);
+        
+        if (cached && cached.expiry > Date.now()) {
+          return cached.data;
+        }
+      }
+      
+      // Is this a non-critical profile request?
+      const isProfileRequest = path.includes('/profile/') || path.includes('/me');
+      
+      // Configure axios request
+      const requestConfig = {
+        ...options,
+        timeout: options.timeout || (isProfileRequest ? 2000 : 30000) // Short timeout for profile requests
+      };
+      
+      const response = await axios.get(url, requestConfig);
+      
+      // Cache the response if caching is not disabled
+      if (!options.noCache) {
+        const cacheKey = generateCacheKey('GET', url, options.params);
+        const ttl = options.cacheTTL || DEFAULT_CACHE_TTL;
+        
+        apiCache.set(cacheKey, {
+          data: response.data,
+          expiry: Date.now() + ttl
+        });
+      }
+      
       return response.data;
     } catch (error) {
-      console.error(`Erreur API GET ${path}:`, error);
-      console.error(`[apiService] Détails de l'erreur:`, error.response || error.message);
+      // Only log detailed errors for non-profile requests
+      const isProfileRequest = path.includes('/profile/') || path.includes('/me');
+      
+      if (!isProfileRequest) {
+        console.error(`Erreur API GET ${path}:`, error);
+        console.error(`[apiService] Détails de l'erreur:`, error.response || error.message);
+      } else {
+        // For profile requests, just log a simpler message
+        console.warn(`Profile data fetch failed: ${path} - ${error.message}`);
+      }
       
       // Gestion spécifique des erreurs CORS
       if (error.message && error.message.includes('Network Error')) {
@@ -305,39 +371,44 @@ const apiService = {
   clearCache() {
     console.log('Cache API entièrement vidé');
     
-    // Identify cache keys in localStorage that might contain API responses
-    const cacheKeys = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && (
-        key.startsWith('api-cache:') || 
-        key.startsWith('api-data:') || 
-        key.startsWith('query:') ||
-        key.includes('dashboard') ||
-        key.includes('profile') ||
-        key.includes('user')
-      )) {
-        cacheKeys.push(key);
-      }
-    }
+    // Clear in-memory cache - much faster than localStorage operations
+    apiCache.clear();
     
-    // Remove all identified cache keys
-    cacheKeys.forEach(key => {
+    // Only clear critical localStorage items, not everything
+    const criticalKeys = [
+      'token', 
+      'refresh_token',
+      'user',
+      'userRoles'
+    ];
+    
+    // Remove only the critical keys
+    criticalKeys.forEach(key => {
       try {
-        localStorage.removeItem(key);
+        if (localStorage.getItem(key)) {
+          localStorage.removeItem(key);
+        }
       } catch (e) {
-        console.error(`Erreur lors de la suppression du cache pour la clé ${key}:`, e);
+        console.error(`Error removing key ${key}:`, e);
       }
     });
     
     // Notify the application that the cache has been cleared
     window.dispatchEvent(new Event('api-cache-cleared'));
     
-    // Also invalidate individual critical paths
-    this.invalidateProfileCache();
-    this.invalidateDocumentCache();
-    
-    console.log(`${cacheKeys.length} entrées de cache supprimées`);
+    console.log('Cache API vidé');
+  },
+  
+  /**
+   * Invalidate a specific cache entry
+   * @param {string} method - The HTTP method
+   * @param {string} path - The API path
+   * @param {Object} params - Query parameters if any
+   */
+  invalidateCacheEntry(method, path, params = {}) {
+    const url = normalizeApiUrl(path);
+    const cacheKey = generateCacheKey(method, url, params);
+    apiCache.delete(cacheKey);
   }
 };
 
