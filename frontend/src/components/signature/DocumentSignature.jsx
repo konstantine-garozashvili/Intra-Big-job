@@ -62,7 +62,6 @@ const FallbackSignatureCanvas = forwardRef((props, ref) => {
     } else if (e.type === 'touchstart') {
       x = e.touches[0].clientX - rect.left;
       y = e.touches[0].clientY - rect.top;
-      e.preventDefault(); // Prevent scrolling
     }
     
     ctx.beginPath();
@@ -86,7 +85,6 @@ const FallbackSignatureCanvas = forwardRef((props, ref) => {
     } else if (e.type === 'touchmove') {
       x = e.touches[0].clientX - rect.left;
       y = e.touches[0].clientY - rect.top;
-      e.preventDefault(); // Prevent scrolling
     }
     
     ctx.lineTo(x, y);

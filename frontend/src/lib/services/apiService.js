@@ -154,7 +154,7 @@ const apiService = {
       }
       
       // Is this a non-critical profile request?
-      const isProfileRequest = path.includes('/profile/') || path.includes('/me');
+      const isProfileRequest = path.includes('/profile') || path.includes('/me');
       
       // Configure axios request
       const requestConfig = {
@@ -178,20 +178,25 @@ const apiService = {
       return response.data;
     } catch (error) {
       // Only log detailed errors for non-profile requests
-      const isProfileRequest = path.includes('/profile/') || path.includes('/me');
+      const isProfileRequest = path.includes('/profile') || path.includes('/me');
       
       if (!isProfileRequest) {
         console.error(`Erreur API GET ${path}:`, error);
         console.error(`[apiService] Détails de l'erreur:`, error.response || error.message);
       } else {
-        // For profile requests, just log a simpler message
-        console.warn(`Profile data fetch failed: ${path} - ${error.message}`);
+        // For profile requests, log the error with more detailed information
+        console.error(`Erreur API (GET): ${path} Statut: ${error.response?.status || 'réseau'}`, error.message);
       }
       
       // Gestion spécifique des erreurs CORS
       if (error.message && error.message.includes('Network Error')) {
         console.error('Erreur réseau possible - Problème CORS');
-        return { success: false, message: 'Erreur de communication avec le serveur' };
+        throw error; // Throw the error for proper propagation
+      }
+      
+      // Pour les requêtes de profil, propager l'erreur au lieu de retourner un objet formaté
+      if (isProfileRequest) {
+        throw error;
       }
       
       // Retourner une réponse formatée en cas d'erreur pour éviter les crashes

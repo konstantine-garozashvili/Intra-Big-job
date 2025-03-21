@@ -193,6 +193,7 @@ const HRDashboard = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
           className="flex flex-col md:flex-row md:items-center md:justify-between mb-8"
+          key="dashboard-title"
         >
           <div>
             <h2 className="text-3xl font-bold text-gray-900 tracking-tight">Tableau de bord RH</h2>
@@ -249,13 +250,14 @@ const HRDashboard = () => {
           </TabsList>
 
           <AnimatePresence mode="wait">
-            <TabsContent value="overview" className="mt-0">
+            <TabsContent value="overview" className="mt-0" key="overview-tab">
               <motion.div
                 variants={containerVariants}
                 initial="hidden"
                 animate="visible"
                 exit={{ opacity: 0 }}
                 className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
+                key="overview-motion"
               >
                 <StatCard 
                   key="total-employees"
@@ -288,7 +290,7 @@ const HRDashboard = () => {
               </motion.div>
             </TabsContent>
 
-            <TabsContent value="employees" className="mt-0">
+            <TabsContent value="employees" className="mt-0" key="employees-tab">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <motion.div 
                   initial={{ opacity: 0, y: 20 }}
@@ -296,6 +298,7 @@ const HRDashboard = () => {
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.3 }}
                   className="lg:col-span-2"
+                  key="employees-chart-motion"
                 >
                   <Card className="border-none shadow-md h-full">
                     <CardHeader className="pb-2">
@@ -327,6 +330,7 @@ const HRDashboard = () => {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.3, delay: 0.1 }}
+                  key="employees-actions-motion"
                 >
                   <Card className="border-none shadow-md h-full">
                     <CardHeader>
@@ -352,12 +356,13 @@ const HRDashboard = () => {
               </div>
             </TabsContent>
 
-            <TabsContent value="absences" className="mt-0">
+            <TabsContent value="absences" className="mt-0" key="absences-tab">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.3 }}
+                key="absences-motion"
               >
                 <Card className="border-none shadow-md">
                   <CardHeader className="pb-2">
@@ -385,13 +390,14 @@ const HRDashboard = () => {
               </motion.div>
             </TabsContent>
 
-            <TabsContent value="contracts" className="mt-0">
+            <TabsContent value="contracts" className="mt-0" key="contracts-tab">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.3 }}
                 className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+                key="contracts-motion"
               >
                 <Card className="border-none shadow-md">
                   <CardHeader className="pb-2">
@@ -449,7 +455,7 @@ const HRDashboard = () => {
                         { type: 'Apprentissage', count: 5, color: 'purple', details: 'Formation en alternance', percentage: '4%' }
                       ].map((contract, index) => (
                         <motion.div 
-                          key={contract.type}
+                          key={`contract-${contract.type}`}
                           initial={{ opacity: 0, x: -10 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: index * 0.1 }}
@@ -532,12 +538,13 @@ const HRDashboard = () => {
               </motion.div>
             </TabsContent>
 
-            <TabsContent value="training" className="mt-0">
+            <TabsContent value="training" className="mt-0" key="training-tab">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.3 }}
+                key="training-motion"
               >
                 <Card className="border-none shadow-md">
                   <CardHeader className="pb-2">

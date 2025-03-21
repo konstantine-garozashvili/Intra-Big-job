@@ -207,19 +207,18 @@ export const authService = {
     if (!cachedUser) return null;
     
     try {
-      // Create a timeout promise with much shorter timeout (1 second instead of 5)
+      // Create a timeout promise with much shorter timeout (2 seconds)
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => {
           reject(new Error('User data fetch timeout'));
-        }, 2000); // Reduced timeout from 5s to 1s
+        }, 2000);
       });
       
-      // Try the correct endpoint format - removing the /api prefix if it's already in the URL
-      const apiPath = '/profile'.replace(/^\/api\//, '/');
-      const correctApiPath = apiPath.startsWith('/') ? `/api${apiPath}` : `/api/${apiPath}`;
+      // Try the correct endpoint format - simplify the path construction
+      const correctApiPath = '/api/profile';
       
       // Fetch user data from API with the corrected path
-      const dataPromise = apiService.get(correctApiPath, { 
+      const dataPromise = apiService.get('/profile', { 
         noCache: false,    // Use cache if available
         retries: 0,        // Don't retry on failure
         timeout: 2000      // Short timeout
@@ -228,7 +227,7 @@ export const authService = {
       // Race between data fetch and timeout
       const userData = await Promise.race([dataPromise, timeoutPromise]);
       
-      if (userData && !userData.success === false) {
+      if (userData && userData.success !== false) {
         // Update localStorage with complete user data
         const enhancedUser = {
           ...cachedUser,
@@ -248,16 +247,14 @@ export const authService = {
       }
       
       // If we reach here, something went wrong but we have cached user data
-      console.warn('Using cached user data due to API issue');
       return cachedUser;
     } catch (error) {
-      // Don't log the full error stack to console - just a warning
-      console.warn('Background user data loading failed, using cached data');
+      console.warn('Failed to load complete user data:', error.message || 'Unknown error');
       
-      // Critical: immediately trigger login-success event if it hasn't been triggered
-      // This ensures navigation continues even if profile fetch fails
-      window.dispatchEvent(new Event('login-success'));
+      // Ensure login in progress flag is cleared on error
+      sessionStorage.removeItem('login_in_progress');
       
+      // Still return cached user data if available
       return cachedUser;
     }
   },
