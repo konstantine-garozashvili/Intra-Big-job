@@ -6,6 +6,7 @@ let activeLoadingCount = 0;
 let lastNavigationTime = 0;
 let loaderHideTimeout = null;
 let enforceMinimumTimeoutId = null;
+let isLowPerformanceMode = false;
 
 /**
  * Injects a style tag to hide scrollbars in all browsers
@@ -65,6 +66,43 @@ const injectScrollbarHidingStyles = () => {
 // Run this immediately
 injectScrollbarHidingStyles();
 
+// Function to detect low performance mode
+const detectLowPerformanceMode = () => {
+  try {
+    // Check if the device is likely to be low-performance
+    // 1. Check for localStorage preference first
+    if (localStorage && localStorage.getItem('preferLowPerformanceMode') === 'true') {
+      return true;
+    }
+    
+    // 2. Check for CPU cores
+    const cpuCores = navigator.hardwareConcurrency || 0;
+    if (cpuCores > 0 && cpuCores <= 2) {
+      return true;
+    }
+    
+    // 3. Check for mobile devices with lower performance
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const isOlderDevice = /Windows NT (5\.1|6\.0|6\.1)|Mac OS X 10[._]([0-9]|10|11)/i.test(navigator.userAgent);
+    
+    return isMobile || isOlderDevice;
+  } catch (e) {
+    console.error('Error detecting performance mode:', e);
+    return false;
+  }
+};
+
+// Set performance mode on load
+isLowPerformanceMode = detectLowPerformanceMode();
+
+// Export function to toggle performance mode
+export const setLowPerformanceMode = (enabled) => {
+  isLowPerformanceMode = enabled;
+  if (localStorage) {
+    localStorage.setItem('preferLowPerformanceMode', enabled.toString());
+  }
+};
+
 // Create a full-screen overlay directly in the DOM on script load
 const createPermanentLoader = () => {
   // Check if we're in a browser environment
@@ -88,19 +126,28 @@ const createPermanentLoader = () => {
     justify-content: center;
     align-items: center;
     opacity: 0;
-    transition: opacity 0.2s ease-in-out;
+    transition: opacity ${isLowPerformanceMode ? '0.1s' : '0.2s'} ease-in-out;
   `;
   
-  // Create the spinner
+  // Create the spinner - simplified for low performance mode
   const spinner = document.createElement('div');
-  spinner.style.cssText = `
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    border: 3px solid rgba(0, 40, 79, 0.1);
-    border-top-color: #02284f;
-    animation: loader-spin 1s infinite linear;
-  `;
+  spinner.style.cssText = isLowPerformanceMode 
+    ? `
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      border: 2px solid rgba(0, 40, 79, 0.3);
+      border-top-color: #02284f;
+      animation: loader-spin 1.2s infinite linear;
+    `
+    : `
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 3px solid rgba(0, 40, 79, 0.1);
+      border-top-color: #02284f;
+      animation: loader-spin 1s infinite linear;
+    `;
   
   // Add animation keyframes
   const style = document.createElement('style');
@@ -207,15 +254,15 @@ export const hideGlobalLoader = (delay = 0) => {
       clearTimeout(loaderHideTimeout);
     }
     
-    // Calculate minimum display time
+    // Calculate minimum display time - shorter for low performance mode
     const currentTime = Date.now();
     const timeSinceNavigation = currentTime - lastNavigationTime;
-    const minLoadingTime = 300; // Reduced from 600ms to 300ms for faster transitions
+    const minLoadingTime = isLowPerformanceMode ? 150 : 300; // Even shorter for low performance mode
     
-    // Calculate final delay
-    let finalDelay = delay;
+    // Calculate final delay - cap maximum delay for low performance devices
+    let finalDelay = isLowPerformanceMode ? Math.min(delay, 100) : delay;
     if (timeSinceNavigation < minLoadingTime) {
-      finalDelay = Math.max(delay, minLoadingTime - timeSinceNavigation);
+      finalDelay = Math.max(finalDelay, minLoadingTime - timeSinceNavigation);
     }
     
     // Set timeout to hide loader

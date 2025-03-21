@@ -2,7 +2,7 @@ import { BrowserRouter as Router, Routes, Route, useLocation, Navigate, Outlet, 
 import { lazy, Suspense, useState, useEffect, useRef, useCallback } from 'react'
 import MainLayout from './components/MainLayout'
 import { RoleProvider, RoleDashboardRedirect, RoleGuard, ROLES } from './features/roles'
-import { showGlobalLoader, hideGlobalLoader } from './lib/utils/loadingUtils'
+import { showGlobalLoader, hideGlobalLoader, setLowPerformanceMode } from './lib/utils/loadingUtils'
 import LoadingOverlay from './components/LoadingOverlay'
 import { AuthProvider } from './contexts/AuthContext'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -16,6 +16,7 @@ import TeacherProtectedRoute from './components/TeacherProtectedRoute'
 import RecruiterProtectedRoute from './components/RecruiterProtectedRoute'
 import StudentRoute from './components/StudentRoute'
 import { Toaster } from './components/ui/sonner'
+import { ErrorBoundary } from "react-error-boundary"
 
 // Create a shared query client for the entire application
 const queryClient = new QueryClient({
@@ -553,20 +554,79 @@ const AppContent = () => {
   );
 };
 
+// Fallback component for error boundary
+const ErrorFallback = () => (
+  <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-50">
+    <div className="w-full max-w-md p-6 bg-white rounded-lg shadow-lg">
+      <h2 className="mb-4 text-2xl font-bold text-red-600">Une erreur est survenue</h2>
+      <p className="mb-4 text-gray-600">
+        Nous nous excusons pour ce désagrément. Veuillez rafraîchir la page ou réessayer plus tard.
+      </p>
+      <button
+        onClick={() => window.location.reload()}
+        className="px-4 py-2 text-white bg-blue-600 rounded hover:bg-blue-700"
+      >
+        Rafraîchir la page
+      </button>
+    </div>
+  </div>
+);
+
+// Check for URL parameter to enable low performance mode
+const checkForPerformanceMode = () => {
+  try {
+    // Check URL for performance mode parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const performanceMode = urlParams.get('performance');
+    
+    if (performanceMode === 'low') {
+      console.info('Enabling low performance mode from URL parameter');
+      setLowPerformanceMode(true);
+      // Remove the parameter from URL to keep it clean
+      urlParams.delete('performance');
+      const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+      window.history.replaceState({}, '', newUrl);
+    } else if (performanceMode === 'high') {
+      console.info('Disabling low performance mode from URL parameter');
+      setLowPerformanceMode(false);
+      // Remove the parameter from URL to keep it clean
+      urlParams.delete('performance');
+      const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+      window.history.replaceState({}, '', newUrl);
+    }
+    
+    // Check if localStorage preference exists
+    const storedPref = localStorage.getItem('preferLowPerformanceMode');
+    if (storedPref === 'true') {
+      console.info('Using low performance mode from stored preference');
+      setLowPerformanceMode(true);
+    }
+  } catch (e) {
+    console.error('Error checking performance mode:', e);
+  }
+};
+
 // Composant App principal qui configure le Router
 const App = () => {
+  useEffect(() => {
+    // Check for performance mode when the app loads
+    checkForPerformanceMode();
+  }, []);
+
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <RoleProvider>
-          <Router>
-            <Suspense fallback={<SuspenseLoader />}>
-              <AppContent />
-            </Suspense>
-          </Router>
-        </RoleProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <ErrorBoundary FallbackComponent={ErrorFallback}>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <RoleProvider>
+            <Router>
+              <Suspense fallback={<SuspenseLoader />}>
+                <AppContent />
+              </Suspense>
+            </Router>
+          </RoleProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 };
 

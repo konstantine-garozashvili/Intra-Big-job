@@ -1,6 +1,25 @@
 import axios from 'axios';
 
-// Configurer des intercepteurs pour logger les requêtes et réponses
+// Import the low performance mode detection from loadingUtils
+import { setLowPerformanceMode } from '../utils/loadingUtils';
+
+// Determine if we're in low performance mode
+const isLowPerformanceMode = () => {
+  return localStorage.getItem('preferLowPerformanceMode') === 'true';
+};
+
+// Configure default timeouts based on performance mode
+const getDefaultTimeout = (isProfileRequest = false) => {
+  const lowPerformance = isLowPerformanceMode();
+  
+  if (isProfileRequest) {
+    return lowPerformance ? 3000 : 2000; // Increase timeout for profile requests on low-perf devices
+  }
+  
+  return lowPerformance ? 15000 : 30000; // Shorter timeout for low-perf devices to avoid hanging
+};
+
+// Configure des intercepteurs pour logger les requêtes et réponses
 axios.interceptors.request.use(request => {
   // Ne pas afficher les informations sensibles comme les mots de passe
   const requestData = { ...request.data };
@@ -14,6 +33,12 @@ axios.interceptors.request.use(request => {
     isAuthRequest = request.url.includes('/login_check') || 
                    request.url.includes('/token/refresh') ||
                    request.url.includes('/token/revoke');
+  }
+  
+  // Set default timeout based on performance mode
+  if (!request.timeout) {
+    const isProfileRequest = request.url && (request.url.includes('/profile/') || request.url.includes('/me'));
+    request.timeout = getDefaultTimeout(isProfileRequest);
   }
   
   // Ajouter les credentials et les headers CORS
@@ -87,7 +112,25 @@ axios.defaults.withCredentials = true;
 
 // Create a simple in-memory request cache with expiration
 const apiCache = new Map();
-const DEFAULT_CACHE_TTL = 60000; // 1 minute
+const DEFAULT_CACHE_TTL = isLowPerformanceMode() ? 120000 : 60000; // 2 minutes for low-perf, 1 minute otherwise
+
+// Add cache size limits for memory management
+const MAX_CACHE_SIZE = isLowPerformanceMode() ? 50 : 100; // Fewer items for low-perf devices
+
+// Add cache cleanup function
+const cleanupCache = () => {
+  if (apiCache.size <= MAX_CACHE_SIZE) return;
+  
+  // Convert to array for sorting
+  const entries = Array.from(apiCache.entries());
+  
+  // Sort by expiry (oldest first)
+  entries.sort((a, b) => a[1].expiry - b[1].expiry);
+  
+  // Remove oldest entries until we're under the limit
+  const toRemove = entries.slice(0, entries.length - MAX_CACHE_SIZE);
+  toRemove.forEach(([key]) => apiCache.delete(key));
+};
 
 /**
  * Normalise une URL d'API en gérant les doublons de "/api"
@@ -154,13 +197,19 @@ const apiService = {
       }
       
       // Is this a non-critical profile request?
-      const isProfileRequest = path.includes('/profile') || path.includes('/me');
+      const isProfileRequest = path.includes('/profile/') || path.includes('/me');
+      const isLowPerf = isLowPerformanceMode();
       
-      // Configure axios request
+      // Configure axios request with optimized timeout
       const requestConfig = {
         ...options,
-        timeout: options.timeout || (isProfileRequest ? 2000 : 30000) // Short timeout for profile requests
+        timeout: options.timeout || getDefaultTimeout(isProfileRequest)
       };
+      
+      // For older devices, set priority hints if supported
+      if (isLowPerf && 'importance' in requestConfig) {
+        requestConfig.importance = isProfileRequest ? 'low' : 'auto';
+      }
       
       const response = await axios.get(url, requestConfig);
       
@@ -173,30 +222,28 @@ const apiService = {
           data: response.data,
           expiry: Date.now() + ttl
         });
+        
+        // Cleanup cache if necessary
+        cleanupCache();
       }
       
       return response.data;
     } catch (error) {
       // Only log detailed errors for non-profile requests
-      const isProfileRequest = path.includes('/profile') || path.includes('/me');
+      const isProfileRequest = path.includes('/profile/') || path.includes('/me');
       
       if (!isProfileRequest) {
         console.error(`Erreur API GET ${path}:`, error);
         console.error(`[apiService] Détails de l'erreur:`, error.response || error.message);
       } else {
-        // For profile requests, log the error with more detailed information
-        console.error(`Erreur API (GET): ${path} Statut: ${error.response?.status || 'réseau'}`, error.message);
+        // For profile requests, just log a simpler message
+        console.warn(`Profile data fetch failed: ${path} - ${error.message}`);
       }
       
       // Gestion spécifique des erreurs CORS
       if (error.message && error.message.includes('Network Error')) {
         console.error('Erreur réseau possible - Problème CORS');
-        throw error; // Throw the error for proper propagation
-      }
-      
-      // Pour les requêtes de profil, propager l'erreur au lieu de retourner un objet formaté
-      if (isProfileRequest) {
-        throw error;
+        return { success: false, message: 'Erreur de communication avec le serveur' };
       }
       
       // Retourner une réponse formatée en cas d'erreur pour éviter les crashes
