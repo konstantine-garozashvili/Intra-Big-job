@@ -1,4 +1,0 @@
-student_routes:
-    resource: '../../src/Domains/Student/Controller/'
-    type: attribute
-    prefix: /api 
