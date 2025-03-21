@@ -116,7 +116,7 @@ export const authService = {
       };
       
       // Use JWT standard route directly with a shorter timeout for faster response
-      const response = await apiService.post('/login_check', loginData, { timeout: 5000 });
+      const response = await apiService.post('/login_check', loginData, { timeout: 15000 });
       
       // Store JWT token in localStorage
       if (response.token) {

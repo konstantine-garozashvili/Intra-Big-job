@@ -161,9 +161,9 @@ const apiService = {
       const requestConfig = {
         ...options,
         timeout: options.timeout || (
-          isAuthRequest ? 3000 : // Auth requests need to be fast
-          isProfileRequest ? 1500 : // Profile requests with very short timeout
-          10000 // Standard timeout for regular requests (reduced from 30000ms)
+          isAuthRequest ? 10000 : // Auth requests timeout increased from 3000ms to 10000ms
+          isProfileRequest ? 7500 : // Profile requests timeout increased from 1500ms to 7500ms
+          20000 // Standard timeout for regular requests increased from 10000ms to 20000ms
         )
       };
       
@@ -230,7 +230,7 @@ const apiService = {
       // Configure request
       const requestConfig = {
         ...options,
-        timeout: options.timeout || (isLoginRequest ? 3000 : 10000)
+        timeout: options.timeout || (isLoginRequest ? 15000 : 20000)
       };
       
       const response = await axios.post(url, data, requestConfig);
