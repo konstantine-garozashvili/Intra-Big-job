@@ -1,0 +1,119 @@
+# CURSOR RULES - Intra-Bigjob-Group-5
+
+## Structure du Projet
+
+```
+Intra-Bigjob-Group-5/
+├── backend/               # Application backend Symfony
+│   ├── assets/           # Assets gérés par Symfony Asset Mapper
+│   ├── bin/              # Binaires et commandes Symfony 
+│   ├── config/           # Configuration de l'application et des bundles
+│   ├── migrations/       # Migrations de base de données Doctrine
+│   ├── public/           # Point d'entrée web et fichiers publics
+│   ├── src/              # Code source de l'application backend
+│   │   ├── Domain/       # Logique métier par domaine
+│   │   │   ├── Admin/    # Fonctionnalités Admin
+│   │   │   ├── HR/       # Fonctionnalités RH
+│   │   │   ├── Student/  # Fonctionnalités Étudiant
+│   │   │   ├── SuperAdmin/# Fonctionnalités Super Admin
+│   │   │   ├── Teacher/  # Fonctionnalités Formateur
+│   │   │   └── User/     # Fonctionnalités Utilisateur
+│   │   ├── Controller/   # Contrôleurs publics partagés
+│   │   ├── Entity/       # Entités Doctrine partagées
+│   │   ├── Repository/   # Repositories Doctrine partagés
+│   │   ├── Service/      # Services publics partagés
+│   │   └── DataFixtures/ # Fixtures pour charger des données de test
+│   ├── templates/        # Templates Twig
+│   ├── tests/            # Tests unitaires et fonctionnels
+│   ├── translations/     # Fichiers de traduction
+│   └── var/             # Fichiers temporaires (cache, logs)
+│
+├── frontend/             # Application frontend React/Vite
+│   ├── public/           # Ressources statiques publiques
+│   ├── src/              # Code source du frontend
+│   │   ├── assets/       # Images, polices et autres fichiers statiques
+│   │   ├── components/   # Composants React réutilisables
+│   │   │   ├── ui/      # Composants UI de base (Shadcn)
+│   │   │   └── shared/  # Composants partagés entre domaines
+│   │   ├── lib/         # Utilitaires et fonctions d'aide
+│   │   ├── pages/       # Pages par domaine
+│   │   │   ├── Admin/   # Pages Admin
+│   │   │   ├── HR/      # Pages RH
+│   │   │   ├── Student/ # Pages Étudiant
+│   │   │   ├── SuperAdmin/# Pages Super Admin
+│   │   │   ├── Teacher/ # Pages Formateur
+│   │   │   └── User/    # Pages Utilisateur
+│   │   ├── services/    # Services partagés (API, auth, etc.)
+│   │   ├── layouts/     # Layouts de l'application
+│   │   ├── hooks/       # Hooks React personnalisés
+│   │   └── context/     # Contextes React
+│   ├── Dockerfile       # Configuration Docker pour le frontend
+│   └── vite.config.js   # Configuration de Vite
+│
+├── infra/               # Configuration d'infrastructure
+│   ├── docker-compose.yml # Configuration Docker Compose
+│   └── nginx/           # Configuration Nginx
+│
+├── docs/                # Documentation du projet
+│   ├── frontend-guide.md # Guide du développement frontend
+│   └── backend-guide.md  # Guide du développement backend
+├── setup-database.sh    # Script pour configurer la base de données
+├── update-roles.sh      # Script pour mettre à jour les rôles
+└── update.sh            # Script de mise à jour générale
+```
+
+## Technologies Utilisées
+
+### Backend (Symfony 7.2.*)
+
+| Technologie | Version | Description |
+|-------------|---------|-------------|
+| PHP | >=8.2 | Langage de programmation côté serveur |
+| Symfony | 7.2.* | Framework PHP moderne |
+| Doctrine ORM | 3.3.* | ORM pour la gestion de la base de données |
+| Doctrine Bundle | 2.13.* | Intégration de Doctrine avec Symfony |
+| Doctrine Migrations | 3.4.* | Gestion des migrations de base de données |
+| Lexik JWT Authentication | 3.1.* | Authentification JWT pour les API |
+| Nelmio CORS | 2.5.* | Gestion des requêtes Cross-Origin |
+| Twig | 3.0.* | Moteur de templates |
+| PHPUnit | 9.5.* | Framework de tests unitaires |
+
+### Frontend (React 19.0.0)
+
+| Technologie | Version | Description |
+|-------------|---------|-------------|
+| React | 19.0.0 | Bibliothèque JavaScript pour construire des interfaces utilisateur |
+| React DOM | 19.0.0 | Rendu de React dans le DOM |
+| React Router | 6.29.0 | Routage pour les applications React |
+| Vite | 6.2.0 | Outil de build et serveur de développement |
+| Tailwind CSS | 3.4.17 | Framework CSS utilitaire |
+| Axios | 1.8.1 | Client HTTP pour les requêtes API |
+| Radix UI | Diverses | Composants UI primitifs accessibles |
+| Framer Motion | 12.4.7 | Bibliothèque d'animations pour React |
+| Recharts | 2.15.1 | Bibliothèque de graphiques pour React |
+| TypeScript | Via tsconfig.json | Typage statique pour JavaScript |
+
+### Infrastructure
+
+| Technologie | Description |
+|-------------|-------------|
+| Docker | Conteneurisation des services |
+| Docker Compose | Orchestration multi-conteneurs |
+| Nginx | Serveur web et proxy inverse |
+
+## Organisation du Code
+
+### Backend
+- Architecture en domaines (Domain-Driven Design)
+- Services et contrôleurs publics partagés
+- Entités et repositories partagés
+- Séparation claire des responsabilités par domaine
+
+### Frontend
+- Architecture basée sur les composants
+- Composants UI réutilisables (Shadcn)
+- Composants partagés entre domaines
+- Organisation des pages par domaine métier
+- Services et hooks partagés
+
+Ce projet suit une architecture moderne séparant clairement le backend (API Symfony) et le frontend (application React), reliés via des appels API. L'infrastructure est configurée avec Docker pour garantir un environnement de développement cohérent. 
