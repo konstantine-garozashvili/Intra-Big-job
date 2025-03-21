@@ -2,7 +2,7 @@ import { BrowserRouter as Router, Routes, Route, useLocation, Navigate, Outlet, 
 import { lazy, Suspense, useState, useEffect, useRef, useCallback } from 'react'
 import MainLayout from './components/MainLayout'
 import { RoleProvider, RoleDashboardRedirect, RoleGuard, ROLES } from './features/roles'
-import { showGlobalLoader, hideGlobalLoader, setLowPerformanceMode } from './lib/utils/loadingUtils'
+import { showGlobalLoader, hideGlobalLoader, setLowPerformanceMode, syncWithServerPerformanceMode } from './lib/utils/loadingUtils'
 import LoadingOverlay from './components/LoadingOverlay'
 import { AuthProvider } from './contexts/AuthContext'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -572,8 +572,8 @@ const ErrorFallback = () => (
   </div>
 );
 
-// Check for URL parameter to enable low performance mode
-const checkForPerformanceMode = () => {
+// Modifier la fonction checkForPerformanceMode pour synchroniser avec le serveur
+const checkForPerformanceMode = async () => {
   try {
     // Check URL for performance mode parameter
     const urlParams = new URLSearchParams(window.location.search);
@@ -595,11 +595,21 @@ const checkForPerformanceMode = () => {
       window.history.replaceState({}, '', newUrl);
     }
     
-    // Check if localStorage preference exists
-    const storedPref = localStorage.getItem('preferLowPerformanceMode');
-    if (storedPref === 'true') {
-      console.info('Using low performance mode from stored preference');
-      setLowPerformanceMode(true);
+    // If no URL parameter, sync with server
+    else {
+      try {
+        // Try to sync with server, but don't block rendering
+        await syncWithServerPerformanceMode();
+      } catch (error) {
+        console.warn('Error syncing with server performance mode:', error);
+        
+        // Fallback to localStorage preference
+        const storedPref = localStorage.getItem('preferLowPerformanceMode');
+        if (storedPref === 'true') {
+          console.info('Using low performance mode from stored preference');
+          setLowPerformanceMode(true);
+        }
+      }
     }
   } catch (e) {
     console.error('Error checking performance mode:', e);

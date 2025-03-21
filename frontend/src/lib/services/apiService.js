@@ -1,22 +1,15 @@
 import axios from 'axios';
 
-// Import the low performance mode detection from loadingUtils
-import { setLowPerformanceMode } from '../utils/loadingUtils';
+// Import the performance mode and timeout utils
+import { isLowPerformanceModeEnabled, getTimeoutConfig } from '../utils/loadingUtils';
 
-// Determine if we're in low performance mode
-const isLowPerformanceMode = () => {
-  return localStorage.getItem('preferLowPerformanceMode') === 'true';
-};
-
-// Configure default timeouts based on performance mode
+// Configure default timeouts based on performance mode and server config
 const getDefaultTimeout = (isProfileRequest = false) => {
-  const lowPerformance = isLowPerformanceMode();
-  
   if (isProfileRequest) {
-    return lowPerformance ? 3000 : 2000; // Increase timeout for profile requests on low-perf devices
+    return getTimeoutConfig('profile');
   }
   
-  return lowPerformance ? 15000 : 30000; // Shorter timeout for low-perf devices to avoid hanging
+  return getTimeoutConfig('default');
 };
 
 // Configure des intercepteurs pour logger les requêtes et réponses
@@ -112,10 +105,10 @@ axios.defaults.withCredentials = true;
 
 // Create a simple in-memory request cache with expiration
 const apiCache = new Map();
-const DEFAULT_CACHE_TTL = isLowPerformanceMode() ? 120000 : 60000; // 2 minutes for low-perf, 1 minute otherwise
+const DEFAULT_CACHE_TTL = isLowPerformanceModeEnabled() ? 120000 : 60000; // 2 minutes for low-perf, 1 minute otherwise
 
 // Add cache size limits for memory management
-const MAX_CACHE_SIZE = isLowPerformanceMode() ? 50 : 100; // Fewer items for low-perf devices
+const MAX_CACHE_SIZE = isLowPerformanceModeEnabled() ? 50 : 100; // Fewer items for low-perf devices
 
 // Add cache cleanup function
 const cleanupCache = () => {
@@ -198,7 +191,7 @@ const apiService = {
       
       // Is this a non-critical profile request?
       const isProfileRequest = path.includes('/profile/') || path.includes('/me');
-      const isLowPerf = isLowPerformanceMode();
+      const isLowPerf = isLowPerformanceModeEnabled();
       
       // Configure axios request with optimized timeout
       const requestConfig = {

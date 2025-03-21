@@ -16,6 +16,8 @@ parameters:
     aws.use_s3_storage: true  # Set to false to use local storage instead of S3
     # URL du frontend (from group3)
     app.frontend_url: 'http://localhost:5173'  # URL du frontend
+    # Paramètres du service de timeout adaptatif
+    timeout.cache_ttl: 3600  # Durée de vie du cache des métriques de performance en secondes
 
 services:
     # default configuration for services in *this* file
@@ -32,50 +34,45 @@ services:
             - '../src/Entity/'
             - '../src/Kernel.php'
 
-    # Configuration du DocumentController
-    App\Domains\Global\Document\Controller\DocumentController:
-        arguments:
-            $documentDirectory: '%document_directory%'
-            $storageFactory: '@App\Service\DocumentStorageFactory'
-            
-    # Configuration des repositories Document
-    App\Domains\Global\Document\Repository\DocumentRepository:
-        autowire: true
-        autoconfigure: true
-        
-    App\Domains\Global\Document\Repository\DocumentTypeRepository:
-        autowire: true
-        autoconfigure: true
-        
-    App\Domains\Global\Document\Repository\DocumentHistoryRepository:
-        autowire: true
-        autoconfigure: true
+    # controllers are imported separately to make sure services can be injected
+    # as action arguments even if you don't extend any base controller class
+    App\Controller\:
+        resource: '../src/Controller/'
+        tags: ['controller.service_arguments']
 
-    # Configuration du S3 Storage Service
-    App\Service\S3StorageService:
-        arguments:
-            $s3Client: '@Aws\S3\S3Client'
-            $slugger: '@Symfony\Component\String\Slugger\SluggerInterface'
-            $params: '@parameter_bag'
-            
-    # Configuration du Document Storage Factory
+    # Configuration pour le stockage des documents
     App\Service\DocumentStorageFactory:
         arguments:
-            $s3Service: '@App\Service\S3StorageService'
-            $params: '@parameter_bag'
+            $useS3Storage: '%aws.use_s3_storage%'
+            $bucketName: '%aws.bucket_name%'
+            $region: '%aws.region%'
+            $documentDirectory: '%document_directory%'
 
-    # add more service definitions when explicit configuration is needed
-    # please note that last definitions always *replace* previous ones
-
-    # Configuration du service RefreshTokenService
+    # Configuration du service de refresh token
     App\Service\RefreshTokenService:
-        arguments:
-            $params: '@parameter_bag'
+        # Les paramètres sont déjà injectés via ParameterBagInterface
+        # Pas besoin d'arguments supplémentaires
 
-    # Configuration du contrôleur RefreshTokenController
-    App\Controller\RefreshTokenController:
-        arguments:
-            $params: '@parameter_bag'
+    # Service d'initialisation PHP
+    App\Service\PhpConfigInitializer:
+        tags:
+            - { name: kernel.event_listener, event: kernel.request, method: onKernelRequest, priority: 255 }
+
+    # Configuration des contrôleurs API
+    App\Controller\ApiController:
+        tags: ['controller.service_arguments']
+
+    App\Controller\AuthController:
+        tags: ['controller.service_arguments']
+
+    App\Controller\UserController:
+        tags: ['controller.service_arguments']
+
+    App\Controller\ProfileController:
+        tags: ['controller.service_arguments']
+
+    App\Controller\TokenController:
+        tags: ['controller.service_arguments']
 
     # Configuration de l'écouteur d'événement AuthenticationSuccessListener
     App\EventListener\AuthenticationSuccessListener:
@@ -115,3 +112,27 @@ services:
             $daysToKeep: 15  # Keep messages for 15 days
         tags:
             - { name: kernel.event_listener, event: kernel.terminate, method: onKernelTerminate }
+    
+    # Configuration du service de timeout adaptatif
+    App\Service\TimeoutService:
+        arguments:
+            $cache: '@cache.app'
+            $logger: '@logger'
+            
+    # Écouteur d'événements pour le timeout adaptatif
+    App\EventListener\HttpTimeoutListener:
+        arguments:
+            $timeoutService: '@App\Service\TimeoutService'
+        tags:
+            - { name: kernel.event_subscriber }
+            
+    # Factory pour HttpClient avec timeout adaptatif
+    App\Service\HttpClientFactory:
+        arguments:
+            $timeoutService: '@App\Service\TimeoutService'
+            $requestStack: '@request_stack'
+            
+    # Configuration du DocumentController
+    App\Domains\Global\Document\Controller\DocumentController:
+        arguments:
+            $documentDirectory: '%document_directory%'

@@ -12,14 +12,15 @@ use Symfony\Component\HttpFoundation\File\UploadedFile;
 class DocumentStorageFactory
 {
     private bool $useS3;
-    private string $documentDirectory;
 
     public function __construct(
         private S3StorageService $s3Service,
-        private ParameterBagInterface $params
+        private bool $useS3Storage,
+        private string $bucketName,
+        private string $region,
+        private string $documentDirectory
     ) {
-        $this->useS3 = $this->params->get('aws.use_s3_storage');
-        $this->documentDirectory = $this->params->get('document_directory');
+        $this->useS3 = $useS3Storage;
         
         // Create the document directory if it doesn't exist (for local storage)
         if (!$this->useS3 && !is_dir($this->documentDirectory)) {

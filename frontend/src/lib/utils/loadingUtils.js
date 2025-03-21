@@ -2,11 +2,18 @@
  * Utility functions for managing global loading state
  */
 
+import axios from 'axios';
+
 let activeLoadingCount = 0;
 let lastNavigationTime = 0;
 let loaderHideTimeout = null;
 let enforceMinimumTimeoutId = null;
 let isLowPerformanceMode = false;
+let timeoutConfig = {
+  default: 30000,  // Default timeout in ms
+  profile: 20000,  // Profile requests timeout in ms
+  large: 60000     // Large data timeout in ms
+};
 
 /**
  * Injects a style tag to hide scrollbars in all browsers
@@ -92,6 +99,42 @@ const detectLowPerformanceMode = () => {
   }
 };
 
+// Function to sync performance mode with server
+export const syncWithServerPerformanceMode = async () => {
+  try {
+    // Only sync if API URL is available
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+    
+    const response = await axios.get(`${apiUrl}/timeout-config`, {
+      timeout: 5000, // Short timeout for this request
+    });
+    
+    if (response.data && typeof response.data.isLowPerformance === 'boolean') {
+      // Sync with server's performance detection
+      setLowPerformanceMode(response.data.isLowPerformance);
+      
+      // Update timeout config with server values
+      if (response.data.timeouts) {
+        timeoutConfig = {
+          default: response.data.timeouts.default || timeoutConfig.default,
+          profile: response.data.timeouts.profile || timeoutConfig.profile,
+          large: response.data.timeouts.large || timeoutConfig.large
+        };
+        
+        console.info('Updated timeout configuration from server:', timeoutConfig);
+      }
+      
+      return response.data.isLowPerformance;
+    }
+  } catch (error) {
+    console.warn('Failed to sync with server performance mode:', error.message);
+    // Fall back to client-side detection
+  }
+  
+  // Default to client-side detection if server sync fails
+  return detectLowPerformanceMode();
+};
+
 // Set performance mode on load
 isLowPerformanceMode = detectLowPerformanceMode();
 
@@ -101,6 +144,14 @@ export const setLowPerformanceMode = (enabled) => {
   if (localStorage) {
     localStorage.setItem('preferLowPerformanceMode', enabled.toString());
   }
+};
+
+// Export function to get current performance mode
+export const isLowPerformanceModeEnabled = () => isLowPerformanceMode;
+
+// Export timeout config getter for services to use
+export const getTimeoutConfig = (type = 'default') => {
+  return timeoutConfig[type] || timeoutConfig.default;
 };
 
 // Create a full-screen overlay directly in the DOM on script load
