@@ -3,57 +3,28 @@ import { authService, getSessionId } from '@/lib/services/authService';
 import { teacherService } from '@/lib/services/teacherService';
 import apiService from '@/lib/services/apiService';
 import { getQueryClient } from '@/lib/services/queryClient';
+import useUserDataHook from './useUserData';
 
 /**
  * Hook pour récupérer les données utilisateur avec React Query
  * @returns {Object} - Données utilisateur et état de la requête
+ * @deprecated Utiliser le hook useUserData à la place
  */
 export const useUserData = () => {
-  // Récupérer l'ID de l'utilisateur actuel depuis le localStorage pour l'utiliser comme partie de la clé de requête
-  // Cela garantit que les données sont actualisées lors d'un changement d'utilisateur
-  const getUserKey = () => {
-    try {
-      const userStr = localStorage.getItem('user');
-      if (userStr) {
-        const user = JSON.parse(userStr);
-        return user.id || 'anonymous';
-      }
-    } catch (e) {
-      console.error('Erreur lors de la récupération de l\'ID utilisateur:', e);
-    }
-    return 'anonymous';
+  // Utiliser notre nouveau hook centralisé avec le nom renommé
+  const userData = useUserDataHook();
+  
+  // Retourner une structure compatible avec l'ancien hook
+  return {
+    data: userData.user,
+    isLoading: userData.isLoading,
+    isError: userData.isError,
+    error: userData.error,
+    refetch: userData.refetch,
+    // Maintenir d'autres propriétés pour la rétrocompatibilité
+    isFetching: userData.isLoading,
+    isSuccess: !userData.isError && !userData.isLoading && !!userData.user,
   };
-
-  // Utiliser l'identifiant de session dans la clé de requête pour garantir que les données sont actualisées
-  // lors d'un changement de session (connexion/déconnexion)
-  const sessionId = getSessionId();
-
-  // Get minimal user data from token if available
-  const getMinimalUserData = () => {
-    try {
-      const userStr = localStorage.getItem('user');
-      if (userStr) {
-        return JSON.parse(userStr);
-      }
-    } catch (e) {
-      console.error('Error parsing user data from localStorage:', e);
-    }
-    return null;
-  };
-
-  const minimalUserData = getMinimalUserData();
-
-  return useApiQuery('/api/me', ['user-data', getUserKey(), sessionId], {
-    staleTime: 30 * 60 * 1000, // 30 minutes
-    cacheTime: 60 * 60 * 1000, // 1 heure
-    refetchOnWindowFocus: false,
-    refetchOnMount: true,
-    refetchOnReconnect: false,
-    initialData: minimalUserData, // Use minimal data from token while loading
-    select: (data) => {
-      return data.user || data;
-    }
-  });
 };
 
 /**
@@ -61,7 +32,7 @@ export const useUserData = () => {
  * @returns {Object} - Données du dashboard formateur et état de la requête
  */
 export const useTeacherDashboardData = () => {
-  // Utiliser useApiQuery pour récupérer les données utilisateur
+  // Utiliser notre propre hook useUserData exporté ci-dessus (pas le hook importé)
   const userQuery = useUserData();
   const sessionId = getSessionId();
   
@@ -206,7 +177,7 @@ export const useAdminDashboardData = () => {
  * @returns {Object} - Données du dashboard étudiant et état de la requête
  */
 export const useStudentDashboardData = () => {
-  // Utiliser useApiQuery pour récupérer les données utilisateur avec des options optimisées
+  // Utiliser notre propre hook useUserData exporté ci-dessus (pas le hook importé)
   const userQuery = useUserData();
   
   // Pour l'instant, nous n'avons pas de données spécifiques à récupérer pour le dashboard étudiant
@@ -228,7 +199,7 @@ export const useStudentDashboardData = () => {
  * @returns {Object} - Données du dashboard RH et état de la requête
  */
 export const useHRDashboardData = () => {
-  // Utiliser useApiQuery pour récupérer les données utilisateur avec des options optimisées
+  // Utiliser notre propre hook useUserData exporté ci-dessus (pas le hook importé)
   const userQuery = useUserData();
   
   // Pour l'instant, nous n'avons pas de données spécifiques à récupérer pour le dashboard RH

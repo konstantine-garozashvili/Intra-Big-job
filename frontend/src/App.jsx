@@ -3,17 +3,13 @@ import { lazy, Suspense, useState, useEffect, useRef, useCallback } from 'react'
 import MainLayout from './components/MainLayout'
 import { RoleProvider, RoleDashboardRedirect, RoleGuard, ROLES } from './features/roles'
 import { showGlobalLoader, hideGlobalLoader, setLowPerformanceMode } from './lib/utils/loadingUtils'
-import LoadingOverlay from './components/LoadingOverlay'
 import { AuthProvider } from './contexts/AuthContext'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { clearChatCache } from './lib/services/chatService'
 import './index.css'
 import ProtectedRoute from './components/ProtectedRoute'
 import PublicRoute from './components/PublicRoute'
 import ProfileLayout from '@/layouts/ProfileLayout'
 import useLoadingIndicator from './hooks/useLoadingIndicator'
-import TeacherProtectedRoute from './components/TeacherProtectedRoute'
-import RecruiterProtectedRoute from './components/RecruiterProtectedRoute'
 import StudentRoute from './components/StudentRoute'
 import { Toaster } from './components/ui/sonner'
 import { ErrorBoundary } from "react-error-boundary"
@@ -152,65 +148,99 @@ const useIntelligentPreload = () => {
   return null;
 };
 
+// Component for handling prefetching and setting up environment
+const AppInitializer = () => {
+  useEffect(() => {
+    // Expose queryClient for debugging purposes
+    window.queryClient = queryClient;
+    
+    // Expose userDataManager for debugging
+    import('./lib/services/userDataManager')
+      .then(({ default: userDataManager }) => {
+        window.userDataManager = userDataManager;
+      });
+    
+
+      
+    // Set up QueryClient
+    import('./lib/services/queryClient')
+      .then(({ setQueryClient }) => {
+        setQueryClient(queryClient);
+      });
+      
+  }, []);
+  
+  return null;
+};
+
 // Composant pour gérer les préchargements
 const PrefetchHandler = () => {
   useIntelligentPreload();
   const location = useLocation();
   
+  // Effet pour initialiser userDataManager
+  useEffect(() => {
+    // Importer et initialiser userDataManager
+    import('./lib/services/userDataManager')
+      .then(({ default: userDataManager }) => {
+        // Attacher userDataManager à window pour le débogage
+        window.userDataManager = userDataManager;
+        
+        // Afficher des informations de débogage en mode développement
+        if (import.meta.env.DEV) {
+          console.log('[Dev] userDataManager disponible globalement via window.userDataManager');
+        }
+      });
+  }, []);
+  
   useEffect(() => {
     // Précharger les données utilisateur dès que l'utilisateur est authentifié
     if (localStorage.getItem('token')) {
-      Promise.all([
-        import('./hooks/useDashboardQueries'),
-        import('./lib/services/queryClient'),
-        import('./lib/services/authService')
-      ]).then(([dashboardModule, queryClientModule, authModule]) => {
-        const { getQueryClient } = queryClientModule;
-        const { getSessionId } = authModule;
-        const qc = getQueryClient();
-        const sessionId = getSessionId();
-        
-        if (qc) {
-          // Précharger les données utilisateur
-          qc.prefetchQuery({
-            queryKey: ['user-data', 'anonymous', sessionId],
-            queryFn: async () => {
-              const { default: apiService } = await import('./lib/services/apiService');
-              return await apiService.get('/api/me', {}, true, 30 * 60 * 1000);
-            },
-            staleTime: 30 * 60 * 1000,
-            cacheTime: 60 * 60 * 1000
+      // Importer les modules nécessaires de manière dynamique
+      import('./lib/services/userDataManager')
+        .then(({ default: userDataManager }) => {
+          // Précharger les données utilisateur en arrière-plan
+          userDataManager.getUserData({
+            forceRefresh: false,
+            useCache: true,
+            background: true
+          }).catch(error => {
+            console.warn('Erreur lors du préchargement des données utilisateur:', error);
           });
-        }
-      });
+        });
     }
   }, [location.pathname]);
   
   // Ajouter un écouteur d'événement pour forcer l'actualisation des données utilisateur lors d'un changement d'utilisateur
   useEffect(() => {
     const handleUserChange = () => {
-      // Importer dynamiquement les modules nécessaires
-      Promise.all([
-        import('./lib/services/queryClient'),
-        import('./lib/services/authService')
-      ]).then(([queryClientModule, authModule]) => {
-        const { getQueryClient } = queryClientModule;
-        const { getSessionId } = authModule;
-        const qc = getQueryClient();
-        const sessionId = getSessionId();
-        
-        if (qc) {
-          // Invalider toutes les requêtes liées à l'utilisateur
-          qc.invalidateQueries({ queryKey: ['user-data'] });
+      // Importer dynamiquement le module userDataManager
+      import('./lib/services/userDataManager')
+        .then(({ default: userDataManager }) => {
+          // Invalider le cache pour forcer un rechargement des données
+          userDataManager.invalidateCache();
           
-          // Invalider également les requêtes de dashboard
-          qc.invalidateQueries({ queryKey: ['teacher-dashboard'] });
-          qc.invalidateQueries({ queryKey: ['admin-users'] });
-          qc.invalidateQueries({ queryKey: ['admin-dashboard'] });
-          qc.invalidateQueries({ queryKey: ['student-dashboard'] });
-          qc.invalidateQueries({ queryKey: ['hr-dashboard'] });
-        }
-      });
+          // Ensuite précharger les nouvelles données
+          userDataManager.getUserData({
+            forceRefresh: true,
+            useCache: false
+          }).catch(error => {
+            console.warn('Erreur lors du rechargement des données utilisateur:', error);
+          });
+          
+          // Importer React Query pour invalider les requêtes spécifiques
+          import('./lib/services/queryClient').then(({ getQueryClient }) => {
+            const qc = getQueryClient();
+            if (qc) {
+              // Invalider également les requêtes de dashboard
+              qc.invalidateQueries({ queryKey: ['teacher-dashboard'] });
+              qc.invalidateQueries({ queryKey: ['admin-users'] });
+              qc.invalidateQueries({ queryKey: ['admin-dashboard'] });
+              qc.invalidateQueries({ queryKey: ['student-dashboard'] });
+              qc.invalidateQueries({ queryKey: ['hr-dashboard'] });
+            }
+          });
+        });
     };
     
     // Fonction pour gérer le nettoyage complet du cache
@@ -619,6 +649,12 @@ const App = () => {
         <AuthProvider>
           <RoleProvider>
             <Router>
+              {/* Initialisation des services de l'application */}
+              <AppInitializer />
+              
+              {/* Gestionnaire de préchargement */}
+              <PrefetchHandler />
+              
               <Suspense fallback={<SuspenseLoader />}>
                 <AppContent />
               </Suspense>

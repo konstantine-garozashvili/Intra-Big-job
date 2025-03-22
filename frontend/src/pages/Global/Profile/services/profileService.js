@@ -1,5 +1,6 @@
 import apiService from '@/lib/services/apiService';
 import { profilePictureEvents } from '../hooks/useProfilePicture';
+import userDataManager from '@/lib/services/userDataManager';
 
 // Cache local pour les données fréquemment utilisées
 const profileCache = {
@@ -86,112 +87,47 @@ class ProfileService {
     }
   }
 
-  async getAllProfileData() {
+  /**
+   * Récupère toutes les données de profil consolidées
+   * @param {Object} options - Options de récupération
+   * @param {boolean} options.forceRefresh - Force une nouvelle requête
+   * @returns {Promise<Object>} - Données de profil
+   */
+  async getAllProfileData(options = {}) {
     try {
-      // Vérifier si les données sont en cache et toujours valides
-      const now = Date.now();
-      if (profileCache.consolidatedData && 
-          (now - profileCache.consolidatedDataTimestamp) < profileCache.cacheDuration) {
+      // Utiliser le gestionnaire centralisé des données utilisateur
+      const data = await userDataManager.getUserData({
+        routeKey: '/profile/consolidated',
+        forceRefresh: options.forceRefresh,
+        useCache: !options.forceRefresh
+      });
+      
+      // Mettre également à jour le cache local pour la compatibilité
+      profileCache.consolidatedData = data;
+      profileCache.consolidatedDataTimestamp = Date.now();
+      
+      return data;
+    } catch (error) {
+      console.warn('Erreur lors de la récupération des données de profil:', error);
+      
+      // FALLBACK: Essayer d'utiliser les données en cache local si disponibles
+      if (profileCache.consolidatedData) {
         return profileCache.consolidatedData;
       }
       
-      // Use a timeout to prevent hanging requests
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-      
+      // Sinon, récupérer les données depuis localStorage
       try {
-        const response = await apiService.get('/profile/consolidated', {
-          signal: controller.signal,
-          retries: 2, // Allow 2 retries
-          timeout: 6000 // 6 second timeout
-        });
-        
-        clearTimeout(timeoutId);
-        
-        // Gérer différents formats de réponse possibles
-        let profileData;
-        
-        if (response && typeof response === 'object') {
-          if (response.data) {
-            // Si la réponse a une propriété data, l'utiliser
-            profileData = response.data;
-          } else if (response.user || response.profile) {
-            // Si la réponse contient directement les données utilisateur ou profil
-            profileData = response;
-          } else {
-            // Si la réponse est déjà le format attendu
-            profileData = response;
-          }
-          
-          // Mettre en cache les données
-          profileCache.consolidatedData = profileData;
-          profileCache.consolidatedDataTimestamp = now;
-          
-          return profileData;
+        // Utiliser directement la méthode getCachedUserData de userDataManager
+        const cachedData = userDataManager.getCachedUserData();
+        if (cachedData) {
+          return cachedData;
         }
-      } catch (apiError) {
-        clearTimeout(timeoutId);
-        console.warn('API error in getAllProfileData:', apiError);
-        
-        // Continue to fallback when API fails
+      } catch (e) {
+        console.error('Erreur lors de la récupération des données en cache:', e);
       }
       
-      // FALLBACK: Try to assemble profile data from localStorage if API fails
-      console.log('Using fallback profile data from localStorage');
-      
-      // Get user data from localStorage
-      const userData = {};
-      try {
-        const userDataStr = localStorage.getItem('user');
-        if (userDataStr) {
-          const parsedUserData = JSON.parse(userDataStr);
-          Object.assign(userData, parsedUserData);
-        }
-        
-        // Get roles
-        const userRolesStr = localStorage.getItem('userRoles');
-        if (userRolesStr) {
-          userData.roles = JSON.parse(userRolesStr);
-        }
-        
-        // Construct a fallback profile object
-        const fallbackData = {
-          user: userData,
-          profile: {
-            firstName: userData.firstName || '',
-            lastName: userData.lastName || '',
-            email: userData.email || ''
-          }
-        };
-        
-        // Cache this fallback data but with a shorter duration
-        profileCache.consolidatedData = fallbackData;
-        profileCache.consolidatedDataTimestamp = now;
-        profileCache.cacheDuration = 30 * 1000; // 30 seconds for fallback data
-        
-        return fallbackData;
-      } catch (fallbackError) {
-        console.error('Error creating fallback profile data:', fallbackError);
-      }
-      
-      // If all else fails, return a minimal structured object
-      return {
-        user: {
-          roles: JSON.parse(localStorage.getItem('userRoles') || '[]')
-        },
-        profile: null,
-        error: 'Could not retrieve profile data'
-      };
-    } catch (error) {
-      console.error('Error fetching profile data:', error);
-      // Retourner un objet structuré même en cas d'erreur
-      return {
-        user: {
-          roles: JSON.parse(localStorage.getItem('userRoles') || '[]')
-        },
-        profile: null,
-        error: error.message
-      };
+      // Si tout échoue, lancer l'erreur
+      throw error;
     }
   }
   
@@ -273,13 +209,19 @@ class ProfileService {
     }
   }
   
-  // Méthode pour invalider le cache
+  /**
+   * Invalide le cache des données de profil
+   */
   invalidateCache() {
     profileCache.userData = null;
     profileCache.userDataTimestamp = 0;
     profileCache.consolidatedData = null;
     profileCache.consolidatedDataTimestamp = 0;
+    
+    // Invalider également le cache centralisé
+    userDataManager.invalidateCache();
   }
 }
 
-export const profileService = new ProfileService(); 
+export const profileService = new ProfileService();
+export default profileService; 

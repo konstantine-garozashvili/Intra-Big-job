@@ -3,6 +3,7 @@ import apiService from './apiService';
 import { clearQueryCache, getQueryClient } from '../utils/queryClientUtils';
 import { showGlobalLoader, hideGlobalLoader } from '../utils/loadingUtils';
 import { toast } from 'sonner';
+import userDataManager from './userDataManager';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
 
@@ -254,35 +255,13 @@ export const authService = {
    */
   async _loadProfileData() {
     try {
-      // Déterminer le timeout adapté à la performance de l'appareil
-      const timeout = window._devicePerformanceScore > 50 ? 5000 : 3000;
-      
-      const userData = await apiService.get('/profile/me', {
-        noCache: false,
-        retries: 1,
-        timeout: timeout
+      // Utiliser le nouveau gestionnaire de données utilisateur
+      const userData = await userDataManager.getUserData({
+        routeKey: '/profile/me',
+        forceRefresh: false,
       });
       
-      if (userData && userData.success !== false) {
-        // Mettre à jour les données utilisateur avec les nouvelles données de profil
-        const cachedUser = this.getUser();
-        const enhancedUser = {
-          ...cachedUser,
-          ...userData,
-          _updatedAt: Date.now(),
-          _minimal: false
-        };
-        
-        localStorage.setItem('user', JSON.stringify(enhancedUser));
-        
-        // Mettre à jour le cache React Query
-        const queryClient = getQueryClient();
-        if (queryClient) {
-          queryClient.setQueryData(['user', 'current'], enhancedUser);
-        }
-        
-        return enhancedUser;
-      }
+      return userData;
     } catch (error) {
       console.warn('Erreur lors du chargement des données de profil:', error);
     }
@@ -534,9 +513,9 @@ export const authService = {
   },
 
   /**
-   * Récupère les informations complètes de l'utilisateur connecté depuis l'API
-   * @param {boolean} [forceRefresh=false] - Force le rafraîchissement des données depuis l'API
-   * @returns {Promise<Object>} - Données complètes de l'utilisateur
+   * Récupère les données de l'utilisateur courant
+   * @param {boolean} forceRefresh - Force une nouvelle requête même si les données sont fraîches
+   * @returns {Promise<Object>} - Données utilisateur
    */
   async getCurrentUser(forceRefresh = false) {
     const token = this.getToken();
@@ -544,67 +523,33 @@ export const authService = {
       throw new Error('Aucun token d\'authentification trouvé');
     }
 
-    // Si une promesse est déjà en cours et qu'on ne force pas le rafraîchissement, on la retourne
-    if (userDataPromise && !forceRefresh) {
-      return userDataPromise;
-    }
-
-    // Créer une nouvelle promesse pour charger les données utilisateur
-    userDataPromise = new Promise(async (resolve, reject) => {
-      try {
-        // Utiliser le cache sauf si on force le rafraîchissement
-        const options = {
-          ...(forceRefresh ? { cache: 'no-store' } : {}),
-          timeout: 15000, // Ensure 15s timeout is set
-          retries: 3 // Allow up to 3 retries
-        };
+    // Utiliser le nouveau gestionnaire de données utilisateur
+    try {
+      const userData = await userDataManager.getUserData({
+        forceRefresh,
+        routeKey: '/api/me'
+      });
+      
+      // Stocker le rôle principal pour référence (maintenir la compatibilité)
+      if (userData.roles && userData.roles.length > 0) {
+        localStorage.setItem('last_role', userData.roles[0]);
         
-        const response = await apiService.get('/api/me', { ...apiService.withAuth(), ...options });
-        
-        // Extraire l'objet utilisateur si la réponse contient un objet "user"
-        let userData = response;
-        if (response.user) {
-          userData = response.user;
-        } else if (response.data) {
-          userData = response.data;
-        } else if (response.success && response.user) {
-          userData = response.user;
-        }
-        
-        // Stocker les données utilisateur dans le localStorage
-        localStorage.setItem('user', JSON.stringify(userData));
-        
-        // Stocker le rôle principal pour référence
-        if (userData.roles && userData.roles.length > 0) {
-          localStorage.setItem('last_role', userData.roles[0]);
-          
-          // IMPORTANT: Also store roles array separately
-          localStorage.setItem('userRoles', JSON.stringify(userData.roles));
-        }
-        
-        resolve(userData);
-      } catch (error) {
-        console.error('Error in getCurrentUser:', error);
-        userDataPromise = null; // Réinitialiser la promesse en cas d'erreur
-        
-        // Try to use cached data if available
-        const cachedUser = localStorage.getItem('user');
-        if (cachedUser) {
-          try {
-            const userData = JSON.parse(cachedUser);
-            resolve(userData);
-            return;
-          } catch (e) {
-            // Invalid cached data
-            localStorage.removeItem('user');
-          }
-        }
-        
-        reject(error);
+        // Stocker également le tableau des rôles séparément
+        localStorage.setItem('userRoles', JSON.stringify(userData.roles));
       }
-    });
-
-    return userDataPromise;
+      
+      return userData;
+    } catch (error) {
+      console.error('Error in getCurrentUser:', error);
+      
+      // Essayer d'utiliser les données en cache si disponibles
+      const cachedUser = userDataManager.getCachedUserData();
+      if (cachedUser) {
+        return cachedUser;
+      }
+      
+      throw error;
+    }
   },
   
   /**

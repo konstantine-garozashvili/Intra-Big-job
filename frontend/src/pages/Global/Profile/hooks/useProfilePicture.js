@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { queryClient } from '@/App';  // Import the shared queryClient
+import userDataManager, { USER_DATA_EVENTS } from '@/lib/services/userDataManager';
 
 // Cache keys for localStorage
 const CACHE_KEYS = {
@@ -179,6 +180,15 @@ export function useProfilePicture() {
           });
           queryClient.setQueryData(PROFILE_QUERY_KEYS.profilePicture, data);
           profilePictureCache.saveToCache(url);
+          
+          // Notifier userDataManager qu'une nouvelle photo de profil est disponible
+          // Cela permettra aux composants qui utilisent useUserDataCentralized
+          // de recevoir la mise à jour de la photo de profil
+          try {
+            userDataManager.invalidateCache();
+          } catch (e) {
+            // Ignorer les erreurs silencieusement
+          }
         }
       },
       onError: (error) => {
@@ -268,36 +278,19 @@ export function useProfilePicture() {
         return { previousData };
       },
       onSuccess: async (data) => {
-        if (!isMountedRef.current) return;
+        console.log('[Debug] Upload success:', data);
         
-        try {
-          // Verify data is valid
-          if (!data || !data.success) {
-            throw new Error('Invalid data received from server');
-          }
-          
-          // Clear the existing cache since we've updated the profile picture
-          profilePictureCache.clearCache();
-          
-          // Update cache with server data
-          queryClient.setQueryData(PROFILE_QUERY_KEYS.profilePicture, data);
-          
-          // Extract and cache the new URL
-          const newUrl = getProfilePictureUrl(data);
-          if (newUrl) {
-            setCachedUrl(newUrl);
-            profilePictureCache.saveToCache(newUrl);
-          }
-          
-          // Wait a moment before refreshing to ensure server has processed the upload
-          setTimeout(async () => {
-            if (isMountedRef.current) {
-              await forceRefresh();
-            }
-          }, 500);
-        } catch (error) {
-          // Error handled silently
-        }
+        // Notifier le gestionnaire de données utilisateur de l'invalidation
+        userDataManager.invalidateCache();
+        
+        // Notify all subscribers
+        profilePictureEvents.notify();
+        
+        // Show success message
+        toast.success('Photo de profil mise à jour avec succès');
+        
+        // Force refresh to get latest picture
+        forceRefresh();
       },
       onError: (error, variables, context) => {
         // Restore previous state on error
@@ -350,21 +343,20 @@ export function useProfilePicture() {
         return { previousData };
       },
       onSuccess: async () => {
-        if (!isMountedRef.current) return;
+        // Notifier le gestionnaire de données utilisateur de l'invalidation
+        userDataManager.invalidateCache();
         
-        try {
-          // Ensure the cache is cleared
-          profilePictureCache.clearCache();
-          
-          // Wait a moment before refreshing to ensure server has processed the deletion
-          setTimeout(async () => {
-            if (isMountedRef.current) {
-              await forceRefresh();
-            }
-          }, 500);
-        } catch (error) {
-          // Error handled silently
-        }
+        // Notify all subscribers
+        profilePictureEvents.notify();
+        
+        // Clear local cache 
+        profilePictureCache.clearCache();
+        
+        // Show success message
+        toast.success('Photo de profil supprimée avec succès');
+        
+        // Force refresh to get latest picture status
+        forceRefresh();
       },
       onError: (error, variables, context) => {
         // Restore previous state on error
@@ -381,6 +373,20 @@ export function useProfilePicture() {
       }
     }
   );
+
+  // S'abonner aux événements de mise à jour des données utilisateur
+  useEffect(() => {
+    // Fonction de rappel pour rafraîchir la photo de profil si les données utilisateur sont mises à jour
+    const handleUserDataUpdate = () => {
+      forceRefresh();
+    };
+    
+    // S'abonner à l'événement UPDATED du gestionnaire de données utilisateur
+    const unsubscribe = userDataManager.subscribe(USER_DATA_EVENTS.UPDATED, handleUserDataUpdate);
+    
+    // Se désabonner lors du démontage du composant
+    return unsubscribe;
+  }, [forceRefresh]);
 
   // Determine the profile picture URL to return, prioritizing:
   // 1. API data if available

@@ -4,6 +4,8 @@ import documentService from '../services/documentService';
 import axiosInstance from '@/lib/axios';
 import authService from '@services/authService';
 import apiService from '@/lib/services/apiService';
+import { useUserDataCentralized } from '@/hooks';
+import userDataManager from '@/lib/services/userDataManager';
 
 // API URL
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
@@ -21,12 +23,25 @@ export const profileKeys = {
 
 // Hook for fetching current user's profile
 export const useCurrentProfile = () => {
-  return useQuery({
-    queryKey: profileKeys.current(),
-    queryFn: () => profileService.getAllProfileData(),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+  const { user, isLoading, isError, error, forceRefresh } = useUserDataCentralized({
+    preferComprehensiveData: true,
+    staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
+  
+  return {
+    data: user ? {
+      user: user,
+      studentProfile: user.studentProfile || null,
+      diplomas: user.diplomas || [],
+      addresses: user.addresses || [],
+      stats: user.stats || { profile: { completionPercentage: 0 } }
+    } : null,
+    isLoading,
+    isError,
+    error,
+    refetch: forceRefresh
+  };
 };
 
 // Hook for fetching a public profile by user ID
