@@ -16,10 +16,19 @@ export const ProfileContext = createContext({
   isProfileLoading: false
 });
 
+// États de chargement
+const LOADING_STATES = {
+  INITIAL: 'initial',     // État initial avant tout chargement
+  MINIMAL: 'minimal',     // Données minimales chargées (depuis le token)
+  LOADING: 'loading',     // Chargement des données complètes en cours
+  COMPLETE: 'complete',   // Données complètes chargées
+  ERROR: 'error'          // Erreur de chargement
+};
+
 const MainLayout = () => {
   const [userData, setUserData] = useState(null);
   const [profileData, setProfileData] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loadingState, setLoadingState] = useState(LOADING_STATES.INITIAL);
   const [showProgress, setShowProgress] = useState(false);
   const { hasRole, isLoading: rolesLoading } = useRoles();
   const location = useLocation();
@@ -60,36 +69,20 @@ const MainLayout = () => {
     window.scrollTo(0, 0);
   }, [location.pathname, calculateMinHeight]);
 
-  // Effect to handle initial render and ensure footer is positioned correctly
-  useEffect(() => {
-    if (initialRender) {
-      // Set a higher initial height to ensure footer is below viewport during initial load
-      setMinContentHeight('150vh');
-      
-      // After a short delay, calculate the actual height needed
-      const timer = setTimeout(() => {
-        calculateMinHeight();
-        setInitialRender(false);
-      }, 500);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [initialRender, calculateMinHeight]);
-
   // Create a memoized refresh function that can be called from child components
   const refreshProfileData = useCallback(async () => {
     if (authService.isLoggedIn()) {
       try {
-        setIsLoading(true);
+        setLoadingState(LOADING_STATES.LOADING);
         // Only fetch profile data since we already have basic user data
         const newProfileData = await profileService.getAllProfileData();
         // S'assurer que les données sont bien mises à jour avant de les retourner
         setProfileData(newProfileData);
-        setIsLoading(false);
+        setLoadingState(LOADING_STATES.COMPLETE);
         return newProfileData; // Retourner les nouvelles données pour permettre aux composants de les utiliser
       } catch (error) {
         console.error('Error refreshing profile data:', error);
-        setIsLoading(false);
+        setLoadingState(LOADING_STATES.ERROR);
         return null;
       }
     }
@@ -98,64 +91,37 @@ const MainLayout = () => {
 
   // Écouter les événements d'authentification
   useEffect(() => {
-    const handleLoginSuccess = () => {
-      // Show global loading immediately
-      showGlobalLoader();
-      
-      // Small delay before updating auth state
-      setTimeout(() => {
-        setIsAuthenticated(true);
-        
-        // Delay before fetching user data
-        setTimeout(() => {
-          // Fetch user data
-          fetchUserData();
-        }, 200);
-      }, 50);
-      
-      // Recalculate height when authentication state changes
-      calculateMinHeight();
-    };
-
-    const handleLogoutSuccess = (event) => {
-      // Show loading before any state changes
-      showGlobalLoader();
-      
-      // Add a small delay before changing state
-      setTimeout(() => {
-        setIsAuthenticated(false);
-        // Reset user data
-        setUserData(null);
-        setProfileData(null);
-        
-        // Ensure footer is positioned correctly
-        setMinContentHeight('150vh');
-        calculateMinHeight();
-        
-        // Réduire le temps d'affichage du loader pour une expérience plus fluide
-        setTimeout(() => {
-          hideGlobalLoader(50);
-          
-          // Recalculate height after transition completes
-          setTimeout(() => calculateMinHeight(), 100);
-        }, 200);
-      }, 50);
-    };
-    
-    // Fonction pour récupérer les données utilisateur
-    const fetchUserData = async (retryCount = 0) => {
+    // Fonction pour récupérer les données utilisateur initiales
+    const fetchInitialUserData = async () => {
       if (authService.isLoggedIn()) {
         try {
-          const data = await authService.getCurrentUser();
-          if (!data) {
-            throw new Error('No user data received');
-          }
-          setUserData(data);
+          // Essayer de récupérer les données minimales de l'utilisateur depuis le localStorage
+          const minimalUser = authService.getUser();
           
-          // After getting basic user data, fetch complete profile data
-          const profileData = await profileService.getAllProfileData();
-          setProfileData(profileData);
-          setIsLoading(false);
+          if (minimalUser) {
+            // Mettre à jour l'état avec les données minimales
+            setUserData(minimalUser);
+            setLoadingState(LOADING_STATES.MINIMAL);
+            
+            // Si les données sont déjà complètes, ne pas les recharger
+            if (!minimalUser._minimal) {
+              setLoadingState(LOADING_STATES.COMPLETE);
+              
+              // Charger les données de profil quand même pour s'assurer d'avoir les dernières données
+              try {
+                const profileData = await profileService.getAllProfileData();
+                setProfileData(profileData);
+              } catch (profileError) {
+                console.warn('Error loading profile data with complete user:', profileError);
+              }
+            }
+          } else {
+            // Aucune donnée utilisateur disponible, charger depuis l'API
+            setLoadingState(LOADING_STATES.LOADING);
+            const userData = await authService.getCurrentUser();
+            setUserData(userData);
+            setLoadingState(LOADING_STATES.COMPLETE);
+          }
           
           // Attendre un court instant avant d'afficher le composant de progression
           setTimeout(() => {
@@ -163,137 +129,120 @@ const MainLayout = () => {
             // Remove loading state when everything is loaded
             hideGlobalLoader();
           }, 300);
-          
-          // Recalculate height after data is loaded
-          calculateMinHeight();
         } catch (error) {
-          console.error('Error fetching data:', error);
-          
-          // Retry logic for network errors with exponential backoff
-          if (retryCount < 3 && (error.code === 'ECONNABORTED' || error.message.includes('timeout'))) {
-            console.log(`Retrying fetch attempt ${retryCount + 1}/3...`);
-            const backoffDelay = Math.min(1000 * Math.pow(2, retryCount), 8000); // Exponential backoff with max 8s
-            setTimeout(() => fetchUserData(retryCount + 1), backoffDelay);
-            return;
-          }
-          
-          // Try to use cached data if available
-          const cachedUser = localStorage.getItem('user');
-          if (cachedUser) {
-            try {
-              const parsedUser = JSON.parse(cachedUser);
-              setUserData(parsedUser);
-              setIsLoading(false);
-              
-              // Even with cached data, try to fetch profile data
-              try {
-                const profileData = await profileService.getAllProfileData();
-                setProfileData(profileData);
-              } catch (profileError) {
-                console.error('Error fetching profile data with cached user:', profileError);
-              }
-            } catch (e) {
-              // Invalid cached data
-              localStorage.removeItem('user');
-              setIsLoading(false);
-            }
-          } else {
-            setIsLoading(false);
-          }
-          
-          // Remove loading state on error
+          console.error('Error fetching initial user data:', error);
+          setLoadingState(LOADING_STATES.ERROR);
           hideGlobalLoader();
         }
       } else {
-        setIsLoading(false);
-        // Remove loading state if not logged in
+        // Not authenticated
         hideGlobalLoader();
       }
     };
 
-    // Vérifier l'état d'authentification au montage
-    setIsAuthenticated(authService.isLoggedIn());
-    
-    // Charger les données utilisateur au montage
-    fetchUserData();
-
-    // Handle user-data-loaded event to remove loading class
-    const handleUserDataLoaded = () => {
-      // Remove loading class after a short delay
-      hideGlobalLoader(300);
+    const handleMinimalDataReady = (event) => {
+      // Mise à jour immédiate avec les données minimales du token
+      if (event.detail && event.detail.user) {
+        setUserData(event.detail.user);
+        setLoadingState(LOADING_STATES.MINIMAL);
+      }
     };
 
+    const handleUserDataUpdated = (event) => {
+      // Mise à jour avec les données complètes du profil
+      if (event.detail && event.detail.user) {
+        setUserData(event.detail.user);
+        setLoadingState(LOADING_STATES.COMPLETE);
+        
+        // Charger les données de profil complètes
+        profileService.getAllProfileData()
+          .then(profileData => {
+            setProfileData(profileData);
+          })
+          .catch(error => {
+            console.warn('Error loading profile data after update:', error);
+          });
+      }
+    };
+
+    const handleLoginSuccess = () => {
+      // Update authentication state immediately
+      setIsAuthenticated(true);
+      
+      // Don't show the global loader here - we'll use skeleton loading
+      // instead of blocking the UI
+    };
+
+    const handleLogoutSuccess = () => {
+      // Show loading before any state changes
+      showGlobalLoader();
+      
+      // Reset all states
+      setIsAuthenticated(false);
+      setUserData(null);
+      setProfileData(null);
+      setLoadingState(LOADING_STATES.INITIAL);
+      
+      // Hide loader after a short delay
+      setTimeout(() => {
+        hideGlobalLoader();
+      }, 300);
+    };
+    
+    // Vérifier l'état d'authentification et récupérer les données initiales
+    setIsAuthenticated(authService.isLoggedIn());
+    fetchInitialUserData();
+
     // Ajouter les écouteurs d'événements
+    document.addEventListener('auth:minimal-data-ready', handleMinimalDataReady);
+    document.addEventListener('user:data-updated', handleUserDataUpdated);
     window.addEventListener('login-success', handleLoginSuccess);
     window.addEventListener('logout-success', handleLogoutSuccess);
-    window.addEventListener('auth-logout-success', handleLogoutSuccess);
-    window.addEventListener('query-cache-cleared', handleLogoutSuccess);
-    window.addEventListener('user-data-loaded', handleUserDataLoaded);
 
     // Nettoyer les écouteurs d'événements
     return () => {
+      document.removeEventListener('auth:minimal-data-ready', handleMinimalDataReady);
+      document.removeEventListener('user:data-updated', handleUserDataUpdated);
       window.removeEventListener('login-success', handleLoginSuccess);
       window.removeEventListener('logout-success', handleLogoutSuccess);
-      window.removeEventListener('auth-logout-success', handleLogoutSuccess);
-      window.removeEventListener('query-cache-cleared', handleLogoutSuccess);
-      window.removeEventListener('user-data-loaded', handleUserDataLoaded);
     };
   }, [calculateMinHeight]);
-
-  // Montrer le loader global pendant le chargement des rôles si l'utilisateur est authentifié
-  useEffect(() => {
-    if (isAuthenticated && rolesLoading) {
-      showGlobalLoader();
-    } else {
-      hideGlobalLoader();
-    }
-  }, [isAuthenticated, rolesLoading]);
 
   // Create a memoized context value to prevent unnecessary re-renders
   const profileContextValue = useMemo(() => ({
     profileData,
     refreshProfileData,
-    isProfileLoading: isLoading
-  }), [profileData, refreshProfileData, isLoading]);
+    isProfileLoading: loadingState === LOADING_STATES.LOADING
+  }), [profileData, refreshProfileData, loadingState]);
 
-  // Immediately hide scrollbars when component mounts
-  useLayoutEffect(() => {
-    // Apply Chrome-specific scrollbar hiding
-    document.documentElement.style.setProperty('--webkit-scrollbar-width', '0px');
-    document.documentElement.style.setProperty('--webkit-scrollbar-display', 'none');
-
-    // Force Chrome to re-evaluate its scrollbar display
-    const styleEl = document.createElement('style');
-    styleEl.textContent = `
-      ::-webkit-scrollbar {
-        display: none !important;
-        width: 0 !important;
-        height: 0 !important;
-        background: transparent !important;
-      }
-    `;
-    document.head.appendChild(styleEl);
-
-    return () => {
-      // Cleanup if necessary
-      if (styleEl && styleEl.parentNode) {
-        styleEl.parentNode.removeChild(styleEl);
-      }
-    };
-  }, []);
+  // Déterminer si nous devons afficher un état de chargement
+  const isLoading = loadingState === LOADING_STATES.INITIAL || loadingState === LOADING_STATES.LOADING;
+  const hasMinimalData = loadingState === LOADING_STATES.MINIMAL || loadingState === LOADING_STATES.COMPLETE;
 
   return (
     <ProfileContext.Provider value={profileContextValue}>
       <div className="flex flex-col min-h-screen bg-gray-50">
         {/* Navbar conditionally rendered */}
-        {!isFullScreenPage && <Navbar user={userData} />}
+        {!isFullScreenPage && (
+          <Navbar 
+            user={userData} 
+            isLoading={loadingState !== LOADING_STATES.COMPLETE && isAuthenticated} 
+          />
+        )}
         
         {/* Main content with minimum height to ensure footer is below viewport */}
         <main 
           className={`flex-grow ${isFullScreenPage ? 'px-0 py-0' : 'container mx-auto px-4 py-8'}`}
           style={{ minHeight: minContentHeight }}
         >
-          <Outlet />
+          {/* Passer l'état de chargement au contexte Outlet */}
+          <Outlet context={{ 
+            userData, 
+            profileData, 
+            loadingState,
+            isLoading,
+            hasMinimalData
+          }} />
         </main>
 
         {showProgress && profileData && hasRole(ROLES.GUEST) && (
@@ -303,7 +252,7 @@ const MainLayout = () => {
         {/* Add ChatButton for authenticated users */}
         {isAuthenticated && !isFullScreenPage && <ChatButton />}
         
-        {/* Footer sans transition */}
+        {/* Footer */}
         <Footer />
       </div>
     </ProfileContext.Provider>

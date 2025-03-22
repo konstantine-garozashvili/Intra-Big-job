@@ -128,11 +128,6 @@ export const authService = {
         localStorage.setItem('refresh_token', response.refresh_token);
       }
       
-      // Store user information if present in response
-      if (response.user) {
-        localStorage.setItem('user', JSON.stringify(response.user));
-      }
-      
       // Extract detailed info from JWT token for immediate use
       if (response.token) {
         try {
@@ -151,7 +146,9 @@ export const authService = {
                 firstName: payload.firstName,
                 lastName: payload.lastName,
                 // Add token extraction timestamp for tracking freshness
-                _extractedAt: Date.now()
+                _extractedAt: Date.now(),
+                // Mark as minimal data to indicate it's from token
+                _minimal: true
               };
               
               localStorage.setItem('user', JSON.stringify(enhancedUser));
@@ -164,8 +161,10 @@ export const authService = {
                 queryClient.setQueryData(['user', 'current'], enhancedUser);
               }
               
-              // Trigger the login success event immediately
-              window.dispatchEvent(new Event('login-success'));
+              // Signal that minimal data is ready for rendering
+              document.dispatchEvent(new CustomEvent('auth:minimal-data-ready', { 
+                detail: { user: enhancedUser } 
+              }));
             }
           }
         } catch (tokenError) {
@@ -174,17 +173,17 @@ export const authService = {
         }
       }
       
-      // Initiate user data loading in the background without awaiting or delaying navigation
-      setTimeout(() => {
-        this.lazyLoadUserData().catch(() => {
-          // Silently ignore any errors in background loading
-        });
-        
-        // Clear login in progress flag after background operations complete
-        setTimeout(() => {
-          sessionStorage.removeItem('login_in_progress');
-        }, 1000);
-      }, 500);
+      // Hide the global loader immediately after basic auth is completed
+      // This will allow the UI to render with skeleton loaders
+      hideGlobalLoader();
+      
+      // Trigger the login success event immediately
+      window.dispatchEvent(new Event('login-success'));
+      
+      // Initiate user data loading in the background without blocking navigation
+      this.lazyLoadUserData(true).catch(err => {
+        console.warn('Background data loading error:', err);
+      });
       
       return response;
     } catch (error) {
@@ -199,46 +198,84 @@ export const authService = {
   },
 
   /**
-   * Charge les données utilisateur en arrière-plan
+   * Charge les données utilisateur en arrière-plan sans bloquer l'interface
+   * @param {boolean} isInitialLoad - Indique s'il s'agit du chargement initial après connexion
    * @returns {Promise<Object>} - Données utilisateur complètes
    */
-  async lazyLoadUserData() {
+  async lazyLoadUserData(isInitialLoad = false) {
     const cachedUser = this.getUser();
     if (!cachedUser) return null;
     
     try {
-      // Create a timeout promise with increased timeout (5 seconds)
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => {
-          reject(new Error('User data fetch timeout'));
-        }, 5000); // Increased from 2000ms to 5000ms for better reliability
-      });
+      // Démarrer le chargement des données en parallèle
+      const loadPromises = [];
       
-      // Use the correct endpoint format for user data
-      const userData = await Promise.race([
-        apiService.get('/profile/me', { 
-          noCache: false,    // Use cache if available
-          retries: 2,        // Allow more retries for reliability
-          timeout: 5000      // 5 seconds timeout
-        }),
-        timeoutPromise
-      ]).catch(error => {
-        console.warn('Failed to fetch profile data:', error.message);
-        // Return the cached user data as fallback
-        return cachedUser;
+      // 1. Charger les données de profil de base - Priorité haute
+      const profilePromise = this._loadProfileData();
+      loadPromises.push(profilePromise);
+      
+      // 2. Charger d'autres données non critiques en parallèle si ce n'est pas le chargement initial
+      if (!isInitialLoad) {
+        // Ces chargements ne sont pas critiques pour l'affichage initial
+        // Ils peuvent être ajoutés selon les besoins de l'application
+      }
+      
+      // Attendre que les données critiques soient chargées
+      const results = await Promise.allSettled(loadPromises);
+      
+      // Récupérer le résultat du chargement du profil
+      const profileResult = results[0];
+      let enhancedUser = cachedUser;
+      
+      if (profileResult.status === 'fulfilled' && profileResult.value) {
+        enhancedUser = profileResult.value;
+      }
+      
+      // Terminer le processus de connexion
+      sessionStorage.removeItem('login_in_progress');
+      
+      // Signaler que les données complètes sont disponibles
+      document.dispatchEvent(new CustomEvent('user:data-updated', { 
+        detail: { user: enhancedUser } 
+      }));
+      
+      return enhancedUser;
+    } catch (error) {
+      console.warn('Erreur lors du chargement des données utilisateur:', error);
+      sessionStorage.removeItem('login_in_progress');
+      return cachedUser;
+    }
+  },
+  
+  /**
+   * Charge les données de profil de base avec timeout adaptatif
+   * @private
+   * @returns {Promise<Object>}
+   */
+  async _loadProfileData() {
+    try {
+      // Déterminer le timeout adapté à la performance de l'appareil
+      const timeout = window._devicePerformanceScore > 50 ? 5000 : 3000;
+      
+      const userData = await apiService.get('/profile/me', {
+        noCache: false,
+        retries: 1,
+        timeout: timeout
       });
       
       if (userData && userData.success !== false) {
-        // Update localStorage with complete user data
+        // Mettre à jour les données utilisateur avec les nouvelles données de profil
+        const cachedUser = this.getUser();
         const enhancedUser = {
           ...cachedUser,
           ...userData,
-          _updatedAt: Date.now()
+          _updatedAt: Date.now(),
+          _minimal: false
         };
         
         localStorage.setItem('user', JSON.stringify(enhancedUser));
         
-        // Update React Query cache if available
+        // Mettre à jour le cache React Query
         const queryClient = getQueryClient();
         if (queryClient) {
           queryClient.setQueryData(['user', 'current'], enhancedUser);
@@ -246,18 +283,11 @@ export const authService = {
         
         return enhancedUser;
       }
-      
-      // If we reach here, something went wrong but we have cached user data
-      return cachedUser;
     } catch (error) {
-      console.warn('Failed to load complete user data:', error.message || 'Unknown error');
-      
-      // Ensure login in progress flag is cleared on error
-      sessionStorage.removeItem('login_in_progress');
-      
-      // Still return cached user data if available
-      return cachedUser;
+      console.warn('Erreur lors du chargement des données de profil:', error);
     }
+    
+    return this.getUser();
   },
 
   /**

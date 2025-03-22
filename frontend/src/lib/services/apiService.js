@@ -3,9 +3,64 @@ import axios from 'axios';
 // Import the low performance mode detection from loadingUtils
 import { setLowPerformanceMode } from '../utils/loadingUtils';
 
+// Détection des performances de l'appareil
+function detectDevicePerformance() {
+  // Si déjà détecté, utiliser la valeur en cache
+  if (window._devicePerformanceScore !== undefined) {
+    return window._devicePerformanceScore;
+  }
+  
+  try {
+    const startTime = performance.now();
+    
+    // Test simple de performance - calcul intense
+    let result = 0;
+    for (let i = 0; i < 100000; i++) {
+      result += Math.sqrt(i);
+    }
+    
+    const endTime = performance.now();
+    const executionTime = endTime - startTime;
+    
+    // Score basé sur le temps d'exécution (0-100)
+    // Plus bas = meilleure performance
+    const performanceScore = Math.min(100, Math.max(0, executionTime / 10));
+    
+    // Stocker le score pour la session
+    window._devicePerformanceScore = performanceScore;
+    
+    // Définir également le mode performance basse si nécessaire
+    if (performanceScore > 70) {
+      setLowPerformanceMode(true);
+    }
+    
+    console.log(`Performance de l'appareil détectée: ${performanceScore}/100`);
+    return performanceScore;
+  } catch (e) {
+    console.warn('Impossible de mesurer la performance du dispositif', e);
+    return 50; // Score moyen par défaut
+  }
+}
+
+// Calculer les timeouts adaptatifs en fonction de la performance du dispositif
+function getAdaptiveTimeout(baseTimeout, isImportant = false) {
+  const performanceScore = detectDevicePerformance();
+  
+  // Pour les requêtes importantes, limiter l'augmentation du timeout
+  const multiplier = isImportant ? 
+    Math.max(1, 1 + (performanceScore / 100)) : // Max 2x pour importantes
+    Math.max(1, 1.5 + (performanceScore / 50));  // Max 3.5x pour non-importantes
+  
+  return Math.round(baseTimeout * multiplier);
+}
+
 // Determine if we're in low performance mode
 const isLowPerformanceMode = () => {
-  return localStorage.getItem('preferLowPerformanceMode') === 'true';
+  // Run the performance detection on first call
+  if (window._devicePerformanceScore === undefined) {
+    detectDevicePerformance();
+  }
+  return localStorage.getItem('preferLowPerformanceMode') === 'true' || window._devicePerformanceScore > 70;
 };
 
 // Configure default timeouts based on performance mode
@@ -199,18 +254,28 @@ const apiService = {
         }
       }
       
-      // Is this a non-critical profile request?
+      // Identifier le type de requête pour optimiser les timeouts
       const isProfileRequest = path.includes('/profile') || path.includes('/me');
       const isMessagesRequest = path.includes('/messages');
+      const isCriticalRequest = path.includes('/auth') || options.critical === true;
+      
+      // Définir les timeouts de base selon le type de requête
+      const baseTimeout = isProfileRequest ? 3000 : 
+                          isMessagesRequest ? 5000 : 
+                          isCriticalRequest ? 8000 : 10000;
+      
+      // Appliquer le timeout adaptatif en fonction des performances de l'appareil
+      const adaptiveTimeout = options.timeout || getAdaptiveTimeout(baseTimeout, isCriticalRequest);
       
       // Configure axios request with appropriate timeouts
       const requestConfig = {
         ...options,
-        timeout: options.timeout || (isProfileRequest ? 5000 : (isMessagesRequest ? 8000 : 15000))
+        timeout: adaptiveTimeout
       };
       
       // Implement retries for profile and messages requests
-      const maxRetries = options.retries || (isProfileRequest || isMessagesRequest ? 2 : 0);
+      const maxRetries = options.retries !== undefined ? options.retries : 
+                         (isProfileRequest || isMessagesRequest) ? 1 : 0;
       let retries = 0;
       let lastError = null;
       

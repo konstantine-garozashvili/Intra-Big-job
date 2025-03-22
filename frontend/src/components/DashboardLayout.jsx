@@ -2,6 +2,8 @@ import React, { memo } from 'react';
 import PropTypes from 'prop-types';
 import { motion } from 'framer-motion';
 import { AlertCircle } from 'lucide-react';
+import { useOutletContext } from 'react-router-dom';
+import DashboardSkeleton from './DashboardSkeleton';
 
 // Composant d'erreur optimisé
 const ErrorDisplay = memo(({ errorMessage }) => (
@@ -36,9 +38,25 @@ ErrorDisplay.propTypes = {
 
 /**
  * Composant de base pour tous les dashboards
- * Gère l'affichage des états d'erreur
+ * Gère l'affichage des états d'erreur et de chargement
  */
-const DashboardLayout = ({ error, children, className = "" }) => {
+const DashboardLayout = ({ error, children, className = "", isLoading, showSkeleton = true }) => {
+  // Récupérer le contexte de chargement depuis le MainLayout
+  const context = useOutletContext() || {};
+  
+  // Utiliser l'état de chargement passé en prop ou depuis le contexte
+  const isLoadingState = isLoading || (context.isLoading && !context.hasMinimalData);
+  
+  // Afficher le squelette pendant le chargement si demandé
+  if (isLoadingState && showSkeleton) {
+    return (
+      <div className={`container mx-auto p-8 ${className}`}>
+        <DashboardSkeleton />
+      </div>
+    );
+  }
+  
+  // Afficher l'erreur si présente
   if (error) {
     return (
       <div className={`container mx-auto p-8 ${className}`}>
@@ -47,6 +65,7 @@ const DashboardLayout = ({ error, children, className = "" }) => {
     );
   }
 
+  // Animer uniquement l'entrée initiale pour éviter les animations lors des mises à jour
   return (
     <motion.div 
       className={`container mx-auto p-8 ${className}`}
@@ -62,7 +81,9 @@ const DashboardLayout = ({ error, children, className = "" }) => {
 DashboardLayout.propTypes = {
   error: PropTypes.string,
   children: PropTypes.node.isRequired,
-  className: PropTypes.string
+  className: PropTypes.string,
+  isLoading: PropTypes.bool,
+  showSkeleton: PropTypes.bool
 };
 
 // Utiliser memo pour éviter les re-rendus inutiles

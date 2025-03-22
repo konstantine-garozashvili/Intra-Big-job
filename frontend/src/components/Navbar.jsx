@@ -32,6 +32,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { MenuBurger } from "./MenuBurger";
 import { SearchBar } from "./SearchBar";
 import { useRolePermissions } from "../features/roles/useRolePermissions";
+import { Skeleton } from './ui/skeleton';
 
 // Style personnalisé pour le menu dropdown et le bouton burger
 const customStyles = `
@@ -279,6 +280,7 @@ const Navbar = memo(() => {
   const permissions = useRolePermissions();
   const navigate = useNavigate();
   const location = useLocation();
+  const [isLoading, setIsLoading] = useState(true);
 
   // Vérifier l'état d'authentification
   const checkAuthStatus = async () => {
@@ -338,6 +340,8 @@ const Navbar = memo(() => {
       }
     } catch (error) {
       console.error('Erreur lors de la vérification de l\'authentification:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -447,7 +451,12 @@ const Navbar = memo(() => {
                 )}
                 
                 {/* Menu utilisateur */}
-                {isAuthenticated ? (
+                {isLoading ? (
+                  <div className="flex items-center space-x-3">
+                    <Skeleton className="h-8 w-24 rounded-md" />
+                    <Skeleton className="h-10 w-10 rounded-full" />
+                  </div>
+                ) : isAuthenticated ? (
                   <UserMenu
                     onLogout={() => setLogoutDialogOpen(true)}
                     userData={userData}
