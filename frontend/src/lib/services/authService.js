@@ -207,6 +207,8 @@ export const authService = {
     const cachedUser = this.getUser();
     if (!cachedUser) return null;
     
+    console.log('🔄 authService.lazyLoadUserData: starting with isInitialLoad=', isInitialLoad);
+    
     try {
       // Démarrer le chargement des données en parallèle
       const loadPromises = [];
@@ -224,12 +226,32 @@ export const authService = {
       // Attendre que les données critiques soient chargées
       const results = await Promise.allSettled(loadPromises);
       
+      console.log('🔄 authService.lazyLoadUserData: profile data loaded, results:', results);
+      
       // Récupérer le résultat du chargement du profil
       const profileResult = results[0];
       let enhancedUser = cachedUser;
       
       if (profileResult.status === 'fulfilled' && profileResult.value) {
         enhancedUser = profileResult.value;
+        
+        // Ensure data is properly saved to localStorage
+        localStorage.setItem('user', JSON.stringify(enhancedUser));
+        console.log('🔄 authService.lazyLoadUserData: saved enhanced user to localStorage');
+        
+        // Update React Query cache
+        try {
+          const queryClient = getQueryClient();
+          if (queryClient) {
+            const sessionId = getSessionId();
+            queryClient.setQueryData(['user', 'current'], enhancedUser);
+            queryClient.setQueryData(['unified-user-data', '/api/me', sessionId], enhancedUser);
+            queryClient.setQueryData(['user-data', enhancedUser?.id || 'anonymous', sessionId], enhancedUser);
+            console.log('🔄 authService.lazyLoadUserData: updated React Query cache');
+          }
+        } catch (cacheError) {
+          console.warn('🔄 authService.lazyLoadUserData: Error updating cache:', cacheError);
+        }
       }
       
       // Terminer le processus de connexion
@@ -240,33 +262,76 @@ export const authService = {
         detail: { user: enhancedUser } 
       }));
       
+      // Also dispatch the specific event that AuthForm is waiting for
+      window.dispatchEvent(new Event('user-data-loaded'));
+      console.log('🔄 authService.lazyLoadUserData: dispatched user-data-loaded event');
+      
       return enhancedUser;
     } catch (error) {
       console.warn('Erreur lors du chargement des données utilisateur:', error);
       sessionStorage.removeItem('login_in_progress');
+      
+      // Even in case of error, dispatch the event to unblock navigation
+      window.dispatchEvent(new Event('user-data-loaded'));
+      console.log('🔄 authService.lazyLoadUserData: dispatched user-data-loaded event (after error)');
+      
       return cachedUser;
     }
   },
   
   /**
-   * Charge les données de profil de base avec timeout adaptatif
+   * Charge les données de profil utilisateur depuis l'API
    * @private
-   * @returns {Promise<Object>}
+   * @returns {Promise<Object>} - Données de profil
    */
   async _loadProfileData() {
     try {
-      // Utiliser le nouveau gestionnaire de données utilisateur
-      const userData = await userDataManager.getUserData({
-        routeKey: '/profile/me',
-        forceRefresh: false,
+      console.log('🔄 authService._loadProfileData: Starting profile data fetch');
+      
+      // Éviter de charger les données si l'utilisateur n'est pas connecté
+      if (!this.isLoggedIn()) {
+        console.log('🔄 authService._loadProfileData: Not logged in, aborting');
+        return null;
+      }
+      
+      // Get data directly from /api/me endpoint (the most reliable source)
+      const response = await apiService.get('/api/me', { 
+        noCache: true,
+        timeout: 10000,
+        retries: 1
       });
+      
+      console.log('🔄 authService._loadProfileData: /api/me response:', response);
+      
+      // Extract user data from response
+      let userData = null;
+      
+      if (response.user) {
+        userData = response.user;
+      } else if (response.data && response.data.user) {
+        userData = response.data.user;
+      } else if (response.success && response.user) {
+        userData = response.user;
+      } else {
+        // If there's no user property, assume the entire response is the user data
+        userData = response;
+      }
+      
+      if (!userData) {
+        console.warn('🔄 authService._loadProfileData: No valid user data found in response');
+        return null;
+      }
+      
+      console.log('🔄 authService._loadProfileData: Extracted user data:', userData);
+      
+      // Store the comprehensive user data in localStorage
+      localStorage.setItem('user', JSON.stringify(userData));
       
       return userData;
     } catch (error) {
-      console.warn('Erreur lors du chargement des données de profil:', error);
+      console.error('🔄 authService._loadProfileData: Error loading profile data:', error);
+      return null;
     }
-    
-    return this.getUser();
   },
 
   /**

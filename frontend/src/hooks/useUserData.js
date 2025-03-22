@@ -28,10 +28,14 @@ export function useUserData(options = {}) {
 
   // Déterminer la route à utiliser
   const routeKey = preferComprehensiveData ? '/profile/consolidated' : '/api/me';
+  
+  console.log(`🔄 useUserData: Hook initialized with routeKey=${routeKey}, sessionId=${sessionId}, enabled=${enabled}`);
 
   // Récupérer les données initiales du cache si disponibles
   const getCachedData = useCallback(() => {
-    return userDataManager.getCachedUserData();
+    const cached = userDataManager.getCachedUserData();
+    console.log(`🔄 useUserData: Retrieved cached data:`, cached);
+    return cached;
   }, []);
 
   // Utiliser React Query pour gérer l'état et le cache
@@ -44,8 +48,13 @@ export function useUserData(options = {}) {
   } = useQuery({
     queryKey: ['unified-user-data', routeKey, sessionId],
     queryFn: async () => {
+      console.log(`🔄 useUserData: queryFn executing for ${routeKey}`);
       setIsInitialLoading(true);
       try {
+        // Check existing cache directly
+        const existingCache = queryClient.getQueryData(['unified-user-data', routeKey, sessionId]);
+        console.log(`🔄 useUserData: Existing query cache:`, existingCache);
+        
         // Utiliser userDataManager pour récupérer les données
         const data = await userDataManager.getUserData({
           routeKey,
@@ -53,9 +62,11 @@ export function useUserData(options = {}) {
           useCache: true
         });
         
+        console.log(`🔄 useUserData: Data received from userDataManager:`, data);
         setIsInitialLoading(false);
         return data;
       } catch (error) {
+        console.error(`🔄 useUserData: Error fetching data:`, error);
         setIsInitialLoading(false);
         throw error;
       }
@@ -70,9 +81,11 @@ export function useUserData(options = {}) {
     retry: 1,
     ...queryOptions,
     onSuccess: (data) => {
+      console.log(`🔄 useUserData: onSuccess with data:`, data);
       if (onSuccess) onSuccess(data);
     },
     onError: (err) => {
+      console.error(`🔄 useUserData: onError:`, err);
       if (onError) onError(err);
     }
   });

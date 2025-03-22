@@ -174,6 +174,9 @@ const userDataManager = {
   async _loadUserData(routeKey, options = {}) {
     const { forceRefresh = false, background = false } = options;
     
+    // DEBUG - Log the request
+    console.log(`🔍 userDataManager._loadUserData: Starting request to ${routeKey}, forceRefresh=${forceRefresh}, background=${background}`);
+    
     // Notifier que le chargement a commencé si ce n'est pas un chargement en arrière-plan
     if (!background) {
       userDataCache.isLoading = true;
@@ -190,8 +193,14 @@ const userDataManager = {
           timeout: background ? 8000 : 12000, // Timeout plus court pour les requêtes en arrière-plan
         };
 
+        // DEBUG - Log API call
+        console.log(`🔍 userDataManager: Calling apiService.get(${routeKey})`, apiOptions);
+
         // Appeler l'API pour obtenir les données utilisateur
         const response = await apiService.get(routeKey, apiOptions);
+        
+        // DEBUG - Log raw response
+        console.log(`🔍 userDataManager: Raw API response from ${routeKey}:`, response);
         
         // Extraire les données utilisateur de la réponse
         let userData = response;
@@ -203,6 +212,9 @@ const userDataManager = {
           userData = response.user;
         }
 
+        // DEBUG - Log extracted data 
+        console.log(`🔍 userDataManager: Extracted user data:`, userData);
+
         // Stocker les données dans le cache
         userDataCache.data = userData;
         userDataCache.timestamp = Date.now();
@@ -211,6 +223,14 @@ const userDataManager = {
 
         // Stocker les données utilisateur dans le localStorage
         localStorage.setItem('user', JSON.stringify(userData));
+        
+        // DEBUG - Verify localStorage
+        try {
+          const savedData = localStorage.getItem('user');
+          console.log(`🔍 userDataManager: Data saved to localStorage:`, savedData ? JSON.parse(savedData) : null);
+        } catch (e) {
+          console.error(`🔍 userDataManager: Error checking localStorage:`, e);
+        }
         
         // Mettre à jour le cache React Query
         const queryClient = getQueryClient();
@@ -221,6 +241,12 @@ const userDataManager = {
           const sessionId = getSessionId();
           queryClient.setQueryData(['user-data', userData?.id || 'anonymous', sessionId], userData);
           queryClient.setQueryData(['currentUser'], userData);
+          
+          // Also update the unified key used by useUserData hook
+          queryClient.setQueryData(['unified-user-data', routeKey, sessionId], userData);
+          
+          // DEBUG - Log QueryClient update
+          console.log(`🔍 userDataManager: Updated query cache for ['unified-user-data', '${routeKey}', '${sessionId}']`);
         }
 
         // Notifier que les données ont été chargées

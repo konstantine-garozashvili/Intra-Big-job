@@ -1,8 +1,9 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import authService from '@/lib/services/authService';
-import apiService from '@/lib/services/apiService';
+import { authService } from '@/lib/services/authService';
+import userDataManager from '@/lib/services/userDataManager';
 import { useEffect, useState, useRef } from 'react';
 import { toast } from 'sonner';
+import { useRolePermissions } from '@/features/roles/useRolePermissions';
 
 /**
  * Composant de route protégée pour les recruteurs et administrateurs
@@ -17,24 +18,28 @@ const RecruiterProtectedRoute = () => {
   const renderedOutletRef = useRef(false);
   const checkedRolesRef = useRef(false);
   const notificationShownRef = useRef(false);
+  const lastCheckRef = useRef(0);
+  const permissions = useRolePermissions();
 
   useEffect(() => {
     // Réinitialiser la notification à chaque changement de chemin
+    renderedOutletRef.current = false;
+    checkedRolesRef.current = false;
     notificationShownRef.current = false;
     
     const checkAuth = async () => {
+      // Éviter les vérifications trop fréquentes (moins de 50ms d'intervalle)
+      const now = Date.now();
+      if (now - lastCheckRef.current < 50) {
+        return;
+      }
+      lastCheckRef.current = now;
+      
       // Réinitialiser le statut de vérification
       setIsChecking(true);
       
-      // Vérifier si l'utilisateur est connecté via le token
-      const token = localStorage.getItem('token');
-      console.log('Token dans localStorage:', token ? 'Présent' : 'Absent');
-      
-      // Vérifier les données utilisateur
-      const userStr = localStorage.getItem('user');
-      console.log('Données utilisateur dans localStorage:', userStr);
-      
-      if (!token) {
+      // Vérifier si l'utilisateur est connecté
+      if (!authService.isLoggedIn()) {
         if (!notificationShownRef.current) {
           toast.error('Veuillez vous connecter pour accéder à cette page', {
             duration: 3000,
@@ -54,55 +59,69 @@ const RecruiterProtectedRoute = () => {
           return;
         }
         
-        // Récupérer les informations de l'utilisateur
-        const user = authService.getUser();
-        console.log('Utilisateur récupéré via authService.getUser():', user);
+        // Récupérer les données utilisateur en privilégiant le cache
+        let userData;
+        const cachedUserData = userDataManager.getCachedUserData();
         
-        // Si nous n'avons pas d'informations utilisateur, essayer de les récupérer via l'API
-        if (!user) {
-          console.log('Tentative de récupération des informations utilisateur via API...');
-          try {
-            // Tenter de récupérer les informations utilisateur via l'API
-            const userData = await authService.getCurrentUser();
-            console.log('Données utilisateur récupérées via API:', userData);
-            
-            // Stocker les informations utilisateur dans le localStorage
-            if (userData) {
-              localStorage.setItem('user', JSON.stringify(userData));
-              console.log('Informations utilisateur stockées dans localStorage');
-              
-              // Vérifier les rôles avec les nouvelles données
-              checkRoles(userData);
-            } else {
-              console.log('Aucune donnée utilisateur récupérée via API');
-              setHasAccess(false); // Ne pas autoriser sans données utilisateur
-              if (!notificationShownRef.current) {
-                toast.error('Impossible de vérifier vos droits d\'accès', {
-                  duration: 3000,
-                  position: 'top-center',
-                });
-                notificationShownRef.current = true;
-              }
-            }
-          } catch (apiError) {
-            console.error('Erreur lors de la récupération des données utilisateur via API:', apiError);
-            setHasAccess(false); // Ne pas autoriser en cas d'erreur
-            if (!notificationShownRef.current) {
-              toast.error('Erreur lors de la vérification de vos droits d\'accès', {
-                duration: 3000,
-                position: 'top-center',
-              });
-              notificationShownRef.current = true;
-            }
+        if (cachedUserData) {
+          // Utiliser les données en cache si disponibles
+          console.log('RecruiterProtectedRoute: Utilisation des données utilisateur en cache');
+          userData = cachedUserData;
+          
+          // Vérifier si les données sont actuelles
+          const stats = userDataManager.getStats();
+          if (stats.dataAge && stats.dataAge > 5 * 60 * 1000) { // 5 minutes
+            // Rafraîchir en arrière-plan sans bloquer l'affichage
+            userDataManager.getUserData({
+              forceRefresh: false,
+              background: true,
+              requestId: 'recruiter_protected_route_background'
+            }).catch(e => {
+              console.warn('Erreur lors du rafraîchissement en arrière-plan:', e);
+            });
           }
         } else {
-          // Vérifier les rôles avec les données existantes
-          checkRoles(user);
+          // Si pas de cache, récupérer les données via le service utilisateur
+          console.log('RecruiterProtectedRoute: Récupération des données utilisateur via API');
+          userData = await authService.getCurrentUser(false, { requestSource: 'recruiterProtectedRoute' });
+        }
+        
+        if (!userData) {
+          setHasAccess(false);
+          setIsChecking(false);
+          if (!notificationShownRef.current) {
+            toast.error('Impossible de récupérer vos informations, veuillez vous reconnecter', {
+              duration: 3000,
+              position: 'top-center',
+            });
+            notificationShownRef.current = true;
+          }
+          return;
+        }
+        
+        // Utiliser les permissions du contexte des rôles pour une cohérence globale
+        const hasRecruiterAccess = permissions.isRecruiter() || permissions.isAdmin();
+        
+        // Si les permissions ne sont pas encore chargées, vérifier manuellement
+        if (!hasRecruiterAccess && userData.roles) {
+          const hasRequiredRole = checkRolesManually(userData);
+          setHasAccess(hasRequiredRole);
+          checkedRolesRef.current = true;
+        } else {
+          setHasAccess(hasRecruiterAccess);
+          checkedRolesRef.current = true;
+        }
+        
+        // Afficher une notification si l'accès est refusé
+        if (!hasAccess && !notificationShownRef.current) {
+          toast.error('Vous n\'avez pas les droits nécessaires pour accéder à cette page', {
+            duration: 3000,
+            position: 'top-center',
+          });
+          notificationShownRef.current = true;
         }
       } catch (error) {
         console.error('Erreur lors de la vérification des droits:', error);
-        
-        // En cas d'erreur, ne pas autoriser l'accès
         setHasAccess(false);
         if (!notificationShownRef.current) {
           toast.error('Erreur lors de la vérification de vos droits d\'accès', {
@@ -116,10 +135,8 @@ const RecruiterProtectedRoute = () => {
       }
     };
     
-    // Fonction pour vérifier les rôles
-    const checkRoles = (user) => {
-      console.log('Vérification des rôles pour:', user);
-      
+    // Fonction pour vérifier manuellement les rôles (fallback)
+    const checkRolesManually = (user) => {
       // Extraire les rôles de l'utilisateur
       let userRoles = [];
       
@@ -131,10 +148,8 @@ const RecruiterProtectedRoute = () => {
         userRoles = Array.isArray(user.role) ? user.role : [user.role];
       }
       
-      console.log('Rôles extraits:', userRoles);
-      
       // Vérifier si l'utilisateur a le rôle de recruteur, d'administrateur ou de super-administrateur
-      const hasRequiredRole = userRoles.some(role => {
+      return userRoles.some(role => {
         let roleName = '';
         
         if (typeof role === 'object' && role !== null) {
@@ -146,7 +161,6 @@ const RecruiterProtectedRoute = () => {
         }
         
         roleName = roleName.toLowerCase();
-        console.log('Vérification du rôle:', roleName);
         
         return roleName.includes('recruiter') || 
                roleName.includes('admin') || 
@@ -154,50 +168,44 @@ const RecruiterProtectedRoute = () => {
                roleName === 'role_admin' ||
                roleName === 'role_superadmin';
       });
-      
-      console.log('A les droits requis:', hasRequiredRole);
-      
-      // Marquer que nous avons vérifié les rôles
-      checkedRolesRef.current = true;
-      
-      // Si l'utilisateur n'a pas les droits requis, afficher un message d'erreur
-      if (!hasRequiredRole && !notificationShownRef.current) {
-        toast.error('Vous n\'avez pas les droits nécessaires pour accéder à cette page', {
-          duration: 3000,
-          position: 'top-center',
-        });
-        notificationShownRef.current = true;
-      }
-      
-      setHasAccess(hasRequiredRole);
     };
 
     checkAuth();
-  }, [location.pathname]);
+  }, [location.pathname, permissions]);
 
   // Pendant la vérification, on renvoie le contenu existant ou null la première fois
   if (isChecking) {
     // Si on a déjà rendu l'Outlet auparavant et qu'on est authentifié, on continue de l'afficher
     // pour éviter un flash de chargement
-    if (renderedOutletRef.current && localStorage.getItem('token')) {
+    if (renderedOutletRef.current && authService.isLoggedIn()) {
       return <Outlet />;
     }
     
-    return null;
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-lg">Vérification de vos droits d'accès...</p>
+        </div>
+      </div>
+    );
   }
 
   // Si l'utilisateur n'est pas authentifié ou n'a pas les droits nécessaires
   if (!hasAccess) {
-    console.log('Accès refusé, redirection en cours...');
-    
     // Redirection vers la page de connexion si non connecté
-    if (!localStorage.getItem('token')) {
-      console.log('Redirection vers /login');
+    if (!authService.isLoggedIn()) {
       return <Navigate to="/login" replace state={{ from: location }} />;
     }
     
     // Redirection vers le dashboard si connecté mais sans les droits nécessaires
-    console.log('Redirection vers /dashboard');
+    if (!notificationShownRef.current) {
+      toast.error('Vous n\'avez pas les droits nécessaires pour accéder à cette page.', {
+        duration: 3000,
+        position: 'top-center',
+      });
+      notificationShownRef.current = true;
+    }
     return <Navigate to="/dashboard" replace state={{ from: location }} />;
   }
 
