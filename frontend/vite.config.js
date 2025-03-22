@@ -27,8 +27,8 @@ export default defineConfig({
     },
   },
   server: {
-    host: '0.0.0.0',
-    port: 5173,
+    host: true,
+    strictPort: true,
     watch: {
       usePolling: true,
       interval: 500,
@@ -51,6 +51,8 @@ export default defineConfig({
     }
   },
   build: {
+    sourcemap: false,
+    chunkSizeWarningLimit: 1000,
     target: 'esnext',
     minify: 'terser',
     terserOptions: {
@@ -62,8 +64,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          react: ['react', 'react-dom'],
-          router: ['react-router-dom'],
+          vendor: ['react', 'react-dom', 'react-router-dom'],
           ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-navigation-menu'],
           query: ['@tanstack/react-query'],
           forms: ['react-hook-form', 'zod'],
