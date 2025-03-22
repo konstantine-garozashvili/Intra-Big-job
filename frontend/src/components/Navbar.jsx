@@ -348,7 +348,7 @@ const Navbar = memo(() => {
   // Vérifier l'état d'authentification au chargement et lors des changements de route
   useEffect(() => {
     checkAuthStatus();
-  }, [location.pathname, userData]);
+  }, [location.pathname]);
 
   // Ajouter un écouteur pour l'événement de connexion réussie
   useEffect(() => {
