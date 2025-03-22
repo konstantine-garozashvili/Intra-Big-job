@@ -2,17 +2,18 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Utiliser une installation efficace
-COPY package*.json ./
-RUN npm ci --only=production
+# Nettoyage du cache npm
+RUN npm cache clean --force
 
-# Copier le code source
+# Copie des fichiers de dépendances
+COPY package.json ./
+
+# Installation des dépendances
+RUN npm install
+
+# Copie du reste du code
 COPY . .
-
-# Build l'application en mode production
-RUN npm run build
 
 EXPOSE 5173
 
-# Servir l'application en mode statique
-CMD ["npm", "run", "preview", "--", "--host", "0.0.0.0"]
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

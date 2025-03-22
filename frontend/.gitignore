@@ -1,3 +1,17 @@
+# Dépendances
+node_modules
+.pnp
+.pnp.js
+
+# Cache et fichiers générés par Vite
+.vite/
+node_modules/.vite/
+*.local
+
+# Fichiers de production
+/dist
+/build
+
 # Logs
 logs
 *.log
@@ -7,7 +21,6 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
 dist
 dist-ssr
 *.local
@@ -23,6 +36,5 @@ dist-ssr
 *.sln
 *.sw?
 
-# Vite
-.vite/
-*.local
+# Coverage directory used by tools like Istanbul
+coverage

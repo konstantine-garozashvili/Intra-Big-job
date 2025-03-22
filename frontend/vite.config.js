@@ -27,8 +27,8 @@ export default defineConfig({
     },
   },
   server: {
-    host: true,
-    strictPort: true,
+    host: '0.0.0.0',
+    port: 5173,
     watch: {
       usePolling: true,
       interval: 500,
@@ -40,7 +40,9 @@ export default defineConfig({
     },
     hmr: {
       clientPort: 5173,
-      overlay: true
+      overlay: true,
+      timeout: 120000,
+      protocol: 'ws'
     },
     proxy: {
       '/api': {
@@ -51,8 +53,6 @@ export default defineConfig({
     }
   },
   build: {
-    sourcemap: false,
-    chunkSizeWarningLimit: 1000,
     target: 'esnext',
     minify: 'terser',
     terserOptions: {
@@ -64,7 +64,8 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
+          react: ['react', 'react-dom'],
+          router: ['react-router-dom'],
           ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-navigation-menu'],
           query: ['@tanstack/react-query'],
           forms: ['react-hook-form', 'zod'],
@@ -82,8 +83,19 @@ export default defineConfig({
       'axios',
       'react-hook-form',
       'zod',
-      'framer-motion'
+      'framer-motion',
+      '@radix-ui/react-switch',
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-dropdown-menu',
+      '@radix-ui/react-navigation-menu',
+      '@radix-ui/react-popover',
+      '@radix-ui/react-slot'
     ],
-    force: true
-  }
+    force: false,
+    esbuildOptions: {
+      target: 'es2020',
+      treeShaking: false
+    }
+  },
+  cacheDir: 'node_modules/.vite'
 })
