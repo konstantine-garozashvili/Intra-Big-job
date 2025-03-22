@@ -3,6 +3,9 @@ import axios from 'axios';
 // Import the low performance mode detection from loadingUtils
 import { setLowPerformanceMode } from '../utils/loadingUtils';
 
+// Système de verrouillage pour éviter les requêtes en parallèle
+const pendingRequests = new Map();
+
 // Détection des performances de l'appareil
 function detectDevicePerformance() {
   // Si déjà détecté, utiliser la valeur en cache
@@ -244,6 +247,15 @@ const apiService = {
     try {
       const url = normalizeApiUrl(path);
       
+      // Générer une clé unique pour cette requête
+      const requestKey = `${path}${JSON.stringify(options.params || {})}`;
+      
+      // Vérifier si une requête identique est déjà en cours
+      if (pendingRequests.has(requestKey)) {
+        console.log(`Requête déjà en cours: ${requestKey}`);
+        return pendingRequests.get(requestKey);
+      }
+      
       // Check for in-memory cache if caching is not disabled
       if (!options.noCache) {
         const cacheKey = generateCacheKey('GET', url, options.params);
@@ -274,96 +286,66 @@ const apiService = {
       };
       
       // Implement retries for profile and messages requests
-      const maxRetries = options.retries !== undefined ? options.retries : 
+      const maxRetries = options.retries !== undefined ? Math.min(options.retries, 2) : 
                          (isProfileRequest || isMessagesRequest) ? 1 : 0;
-      let retries = 0;
-      let lastError = null;
       
-      while (retries <= maxRetries) {
-        try {
-          const response = await axios.get(url, requestConfig);
-          
-          // Cache the response if caching is not disabled
-          if (!options.noCache) {
-            const cacheKey = generateCacheKey('GET', url, options.params);
-            const ttl = options.cacheTTL || DEFAULT_CACHE_TTL;
-            
-            apiCache.set(cacheKey, {
-              data: response.data,
-              expiry: Date.now() + ttl
-            });
-          }
-          
-          return response.data;
-        } catch (error) {
-          lastError = error;
-          
-          // Only retry on timeout or network errors
-          if (error.code === 'ECONNABORTED' || error.message.includes('Network Error')) {
-            retries++;
-            if (retries <= maxRetries) {
-              // Exponential backoff - wait longer between each retry
-              const delay = retries * 500; // 500ms, 1000ms, 1500ms...
-              console.warn(`Retry ${retries}/${maxRetries} for ${path} after ${delay}ms`);
-              await new Promise(resolve => setTimeout(resolve, delay));
-              continue;
-            }
-          } else {
-            // For other errors, don't retry
-            break;
-          }
-        }
-      }
-      
-      // If we got here, all retries failed or it wasn't a retryable error
-      throw lastError;
-      
-    } catch (error) {
-      // Only log detailed errors for non-profile requests
-      const isProfileRequest = path.includes('/profile') || path.includes('/me');
-      const isMessagesRequest = path.includes('/messages');
-      
-      if (!isProfileRequest && !isMessagesRequest) {
-        console.error(`Erreur API GET ${path}:`, error);
-        console.error(`[apiService] Détails de l'erreur:`, error.response || error.message);
-      } else {
-        // For profile/messages requests, log less verbosely
-        console.error(`Erreur API (GET): ${path} Statut: ${error.response?.status || 'réseau'}`, error.message);
-      }
-      
-      // For client-side timeout errors, use more appropriate error message
-      if (error.code === 'ECONNABORTED') {
-        console.warn(`Profile data fetch failed: ${path} - ${error.message}`);
+      // Créer une promesse pour cette requête
+      const requestPromise = (async () => {
+        let retries = 0;
+        let lastError = null;
         
-        // Check if we have cached data we can return instead
-        if (!options.noCache) {
-          const cacheKey = generateCacheKey('GET', url, options.params);
-          const cached = apiCache.get(cacheKey);
-          
-          if (cached) {
-            console.info(`Returning cached data for ${path} due to timeout`);
-            return cached.data;
+        // Utiliser une boucle while au lieu d'une récursion pour éviter des problèmes de pile
+        while (retries <= maxRetries) {
+          try {
+            const response = await axios.get(url, requestConfig);
+            
+            // Si success, mettre en cache si le caching n'est pas désactivé
+            if (!options.noCache) {
+              const cacheKey = generateCacheKey('GET', url, options.params);
+              const ttl = options.cacheDuration || DEFAULT_CACHE_TTL;
+              apiCache.set(cacheKey, {
+                data: response.data,
+                expiry: Date.now() + ttl
+              });
+              cleanupCache();
+            }
+            
+            return response.data;
+          } catch (error) {
+            lastError = error;
+            
+            // Ne pas retenter si c'est une erreur 4xx (sauf timeout)
+            if (error.response && error.response.status >= 400 && error.response.status < 500) {
+              break;
+            }
+            
+            // Attendre avant de réessayer avec backoff exponentiel
+            if (retries < maxRetries) {
+              const backoffDelay = Math.min(1000 * Math.pow(2, retries), 8000);
+              await new Promise(resolve => setTimeout(resolve, backoffDelay));
+              retries++;
+            } else {
+              break;
+            }
           }
         }
-      }
+        
+        // Toutes les tentatives ont échoué
+        throw lastError;
+      })();
       
-      // Gestion spécifique des erreurs CORS
-      if (error.message && error.message.includes('Network Error')) {
-        console.error('Erreur réseau possible - Problème CORS');
-        throw error; // Throw the error for proper propagation
-      }
+      // Enregistrer cette promesse
+      pendingRequests.set(requestKey, requestPromise);
       
-      // Pour les requêtes de profil, propager l'erreur au lieu de retourner un objet formaté
-      if (isProfileRequest || isMessagesRequest) {
-        throw error;
+      try {
+        return await requestPromise;
+      } finally {
+        // Libérer le verrou quand la requête est terminée
+        pendingRequests.delete(requestKey);
       }
-      
-      // Retourner une réponse formatée en cas d'erreur pour éviter les crashes
-      if (error.response && error.response.data) {
-        return { success: false, message: error.response.data.message || 'Une erreur est survenue' };
-      }
-      
-      return { success: false, message: 'Une erreur est survenue' };
+    } catch (error) {
+      console.error(`Error in API GET ${path}:`, error);
+      throw error;
     }
   },
   
