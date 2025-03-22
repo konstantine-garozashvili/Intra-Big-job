@@ -23,7 +23,15 @@ const userDataCache = {
   // Durée du blocage (15 secondes par défaut)
   circuitBreakDuration: 15 * 1000,
   // Événements pour notifier les changements
-  events: new EventTarget()
+  events: new EventTarget(),
+  // ID de l'opération courante pour éviter les appels en doublon
+  currentOperationId: null,
+  // Délai pour considérer les opérations comme distinctes (en ms)
+  operationDebounceTime: 100,
+  // Date de la dernière opération
+  lastOperationTime: 0,
+  // Map de déduplication pour traquer les requêtes identiques durant le même cycle
+  deduplicationMap: new Map()
 };
 
 // Événements personnalisés
@@ -45,6 +53,7 @@ const userDataManager = {
    * @param {number} options.maxAge - Âge maximal des données en ms (par défaut 20 minutes)
    * @param {boolean} options.useCache - Utilise les données en cache si disponibles
    * @param {string} options.routeKey - Clé de route à utiliser ('/api/me' ou '/profile/consolidated')
+   * @param {string} options.requestId - Identifiant unique de la requête pour déduplication
    * @returns {Promise<Object>} - Données utilisateur
    */
   async getUserData(options = {}) {
@@ -52,14 +61,25 @@ const userDataManager = {
       forceRefresh = false,
       maxAge = userDataCache.maxAgeDuration,
       useCache = true,
-      routeKey = '/api/me'
+      routeKey = '/api/me',
+      requestId = `user_data_${Date.now()}`
     } = options;
+
+    // Génération d'une clé de déduplication basée sur les paramètres de la requête
+    const deduplicationKey = `${routeKey}_${forceRefresh}_${maxAge}_${useCache}`;
+    
+    // Si une requête identique est en cours dans le même cycle de rendu (30ms), réutiliser sa promesse
+    const now = Date.now();
+    const recentDeduplicationEntry = userDataCache.deduplicationMap.get(deduplicationKey);
+    if (recentDeduplicationEntry && now - recentDeduplicationEntry.timestamp < 30) {
+      console.log(`🔄 Requête dupliquée détectée et dédupliquée pour ${routeKey}`);
+      return recentDeduplicationEntry.promise;
+    }
 
     // Incrémenter le compteur de requêtes
     userDataCache.requestCount++;
     
     // Vérifier si le circuit breaker est actif (trop d'erreurs consécutives)
-    const now = Date.now();
     if (userDataCache.consecutiveErrors >= userDataCache.errorThreshold) {
       const timeInBreak = now - userDataCache.lastCircuitBreak;
       if (timeInBreak < userDataCache.circuitBreakDuration) {
@@ -120,7 +140,28 @@ const userDataManager = {
     }
 
     // Si nous arrivons ici, nous devons charger/recharger les données
-    return this._loadUserData(routeKey, { forceRefresh });
+    const dataPromise = this._loadUserData(routeKey, { forceRefresh });
+    
+    // Stocker la promesse pour la déduplication
+    userDataCache.deduplicationMap.set(deduplicationKey, {
+      timestamp: now,
+      promise: dataPromise
+    });
+    
+    // Nettoyer les entrées de déduplication anciennes toutes les 5 secondes
+    if (now - userDataCache.lastOperationTime > 5000) {
+      setTimeout(() => {
+        const currentTime = Date.now();
+        for (const [key, entry] of userDataCache.deduplicationMap.entries()) {
+          if (currentTime - entry.timestamp > 100) {
+            userDataCache.deduplicationMap.delete(key);
+          }
+        }
+      }, 0);
+      userDataCache.lastOperationTime = now;
+    }
+    
+    return dataPromise;
   },
 
   /**
@@ -309,14 +350,30 @@ const userDataManager = {
    * @returns {Object} - Statistiques
    */
   getStats() {
+    const now = Date.now();
     return {
       requestCount: userDataCache.requestCount,
       lastUpdated: userDataCache.timestamp ? new Date(userDataCache.timestamp).toISOString() : null,
-      dataAge: userDataCache.timestamp ? Date.now() - userDataCache.timestamp : null,
+      dataAge: userDataCache.timestamp ? now - userDataCache.timestamp : null,
       consecutiveErrors: userDataCache.consecutiveErrors,
       pendingRequests: Array.from(userDataCache.pendingRequests.keys()),
       isCircuitBreakerActive: userDataCache.consecutiveErrors >= userDataCache.errorThreshold &&
-        (Date.now() - userDataCache.lastCircuitBreak < userDataCache.circuitBreakDuration)
+        (now - userDataCache.lastCircuitBreak < userDataCache.circuitBreakDuration),
+      // Nouvelles statistiques de déduplication
+      deduplicationMapSize: userDataCache.deduplicationMap.size,
+      deduplicationEntries: Array.from(userDataCache.deduplicationMap.entries()).map(([key, entry]) => ({
+        key,
+        age: now - entry.timestamp
+      })),
+      cacheStatus: userDataCache.data ? (
+        now - userDataCache.timestamp < userDataCache.freshnessDuration 
+          ? 'fresh' 
+          : now - userDataCache.timestamp < userDataCache.maxAgeDuration
+            ? 'stale'
+            : 'expired'
+      ) : 'empty',
+      hasCachedData: !!userDataCache.data,
+      isLoading: userDataCache.isLoading
     };
   }
 };

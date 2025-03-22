@@ -1,6 +1,7 @@
 import React, { memo, useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { authService } from "../lib/services/authService";
+import userDataManager from "../lib/services/userDataManager";
 import { profileService } from "../pages/Global/Profile/services/profileService";
 import { Button } from "./ui/button";
 import {
@@ -292,24 +293,61 @@ const Navbar = memo(() => {
       // Si l'utilisateur est connecté, charger ses données
       if (status) {
         try {
-          // Nettoyer le cache avant de recharger les données utilisateur
-          if (!wasAuthenticated) {
-            const queryClient = window.queryClient || authService.getQueryClient();
-            if (queryClient) {
-              queryClient.invalidateQueries({ queryKey: ['user'] });
-              queryClient.invalidateQueries({ queryKey: ['profile'] });
+          // Utiliser le cache si disponible pour éviter les appels API en doublon
+          const cachedUserData = userDataManager.getCachedUserData();
+          
+          if (cachedUserData) {
+            // Utiliser les données en cache d'abord
+            setUserData(cachedUserData);
+            setIsLoading(false);
+            
+            // Déclencher un événement de changement de rôle si l'état d'authentification a changé
+            if (!wasAuthenticated) {
+              window.dispatchEvent(new Event("role-change"));
+            }
+            
+            // Vérifier si une mise à jour est nécessaire (données plus vieilles que 2 min)
+            const stats = userDataManager.getStats();
+            const dataAge = stats.dataAge || Infinity;
+            
+            if (dataAge > 2 * 60 * 1000) {
+              // Récupérer les données en arrière-plan sans bloquer l'interface
+              userDataManager.getUserData({
+                routeKey: '/api/me',
+                forceRefresh: false,
+                background: true,
+                requestId: 'navbar_background_refresh'
+              }).then(freshData => {
+                if (freshData && JSON.stringify(freshData) !== JSON.stringify(cachedUserData)) {
+                  setUserData(freshData);
+                }
+              }).catch(e => {
+                console.warn('Erreur lors du rafraîchissement des données utilisateur:', e);
+              });
+            }
+          } else {
+            // Si le cache est vide, nettoyer le cache avant de recharger les données utilisateur
+            if (!wasAuthenticated) {
+              const queryClient = window.queryClient || authService.getQueryClient();
+              if (queryClient) {
+                queryClient.invalidateQueries({ queryKey: ['user'] });
+                queryClient.invalidateQueries({ queryKey: ['profile'] });
+              }
+            }
+            
+            // Faire un appel API uniquement si nécessaire
+            // Ajouter un identifiant unique pour la requête
+            const userData = await authService.getCurrentUser(false, { requestSource: 'navbar' });
+            setUserData(userData);
+            setIsLoading(false);
+
+            // Déclencher un événement de changement de rôle si l'état d'authentification a changé
+            if (!wasAuthenticated) {
+              window.dispatchEvent(new Event("role-change"));
             }
           }
-          
-          // Toujours forcer une nouvelle requête pour obtenir les données utilisateur à jour
-          const userData = await authService.getCurrentUser(true);
-          setUserData(userData);
-
-          // Déclencher un événement de changement de rôle si l'état d'authentification a changé
-          if (!wasAuthenticated) {
-            window.dispatchEvent(new Event("role-change"));
-          }
         } catch (userError) {
+          console.warn('Erreur lors de la récupération des données utilisateur:', userError);
           // Fallback: essayer de récupérer les données du profil
           try {
             const profileData = await profileService.getAllProfileData();
@@ -321,6 +359,7 @@ const Navbar = memo(() => {
             } else {
               setUserData(profileData);
             }
+            setIsLoading(false);
 
             // Déclencher un événement de changement de rôle si l'état d'authentification a changé
             if (!wasAuthenticated) {
@@ -328,10 +367,12 @@ const Navbar = memo(() => {
             }
           } catch (profileError) {
             // Gestion silencieuse de l'erreur
+            setIsLoading(false);
           }
         }
       } else {
         setUserData(null);
+        setIsLoading(false);
 
         // Déclencher un événement de changement de rôle si l'état d'authentification a changé
         if (wasAuthenticated) {

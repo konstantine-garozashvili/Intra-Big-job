@@ -1,7 +1,7 @@
 import React, { memo, useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { authService } from '../lib/services/authService';
-import { Link, useNavigate } from 'react-router-dom';
+import { authService } from '@/lib/services/authService';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useRoles, ROLES } from '../features/roles/roleContext';
 import { useRoleUI } from '../features/roles/useRolePermissions';
 import {
@@ -29,6 +29,7 @@ import {
   ClipboardCheck
 } from 'lucide-react';
 import { useRolePermissions } from '@/features/roles/useRolePermissions';
+import userDataManager from '@/lib/services/userDataManager';
 
 // Style personnalisé pour les animations et transitions
 const customStyles = `
@@ -131,16 +132,47 @@ const MenuBurger = memo(() => {
   const checkAuthentication = useCallback(async () => {
     try {
       if (authService.isLoggedIn()) {
-        const user = await authService.getCurrentUser();
-        if (user) {
-          setUserData(user);
+        // Utiliser les données en cache si disponibles pour éviter des appels API en doublon
+        const cachedUserData = authService.getUser() || userDataManager.getCachedUserData();
+        
+        if (cachedUserData) {
+          // Utiliser les données en cache d'abord pour un rendu rapide
+          setUserData(cachedUserData);
+          
+          // Vérifier si une mise à jour est nécessaire en arrière-plan
+          const stats = userDataManager.getStats();
+          const dataAge = stats.dataAge || Infinity;
+          
+          // Ne rafraîchir que si les données sont anciennes (plus de 2 minutes)
+          if (dataAge > 2 * 60 * 1000) {
+            // Utiliser background refresh pour ne pas bloquer l'UI
+            userDataManager.getUserData({
+              routeKey: '/api/me',
+              forceRefresh: false,
+              background: true,
+              requestId: 'menuburger_background_refresh'
+            }).then(freshData => {
+              if (freshData && JSON.stringify(freshData) !== JSON.stringify(cachedUserData)) {
+                setUserData(freshData);
+              }
+            }).catch(e => {
+              console.warn('Erreur lors du rafraîchissement en arrière-plan des données utilisateur:', e);
+            });
+          }
         } else {
-          setUserData(null);
+          // Aucune donnée en cache, récupérer depuis l'API
+          const user = await authService.getCurrentUser(false, { requestSource: 'menuburger' });
+          if (user) {
+            setUserData(user);
+          } else {
+            setUserData(null);
+          }
         }
       } else {
         setUserData(null);
       }
     } catch (error) {
+      console.error('Erreur dans checkAuthentication MenuBurger:', error);
       setUserData(null);
     }
   }, []);

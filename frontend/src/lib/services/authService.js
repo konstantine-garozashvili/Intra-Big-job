@@ -514,20 +514,27 @@ export const authService = {
 
   /**
    * Récupère les données de l'utilisateur courant
-   * @param {boolean} forceRefresh - Force une nouvelle requête même si les données sont fraîches
+   * @param {boolean} forceRefresh - Force un rafraîchissement des données
+   * @param {Object} options - Options supplémentaires
+   * @param {string} options.requestSource - Identifie la source de la requête pour le débogage
    * @returns {Promise<Object>} - Données utilisateur
    */
-  async getCurrentUser(forceRefresh = false) {
+  async getCurrentUser(forceRefresh = false, options = {}) {
+    const { requestSource = 'unknown' } = options;
     const token = this.getToken();
     if (!token) {
       throw new Error('Aucun token d\'authentification trouvé');
     }
 
+    // Ajouter du contexte de débogage pour tracer l'origine des appels
+    console.log(`🔍 getCurrentUser appelé depuis: ${requestSource || 'non spécifié'} (force=${forceRefresh})`);
+
     // Utiliser le nouveau gestionnaire de données utilisateur
     try {
       const userData = await userDataManager.getUserData({
         forceRefresh,
-        routeKey: '/api/me'
+        routeKey: '/api/me',
+        requestId: `auth_service_${requestSource}_${Date.now()}`
       });
       
       // Stocker le rôle principal pour référence (maintenir la compatibilité)
@@ -540,11 +547,12 @@ export const authService = {
       
       return userData;
     } catch (error) {
-      console.error('Error in getCurrentUser:', error);
+      console.error(`Error in getCurrentUser (source: ${requestSource}):`, error);
       
       // Essayer d'utiliser les données en cache si disponibles
       const cachedUser = userDataManager.getCachedUserData();
       if (cachedUser) {
+        console.log(`Utilisation des données en cache pour getCurrentUser (source: ${requestSource})`);
         return cachedUser;
       }
       
