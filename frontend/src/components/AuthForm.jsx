@@ -6,7 +6,6 @@ import { toast } from "sonner"
 import { useRolePermissions } from "@/features/roles/useRolePermissions"
 import { useRoles } from "@/features/roles/roleContext"
 import QuickLoginButtons from './QuickLoginButtons'
-import { showGlobalLoader, hideGlobalLoader } from "@/lib/utils/loadingUtils"
 
 // Separate input component to prevent re-renders of the entire form
 const FormInput = React.memo(({ 
@@ -127,9 +126,6 @@ export function AuthForm() {
     setIsLoading(true)
     
     try {
-      // Show global loading state with higher priority
-      showGlobalLoader()
-      
       const response = await authService.login(formState.email, formState.password)
       
       if (formState.rememberMe) {
@@ -200,7 +196,6 @@ export function AuthForm() {
       const handleUserDataLoaded = () => {
         refreshRoles()
         window.removeEventListener('user-data-loaded', handleUserDataLoaded)
-        // Loading will be handled by global loading utilities now
       }
       
       window.addEventListener('user-data-loaded', handleUserDataLoaded)
@@ -221,11 +216,6 @@ export function AuthForm() {
       }, 2000);
       
     } catch (error) {
-      // Remove loading state on error after a brief delay
-      setTimeout(() => {
-        hideGlobalLoader()
-      }, 200)
-      
       if (error.response) {
         const { data } = error.response
         

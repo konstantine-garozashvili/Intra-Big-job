@@ -4,27 +4,103 @@ import { teacherService } from '@/lib/services/teacherService';
 import apiService from '@/lib/services/apiService';
 import { getQueryClient } from '@/lib/services/queryClient';
 import useUserDataHook from './useUserData';
+import { useQuery } from '@tanstack/react-query';
 
 /**
- * Hook pour récupérer les données utilisateur avec React Query
- * @returns {Object} - Données utilisateur et état de la requête
- * @deprecated Utiliser le hook useUserData à la place
+ * Hook pour récupérer et gérer les données de l'utilisateur
+ * Optimisé pour éviter les problèmes d'affichage intermittent
  */
 export const useUserData = () => {
-  // Utiliser notre nouveau hook centralisé avec le nom renommé
-  const userData = useUserDataHook();
-  
-  // Retourner une structure compatible avec l'ancien hook
-  return {
-    data: userData.user,
-    isLoading: userData.isLoading,
-    isError: userData.isError,
-    error: userData.error,
-    refetch: userData.refetch,
-    // Maintenir d'autres propriétés pour la rétrocompatibilité
-    isFetching: userData.isLoading,
-    isSuccess: !userData.isError && !userData.isLoading && !!userData.user,
-  };
+  return useQuery({
+    queryKey: ['user'],
+    queryFn: async () => {
+      try {
+        // Récupérer les données complètes de l'utilisateur
+        const userData = await authService.getCurrentUser();
+        return userData;
+      } catch (error) {
+        console.error("Erreur lors de la récupération des données utilisateur:", error);
+        
+        // En cas d'erreur, essayer de récupérer les données minimales du localStorage
+        try {
+          const minimalData = authService.getMinimalUserData();
+          if (minimalData) {
+            return minimalData;
+          }
+        } catch (localError) {
+          console.error("Erreur lors de la récupération des données minimales:", localError);
+        }
+        
+        // Si toutes les tentatives échouent, propager l'erreur
+        throw error;
+      }
+    },
+    // Paramètres optimisés pour la stabilité et la performance
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    cacheTime: 60 * 60 * 1000, // 1 heure
+    refetchOnWindowFocus: false,
+    refetchOnMount: true,
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+    onError: (error) => {
+      console.error("Erreur lors de la récupération des données utilisateur:", error);
+    }
+  });
+};
+
+/**
+ * Hook pour récupérer les statistiques du tableau de bord
+ */
+export const useDashboardStats = () => {
+  return useQuery({
+    queryKey: ['dashboardStats'],
+    queryFn: async () => {
+      // TODO: Implémenter l'appel API pour récupérer les statistiques
+      return {
+        totalStudents: 120,
+        activeFormations: 8,
+        completionRate: 85,
+        upcomingEvents: 3
+      };
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
+
+/**
+ * Hook pour récupérer les activités récentes
+ */
+export const useRecentActivities = () => {
+  return useQuery({
+    queryKey: ['recentActivities'],
+    queryFn: async () => {
+      // TODO: Implémenter l'appel API pour récupérer les activités récentes
+      return [
+        {
+          id: 1,
+          type: 'formation',
+          title: 'Développement Web Avancé',
+          date: new Date(Date.now() - 3600000),
+          status: 'completed'
+        },
+        {
+          id: 2,
+          type: 'course',
+          title: 'Introduction à React',
+          date: new Date(Date.now() - 86400000),
+          status: 'in-progress'
+        },
+        {
+          id: 3,
+          type: 'assignment',
+          title: 'Projet Final JavaScript',
+          date: new Date(Date.now() - 172800000),
+          status: 'pending'
+        }
+      ];
+    },
+    staleTime: 2 * 60 * 1000, // 2 minutes
+  });
 };
 
 /**
@@ -199,15 +275,63 @@ export const useStudentDashboardData = () => {
  * @returns {Object} - Données du dashboard RH et état de la requête
  */
 export const useHRDashboardData = () => {
-  // Utiliser notre propre hook useUserData exporté ci-dessus (pas le hook importé)
-  const userQuery = useUserData();
+  const sessionId = getSessionId();
   
-  // Pour l'instant, nous n'avons pas de données spécifiques à récupérer pour le dashboard RH
-  // Mais nous pouvons préparer la structure pour les futures requêtes
+  // Get minimal user data from token if available
+  const getMinimalUserData = () => {
+    try {
+      return authService.getMinimalUserData();
+    } catch (e) {
+      console.error('Error retrieving minimal user data:', e);
+    }
+    return null;
+  };
+  
+  // Use minimal user data from localStorage while full data loads
+  const minimalUserData = getMinimalUserData();
+  
+  // S'assurer que le token est disponible
+  const token = localStorage.getItem('token');
+  const isAuthenticated = !!token;
+  
+  // Load full user data
+  const userQuery = useApiQuery('/api/me', ['user-data-hr', sessionId], {
+    staleTime: 30 * 60 * 1000, // 30 minutes
+    cacheTime: 60 * 60 * 1000, // 1 hour
+    refetchOnWindowFocus: false,
+    refetchOnMount: true,
+    refetchOnReconnect: false,
+    retry: 1,
+    retryDelay: 1000,
+    timeout: 4000,
+    // N'activer la requête que si l'utilisateur est authentifié
+    enabled: isAuthenticated,
+    select: (data) => {
+      return data.user || data;
+    },
+    // Utiliser initialData pour éviter l'affichage de chargement si possible
+    initialData: () => {
+      // Si nous avons des données minimales, les utiliser comme initialData
+      if (minimalUserData) return minimalUserData;
+      
+      try {
+        // Vérifier si des données sont déjà en cache
+        const cachedData = getQueryClient().getQueryData(['user-data-hr', sessionId]);
+        if (cachedData) return cachedData;
+        return undefined;
+      } catch (e) {
+        return undefined;
+      }
+    }
+  });
+  
+  // Pour l'instant, nous n'avons pas de données spécifiques supplémentaires à récupérer pour le dashboard HR
+  // Mais la structure est prête pour les futures extensions
   
   return {
-    user: userQuery.data,
-    isLoading: userQuery.isLoading,
+    // Use minimal user data as fallback if full data is still loading
+    user: userQuery.data || minimalUserData,
+    isLoading: userQuery.isLoading && !minimalUserData,
     isError: userQuery.isError,
     error: userQuery.error,
     refetch: () => {

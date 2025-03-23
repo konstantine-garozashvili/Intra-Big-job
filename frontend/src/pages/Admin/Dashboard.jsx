@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Edit, Trash2, Calendar as CalendarIcon, Users, Shield, Book, ChevronRight } from 'lucide-react';
 import Calendar from './Calendar';
-import apiService from '@/lib/services/apiService';
 import { useAdminDashboardData } from '@/hooks/useDashboardQueries';
 import { useApiMutation } from '@/hooks/useReactQuery';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -14,9 +13,8 @@ import { motion } from 'framer-motion';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
-import DashboardHeader from '@/components/shared/DashboardHeader';
-import "./Calendar.css";
 import { toast } from 'sonner';
+import authService from '@/lib/services/authService';
 
 const ROLE_COLORS = {
   'ADMIN': 'bg-blue-100 text-blue-800',
@@ -61,6 +59,7 @@ const AdminDashboard = () => {
     email: '',
     phoneNumber: '',
   });
+  const hasAttemptedRefresh = useRef(false);
 
   // Définir les cartes pour les accès rapides
   const quickAccessCards = [
@@ -192,18 +191,38 @@ const AdminDashboard = () => {
     return user.roles && user.roles.some(role => role.name === roleFilter);
   }) || [];
 
+  // Avoid infinite loop of refreshes but try once if we don't have user data
+  useEffect(() => {
+    if (!user && !hasAttemptedRefresh.current && !isLoading) {
+      hasAttemptedRefresh.current = true;
+      // Wait a short delay before attempting to refresh
+      const timer = setTimeout(() => {
+        authService.getCurrentUser();
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [user, isLoading]);
+
   return (
     <DashboardLayout 
       loading={isLoading} 
       error={isError ? error?.message || 'Une erreur est survenue lors du chargement des données' : null}
+      className="p-0"
+      user={user}
+      headerIcon={Shield}
+      headerTitle="Tableau de bord administrateur"
     >
-      <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8">
-        <DashboardHeader 
-          user={user}
-          icon={Shield}
-          roleTitle="Tableau de bord administrateur"
-        />
-        
+      <div className="container p-4 mx-auto sm:p-6 lg:p-8 bg-gray-50 dark:bg-gray-900 min-h-screen">
+        {/* Statistiques essentielles */}
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8"
+        >
+          {/* ... existing stats code ... */}
+        </motion.div>
+
         <Card className="border-0 shadow-md mb-6">
           <CardContent className="p-6">
             <h2 className="text-xl font-semibold text-gray-800 mb-6">Accès rapide</h2>

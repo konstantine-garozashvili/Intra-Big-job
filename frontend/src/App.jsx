@@ -1,15 +1,13 @@
-import { BrowserRouter as Router, Routes, Route, useLocation, Navigate, Outlet, useNavigate } from 'react-router-dom'
-import { lazy, Suspense, useState, useEffect, useRef, useCallback } from 'react'
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate, useNavigate } from 'react-router-dom'
+import { lazy, Suspense, useEffect, useRef, useCallback } from 'react'
 import MainLayout from './components/MainLayout'
 import { RoleProvider, RoleDashboardRedirect, RoleGuard, ROLES } from './features/roles'
-import { showGlobalLoader, hideGlobalLoader, setLowPerformanceMode } from './lib/utils/loadingUtils'
 import { AuthProvider } from './contexts/AuthContext'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import './index.css'
 import ProtectedRoute from './components/ProtectedRoute'
 import PublicRoute from './components/PublicRoute'
 import ProfileLayout from '@/layouts/ProfileLayout'
-import useLoadingIndicator from './hooks/useLoadingIndicator'
 import StudentRoute from './components/StudentRoute'
 import { Toaster } from './components/ui/sonner'
 import { ErrorBoundary } from "react-error-boundary"
@@ -266,31 +264,6 @@ const PrefetchHandler = () => {
   return null;
 };
 
-// Composant de chargement optimisé pour Suspense
-const SuspenseLoader = () => {
-  // Apply app-loading class to show the global loader
-  useEffect(() => {
-    // Reset any lingering navigation flags
-    window.__isNavigating = false;
-    window.__isLoggingOut = false;
-    
-    // Just use the global loader directly
-    showGlobalLoader();
-    
-    return () => {
-      // Just hide the global loader on unmount
-      hideGlobalLoader();
-      
-      // Ensure navigation flags are reset when the loader is removed
-      window.__isNavigating = false;
-      window.__isLoggingOut = false;
-    };
-  }, []);
-  
-  // No need to render anything - handled by the global loader
-  return null;
-};
-
 // Composant de contenu principal qui utilise les hooks de React Router
 const AppContent = () => {
   const navigate = useNavigate();
@@ -298,25 +271,11 @@ const AppContent = () => {
   const isProcessingRef = useRef(false);
   const mountedRef = useRef(true);
   
-  // Use the loading indicator hook to hide the browser's default loading indicator
-  useLoadingIndicator();
-  
   // Cache for navigation decisions to avoid redundant token parsing
   const roleCache = useRef({
     lastToken: null,
     dashboardPath: '/dashboard'
   });
-  
-  useEffect(() => {
-    // Show loader initially, then hide it when content is ready
-    const timer = setTimeout(() => {
-      if (!window.__isLoggingOut && !window.__isNavigating) {
-        hideGlobalLoader();
-      }
-    }, 200);
-    
-    return () => clearTimeout(timer);
-  }, []);
   
   // Get dashboard route by role, with caching
   const getDashboardByRole = useCallback(() => {
@@ -422,7 +381,7 @@ const AppContent = () => {
       
       {/* Wrapper for the main content */}
       <div className="relative z-10">
-        <Suspense fallback={<SuspenseLoader />}>
+        <Suspense>
           <RoleProvider>
             <div>
               <Routes>
@@ -602,47 +561,8 @@ const ErrorFallback = () => (
   </div>
 );
 
-// Check for URL parameter to enable low performance mode
-const checkForPerformanceMode = () => {
-  try {
-    // Check URL for performance mode parameter
-    const urlParams = new URLSearchParams(window.location.search);
-    const performanceMode = urlParams.get('performance');
-    
-    if (performanceMode === 'low') {
-      console.info('Enabling low performance mode from URL parameter');
-      setLowPerformanceMode(true);
-      // Remove the parameter from URL to keep it clean
-      urlParams.delete('performance');
-      const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
-      window.history.replaceState({}, '', newUrl);
-    } else if (performanceMode === 'high') {
-      console.info('Disabling low performance mode from URL parameter');
-      setLowPerformanceMode(false);
-      // Remove the parameter from URL to keep it clean
-      urlParams.delete('performance');
-      const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
-      window.history.replaceState({}, '', newUrl);
-    }
-    
-    // Check if localStorage preference exists
-    const storedPref = localStorage.getItem('preferLowPerformanceMode');
-    if (storedPref === 'true') {
-      console.info('Using low performance mode from stored preference');
-      setLowPerformanceMode(true);
-    }
-  } catch (e) {
-    console.error('Error checking performance mode:', e);
-  }
-};
-
 // Composant App principal qui configure le Router
 const App = () => {
-  useEffect(() => {
-    // Check for performance mode when the app loads
-    checkForPerformanceMode();
-  }, []);
-
   return (
     <ErrorBoundary FallbackComponent={ErrorFallback}>
       <QueryClientProvider client={queryClient}>
@@ -655,7 +575,7 @@ const App = () => {
               {/* Gestionnaire de préchargement */}
               <PrefetchHandler />
               
-              <Suspense fallback={<SuspenseLoader />}>
+              <Suspense>
                 <AppContent />
               </Suspense>
             </Router>

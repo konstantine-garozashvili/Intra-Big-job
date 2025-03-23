@@ -1,4 +1,37 @@
 /**
+ * Dummy utility functions for managing global loading state
+ * These functions are empty placeholders to prevent import errors
+ */
+
+/**
+ * Set the performance mode (dummy function that does nothing)
+ */
+export const setLowPerformanceMode = (enabled) => {
+  // This function is intentionally empty
+};
+
+/**
+ * Show the global loading state (dummy function that does nothing)
+ */
+export const showGlobalLoader = () => {
+  // This function is intentionally empty
+};
+
+/**
+ * Hide the global loading state (dummy function that does nothing)
+ */
+export const hideGlobalLoader = () => {
+  // This function is intentionally empty
+};
+
+/**
+ * Reset the loading state (dummy function that does nothing)
+ */
+export const resetLoadingState = () => {
+  // This function is intentionally empty
+};
+
+/**
  * Utility functions for managing global loading state
  */
 
@@ -94,14 +127,6 @@ const detectLowPerformanceMode = () => {
 
 // Set performance mode on load
 isLowPerformanceMode = detectLowPerformanceMode();
-
-// Export function to toggle performance mode
-export const setLowPerformanceMode = (enabled) => {
-  isLowPerformanceMode = enabled;
-  if (localStorage) {
-    localStorage.setItem('preferLowPerformanceMode', enabled.toString());
-  }
-};
 
 // Create a full-screen overlay directly in the DOM on script load
 const createPermanentLoader = () => {
@@ -208,98 +233,6 @@ const hideLoader = () => {
       overlay.style.display = 'none';
     }
   }, 200);
-};
-
-/**
- * Show the global loading state
- */
-export const showGlobalLoader = () => {
-  // Clear any pending hide operation
-  if (loaderHideTimeout) {
-    clearTimeout(loaderHideTimeout);
-    loaderHideTimeout = null;
-  }
-  
-  // Clear any minimum time enforcement
-  if (enforceMinimumTimeoutId) {
-    clearTimeout(enforceMinimumTimeoutId);
-  }
-  
-  // Record the time when navigation starts
-  lastNavigationTime = Date.now();
-  
-  // Increment the active loading count
-  activeLoadingCount++;
-  
-  // Show the loader overlay
-  displayLoader();
-  
-  // Set a flag to prevent flickering during page loads
-  window.__loaderVisible = true;
-};
-
-/**
- * Hide the global loading state, with optional delay
- * @param {number} delay - Delay in milliseconds before hiding the loader
- */
-export const hideGlobalLoader = (delay = 0) => {
-  if (activeLoadingCount > 0) {
-    activeLoadingCount--;
-  }
-  
-  // Only proceed with hiding if there are no active loading calls
-  if (activeLoadingCount === 0) {
-    // Clear any existing timeout
-    if (loaderHideTimeout) {
-      clearTimeout(loaderHideTimeout);
-    }
-    
-    // Calculate minimum display time - shorter for low performance mode
-    const currentTime = Date.now();
-    const timeSinceNavigation = currentTime - lastNavigationTime;
-    const minLoadingTime = isLowPerformanceMode ? 150 : 300; // Even shorter for low performance mode
-    
-    // Calculate final delay - cap maximum delay for low performance devices
-    let finalDelay = isLowPerformanceMode ? Math.min(delay, 100) : delay;
-    if (timeSinceNavigation < minLoadingTime) {
-      finalDelay = Math.max(finalDelay, minLoadingTime - timeSinceNavigation);
-    }
-    
-    // Set timeout to hide loader
-    loaderHideTimeout = setTimeout(() => {
-      // Only hide if we're not in another loading operation
-      if (activeLoadingCount === 0) {
-        window.__loaderVisible = false;
-        hideLoader();
-      }
-      loaderHideTimeout = null;
-    }, finalDelay);
-  }
-};
-
-/**
- * Reset loading state (use with caution)
- */
-export const resetLoadingState = () => {
-  // Clear all timeouts
-  if (loaderHideTimeout) {
-    clearTimeout(loaderHideTimeout);
-    loaderHideTimeout = null;
-  }
-  
-  if (enforceMinimumTimeoutId) {
-    clearTimeout(enforceMinimumTimeoutId);
-    enforceMinimumTimeoutId = null;
-  }
-  
-  // Reset counters and flags
-  activeLoadingCount = 0;
-  window.__loaderVisible = false;
-  window.__isLoggingOut = false;
-  window.__isNavigating = false;
-  
-  // Hide the loader
-  hideLoader();
 };
 
 /**

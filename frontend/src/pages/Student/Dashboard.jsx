@@ -60,8 +60,28 @@ const fadeInVariants = {
   }
 };
 
+/**
+ * Tableau de bord pour les étudiants
+ */
 const StudentDashboard = () => {
-  const { user, isLoading, isError, error } = useStudentDashboardData();
+  const { user, dashboardData, isLoading, isError, error } = useStudentDashboardData();
+  
+  // Format current date for display
+  const formattedDate = useMemo(() => {
+    const today = new Date();
+    return today.toLocaleDateString('fr-FR', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+  }, []);
+
+  // Get initials for avatar
+  const userInitials = useMemo(() => {
+    if (!user?.firstName || !user?.lastName) return 'ET';
+    return `${user.firstName[0]}${user.lastName[0]}`;
+  }, [user]);
 
   // Données du graphique radar des compétences
   const competencesData = [
@@ -83,18 +103,8 @@ const StudentDashboard = () => {
     tools: { label: "Outils", color: "hsl(var(--primary))" },
   }), []);
 
-  // Données pour les cartes principales
+  // Cartes principales
   const mainCards = [
-    {
-      title: 'Emploi du temps',
-      description: 'Consultez votre planning de cours',
-      icon: Calendar,
-      color: 'from-blue-500 to-blue-600',
-      textColor: 'text-blue-50',
-      link: '/student/schedule',
-      stats: '3 cours aujourd\'hui',
-      progress: 75
-    },
     {
       title: 'Notes et résultats',
       description: 'Suivez vos performances académiques',
@@ -148,55 +158,54 @@ const StudentDashboard = () => {
       bgColor: 'bg-purple-100 dark:bg-purple-900/20'
     },
     { 
-      title: 'Sécurité des applications', 
-      type: 'Examen', 
-      time: 'Vendredi, 10:00 - 12:00',
+      title: 'Examen Machine Learning', 
+      type: 'Évaluation', 
+      time: 'Vendredi, 09:00 - 11:00',
       location: 'Amphithéâtre A',
-      icon: GraduationCap,
-      color: 'text-emerald-500',
-      bgColor: 'bg-emerald-100 dark:bg-emerald-900/20'
+      icon: Trophy,
+      color: 'text-red-500',
+      bgColor: 'bg-red-100 dark:bg-red-900/20'
     }
   ];
+
+  // Animation settings for the charts
+  const options = {
+    // Chart options...
+  };
 
   return (
     <DashboardLayout 
       loading={isLoading} 
       error={isError ? error?.message || 'Une erreur est survenue lors du chargement des données' : null}
-      className="min-h-screen bg-gray-50 dark:bg-gray-900"
+      className="p-0"
+      user={user} 
+      headerIcon={GraduationCap}
+      headerTitle="Tableau de bord étudiant"
+      showHeader={false} // Désactiver le header intégré car on a un header personnalisé
     >
-      <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8">
-        {/* En-tête du dashboard avec avatar */}
+      <div className="container mx-auto px-4 py-6 space-y-8">
+        {/* En-tête personnalisé */}
         <motion.div 
-          variants={{
-            hidden: { opacity: 0, y: -15 },
-            visible: { opacity: 1, y: 0, transition: { duration: 0.4 } }
-          }}
-          initial="hidden"
-          animate="visible"
-          className="relative p-6 mb-8 overflow-hidden bg-white shadow-lg dark:bg-gray-800 rounded-xl"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="relative bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 overflow-hidden"
         >
-          <div className="flex flex-col items-start justify-between md:flex-row md:items-center">
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <Avatar className="h-16 w-16 border-4 border-white dark:border-gray-800 shadow-md">
-                  <AvatarImage src={user?.avatar} alt={`${user?.firstName} ${user?.lastName}`} />
-                  <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-white text-xl">
-                    {user?.firstName?.[0]}{user?.lastName?.[0]}
-                  </AvatarFallback>
-                </Avatar>
-              </div>
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100">
-                  Bienvenue{" "}
-                  <span className="relative inline-block px-3 py-1 text-white transition-all duration-300 transform rounded-lg shadow-md bg-gradient-to-r from-blue-500 to-indigo-600 hover:scale-105">
-                    <span className="relative inline-block">
-                      {user?.firstName || 'Étudiant'}
-                    </span>
-                    <motion.div
-                      className="absolute inset-0 bg-white rounded-lg opacity-0"
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between relative z-10">
+            <div className="flex items-center">
+              <Avatar className="h-14 w-14 border-2 border-primary">
+                <AvatarImage src={user?.profilePicture} alt={user?.firstName} />
+                <AvatarFallback className="bg-primary text-primary-foreground">{userInitials}</AvatarFallback>
+              </Avatar>
+              <div className="ml-4">
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
+                  Bonjour, {user?.firstName || 'Étudiant'}{' '}
+                  <span className="inline-block ml-2">
+                    <motion.div 
+                      className="w-5 h-5 text-yellow-500"
                       animate={{
-                        opacity: [0, 0.1, 0],
-                        scale: [1, 1.05, 1]
+                        rotate: [0, 20, 0, -20, 0],
+                        scale: [1, 1.2, 1, 1.2, 1],
                       }}
                       transition={{
                         duration: 2,

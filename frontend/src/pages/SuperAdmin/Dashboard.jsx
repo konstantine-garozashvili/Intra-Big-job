@@ -1,9 +1,8 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useUserData } from '@/hooks/useDashboardQueries';
 import { authService } from '@/lib/services/authService';
-import DashboardHeader from '@/components/shared/DashboardHeader';
 import { ShieldAlert, Users, Book, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from "@/components/ui/button";
@@ -33,7 +32,8 @@ const itemVariants = {
  * Tableau de bord spécifique pour les Super Administrateurs
  */
 const SuperAdminDashboard = () => {
-  const { data: user, isLoading, error } = useUserData();
+  const { data: user, isLoading, error, refetch } = useUserData();
+  const refreshAttemptedRef = useRef(false);
   
   // Utiliser useMemo pour éviter les re-rendus inutiles
   const roleAlias = useMemo(() => {
@@ -53,18 +53,39 @@ const SuperAdminDashboard = () => {
     return roleAliases[role] || role;
   }, [user]);
 
-  // Forcer un rafraîchissement des données utilisateur au chargement
+  // Approche améliorée pour gérer les données utilisateur
   useEffect(() => {
+    // Si nous avons déjà des données complètes, ne pas rafraîchir
+    if (user?.firstName && user?.lastName) {
+      refreshAttemptedRef.current = true;
+      return;
+    }
+    
+    // Si une tentative a déjà été faite, ne pas réessayer
+    if (refreshAttemptedRef.current) {
+      return;
+    }
+    
+    // Une seule tentative de rafraîchissement si nécessaire
     const refreshUserData = async () => {
       try {
-        await authService.getCurrentUser(true);
+        refreshAttemptedRef.current = true;
+        // Utiliser le refetch du hook useUserData plutôt que d'appeler directement l'API
+        await refetch();
       } catch (error) {
-        // Error handled silently
+        console.log("Erreur lors du rafraîchissement des données utilisateur", error);
       }
     };
     
-    refreshUserData();
-  }, []);
+    // Attendre un court instant pour permettre aux données initiales de se charger
+    const timeoutId = setTimeout(() => {
+      if (!user?.firstName) {
+        refreshUserData();
+      }
+    }, 100);
+    
+    return () => clearTimeout(timeoutId);
+  }, [user, refetch]);
 
   // Définir les cartes pour les accès rapides
   const quickAccessCards = [
@@ -90,54 +111,49 @@ const SuperAdminDashboard = () => {
     <DashboardLayout 
       loading={isLoading} 
       error={error?.message || null}
+      user={user}
+      headerIcon={ShieldAlert}
+      headerTitle="Tableau de bord super administrateur"
     >
-      <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8">
-        <DashboardHeader 
-          user={user}
-          icon={ShieldAlert}
-          roleTitle="Tableau de bord super administrateur"
-        />
-
-        <Card className="border-0 shadow-md mb-6">
-          <CardContent className="p-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-6">Accès rapide</h2>
-            
-            <motion.div 
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-              className="grid grid-cols-1 md:grid-cols-2 gap-5"
-            >
-              {quickAccessCards.map((card, index) => (
-                <motion.div key={index} variants={itemVariants} className="h-full">
-                  <Link to={card.link} className="block h-full">
-                    <div className="relative h-full overflow-hidden rounded-xl shadow-sm hover:shadow-md transition-all duration-300 group">
-                      <div className={`absolute inset-0 bg-gradient-to-br ${card.color} opacity-90 group-hover:opacity-100 transition-opacity`}></div>
-                      <div className="relative p-5 h-full flex flex-col">
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="p-2.5 rounded-lg bg-white/20 backdrop-blur-sm">
-                            <card.icon className="w-5 h-5 text-white" />
-                          </div>
-                          <div className="p-1.5 rounded-full bg-white/20 backdrop-blur-sm">
-                            <ChevronRight className="w-4 h-4 text-white" />
-                          </div>
+      <Card className="border-0 shadow-md mb-6">
+        <CardContent className="p-6">
+          <h2 className="text-xl font-semibold text-gray-800 mb-6">Accès rapide</h2>
+          
+          <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="grid grid-cols-1 md:grid-cols-2 gap-5"
+          >
+            {quickAccessCards.map((card, index) => (
+              <motion.div key={index} variants={itemVariants} className="h-full">
+                <Link to={card.link} className="block h-full">
+                  <div className="relative h-full overflow-hidden rounded-xl shadow-sm hover:shadow-md transition-all duration-300 group">
+                    <div className={`absolute inset-0 bg-gradient-to-br ${card.color} opacity-90 group-hover:opacity-100 transition-opacity`}></div>
+                    <div className="relative p-5 h-full flex flex-col">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="p-2.5 rounded-lg bg-white/20 backdrop-blur-sm">
+                          <card.icon className="w-5 h-5 text-white" />
                         </div>
-                        
-                        <h2 className="text-xl font-semibold text-white mb-1">
-                          {card.title}
-                        </h2>
-                        <p className="text-white/80 text-sm mb-4">
-                          {card.description}
-                        </p>
+                        <div className="p-1.5 rounded-full bg-white/20 backdrop-blur-sm">
+                          <ChevronRight className="w-4 h-4 text-white" />
+                        </div>
                       </div>
+                      
+                      <h2 className="text-xl font-semibold text-white mb-1">
+                        {card.title}
+                      </h2>
+                      <p className="text-white/80 text-sm mb-4">
+                        {card.description}
+                      </p>
                     </div>
-                  </Link>
-                </motion.div>
-              ))}
-            </motion.div>
-          </CardContent>
-        </Card>
-      </div>
+                  </div>
+                </Link>
+              </motion.div>
+            ))}
+          </motion.div>
+        </CardContent>
+      </Card>
     </DashboardLayout>
   );
 };

@@ -6,7 +6,6 @@ import { RoleGuard, ROLES, useRoles } from '../features/roles';
 import { authService } from '../lib/services/authService';
 import { profileService } from '../pages/Global/Profile/services/profileService';
 import Footer from './Footer';
-import { showGlobalLoader, hideGlobalLoader } from '../lib/utils/loadingUtils';
 import ChatButton from './chat/ChatButton';
 
 // Create a context for profile data and refresh function
@@ -126,17 +125,11 @@ const MainLayout = () => {
           // Attendre un court instant avant d'afficher le composant de progression
           setTimeout(() => {
             setShowProgress(true);
-            // Remove loading state when everything is loaded
-            hideGlobalLoader();
           }, 300);
         } catch (error) {
           console.error('Error fetching initial user data:', error);
           setLoadingState(LOADING_STATES.ERROR);
-          hideGlobalLoader();
         }
-      } else {
-        // Not authenticated
-        hideGlobalLoader();
       }
     };
 
@@ -168,25 +161,14 @@ const MainLayout = () => {
     const handleLoginSuccess = () => {
       // Update authentication state immediately
       setIsAuthenticated(true);
-      
-      // Don't show the global loader here - we'll use skeleton loading
-      // instead of blocking the UI
     };
 
     const handleLogoutSuccess = () => {
-      // Show loading before any state changes
-      showGlobalLoader();
-      
       // Reset all states
       setIsAuthenticated(false);
       setUserData(null);
       setProfileData(null);
       setLoadingState(LOADING_STATES.INITIAL);
-      
-      // Hide loader after a short delay
-      setTimeout(() => {
-        hideGlobalLoader();
-      }, 300);
     };
     
     // Vérifier l'état d'authentification et récupérer les données initiales

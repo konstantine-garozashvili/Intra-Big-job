@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Link } from 'react-router-dom';
-import DashboardHeader from '@/components/shared/DashboardHeader';
 
 import { 
   BookOpen, 
@@ -96,14 +95,11 @@ const TeacherDashboard = () => {
       loading={isLoading} 
       error={isError ? error?.message || 'Une erreur est survenue lors du chargement des données' : null}
       className="p-0"
+      user={user}
+      headerIcon={GraduationCap}
+      headerTitle="Tableau de bord formateur"
     >
       <div className="container p-4 mx-auto sm:p-6 lg:p-8 bg-gray-50 dark:bg-gray-900 min-h-screen">
-        <DashboardHeader 
-          user={user}
-          icon={GraduationCap}
-          roleTitle="Tableau de bord formateur"
-        />
-
         {/* Informations de la formation */}
         {dashboardData?.formation && (
           <motion.div 

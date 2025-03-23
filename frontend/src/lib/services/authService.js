@@ -826,6 +826,34 @@ export const authService = {
       console.error('Error in fixProfileDataIssues:', error);
       return { success: false, message: error.message };
     }
+  },
+
+  /**
+   * Récupère les données minimales de l'utilisateur à partir du localStorage
+   * Utilisé comme fallback lorsque les appels API échouent
+   * @returns {Object|null} - Données minimales utilisateur ou null
+   */
+  getMinimalUserData() {
+    try {
+      const userStr = localStorage.getItem('user');
+      if (!userStr) return null;
+      
+      const userData = JSON.parse(userStr);
+      
+      // Vérifier que les données minimales requises sont présentes
+      if (!userData || (!userData.firstName && !userData.lastName)) {
+        return null;
+      }
+      
+      return {
+        ...userData,
+        _source: 'localStorage',
+        _retrievedAt: Date.now()
+      };
+    } catch (error) {
+      console.error('Erreur lors de la récupération des données minimales:', error);
+      return null;
+    }
   }
 };
 

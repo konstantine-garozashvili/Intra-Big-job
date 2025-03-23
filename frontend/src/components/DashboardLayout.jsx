@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { AlertCircle } from 'lucide-react';
 import { useOutletContext } from 'react-router-dom';
 import DashboardSkeleton from './DashboardSkeleton';
+import DashboardHeader from './shared/DashboardHeader';
 
 // Composant d'erreur optimisé
 const ErrorDisplay = memo(({ errorMessage }) => (
@@ -39,8 +40,19 @@ ErrorDisplay.propTypes = {
 /**
  * Composant de base pour tous les dashboards
  * Gère l'affichage des états d'erreur et de chargement
+ * Inclut maintenant le DashboardHeader directement
  */
-const DashboardLayout = ({ error, children, className = "", isLoading, showSkeleton = true }) => {
+const DashboardLayout = ({ 
+  error, 
+  children, 
+  className = "", 
+  isLoading, 
+  showSkeleton = true,
+  user,
+  headerIcon,
+  headerTitle,
+  showHeader = true
+}) => {
   // Récupérer le contexte de chargement depuis le MainLayout
   const context = useOutletContext() || {};
   
@@ -65,16 +77,19 @@ const DashboardLayout = ({ error, children, className = "", isLoading, showSkele
     );
   }
 
-  // Animer uniquement l'entrée initiale pour éviter les animations lors des mises à jour
+  // Contenu normal sans animation
   return (
-    <motion.div 
-      className={`container mx-auto p-8 ${className}`}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.3 }}
-    >
+    <div className={`container mx-auto p-8 ${className}`}>
+      {/* Intégrer le DashboardHeader ici si showHeader est true */}
+      {showHeader && user && (
+        <DashboardHeader 
+          user={user}
+          icon={headerIcon}
+          roleTitle={headerTitle}
+        />
+      )}
       {children}
-    </motion.div>
+    </div>
   );
 };
 
@@ -83,7 +98,11 @@ DashboardLayout.propTypes = {
   children: PropTypes.node.isRequired,
   className: PropTypes.string,
   isLoading: PropTypes.bool,
-  showSkeleton: PropTypes.bool
+  showSkeleton: PropTypes.bool,
+  user: PropTypes.object,
+  headerIcon: PropTypes.elementType,
+  headerTitle: PropTypes.string,
+  showHeader: PropTypes.bool
 };
 
 // Utiliser memo pour éviter les re-rendus inutiles
