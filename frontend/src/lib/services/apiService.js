@@ -37,10 +37,8 @@ function detectDevicePerformance() {
       setLowPerformanceMode(true);
     }
     
-    console.log(`Performance de l'appareil détectée: ${performanceScore}/100`);
     return performanceScore;
   } catch (e) {
-    console.warn('Impossible de mesurer la performance du dispositif', e);
     return 50; // Score moyen par défaut
   }
 }
@@ -110,7 +108,6 @@ axios.interceptors.request.use(request => {
   
   return request;
 }, error => {
-  console.error('Erreur lors de la préparation de la requête:', error);
   return Promise.reject(error);
 });
 
@@ -123,45 +120,8 @@ axios.interceptors.response.use(response => {
                     response.config.url.includes('/token/revoke');
   }
   
-  // Ne pas afficher les tokens complets pour des raisons de sécurité
-  if (isAuthResponse) {
-    const data = response.data;
-    // Sanitize data if needed
-  }
-  
   return response;
 }, error => {
-  // Identifier les réponses d'authentification
-  let isAuthResponse = false;
-  if (error.config?.url) {
-    isAuthResponse = error.config.url.includes('/login_check') || 
-                    error.config.url.includes('/token/refresh') ||
-                    error.config.url.includes('/token/revoke');
-  }
-  
-  if (isAuthResponse) {
-    console.error(`=== ERREUR API (${error.config?.method?.toUpperCase()}) - AUTHENTIFICATION ===`);
-    console.error('URL:', error.config?.url);
-    console.error('Statut:', error.response?.status, error.response?.statusText);
-    
-    if (error.response) {
-      console.error('Données de réponse:', error.response.data);
-    } else {
-      console.error('Erreur réseau ou timeout');
-    }
-    
-    // Vérifier spécifiquement pour les problèmes d'expiration de token
-    if (error.response?.status === 401) {
-      console.error('Token expiré ou invalide détecté');
-    }
-  } else {
-    // Log standard pour les autres erreurs
-    console.error(`Erreur API (${error.config?.method?.toUpperCase()}):`, error.config?.url, 'Statut:', error.response?.status);
-    if (error.response) {
-      console.error('Données d\'erreur:', error.response.data);
-    }
-  }
-  
   return Promise.reject(error);
 });
 
@@ -252,7 +212,6 @@ const apiService = {
       
       // Vérifier si une requête identique est déjà en cours
       if (pendingRequests.has(requestKey)) {
-        console.log(`Requête déjà en cours: ${requestKey}`);
         return pendingRequests.get(requestKey);
       }
       
@@ -344,7 +303,6 @@ const apiService = {
         pendingRequests.delete(requestKey);
       }
     } catch (error) {
-      console.error(`Error in API GET ${path}:`, error);
       throw error;
     }
   },
@@ -358,16 +316,10 @@ const apiService = {
    */
   async post(path, data = {}, options = {}) {
     try {
-      console.log(`[apiService] POST ${path}:`, { data });
       const url = normalizeApiUrl(path);
       const response = await axios.post(url, data, options);
       return response.data;
     } catch (error) {
-      console.error(
-        `POST ${path} ${error.response?.status || 'error'}`,
-        error
-      );
-      
       // Pour login_check, on ne doit PAS transformer l'erreur, mais la rejeter
       // afin que le composant d'authentification puisse la traiter correctement
       if (path.includes('login_check')) {
@@ -376,7 +328,6 @@ const apiService = {
       
       // Gestion spécifique des erreurs CORS
       if (error.message && error.message.includes('Network Error')) {
-        console.error('Erreur réseau possible - Problème CORS');
         return { success: false, message: 'Erreur de communication avec le serveur' };
       }
       
@@ -402,11 +353,8 @@ const apiService = {
       const response = await axios.put(url, data, options);
       return response.data;
     } catch (error) {
-      console.error(`Erreur API PUT ${path}:`, error);
-      
       // Gestion spécifique des erreurs CORS
       if (error.message && error.message.includes('Network Error')) {
-        console.error('Erreur réseau possible - Problème CORS');
         return { success: false, message: 'Erreur de communication avec le serveur' };
       }
       
@@ -430,7 +378,6 @@ const apiService = {
       const response = await axios.delete(normalizeApiUrl(path), options);
       return response.data;
     } catch (error) {
-      console.error(`Erreur API DELETE ${path}:`, error);
       throw error;
     }
   },
@@ -469,7 +416,6 @@ const apiService = {
   withAuth(options = {}) {
     const token = localStorage.getItem('token');
     if (!token) {
-      console.warn('Tentative d\'appel API authentifié sans token');
       return options;
     }
     
@@ -487,7 +433,6 @@ const apiService = {
    * @param {string} path - Chemin de l'API à invalider
    */
   invalidateCache(path) {
-    console.log(`Cache invalidé pour: ${path}`);
     // Logique d'invalidation du cache pour un chemin spécifique
     // Ici, on pourrait implémenter une logique avec localStorage ou IndexedDB si nécessaire
   },
@@ -496,7 +441,6 @@ const apiService = {
    * Invalide le cache lié au profil utilisateur
    */
   invalidateProfileCache() {
-    console.log('Cache de profil invalidé');
     // Logique d'invalidation du cache spécifique au profil
     this.invalidateCache('/profile');
     this.invalidateCache('/api/me');
@@ -506,7 +450,6 @@ const apiService = {
    * Invalide le cache lié aux documents
    */
   invalidateDocumentCache() {
-    console.log('Cache de documents invalidé');
     // Logique d'invalidation du cache spécifique aux documents
     this.invalidateCache('/documents');
   },
@@ -515,8 +458,6 @@ const apiService = {
    * Vide complètement le cache API
    */
   clearCache() {
-    console.log('Cache API entièrement vidé');
-    
     // Clear in-memory cache - much faster than localStorage operations
     apiCache.clear();
     
@@ -535,14 +476,12 @@ const apiService = {
           localStorage.removeItem(key);
         }
       } catch (e) {
-        console.error(`Error removing key ${key}:`, e);
+        // Silent error handling
       }
     });
     
     // Notify the application that the cache has been cleared
     window.dispatchEvent(new Event('api-cache-cleared'));
-    
-    console.log('Cache API vidé');
   },
   
   /**

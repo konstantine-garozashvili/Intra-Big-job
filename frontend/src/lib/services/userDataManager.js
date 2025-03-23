@@ -42,10 +42,109 @@ export const USER_DATA_EVENTS = {
   UPDATED: 'userData:updated'
 };
 
+// Ajouter un mécanisme de contrôle de fréquence des émissions d'événements
+const eventThrottleState = {
+  lastEventTime: 0,
+  pendingEvents: new Map(),
+  throttleInterval: 1000 // Intervalle minimum entre les événements (1 seconde)
+};
+
+// Système de coordination des requêtes pour éviter les requêtes dupliquées
+const requestRegistry = {
+  // Map pour stocker les requêtes en cours par route
+  activeRequests: new Map(),
+  // Map pour stocker les composants qui utilisent chaque route
+  routeUsers: new Map(),
+  // Délai de contrôle des requêtes
+  requestDebounceTime: 2000, // 2 secondes
+  // Dernières requêtes par route
+  lastRequestTime: new Map(),
+  
+  // Enregistrer un composant utilisateur d'une route
+  registerRouteUser(route, componentId) {
+    if (!this.routeUsers.has(route)) {
+      this.routeUsers.set(route, new Set());
+    }
+    this.routeUsers.get(route).add(componentId);
+    console.log(`🔄 Registry: Component ${componentId} registered for route ${route}`);
+    console.log(`🔄 Registry: Route ${route} now has ${this.routeUsers.get(route).size} users`);
+  },
+  
+  // Désenregistrer un composant
+  unregisterRouteUser(route, componentId) {
+    if (this.routeUsers.has(route)) {
+      this.routeUsers.get(route).delete(componentId);
+      console.log(`🔄 Registry: Component ${componentId} unregistered from route ${route}`);
+      if (this.routeUsers.get(route).size === 0) {
+        this.routeUsers.delete(route);
+        console.log(`🔄 Registry: Route ${route} has no more users`);
+      } else {
+        console.log(`🔄 Registry: Route ${route} still has ${this.routeUsers.get(route).size} users`);
+      }
+    }
+  },
+  
+  // Vérifier si une route est utilisée par plusieurs composants
+  isRouteShared(route) {
+    return this.routeUsers.has(route) && this.routeUsers.get(route).size > 1;
+  },
+  
+  // Vérifier si une requête peut être exécutée ou s'il faut attendre
+  shouldThrottleRequest(route) {
+    const now = Date.now();
+    if (!this.lastRequestTime.has(route)) {
+      this.lastRequestTime.set(route, now);
+      return false;
+    }
+    
+    const timeSinceLastRequest = now - this.lastRequestTime.get(route);
+    if (timeSinceLastRequest < this.requestDebounceTime) {
+      console.log(`🔄 Registry: Throttling request to ${route} (${timeSinceLastRequest}ms since last request)`);
+      return true;
+    }
+    
+    this.lastRequestTime.set(route, now);
+    return false;
+  },
+  
+  // Enregistrer une requête active
+  registerActiveRequest(route, promise) {
+    this.activeRequests.set(route, promise);
+    // Nettoyer la requête une fois terminée
+    promise.finally(() => {
+      if (this.activeRequests.get(route) === promise) {
+        this.activeRequests.delete(route);
+      }
+    });
+    return promise;
+  },
+  
+  // Récupérer une requête active pour une route
+  getActiveRequest(route) {
+    return this.activeRequests.get(route);
+  },
+  
+  // Coordonner une requête pour éviter les doublons
+  coordinateRequest(route, requestFn) {
+    // Si la route a une requête active, réutiliser cette requête
+    if (this.activeRequests.has(route)) {
+      console.log(`🔄 Registry: Reusing active request for ${route}`);
+      return this.activeRequests.get(route);
+    }
+    
+    // Exécuter la fonction de requête et enregistrer la promesse
+    const promise = requestFn();
+    return this.registerActiveRequest(route, promise);
+  }
+};
+
 /**
  * Service centralisé pour gérer les données utilisateur
  */
 const userDataManager = {
+  // Exposer le registre des requêtes
+  requestRegistry,
+
   /**
    * Récupère les données utilisateur
    * @param {Object} options - Options de récupération
@@ -337,18 +436,64 @@ const userDataManager = {
   },
 
   /**
-   * Invalide le cache des données utilisateur
+   * Invalide le cache des données utilisateur et notifie les abonnés
+   * @param {string} [updateType] - Type optionnel de mise à jour (ex: 'profile_picture', 'address')
    */
-  invalidateCache() {
-    userDataCache.data = null;
+  invalidateCache(updateType = null) {
+    console.log(`🔄 userDataManager.invalidateCache(${updateType}): Invalidating user data cache`);
+    
+    // Réinitialiser le cache
     userDataCache.timestamp = 0;
     
-    // Invalider également le cache React Query
+    // Contrôle de la fréquence des événements
+    const now = Date.now();
+    const eventKey = updateType || 'general';
+    
+    // Si un événement du même type est déjà programmé, ne rien faire
+    if (eventThrottleState.pendingEvents.has(eventKey)) {
+      console.log(`🔄 userDataManager: Event ${eventKey} already pending, skipping`);
+      return;
+    }
+    
+    // Si l'intervalle minimum n'est pas écoulé depuis le dernier événement, programmer l'événement
+    if (now - eventThrottleState.lastEventTime < eventThrottleState.throttleInterval) {
+      console.log(`🔄 userDataManager: Throttling event ${eventKey}`);
+      
+      // Programmer l'événement pour plus tard
+      const timeoutId = setTimeout(() => {
+        console.log(`🔄 userDataManager: Emitting delayed event ${eventKey}`);
+        eventThrottleState.lastEventTime = Date.now();
+        eventThrottleState.pendingEvents.delete(eventKey);
+        
+        // Notifier les abonnés que les données ont été mises à jour
+        userDataCache.events.dispatchEvent(
+          new CustomEvent(USER_DATA_EVENTS.UPDATED, { 
+            detail: updateType 
+          })
+        );
+      }, eventThrottleState.throttleInterval - (now - eventThrottleState.lastEventTime));
+      
+      // Enregistrer l'événement programmé
+      eventThrottleState.pendingEvents.set(eventKey, timeoutId);
+      return;
+    }
+    
+    // Mettre à jour le timestamp du dernier événement
+    eventThrottleState.lastEventTime = now;
+    
+    // Notifier les abonnés que les données ont été mises à jour
+    userDataCache.events.dispatchEvent(
+      new CustomEvent(USER_DATA_EVENTS.UPDATED, { 
+        detail: updateType 
+      })
+    );
+    
+    // Invalider les données dans React Query
     const queryClient = getQueryClient();
     if (queryClient) {
-      queryClient.invalidateQueries({ queryKey: ['user'] });
-      queryClient.invalidateQueries({ queryKey: ['currentUser'] });
-      queryClient.invalidateQueries({ queryKey: ['user-data'] });
+      queryClient.invalidateQueries(['user']);
+      queryClient.invalidateQueries(['user-data']);
+      queryClient.invalidateQueries(['unified-user-data']);
     }
   },
 
@@ -401,6 +546,35 @@ const userDataManager = {
       hasCachedData: !!userDataCache.data,
       isLoading: userDataCache.isLoading
     };
+  },
+
+  /**
+   * Coordonne une requête à une route spécifique
+   * @param {string} route - Route API à appeler
+   * @param {string} componentId - Identifiant du composant qui fait la requête
+   * @param {Function} requestFn - Fonction qui effectue la requête API
+   * @returns {Promise} - Promesse de la requête
+   */
+  coordinateRequest(route, componentId, requestFn) {
+    // Enregistrer le composant comme utilisateur de la route
+    this.requestRegistry.registerRouteUser(route, componentId);
+    
+    // Vérifier si la requête doit être limitée en fréquence
+    if (this.requestRegistry.shouldThrottleRequest(route)) {
+      console.log(`🔄 userDataManager: Throttling request to ${route} from ${componentId}`);
+      
+      // Si une requête est déjà active, la réutiliser
+      const activeRequest = this.requestRegistry.getActiveRequest(route);
+      if (activeRequest) {
+        return activeRequest;
+      }
+      
+      // Sinon, créer une promesse résolue pour éviter de faire une nouvelle requête
+      return Promise.resolve(null);
+    }
+    
+    // Coordonner la requête via le registre
+    return this.requestRegistry.coordinateRequest(route, requestFn);
   }
 };
 

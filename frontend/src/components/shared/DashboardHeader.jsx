@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
 import { authService } from '@/lib/services/authService';
 import userDataManager from '@/lib/services/userDataManager';
+import UserSkeleton from '@/components/ui/UserSkeleton';
 
 const getInitials = (firstName, lastName) => {
   if (!firstName || !lastName) return '?';
@@ -224,25 +225,44 @@ const DashboardHeader = ({ user, icon: Icon, roleTitle }) => {
   // Skeleton pour le header
   if (showSkeleton) {
     return (
-      <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 overflow-hidden mb-8">
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="relative bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 overflow-hidden mb-8"
+      >
         <div className="flex flex-col md:flex-row md:items-center md:justify-between relative z-10">
-          <div className="flex items-center">
-            <Skeleton className="h-14 w-14 rounded-full" />
-            <div className="ml-4">
-              <Skeleton className="h-7 w-40 mb-2" />
-              <Skeleton className="h-4 w-24" />
+          <div className="flex items-center space-x-4">
+            {/* Avatar et Info Utilisateur */}
+            <UserSkeleton variant="compact" />
+            
+            {/* Titre et Rôle */}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl font-bold text-gray-900 dark:text-white">Bonjour,</span>
+                <Skeleton className="h-8 w-32" />
+                <Skeleton className="h-5 w-5 rounded-full" />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Skeleton className="h-3.5 w-3.5" />
+                <Skeleton className="h-4 w-24" />
+              </div>
             </div>
           </div>
-          <div className="flex items-center mt-4 md:mt-0 gap-3">
-            <div className="flex items-center mr-4">
-              <Skeleton className="w-5 h-5 mr-2 rounded-full" />
+
+          {/* Actions */}
+          <div className="flex items-center mt-4 md:mt-0 gap-4">
+            {/* Horloge */}
+            <div className="flex items-center">
+              <Skeleton className="w-5 h-5 mr-2" />
               <Skeleton className="h-6 w-16" />
             </div>
-            <Skeleton className="h-9 w-24 rounded-md" />
+            {/* Bouton Profil */}
+            <Skeleton className="h-9 w-[105px] rounded-md" />
           </div>
         </div>
         <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-indigo-600"></div>
-      </div>
+      </motion.div>
     );
   }
   
@@ -262,21 +282,30 @@ const DashboardHeader = ({ user, icon: Icon, roleTitle }) => {
           </Avatar>
           <div className="ml-4">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
-              Bonjour, {firstName || 'Utilisateur'}{' '}
-              <span className="inline-block ml-2">
-                <motion.div 
-                  className="w-5 h-5 text-yellow-500"
-                  animate={{
-                    rotate: [0, 20, 0, -20, 0],
-                    scale: [1, 1.2, 1, 1.2, 1],
-                  }}
-                  transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                  }}
-                />
-              </span>
+              {firstName ? (
+                <>
+                  Bonjour, {firstName}{' '}
+                  <span className="inline-block ml-2">
+                    <motion.div 
+                      className="w-5 h-5 text-yellow-500"
+                      animate={{
+                        rotate: [0, 20, 0, -20, 0],
+                        scale: [1, 1.2, 1, 1.2, 1],
+                      }}
+                      transition={{
+                        duration: 2,
+                        repeat: Infinity,
+                        ease: "easeInOut"
+                      }}
+                    />
+                  </span>
+                </>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span>Bonjour,</span>
+                  <Skeleton className="h-8 w-32" />
+                </div>
+              )}
             </h1>
             <p className="text-gray-600 dark:text-gray-400 flex items-center gap-1.5 mt-1">
               {Icon ? <Icon className="h-3.5 w-3.5 text-primary" /> : <Sparkles className="h-3.5 w-3.5 text-primary" />}

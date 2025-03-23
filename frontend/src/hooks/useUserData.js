@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import userDataManager, { USER_DATA_EVENTS } from '@/lib/services/userDataManager';
 import { getSessionId } from '@/lib/services/authService';
+import apiService from '@/lib/services/apiService';
 
 /**
  * Hook pour accéder aux données utilisateur de manière centralisée
@@ -26,6 +27,11 @@ export function useUserData(options = {}) {
   const [isInitialLoading, setIsInitialLoading] = useState(false);
   const sessionId = getSessionId();
   
+  // Générer un ID unique pour ce composant
+  const [componentId] = useState(() => 
+    `user_data_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  );
+  
   // Optimisation : récupérer les données du localStorage immédiatement
   const [localStorageUser, setLocalStorageUser] = useState(() => {
     try {
@@ -39,6 +45,26 @@ export function useUserData(options = {}) {
 
   // Déterminer la route à utiliser
   const routeKey = preferComprehensiveData ? '/profile/consolidated' : '/api/me';
+  
+  // Enregistrer/désenregistrer ce composant comme utilisateur des routes pertinentes
+  useEffect(() => {
+    // Enregistrer ce composant au montage
+    userDataManager.requestRegistry.registerRouteUser(routeKey, componentId);
+    
+    // Si on utilise les données complètes, on est aussi potentiellement intéressé par la photo de profil
+    if (preferComprehensiveData) {
+      userDataManager.requestRegistry.registerRouteUser('/api/profile/picture', componentId);
+    }
+    
+    return () => {
+      // Désenregistrer ce composant au démontage
+      userDataManager.requestRegistry.unregisterRouteUser(routeKey, componentId);
+      
+      if (preferComprehensiveData) {
+        userDataManager.requestRegistry.unregisterRouteUser('/api/profile/picture', componentId);
+      }
+    };
+  }, [routeKey, componentId, preferComprehensiveData]);
   
   // Force une requête au démarrage, que le composant soit monté ou non
   useEffect(() => {
@@ -96,6 +122,53 @@ export function useUserData(options = {}) {
     return null;
   }, [localStorageUser]);
 
+  // Créer une fonction pour fetcher les données avec coordination
+  const fetchUserData = useCallback(async () => {
+    console.log(`🔄 useUserData: queryFn executing for ${routeKey}`);
+    setIsInitialLoading(true);
+    
+    try {
+      // Utiliser le système de coordination pour éviter les requêtes dupliquées
+      const data = await userDataManager.coordinateRequest(
+        routeKey,
+        componentId,
+        async () => {
+          console.log(`🔄 Component ${componentId} initiating user data request to ${routeKey}`);
+          
+          // Check existing cache directly
+          const existingCache = queryClient.getQueryData(['unified-user-data', routeKey, sessionId]);
+          console.log(`🔄 useUserData: Existing query cache:`, existingCache);
+          
+          // Faire l'appel API directement pour mieux contrôler le comportement
+          return await apiService.get(routeKey, {
+            noCache: true,  // Forcer le rafraîchissement des données
+            retries: 2,     // Nombre de tentatives en cas d'échec
+            timeout: 12000  // Timeout en ms
+          });
+        }
+      );
+      
+      console.log(`🔄 useUserData: Data received from coordinated request:`, data);
+      
+      // Si nous avons des données, les sauvegarder dans localStorage
+      if (data) {
+        try {
+          localStorage.setItem('user', JSON.stringify(data));
+          setLocalStorageUser(data);
+        } catch (e) {
+          console.error('Error saving user data to localStorage:', e);
+        }
+      }
+      
+      setIsInitialLoading(false);
+      return data;
+    } catch (error) {
+      console.error(`🔄 useUserData: Error fetching data:`, error);
+      setIsInitialLoading(false);
+      throw error;
+    }
+  }, [routeKey, componentId, queryClient, sessionId]);
+
   // Utiliser React Query pour gérer l'état et le cache
   const {
     data: userData,
@@ -105,41 +178,7 @@ export function useUserData(options = {}) {
     refetch
   } = useQuery({
     queryKey: ['unified-user-data', routeKey, sessionId],
-    queryFn: async () => {
-      console.log(`🔄 useUserData: queryFn executing for ${routeKey}`);
-      setIsInitialLoading(true);
-      try {
-        // Check existing cache directly
-        const existingCache = queryClient.getQueryData(['unified-user-data', routeKey, sessionId]);
-        console.log(`🔄 useUserData: Existing query cache:`, existingCache);
-        
-        // Utiliser userDataManager pour récupérer les données
-        const data = await userDataManager.getUserData({
-          routeKey,
-          forceRefresh: true,  // Forcer le rafraîchissement des données
-          useCache: false      // Ne pas utiliser le cache pour les requêtes explicites
-        });
-        
-        console.log(`🔄 useUserData: Data received from userDataManager:`, data);
-        
-        // Si nous avons des données, les sauvegarder dans localStorage
-        if (data) {
-          try {
-            localStorage.setItem('user', JSON.stringify(data));
-            setLocalStorageUser(data);
-          } catch (e) {
-            console.error('Error saving user data to localStorage:', e);
-          }
-        }
-        
-        setIsInitialLoading(false);
-        return data;
-      } catch (error) {
-        console.error(`🔄 useUserData: Error fetching data:`, error);
-        setIsInitialLoading(false);
-        throw error;
-      }
-    },
+    queryFn: fetchUserData,
     initialData: getCachedData,
     enabled: enabled && !!sessionId,
     staleTime: 1 * 60 * 1000, // 1 minute (réduit pour forcer des actualisations plus fréquentes)
@@ -171,15 +210,32 @@ export function useUserData(options = {}) {
     }
   });
 
-  // Forcer un rechargement des données
+  // Forcer un rechargement des données avec coordination
   const forceRefresh = useCallback(async () => {
+    // Vérifier si une requête est déjà en cours pour cette route
+    if (userDataManager.requestRegistry.getActiveRequest(routeKey)) {
+      console.log(`🔄 useUserData: Active request detected for ${routeKey}, skipping refresh`);
+      return null;
+    }
+    
+    // Vérifier s'il faut limiter la fréquence des requêtes
+    if (userDataManager.requestRegistry.shouldThrottleRequest(routeKey)) {
+      console.log(`🔄 useUserData: Throttling refresh request to ${routeKey}`);
+      return null;
+    }
+    
+    // Si tout est OK, lancer la requête
     try {
       setIsInitialLoading(true);
-      const freshData = await userDataManager.getUserData({
+      const freshData = await userDataManager.coordinateRequest(
         routeKey,
-        forceRefresh: true,
-        useCache: false
-      });
+        componentId,
+        () => userDataManager.getUserData({
+          routeKey,
+          forceRefresh: true,
+          useCache: false
+        })
+      );
       
       // Mettre à jour le cache React Query avec les nouvelles données
       queryClient.setQueryData(['unified-user-data', routeKey, sessionId], freshData);
@@ -200,7 +256,7 @@ export function useUserData(options = {}) {
       setIsInitialLoading(false);
       throw error;
     }
-  }, [routeKey, sessionId, queryClient]);
+  }, [routeKey, sessionId, queryClient, componentId]);
 
   // Vérifier si l'utilisateur a un rôle spécifique
   const hasRole = useCallback((role) => {
@@ -219,27 +275,77 @@ export function useUserData(options = {}) {
     );
   }, [userData, localStorageUser]);
 
-  // S'abonner aux événements de mise à jour des données utilisateur
+  // Améliorer la gestion des événements de mise à jour
   useEffect(() => {
     if (!enabled) return () => {};
     
-    // S'abonner à l'événement de mise à jour
-    const unsubscribe = userDataManager.subscribe(USER_DATA_EVENTS.UPDATED, (updatedData) => {
-      if (updatedData) {
-        queryClient.setQueryData(['unified-user-data', routeKey, sessionId], updatedData);
+    // Variable pour limiter la fréquence des requêtes
+    let lastUpdateTime = Date.now();
+    const UPDATE_THROTTLE_MS = 2000; // 2 secondes minimum entre les mises à jour
+    let pendingUpdate = false;
+    
+    // S'abonner à l'événement de mise à jour avec contrôle de fréquence
+    const unsubscribe = userDataManager.subscribe(USER_DATA_EVENTS.UPDATED, (updateType) => {
+      console.log(`🔄 useUserData: Received UPDATE event with type:`, updateType);
+      
+      // Si c'est une mise à jour de photo de profil uniquement, ne pas refetch toutes les données
+      if (updateType === 'profile_picture') {
+        console.log('🔄 useUserData: Ignoring profile_picture update to prevent recursive fetching');
+        return;
+      }
+      
+      // Vérifier si la route est partagée entre plusieurs composants
+      if (userDataManager.requestRegistry.isRouteShared(routeKey)) {
+        console.log(`🔄 useUserData: Route ${routeKey} is shared, being cautious with updates`);
         
-        // Mettre à jour également le localStorage
-        try {
-          localStorage.setItem('user', JSON.stringify(updatedData));
-          setLocalStorageUser(updatedData);
-        } catch (e) {
-          console.error('Error saving updated user data to localStorage:', e);
+        // Si une requête est déjà en cours, ne pas en lancer une nouvelle
+        if (userDataManager.requestRegistry.getActiveRequest(routeKey)) {
+          console.log(`🔄 useUserData: Active request detected for ${routeKey}, skipping update`);
+          return;
         }
+      }
+      
+      // Vérifier si une mise à jour est déjà en attente ou si la dernière mise à jour est trop récente
+      const now = Date.now();
+      if (pendingUpdate || (now - lastUpdateTime < UPDATE_THROTTLE_MS)) {
+        console.log(`🔄 useUserData: Throttling update, last update was ${now - lastUpdateTime}ms ago`);
+        
+        // Si aucune mise à jour n'est en attente, programmer une mise à jour différée
+        if (!pendingUpdate) {
+          pendingUpdate = true;
+          setTimeout(() => {
+            console.log('🔄 useUserData: Processing delayed update');
+            lastUpdateTime = Date.now();
+            pendingUpdate = false;
+            
+            if (updateType) {
+              // En cas de mise à jour avec type spécifique, invalider les données 
+              // mais ne pas forcer un refetch immédiat
+              queryClient.invalidateQueries(['unified-user-data', routeKey, sessionId]);
+            } else {
+              // Seulement pour les invalidations générales complètes
+              refetch();
+            }
+          }, UPDATE_THROTTLE_MS - (now - lastUpdateTime));
+        }
+        return;
+      }
+      
+      // Mettre à jour le timestamp de la dernière mise à jour
+      lastUpdateTime = now;
+      
+      if (updateType) {
+        // En cas de mise à jour avec type spécifique, invalider les données
+        // mais ne pas forcément refetch immédiatement pour éviter les boucles
+        queryClient.invalidateQueries(['unified-user-data', routeKey, sessionId]);
+      } else {
+        // Pour les invalidations générales, refetch toutes les données
+        refetch();
       }
     });
     
     return unsubscribe;
-  }, [enabled, routeKey, sessionId, queryClient]);
+  }, [enabled, routeKey, sessionId, queryClient, refetch]);
 
   // Données dérivées basées sur le rôle de l'utilisateur
   const derivedData = useMemo(() => {

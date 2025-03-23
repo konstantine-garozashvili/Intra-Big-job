@@ -1,10 +1,11 @@
 import { useApiQuery, useApiMutation } from '@/hooks/useReactQuery';
 import { profileService } from '../services/profileService';
 import { toast } from 'sonner';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { queryClient } from '@/App';  // Import the shared queryClient
 import userDataManager, { USER_DATA_EVENTS } from '@/lib/services/userDataManager';
+import apiService from '@/lib/services/apiService';
 
 // Cache keys for localStorage
 const CACHE_KEYS = {
@@ -137,6 +138,13 @@ function getProfilePictureUrl(data) {
 export function useProfilePicture() {
   // Use the shared queryClient instead of creating a new one
   const isMountedRef = useRef(true);
+  const queryClient = useQueryClient();
+  
+  // Générer un ID unique pour ce composant
+  const [componentId] = useState(() => 
+    `profile_picture_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  );
+  
   const [cachedUrl, setCachedUrl] = useState(() => {
     const url = profilePictureCache.getFromCache();
     console.log('[Debug] Initial cached URL:', url);
@@ -147,6 +155,9 @@ export function useProfilePicture() {
   useEffect(() => {
     isMountedRef.current = true;
     
+    // Enregistrer ce composant comme utilisateur de la route au montage
+    userDataManager.requestRegistry.registerRouteUser('/api/profile/picture', componentId);
+    
     // Check if we have a valid cached URL on mount
     const url = profilePictureCache.getFromCache();
     if (url) {
@@ -155,54 +166,76 @@ export function useProfilePicture() {
     
     return () => {
       isMountedRef.current = false;
+      // Désenregistrer ce composant comme utilisateur de la route au démontage
+      userDataManager.requestRegistry.unregisterRouteUser('/api/profile/picture', componentId);
     };
-  }, []);
+  }, [componentId]);
 
-  // Query for profile picture with enhanced debugging
-  const profilePictureQuery = useApiQuery(
-    '/api/profile/picture',
-    PROFILE_QUERY_KEYS.profilePicture,
-    {
-      staleTime: 5 * 60 * 1000,
-      cacheTime: 10 * 60 * 1000,
-      retry: 1,
-      refetchOnWindowFocus: false,
-      refetchOnMount: profilePictureCache.isCacheValid() ? false : true,
-      refetchInterval: null,
-      onSuccess: (data) => {
-        console.log('[Debug] Query success:', data);
-        const url = getProfilePictureUrl(data);
-        if (url) {
-          console.log('[Debug] New URL from query:', url);
-          console.log('[Debug] Updating React Query cache with:', {
-            queryKey: PROFILE_QUERY_KEYS.profilePicture,
-            data: data
-          });
-          queryClient.setQueryData(PROFILE_QUERY_KEYS.profilePicture, data);
-          profilePictureCache.saveToCache(url);
-          
-          // Notifier userDataManager qu'une nouvelle photo de profil est disponible
-          // Cela permettra aux composants qui utilisent useUserDataCentralized
-          // de recevoir la mise à jour de la photo de profil
-          try {
-            userDataManager.invalidateCache();
-          } catch (e) {
-            // Ignorer les erreurs silencieusement
+  // Fonction pour récupérer la photo de profil en utilisant la coordination
+  const fetchProfilePicture = useCallback(async () => {
+    // Utiliser le système de coordination des requêtes
+    return userDataManager.coordinateRequest(
+      '/api/profile/picture',
+      componentId,
+      () => {
+        console.log(`[Debug] Component ${componentId} initiating profile picture request`);
+        return apiService.get('/api/profile/picture', { 
+          params: { _t: Date.now() }, // Ajouter un timestamp pour éviter le cache du navigateur
+          timeout: 5000, // Timeout court pour les images
+          retries: 1 // Limiter les retries
+        });
+      }
+    );
+  }, [componentId]);
+
+  // Query for profile picture with enhanced debugging - Utiliser notre fonction de fetch coordonnée
+  const profilePictureQuery = useQuery({
+    queryKey: PROFILE_QUERY_KEYS.profilePicture,
+    queryFn: fetchProfilePicture,
+    staleTime: 5 * 60 * 1000,
+    cacheTime: 10 * 60 * 1000,
+    retry: 1,
+    refetchOnWindowFocus: false,
+    refetchOnMount: profilePictureCache.isCacheValid() ? false : true,
+    refetchInterval: null,
+    onSuccess: (data) => {
+      console.log('[Debug] Query success:', data);
+      const url = getProfilePictureUrl(data);
+      if (url) {
+        console.log('[Debug] New URL from query:', url);
+        console.log('[Debug] Updating React Query cache with:', {
+          queryKey: PROFILE_QUERY_KEYS.profilePicture,
+          data: data
+        });
+        queryClient.setQueryData(PROFILE_QUERY_KEYS.profilePicture, data);
+        profilePictureCache.saveToCache(url);
+        
+        // Notifier avec le type approprié mais limiter la propagation
+        try {
+          // Ne déclencher l'invalidation que si ce composant est le seul utilisateur de la route
+          // ou si c'est une première requête (pas dans le cadre d'une mise à jour)
+          if (!userDataManager.requestRegistry.isRouteShared('/api/profile/picture')) {
+            console.log('[Debug] Not a shared route, safe to invalidate cache with type');
+            userDataManager.invalidateCache('profile_picture');
+          } else {
+            console.log('[Debug] Shared route, skipping invalidation to prevent recursive fetching');
           }
+        } catch (e) {
+          // Ignorer les erreurs silencieusement
         }
-      },
-      onError: (error) => {
-        console.error('[Debug] Query error:', error);
-      },
-      placeholderData: cachedUrl ? {
-        success: true,
-        data: {
-          has_profile_picture: true,
-          profile_picture_url: cachedUrl
-        }
-      } : undefined
-    }
-  );
+      }
+    },
+    onError: (error) => {
+      console.error('[Debug] Query error:', error);
+    },
+    placeholderData: cachedUrl ? {
+      success: true,
+      data: {
+        has_profile_picture: true,
+        profile_picture_url: cachedUrl
+      }
+    } : undefined
+  });
 
   // Log detailed query state changes
   useEffect(() => {
@@ -221,9 +254,23 @@ export function useProfilePicture() {
     });
   }, [profilePictureQuery.data, profilePictureQuery.isLoading, profilePictureQuery.isFetching, profilePictureQuery.isError, cachedUrl]);
 
-  // Force refresh function
-  const forceRefresh = useCallback(async () => {
-    // Invalidate all related queries
+  // Ajouter un état pour contrôler la fréquence des actualisations
+  const [lastRefreshTime, setLastRefreshTime] = useState(0);
+  const REFRESH_THROTTLE_MS = 2000; // 2 secondes minimum entre les rafraîchissements
+
+  // Modifier la fonction forceRefresh pour limiter la fréquence des actualisations
+  const forceRefresh = useCallback(async (skipThrottle = false) => {
+    // Vérifier si nous devons respecter la limite de fréquence et si le temps minimum est écoulé
+    const now = Date.now();
+    if (!skipThrottle && now - lastRefreshTime < REFRESH_THROTTLE_MS) {
+      console.log(`[Debug] Throttling profile picture refresh (last refresh: ${now - lastRefreshTime}ms ago)`);
+      return null; // Ne pas rafraîchir si trop récent
+    }
+    
+    // Mettre à jour l'horodatage du dernier rafraîchissement
+    setLastRefreshTime(now);
+    
+    // Invalider les requêtes pertinentes
     await Promise.all([
       queryClient.invalidateQueries({ 
         queryKey: PROFILE_QUERY_KEYS.profilePicture,
@@ -239,9 +286,9 @@ export function useProfilePicture() {
       })
     ]);
     
-    // Force immediate refetch
+    // Forcer un rafraîchissement immédiat
     return await profilePictureQuery.refetch();
-  }, [queryClient, profilePictureQuery]);
+  }, [queryClient, profilePictureQuery, lastRefreshTime]);
 
   // Upload profile picture mutation
   const uploadProfilePictureMutation = useApiMutation(
@@ -281,7 +328,7 @@ export function useProfilePicture() {
         console.log('[Debug] Upload success:', data);
         
         // Notifier le gestionnaire de données utilisateur de l'invalidation
-        userDataManager.invalidateCache();
+        userDataManager.invalidateCache('profile_picture'); // Passer un type spécifique
         
         // Notify all subscribers
         profilePictureEvents.notify();
@@ -344,7 +391,7 @@ export function useProfilePicture() {
       },
       onSuccess: async () => {
         // Notifier le gestionnaire de données utilisateur de l'invalidation
-        userDataManager.invalidateCache();
+        userDataManager.invalidateCache('profile_picture'); // Passer un type spécifique
         
         // Notify all subscribers
         profilePictureEvents.notify();
@@ -374,11 +421,44 @@ export function useProfilePicture() {
     }
   );
 
-  // S'abonner aux événements de mise à jour des données utilisateur
+  // Modifier l'abonnement aux événements pour mieux gérer les mises à jour
   useEffect(() => {
+    // Variables pour suivre les événements récents
+    let recentUpdateTimestamp = 0;
+    const UPDATE_THROTTLE_MS = 1000; // 1 seconde minimum entre les mises à jour
+    
     // Fonction de rappel pour rafraîchir la photo de profil si les données utilisateur sont mises à jour
-    const handleUserDataUpdate = () => {
-      forceRefresh();
+    const handleUserDataUpdate = (updateType) => {
+      // Ne déclencher le forceRefresh que si la mise à jour n'est pas liée à la photo de profil
+      // Cela empêche la boucle infinie où la mise à jour de la photo déclenche une mise à jour des données
+      if (updateType === 'profile_picture') {
+        console.log('[Debug] Ignoring profile_picture update to prevent recursive fetching');
+        return;
+      }
+      
+      // Vérifier si la route est partagée entre plusieurs composants
+      // Si oui, être encore plus prudent pour éviter les cascades de mises à jour
+      if (userDataManager.requestRegistry.isRouteShared('/api/profile/picture')) {
+        console.log('[Debug] Route is shared, being extra cautious with updates');
+        
+        // Si un autre composant est en train de faire une requête, ne pas en lancer une nouvelle
+        if (userDataManager.requestRegistry.getActiveRequest('/api/profile/picture')) {
+          console.log('[Debug] Active request detected, skipping update');
+          return;
+        }
+      }
+      
+      // Vérifier la fréquence des mises à jour
+      const now = Date.now();
+      if (now - recentUpdateTimestamp < UPDATE_THROTTLE_MS) {
+        console.log('[Debug] Throttling update event, too many updates');
+        return;
+      }
+      
+      recentUpdateTimestamp = now;
+      
+      // Utiliser la version throttled de forceRefresh
+      forceRefresh(false);
     };
     
     // S'abonner à l'événement UPDATED du gestionnaire de données utilisateur

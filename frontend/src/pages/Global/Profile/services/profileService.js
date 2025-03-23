@@ -12,7 +12,16 @@ const profileCache = {
   cacheDuration: 2 * 60 * 1000
 };
 
+// Identifiant unique pour ce service
+const SERVICE_ID = `profile_service_${Date.now()}`;
+
 class ProfileService {
+  constructor() {
+    // Enregistrer le service comme utilisateur des routes qu'il utilise fréquemment
+    userDataManager.requestRegistry.registerRouteUser('/profile/picture', SERVICE_ID);
+    userDataManager.requestRegistry.registerRouteUser('/profile/consolidated', SERVICE_ID);
+  }
+
   async getUserProfile() {
     try {
       // Vérifier si les données sont en cache et toujours valides
@@ -22,7 +31,12 @@ class ProfileService {
         return profileCache.userData;
       }
       
-      const response = await apiService.get('/profile/user-data');
+      // Utiliser le système de coordination pour éviter les requêtes dupliquées
+      const response = await userDataManager.coordinateRequest(
+        '/profile/user-data',
+        SERVICE_ID,
+        () => apiService.get('/profile/user-data')
+      );
       
       // Mettre en cache les données
       profileCache.userData = response.data;
@@ -43,7 +57,7 @@ class ProfileService {
         });
         
         // Invalider le cache après une mise à jour
-        this.invalidateCache();
+        this.invalidateCache('profile_data');
         
         return response.data;
       }
@@ -52,7 +66,7 @@ class ProfileService {
       const response = await apiService.put('/profile', profileData);
       
       // Invalider le cache après une mise à jour
-      this.invalidateCache();
+      this.invalidateCache('profile_data');
       
       return response.data;
     } catch (error) {
@@ -95,12 +109,25 @@ class ProfileService {
    */
   async getAllProfileData(options = {}) {
     try {
-      // Utiliser le gestionnaire centralisé des données utilisateur
-      const data = await userDataManager.getUserData({
-        routeKey: '/profile/consolidated',
-        forceRefresh: options.forceRefresh,
-        useCache: !options.forceRefresh
-      });
+      // Vérifier si une requête est déjà en cours pour cette route
+      if (userDataManager.requestRegistry.getActiveRequest('/profile/consolidated') && !options.forceRefresh) {
+        console.log('Requête consolidée déjà en cours, réutilisation de la requête existante');
+        const activeRequest = userDataManager.requestRegistry.getActiveRequest('/profile/consolidated');
+        if (activeRequest) {
+          return activeRequest;
+        }
+      }
+      
+      // Utiliser le gestionnaire centralisé des données utilisateur avec coordination
+      const data = await userDataManager.coordinateRequest(
+        '/profile/consolidated',
+        SERVICE_ID,
+        () => userDataManager.getUserData({
+          routeKey: '/profile/consolidated',
+          forceRefresh: options.forceRefresh,
+          useCache: !options.forceRefresh
+        })
+      );
       
       // Mettre également à jour le cache local pour la compatibilité
       profileCache.consolidatedData = data;
@@ -148,8 +175,12 @@ class ProfileService {
   // Profile picture methods
   async getProfilePicture() {
     try {
-      const response = await apiService.get('/profile/picture');
-      return response;
+      // Utiliser la coordination des requêtes
+      return await userDataManager.coordinateRequest(
+        '/api/profile/picture',
+        SERVICE_ID,
+        () => apiService.get('/profile/picture')
+      );
     } catch (error) {
       throw error;
     }
@@ -167,7 +198,7 @@ class ProfileService {
       });
       
       // Invalider le cache après une mise à jour
-      this.invalidateCache();
+      this.invalidateCache('profile_picture');
       
       // Notifier tous les composants abonnés
       profilePictureEvents.notify();
@@ -185,7 +216,7 @@ class ProfileService {
       const response = await apiService.delete(`/profile/picture?t=${timestamp}`);
       
       // Invalider le cache après une mise à jour
-      this.invalidateCache();
+      this.invalidateCache('profile_picture');
       
       // Notifier tous les composants abonnés
       profilePictureEvents.notify();
@@ -201,7 +232,7 @@ class ProfileService {
       const response = await apiService.put('/profile/address', addressData);
       
       // Invalider le cache après une mise à jour
-      this.invalidateCache();
+      this.invalidateCache('address');
       
       return response.data;
     } catch (error) {
@@ -211,15 +242,34 @@ class ProfileService {
   
   /**
    * Invalide le cache des données de profil
+   * @param {string} [updateType] - Type de mise à jour (ex: 'profile_picture', 'address', 'profile_data')
    */
-  invalidateCache() {
+  invalidateCache(updateType = null) {
+    // Ne pas déclencher l'invalidation trop fréquemment
+    if (updateType === 'profile_picture' && 
+        userDataManager.requestRegistry.isRouteShared('/api/profile/picture')) {
+      console.log('Route partagée, invalidation de cache limitée pour éviter les boucles');
+      
+      // Vider uniquement notre cache local sans propager
+      profileCache.userData = null;
+      profileCache.userDataTimestamp = 0;
+      profileCache.consolidatedData = null;
+      profileCache.consolidatedDataTimestamp = 0;
+      
+      // Notifier directement les abonnés au lieu de passer par userDataManager
+      // pour éviter de déclencher des cascades de mises à jour
+      profilePictureEvents.notify();
+      return;
+    }
+    
+    // Si ce n'est pas un cas spécial, procéder normalement
     profileCache.userData = null;
     profileCache.userDataTimestamp = 0;
     profileCache.consolidatedData = null;
     profileCache.consolidatedDataTimestamp = 0;
     
-    // Invalider également le cache centralisé
-    userDataManager.invalidateCache();
+    // Invalider également le cache centralisé avec le type de mise à jour
+    userDataManager.invalidateCache(updateType);
   }
 }
 

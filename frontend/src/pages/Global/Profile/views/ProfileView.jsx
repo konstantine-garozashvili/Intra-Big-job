@@ -286,23 +286,6 @@ const ProfileView = () => {
     };
   }
 
-  // Guard against invalid data structure
-  if (!userData.user || (!userData.user.firstName && !userData.user.lastName)) {
-    return (
-      <div className="w-full max-w-7xl mx-auto px-4 py-6" data-testid="profile-invalid-data">
-        <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded relative" role="alert">
-          <strong className="font-bold">Attention :</strong>
-          <span className="block sm:inline"> La structure des données du profil est invalide.</span>
-          <div className="mt-2">
-            <p className="text-sm">Données reçues :</p>
-            <pre className="mt-2 text-xs overflow-auto max-h-80 whitespace-pre-wrap bg-gray-100 p-2 rounded">
-              {JSON.stringify(data, null, 2)}
-            </pre>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <motion.div

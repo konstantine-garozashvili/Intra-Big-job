@@ -1,9 +1,9 @@
-import React, { memo, useState, useEffect, useRef, useCallback } from 'react';
+import React, { memo, useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { authService } from '@/lib/services/authService';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useRoles, ROLES } from '../features/roles/roleContext';
 import { useRoleUI } from '../features/roles/useRolePermissions';
+import { useUserData } from '@/hooks/useUserData';
 import {
   User, 
   UserPlus, 
@@ -29,7 +29,6 @@ import {
   ClipboardCheck
 } from 'lucide-react';
 import { useRolePermissions } from '@/features/roles/useRolePermissions';
-import userDataManager from '@/lib/services/userDataManager';
 
 // Style personnalisé pour les animations et transitions
 const customStyles = `
@@ -116,7 +115,7 @@ const customStyles = `
 `;
 
 const MenuBurger = memo(() => {
-  const [userData, setUserData] = useState(null);
+  const { user: userData, isLoading } = useUserData();
   const [menuOpen, setMenuOpen] = useState(false);
   const [openSubMenus, setOpenSubMenus] = useState({});
   const menuRef = useRef(null);
@@ -127,55 +126,6 @@ const MenuBurger = memo(() => {
   const { roles, hasRole, hasAnyRole, refreshRoles } = useRoles();
   const { translateRoleName } = useRoleUI();
   const permissions = useRolePermissions();
-
-  // Fonction pour vérifier l'authentification et mettre à jour les données utilisateur
-  const checkAuthentication = useCallback(async () => {
-    try {
-      if (authService.isLoggedIn()) {
-        // Utiliser les données en cache si disponibles pour éviter des appels API en doublon
-        const cachedUserData = authService.getUser() || userDataManager.getCachedUserData();
-        
-        if (cachedUserData) {
-          // Utiliser les données en cache d'abord pour un rendu rapide
-          setUserData(cachedUserData);
-          
-          // Vérifier si une mise à jour est nécessaire en arrière-plan
-          const stats = userDataManager.getStats();
-          const dataAge = stats.dataAge || Infinity;
-          
-          // Ne rafraîchir que si les données sont anciennes (plus de 2 minutes)
-          if (dataAge > 2 * 60 * 1000) {
-            // Utiliser background refresh pour ne pas bloquer l'UI
-            userDataManager.getUserData({
-              routeKey: '/api/me',
-              forceRefresh: false,
-              background: true,
-              requestId: 'menuburger_background_refresh'
-            }).then(freshData => {
-              if (freshData && JSON.stringify(freshData) !== JSON.stringify(cachedUserData)) {
-                setUserData(freshData);
-              }
-            }).catch(e => {
-              console.warn('Erreur lors du rafraîchissement en arrière-plan des données utilisateur:', e);
-            });
-          }
-        } else {
-          // Aucune donnée en cache, récupérer depuis l'API
-          const user = await authService.getCurrentUser(false, { requestSource: 'menuburger' });
-          if (user) {
-            setUserData(user);
-          } else {
-            setUserData(null);
-          }
-        }
-      } else {
-        setUserData(null);
-      }
-    } catch (error) {
-      console.error('Erreur dans checkAuthentication MenuBurger:', error);
-      setUserData(null);
-    }
-  }, []);
 
   // Gestionnaire de clic à l'extérieur du menu
   useEffect(() => {
@@ -191,54 +141,17 @@ const MenuBurger = memo(() => {
       }
     };
 
-    // Ajouter l'écouteur d'événement lorsque le menu est ouvert
     if (menuOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
-    // Nettoyer l'écouteur d'événement
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [menuOpen]);
 
-  // Effet pour vérifier l'authentification et écouter les événements d'authentification
-  useEffect(() => {
-    // Vérifier l'authentification au chargement
-    checkAuthentication();
-  
-    // Gestionnaires d'événements pour les changements d'authentification
-    const handleLoginEvent = async () => {
-      await checkAuthentication();
-      refreshRoles(); // Rafraîchir les rôles après connexion
-    };
-  
-    const handleLogoutEvent = async () => {
-      setUserData(null);
-      // Les rôles seront automatiquement mis à jour par le contexte
-    };
-  
-    const handleRoleChangeEvent = async () => {
-      await checkAuthentication();
-      refreshRoles(); // Rafraîchir les rôles après changement de rôle
-    };
-  
-    // Ajouter les écouteurs d'événements
-    window.addEventListener('login-success', handleLoginEvent);
-    window.addEventListener('logout-success', handleLogoutEvent);
-    window.addEventListener('role-change', handleRoleChangeEvent);
-  
-    // Nettoyer les écouteurs d'événements
-    return () => {
-      window.removeEventListener('login-success', handleLoginEvent);
-      window.removeEventListener('logout-success', handleLogoutEvent);
-      window.removeEventListener('role-change', handleRoleChangeEvent);
-    };
-  }, [checkAuthentication, refreshRoles]);
-  
   // Effet pour fermer le menu lorsque les rôles changent
   useEffect(() => {
-    // Fermer le menu si les rôles changent et que le menu est ouvert
     if (menuOpen) {
       setMenuOpen(false);
     }
@@ -247,26 +160,10 @@ const MenuBurger = memo(() => {
   const toggleMenu = () => setMenuOpen(!menuOpen);
 
   const toggleSubMenu = (menu) => {
-    setOpenSubMenus((prev) => {
-      // If the clicked menu is already open, close it
-      if (prev[menu]) {
-        return {
-          ...prev,
-          [menu]: false
-        };
-      }
-      
-      // Otherwise, close all menus and open only the clicked one
-      const newState = {};
-      Object.keys(prev).forEach(key => {
-        newState[key] = false;
-      });
-      
-      return {
-        ...newState,
-        [menu]: true
-      };
-    });
+    setOpenSubMenus((prev) => ({
+      ...Object.keys(prev).reduce((acc, key) => ({ ...acc, [key]: false }), {}),
+      [menu]: !prev[menu]
+    }));
   };
   
 
@@ -619,7 +516,9 @@ const MenuBurger = memo(() => {
                            setMenuOpen(false);
                            navigate('/profile');
                          }}>
-                      <p className="font-semibold hover:underline transition-all">{userData ? `${userData.firstName} ${userData.lastName}` : 'Utilisateur'}</p>
+                      <p className="font-semibold hover:underline transition-all">
+                        {userData ? `${userData.firstName} ${userData.lastName}` : 'Chargement...'}
+                      </p>
                       <p className="text-sm text-blue-200">{translateRoleName(roles[0])}</p>
                     </div>
                     <button 
@@ -632,7 +531,7 @@ const MenuBurger = memo(() => {
                   </div>
                 )}
                 
-                {!roles.length && (
+                {!roles.length && !isLoading && (
                   <div className="p-4 border-b border-blue-700 bg-gradient-to-r from-[#00284f] to-[#003a6b]">
                     <div className="flex items-center justify-between mb-3">
                       <h2 className="text-xl font-semibold text-white">Bienvenue</h2>
