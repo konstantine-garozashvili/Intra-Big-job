@@ -1,19 +1,13 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useState, useMemo, memo, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMemo, memo, useCallback } from 'react';
 import {
   User,
-  Shield,
   Bell,
-  Settings,
-  LogOut,
-  FileText,
-  BookOpen,
   Lock,
   Briefcase,
-  Eye,
 } from 'lucide-react';
 import { useUserDataCentralized } from '@/hooks';
+import { authService } from '@/lib/services/authService';
 
 // Memoized navigation button component
 const NavButton = memo(({ item, isActive, onClick }) => (

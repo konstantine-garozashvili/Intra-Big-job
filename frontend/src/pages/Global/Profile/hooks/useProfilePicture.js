@@ -1,9 +1,7 @@
-import { useApiQuery, useApiMutation } from '@/hooks/useReactQuery';
-import { profileService } from '../services/profileService';
+import { useApiMutation } from '@/hooks/useReactQuery';
 import { toast } from 'sonner';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { queryClient } from '@/App';  // Import the shared queryClient
 import userDataManager, { USER_DATA_EVENTS } from '@/lib/services/userDataManager';
 import apiService from '@/lib/services/apiService';
 
@@ -174,18 +172,111 @@ export function useProfilePicture() {
   // Fonction pour récupérer la photo de profil en utilisant la coordination
   const fetchProfilePicture = useCallback(async () => {
     // Utiliser le système de coordination des requêtes
-    return userDataManager.coordinateRequest(
-      '/api/profile/picture',
-      componentId,
-      () => {
-        console.log(`[Debug] Component ${componentId} initiating profile picture request`);
-        return apiService.get('/api/profile/picture', { 
-          params: { _t: Date.now() }, // Ajouter un timestamp pour éviter le cache du navigateur
-          timeout: 5000, // Timeout court pour les images
-          retries: 1 // Limiter les retries
-        });
-      }
-    );
+    try {
+      const response = await userDataManager.coordinateRequest(
+        '/api/profile/picture',
+        componentId,
+        async () => {
+          console.log(`[Debug] Component ${componentId} initiating profile picture request`);
+          const result = await apiService.get('/api/profile/picture', { 
+            params: { _t: Date.now() }, // Ajouter un timestamp pour éviter le cache du navigateur
+            timeout: 5000, // Timeout court pour les images
+            retries: 1 // Limiter les retries
+          });
+          
+          console.log(`[Debug] Raw API response:`, result);
+          
+          // Normaliser les données pour assurer un format cohérent
+          // Le format attendu par getProfilePictureUrl est { data: { has_profile_picture: bool, profile_picture_url: string } }
+          if (result) {
+            // Si le résultat est une string, c'est probablement une URL directe
+            if (typeof result === 'string') {
+              return { 
+                success: true,
+                data: { 
+                  has_profile_picture: true, 
+                  profile_picture_url: result 
+                } 
+              };
+            }
+            
+            // Si on a direct la propriété url ou profile_picture_url
+            if (result.url || result.profile_picture_url) {
+              const url = result.url || result.profile_picture_url;
+              return { 
+                success: true, 
+                data: { 
+                  has_profile_picture: true, 
+                  profile_picture_url: url 
+                } 
+              };
+            }
+            
+            // Si on a data.profile_picture_url
+            if (result.data && (result.data.profile_picture_url || result.data.url)) {
+              // Le format est déjà correct, assurer juste qu'on a bien has_profile_picture
+              const profileData = { ...result.data };
+              if (profileData.profile_picture_url || profileData.url) {
+                profileData.has_profile_picture = true;
+                profileData.profile_picture_url = profileData.profile_picture_url || profileData.url;
+              }
+              return { success: true, data: profileData };
+            }
+            
+            // Si on a un autre format (mais toujours un objet), essayer de normaliser
+            if (typeof result === 'object' && result !== null) {
+              if (result.success === true && result.data) {
+                // Le format est probablement déjà correct
+                return result;
+              }
+              
+              // Dernier recours: chercher une URL à n'importe quel niveau
+              const findUrlInObject = (obj) => {
+                for (const key in obj) {
+                  if (typeof obj[key] === 'string' && 
+                      (key.includes('url') || key.includes('picture')) && 
+                      (obj[key].startsWith('http') || obj[key].startsWith('/'))) {
+                    return obj[key];
+                  } else if (typeof obj[key] === 'object' && obj[key] !== null) {
+                    const nestedUrl = findUrlInObject(obj[key]);
+                    if (nestedUrl) return nestedUrl;
+                  }
+                }
+                return null;
+              };
+              
+              const url = findUrlInObject(result);
+              if (url) {
+                return { 
+                  success: true, 
+                  data: { 
+                    has_profile_picture: true, 
+                    profile_picture_url: url 
+                  } 
+                };
+              }
+            }
+          }
+          
+          // Si aucune normalisation n'a fonctionné, retourner le résultat tel quel
+          // en s'assurant qu'il a la structure minimale attendue
+          return result && typeof result === 'object' 
+            ? result 
+            : { success: false, data: { has_profile_picture: false } };
+        }
+      );
+      
+      console.log(`[Debug] Normalized profile picture response:`, response);
+      return response;
+    } catch (error) {
+      console.error(`[Debug] Error fetching profile picture:`, error);
+      // En cas d'erreur, retourner un objet avec le format attendu
+      return { 
+        success: false, 
+        data: { has_profile_picture: false },
+        error: error.message
+      };
+    }
   }, [componentId]);
 
   // Query for profile picture with enhanced debugging - Utiliser notre fonction de fetch coordonnée

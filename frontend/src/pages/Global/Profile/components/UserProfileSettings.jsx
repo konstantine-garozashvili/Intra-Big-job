@@ -7,14 +7,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useQueryClient } from '@tanstack/react-query';
 import { profileService } from '../services/profileService';
 import ProfilePicture from './settings/ProfilePicture';
-import { useProfilePicture } from '../hooks/useProfilePicture';
 import { isValidEmail, isValidPhone, isValidLinkedInUrl, isValidName, isValidUrl } from '@/lib/utils/validation';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Upload, FileText, Trash2, Send } from 'lucide-react';
 // Importer notre hook centralisé
 import { useUserDataCentralized } from '@/hooks';
-import userDataManager from '@/lib/services/userDataManager';
 
 // Import our components using the barrel export
 import {

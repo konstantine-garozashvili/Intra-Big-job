@@ -129,7 +129,7 @@ export function useUserData(options = {}) {
     
     try {
       // Utiliser le système de coordination pour éviter les requêtes dupliquées
-      const data = await userDataManager.coordinateRequest(
+      const response = await userDataManager.coordinateRequest(
         routeKey,
         componentId,
         async () => {
@@ -148,20 +148,80 @@ export function useUserData(options = {}) {
         }
       );
       
-      console.log(`🔄 useUserData: Data received from coordinated request:`, data);
+      console.log(`🔄 useUserData: Raw response from API:`, response);
+      
+      // Normaliser les données pour assurer une structure cohérente
+      let normalizedData;
+      
+      if (response) {
+        // Cas 1: La réponse est déjà normalisée avec une structure "user"
+        if (response.user && typeof response.user === 'object') {
+          normalizedData = response;
+        } 
+        // Cas 2: La réponse contient directement les données utilisateur
+        else if (response.id || response.email) {
+          normalizedData = {
+            ...response,
+            // Assurer que les champs essentiels existent
+            firstName: response.firstName || response.first_name || "",
+            lastName: response.lastName || response.last_name || "",
+            email: response.email || "",
+            profilePictureUrl: response.profilePictureUrl || response.profile_picture_url || "",
+            // Assurer que les collections sont des tableaux
+            diplomas: Array.isArray(response.diplomas) ? response.diplomas : [],
+            addresses: Array.isArray(response.addresses) ? response.addresses : [],
+            // Assurer que stats existe
+            stats: response.stats || { profile: { completionPercentage: 0 } }
+          };
+        }
+        // Cas 3: La réponse est dans un format API avec data ou success
+        else if ((response.data && typeof response.data === 'object') || response.success) {
+          const userData = response.data || {};
+          normalizedData = {
+            ...userData,
+            // Assurer que les champs essentiels existent
+            firstName: userData.firstName || userData.first_name || "",
+            lastName: userData.lastName || userData.last_name || "",
+            email: userData.email || "",
+            profilePictureUrl: userData.profilePictureUrl || userData.profile_picture_url || "",
+            // Assurer que les collections sont des tableaux
+            diplomas: Array.isArray(userData.diplomas) ? userData.diplomas : [],
+            addresses: Array.isArray(userData.addresses) ? userData.addresses : [],
+            // Assurer que stats existe
+            stats: userData.stats || { profile: { completionPercentage: 0 } }
+          };
+        }
+        // Cas 4: Format inconnu, utiliser tel quel
+        else {
+          normalizedData = response;
+        }
+      } else {
+        // Si pas de données, créer un objet vide mais avec la structure attendue
+        normalizedData = {
+          firstName: "",
+          lastName: "",
+          email: "",
+          profilePictureUrl: "",
+          diplomas: [],
+          addresses: [],
+          stats: { profile: { completionPercentage: 0 } }
+        };
+      }
+      
+      console.log(`🔄 useUserData: Normalized response:`, normalizedData);
       
       // Si nous avons des données, les sauvegarder dans localStorage
-      if (data) {
+      if (normalizedData) {
         try {
-          localStorage.setItem('user', JSON.stringify(data));
-          setLocalStorageUser(data);
+          localStorage.setItem('user', JSON.stringify(normalizedData));
+          setLocalStorageUser(normalizedData);
         } catch (e) {
           console.error('Error saving user data to localStorage:', e);
         }
       }
       
       setIsInitialLoading(false);
-      return data;
+      return normalizedData;
     } catch (error) {
       console.error(`🔄 useUserData: Error fetching data:`, error);
       setIsInitialLoading(false);
@@ -380,44 +440,87 @@ export function useUserData(options = {}) {
   // Normaliser les données de l'utilisateur pour assurer une structure cohérente
   const normalizedUser = useMemo(() => {
     const rawData = userData || localStorageUser || {};
+    console.log('Normalisation des données utilisateur:', rawData);
     
     // Vérifier si les données sont déjà à la racine ou dans un sous-objet
     const hasNestedUser = rawData.user && typeof rawData.user === 'object';
-    const userSource = hasNestedUser ? rawData.user : rawData;
+    const hasNestedData = rawData.data && typeof rawData.data === 'object';
     
-    // Créer un objet utilisateur normalisé
-    return {
+    // Déterminer la source des données utilisateur
+    let userSource;
+    if (hasNestedUser) {
+      userSource = rawData.user;
+    } else if (hasNestedData) {
+      userSource = rawData.data;
+    } else {
+      userSource = rawData;
+    }
+    
+    // Extraire les propriétés de base avec fallbacks
+    const extractValue = (obj, keys, defaultValue = "") => {
+      for (const key of keys) {
+        if (obj[key] !== undefined && obj[key] !== null) {
+          return obj[key];
+        }
+      }
+      return defaultValue;
+    };
+    
+    // Extraire les rôles avec normalisation
+    const extractRoles = (source) => {
+      if (!source || !source.roles) return [{ id: 0, name: 'USER' }];
+      
+      if (Array.isArray(source.roles)) {
+        return source.roles.map(role => {
+          if (typeof role === 'string') {
+            return { id: 0, name: role };
+          } else if (typeof role === 'object' && role !== null && role.name) {
+            return role;
+          } else {
+            return { id: 0, name: 'USER' };
+          }
+        });
+      } else if (typeof source.roles === 'object' && source.roles !== null) {
+        // Cas où les rôles sont un objet { 0: "ROLE_X", 1: "ROLE_Y" }
+        return Object.values(source.roles).map(role => {
+          if (typeof role === 'string') {
+            return { id: 0, name: role };
+          } else if (typeof role === 'object' && role !== null && role.name) {
+            return role;
+          } else {
+            return { id: 0, name: 'USER' };
+          }
+        });
+      }
+      
+      return [{ id: 0, name: 'USER' }];
+    };
+    
+    // Construire l'objet utilisateur normalisé
+    const normalizedObj = {
+      // Conserver les propriétés originales pour la compatibilité
       ...rawData,
-      // Propriétés standards de l'utilisateur
-      id: userSource.id,
-      firstName: userSource.firstName || userSource.firstname || userSource.first_name || "",
-      lastName: userSource.lastName || userSource.lastname || userSource.last_name || "",
-      email: userSource.email || "",
-      phoneNumber: userSource.phoneNumber || userSource.phone_number || userSource.phonenumber || "",
-      birthDate: userSource.birthDate || userSource.birth_date || userSource.birthdate || "",
-      profilePictureUrl: userSource.profilePictureUrl || userSource.profile_picture_url || "",
-      profilePicturePath: userSource.profilePicturePath || userSource.profile_picture_path || "",
-      city: userSource.city || "",
-      nationality: userSource.nationality || "",
-      gender: userSource.gender || "",
-      linkedinUrl: userSource.linkedinUrl || userSource.linkedin_url || "",
+      
+      // Propriétés standards de l'utilisateur avec normalisations et fallbacks
+      id: extractValue(userSource, ['id']),
+      firstName: extractValue(userSource, ['firstName', 'firstname', 'first_name']),
+      lastName: extractValue(userSource, ['lastName', 'lastname', 'last_name']),
+      email: extractValue(userSource, ['email']),
+      phoneNumber: extractValue(userSource, ['phoneNumber', 'phone_number', 'phonenumber']),
+      birthDate: extractValue(userSource, ['birthDate', 'birth_date', 'birthdate']),
+      profilePictureUrl: extractValue(userSource, ['profilePictureUrl', 'profile_picture_url']),
+      profilePicturePath: extractValue(userSource, ['profilePicturePath', 'profile_picture_path']),
+      city: extractValue(userSource, ['city']),
+      nationality: extractValue(userSource, ['nationality']),
+      gender: extractValue(userSource, ['gender']),
+      linkedinUrl: extractValue(userSource, ['linkedinUrl', 'linkedin_url']),
       specialization: userSource.specialization || {},
       
       // S'assurer que les rôles sont correctement formatés
-      roles: Array.isArray(userSource.roles) 
-        ? userSource.roles.map(role => {
-            if (typeof role === 'string') {
-              return { id: 0, name: role };
-            } else if (typeof role === 'object' && role !== null && role.name) {
-              return role;
-            } else {
-              return { id: 0, name: 'USER' };
-            }
-          })
-        : [{ id: 0, name: 'USER' }],
+      roles: extractRoles(userSource),
       
-      // Propriétés spécifiques au profil étudiant
-      studentProfile: rawData.studentProfile || {
+      // Propriétés spécifiques au profil étudiant (avec valeurs par défaut)
+      studentProfile: userSource.studentProfile || {
         isSeekingInternship: false,
         isSeekingApprenticeship: false,
         currentInternshipCompany: null,
@@ -427,12 +530,17 @@ export function useUserData(options = {}) {
         situationType: null
       },
       
-      // Collections
-      diplomas: Array.isArray(rawData.diplomas) ? rawData.diplomas : [],
-      addresses: Array.isArray(rawData.addresses) ? rawData.addresses : [],
-      documents: Array.isArray(rawData.documents) ? rawData.documents : [],
-      stats: rawData.stats || { profile: { completionPercentage: 0 } }
+      // Collections (avec valeurs par défaut)
+      diplomas: Array.isArray(userSource.diplomas) ? userSource.diplomas : [],
+      addresses: Array.isArray(userSource.addresses) ? userSource.addresses : [],
+      documents: Array.isArray(userSource.documents) ? userSource.documents : [],
+      stats: userSource.stats || { profile: { completionPercentage: 0 } }
     };
+    
+    // Log de la normalisation pour débogage
+    console.log('Données utilisateur normalisées:', normalizedObj);
+    
+    return normalizedObj;
   }, [userData, localStorageUser]);
 
   // Retourner tout ce dont les composants pourraient avoir besoin

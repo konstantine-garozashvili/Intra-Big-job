@@ -118,8 +118,17 @@ class ProfileService {
         }
       }
       
+      // Vérifier si nous avons des données valides en cache local
+      const now = Date.now();
+      if (!options.forceRefresh && 
+          profileCache.consolidatedData && 
+          (now - profileCache.consolidatedDataTimestamp) < profileCache.cacheDuration) {
+        console.log('Utilisation des données consolidées en cache local');
+        return profileCache.consolidatedData;
+      }
+      
       // Utiliser le gestionnaire centralisé des données utilisateur avec coordination
-      const data = await userDataManager.coordinateRequest(
+      const response = await userDataManager.coordinateRequest(
         '/profile/consolidated',
         SERVICE_ID,
         () => userDataManager.getUserData({
@@ -129,16 +138,84 @@ class ProfileService {
         })
       );
       
-      // Mettre également à jour le cache local pour la compatibilité
-      profileCache.consolidatedData = data;
-      profileCache.consolidatedDataTimestamp = Date.now();
+      console.log('Réponse brute de getAllProfileData:', response);
       
-      return data;
+      // Normaliser les données pour assurer une structure cohérente
+      let normalizedData;
+      
+      if (response) {
+        // Cas 1: La réponse est déjà normalisée avec une structure "user"
+        if (response.user && typeof response.user === 'object') {
+          normalizedData = response;
+        } 
+        // Cas 2: La réponse contient directement les données utilisateur
+        else if (response.id || response.email) {
+          normalizedData = {
+            ...response,
+            // Assurer que les champs essentiels existent
+            firstName: response.firstName || response.first_name || "",
+            lastName: response.lastName || response.last_name || "",
+            email: response.email || "",
+            profilePictureUrl: response.profilePictureUrl || response.profile_picture_url || "",
+            // Assurer que les collections sont des tableaux
+            diplomas: Array.isArray(response.diplomas) ? response.diplomas : [],
+            addresses: Array.isArray(response.addresses) ? response.addresses : [],
+            // Assurer que stats existe
+            stats: response.stats || { profile: { completionPercentage: 0 } }
+          };
+        }
+        // Cas 3: La réponse est dans un format API avec data ou success
+        else if ((response.data && typeof response.data === 'object') || response.success) {
+          const userData = response.data || {};
+          normalizedData = {
+            ...userData,
+            // Assurer que les champs essentiels existent
+            firstName: userData.firstName || userData.first_name || "",
+            lastName: userData.lastName || userData.last_name || "",
+            email: userData.email || "",
+            profilePictureUrl: userData.profilePictureUrl || userData.profile_picture_url || "",
+            // Assurer que les collections sont des tableaux
+            diplomas: Array.isArray(userData.diplomas) ? userData.diplomas : [],
+            addresses: Array.isArray(userData.addresses) ? userData.addresses : [],
+            // Assurer que stats existe
+            stats: userData.stats || { profile: { completionPercentage: 0 } }
+          };
+        }
+        // Cas 4: Format inconnu, utiliser tel quel
+        else {
+          normalizedData = response;
+        }
+      } else {
+        // Si pas de données, créer un objet vide mais avec la structure attendue
+        normalizedData = {
+          firstName: "",
+          lastName: "",
+          email: "",
+          profilePictureUrl: "",
+          diplomas: [],
+          addresses: [],
+          stats: { profile: { completionPercentage: 0 } }
+        };
+      }
+      
+      // Mettre à jour le cache local pour la compatibilité
+      profileCache.consolidatedData = normalizedData;
+      profileCache.consolidatedDataTimestamp = now;
+      
+      // Mettre à jour également le localStorage pour une persistance plus longue
+      try {
+        localStorage.setItem('user', JSON.stringify(normalizedData));
+      } catch (e) {
+        console.error('Erreur lors de la sauvegarde des données utilisateur dans localStorage:', e);
+      }
+      
+      return normalizedData;
     } catch (error) {
       console.warn('Erreur lors de la récupération des données de profil:', error);
       
       // FALLBACK: Essayer d'utiliser les données en cache local si disponibles
       if (profileCache.consolidatedData) {
+        console.log('Utilisation des données en cache local après erreur');
         return profileCache.consolidatedData;
       }
       
@@ -147,7 +224,20 @@ class ProfileService {
         // Utiliser directement la méthode getCachedUserData de userDataManager
         const cachedData = userDataManager.getCachedUserData();
         if (cachedData) {
+          console.log('Utilisation des données en cache central après erreur');
           return cachedData;
+        }
+        
+        // Dernier recours: essayer de récupérer directement depuis localStorage
+        const storedData = localStorage.getItem('user');
+        if (storedData) {
+          try {
+            const parsedData = JSON.parse(storedData);
+            console.log('Utilisation des données depuis localStorage après erreur');
+            return parsedData;
+          } catch (e) {
+            console.error('Erreur lors du parsing des données utilisateur:', e);
+          }
         }
       } catch (e) {
         console.error('Erreur lors de la récupération des données en cache:', e);
@@ -176,13 +266,102 @@ class ProfileService {
   async getProfilePicture() {
     try {
       // Utiliser la coordination des requêtes
-      return await userDataManager.coordinateRequest(
+      const response = await userDataManager.coordinateRequest(
         '/api/profile/picture',
         SERVICE_ID,
-        () => apiService.get('/profile/picture')
+        async () => {
+          const result = await apiService.get('/profile/picture', {
+            params: { _t: Date.now() }, // Éviter le cache navigateur
+            timeout: 5000 // Timeout court pour les images
+          });
+          
+          // Normaliser les données pour assurer un format cohérent
+          // Format attendu: { data: { has_profile_picture: bool, profile_picture_url: string } }
+          if (result) {
+            // Si le résultat est une string, c'est probablement une URL directe
+            if (typeof result === 'string') {
+              return { 
+                success: true,
+                data: { 
+                  has_profile_picture: true, 
+                  profile_picture_url: result 
+                } 
+              };
+            }
+            
+            // Si on a direct la propriété url ou profile_picture_url
+            if (result.url || result.profile_picture_url) {
+              const url = result.url || result.profile_picture_url;
+              return { 
+                success: true, 
+                data: { 
+                  has_profile_picture: true, 
+                  profile_picture_url: url 
+                } 
+              };
+            }
+            
+            // Si on a data.profile_picture_url
+            if (result.data && (result.data.profile_picture_url || result.data.url)) {
+              const profileData = { ...result.data };
+              if (profileData.profile_picture_url || profileData.url) {
+                profileData.has_profile_picture = true;
+                profileData.profile_picture_url = profileData.profile_picture_url || profileData.url;
+              }
+              return { success: true, data: profileData };
+            }
+            
+            // Si on a un autre format (mais toujours un objet), essayer de normaliser
+            if (typeof result === 'object' && result !== null) {
+              if (result.success === true && result.data) {
+                // Le format est probablement déjà correct
+                return result;
+              }
+              
+              // Dernier recours: chercher une URL à n'importe quel niveau
+              const findUrlInObject = (obj) => {
+                for (const key in obj) {
+                  if (typeof obj[key] === 'string' && 
+                      (key.includes('url') || key.includes('picture')) && 
+                      (obj[key].startsWith('http') || obj[key].startsWith('/'))) {
+                    return obj[key];
+                  } else if (typeof obj[key] === 'object' && obj[key] !== null) {
+                    const nestedUrl = findUrlInObject(obj[key]);
+                    if (nestedUrl) return nestedUrl;
+                  }
+                }
+                return null;
+              };
+              
+              const url = findUrlInObject(result);
+              if (url) {
+                return { 
+                  success: true, 
+                  data: { 
+                    has_profile_picture: true, 
+                    profile_picture_url: url 
+                  } 
+                };
+              }
+            }
+          }
+          
+          // Si aucune normalisation n'a fonctionné, retourner le résultat tel quel
+          return result && typeof result === 'object' 
+            ? result 
+            : { success: false, data: { has_profile_picture: false } };
+        }
       );
+      
+      return response;
     } catch (error) {
-      throw error;
+      console.error('Erreur lors de la récupération de la photo de profil:', error);
+      // En cas d'erreur, retourner un objet avec le format attendu
+      return { 
+        success: false, 
+        data: { has_profile_picture: false },
+        error: error.message
+      };
     }
   }
   
