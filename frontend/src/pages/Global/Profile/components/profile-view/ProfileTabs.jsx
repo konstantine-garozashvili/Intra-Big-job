@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import AboutTab from "./tabs/AboutTab";
 import ExperienceTab from "./tabs/ExperienceTab";
 
-const ProfileTabs = ({ userData, isPublicProfile = false }) => {
+const ProfileTabs = ({ userData, isPublicProfile = false, documents = [] }) => {
   // Animation variants
   const containerVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -139,7 +139,11 @@ const ProfileTabs = ({ userData, isPublicProfile = false }) => {
             value="about" 
             className="mt-0 space-y-6 focus-visible:outline-none focus-visible:ring-0"
           >
-            <AboutTab userData={userData} isPublicProfile={isPublicProfile} />
+            <AboutTab 
+              userData={userData} 
+              isPublicProfile={isPublicProfile} 
+              documents={documents} 
+            />
           </TabsContent>
           
           {shouldShowExperienceTab && (
@@ -147,7 +151,11 @@ const ProfileTabs = ({ userData, isPublicProfile = false }) => {
               value="experience" 
               className="mt-0 space-y-6 focus-visible:outline-none focus-visible:ring-0"
             >
-              <ExperienceTab userData={userData} isPublicProfile={isPublicProfile} />
+              <ExperienceTab 
+                userData={userData} 
+                isPublicProfile={isPublicProfile} 
+                documents={documents} 
+              />
             </TabsContent>
           )}
         </motion.div>

@@ -271,9 +271,67 @@ export function useUserData(options = {}) {
     };
   }, [userData, localStorageUser, hasRole]);
 
+  // Normaliser les données de l'utilisateur pour assurer une structure cohérente
+  const normalizedUser = useMemo(() => {
+    const rawData = userData || localStorageUser || {};
+    
+    // Vérifier si les données sont déjà à la racine ou dans un sous-objet
+    const hasNestedUser = rawData.user && typeof rawData.user === 'object';
+    const userSource = hasNestedUser ? rawData.user : rawData;
+    
+    // Créer un objet utilisateur normalisé
+    return {
+      ...rawData,
+      // Propriétés standards de l'utilisateur
+      id: userSource.id,
+      firstName: userSource.firstName || userSource.firstname || userSource.first_name || "",
+      lastName: userSource.lastName || userSource.lastname || userSource.last_name || "",
+      email: userSource.email || "",
+      phoneNumber: userSource.phoneNumber || userSource.phone_number || userSource.phonenumber || "",
+      birthDate: userSource.birthDate || userSource.birth_date || userSource.birthdate || "",
+      profilePictureUrl: userSource.profilePictureUrl || userSource.profile_picture_url || "",
+      profilePicturePath: userSource.profilePicturePath || userSource.profile_picture_path || "",
+      city: userSource.city || "",
+      nationality: userSource.nationality || "",
+      gender: userSource.gender || "",
+      linkedinUrl: userSource.linkedinUrl || userSource.linkedin_url || "",
+      specialization: userSource.specialization || {},
+      
+      // S'assurer que les rôles sont correctement formatés
+      roles: Array.isArray(userSource.roles) 
+        ? userSource.roles.map(role => {
+            if (typeof role === 'string') {
+              return { id: 0, name: role };
+            } else if (typeof role === 'object' && role !== null && role.name) {
+              return role;
+            } else {
+              return { id: 0, name: 'USER' };
+            }
+          })
+        : [{ id: 0, name: 'USER' }],
+      
+      // Propriétés spécifiques au profil étudiant
+      studentProfile: rawData.studentProfile || {
+        isSeekingInternship: false,
+        isSeekingApprenticeship: false,
+        currentInternshipCompany: null,
+        internshipStartDate: null,
+        internshipEndDate: null,
+        portfolioUrl: null,
+        situationType: null
+      },
+      
+      // Collections
+      diplomas: Array.isArray(rawData.diplomas) ? rawData.diplomas : [],
+      addresses: Array.isArray(rawData.addresses) ? rawData.addresses : [],
+      documents: Array.isArray(rawData.documents) ? rawData.documents : [],
+      stats: rawData.stats || { profile: { completionPercentage: 0 } }
+    };
+  }, [userData, localStorageUser]);
+
   // Retourner tout ce dont les composants pourraient avoir besoin
   return {
-    user: userData || localStorageUser, // Utiliser le fallback
+    user: normalizedUser,
     isLoading: (isQueryLoading || isInitialLoading) && !localStorageUser, // Ne pas afficher loading si on a des données locales
     isInitialLoading: isInitialLoading && !localStorageUser,
     isError,
@@ -285,4 +343,5 @@ export function useUserData(options = {}) {
   };
 }
 
+// Export both as named and default export for compatibility
 export default useUserData; 
