@@ -46,12 +46,10 @@ export const profilePictureCache = {
     if (!pictureUrl) return;
     
     try {
-      console.log('[Debug] Saving profile picture to cache:', pictureUrl);
       localStorage.setItem(CACHE_KEYS.PROFILE_PICTURE, pictureUrl);
       localStorage.setItem(CACHE_KEYS.TIMESTAMP, Date.now().toString());
-      console.log('[Debug] Cache saved successfully');
     } catch (error) {
-      console.error('[Debug] Error saving to cache:', error);
+      // Error saving to cache
     }
   },
   
@@ -61,26 +59,20 @@ export const profilePictureCache = {
       const cachedUrl = localStorage.getItem(CACHE_KEYS.PROFILE_PICTURE);
       const timestamp = localStorage.getItem(CACHE_KEYS.TIMESTAMP);
       
-      console.log('[Debug] Getting from cache:', { cachedUrl, timestamp });
-      
       if (!cachedUrl || !timestamp) {
-        console.log('[Debug] No cache found');
         return null;
       }
       
       // Check if cache is still valid
       const isExpired = Date.now() - Number(timestamp) > CACHE_DURATION;
-      console.log('[Debug] Cache status:', { isExpired, age: Date.now() - Number(timestamp) });
       
       if (isExpired) {
-        console.log('[Debug] Cache expired, clearing');
         profilePictureCache.clearCache();
         return null;
       }
       
       return cachedUrl;
     } catch (error) {
-      console.error('[Debug] Error reading from cache:', error);
       return null;
     }
   },
@@ -91,7 +83,7 @@ export const profilePictureCache = {
       localStorage.removeItem(CACHE_KEYS.PROFILE_PICTURE);
       localStorage.removeItem(CACHE_KEYS.TIMESTAMP);
     } catch (error) {
-      console.error('Error clearing profile picture cache:', error);
+      // Error clearing profile picture cache
     }
   },
   
@@ -145,7 +137,6 @@ export function useProfilePicture() {
   
   const [cachedUrl, setCachedUrl] = useState(() => {
     const url = profilePictureCache.getFromCache();
-    console.log('[Debug] Initial cached URL:', url);
     return url;
   });
   
@@ -177,14 +168,11 @@ export function useProfilePicture() {
         '/api/profile/picture',
         componentId,
         async () => {
-          console.log(`[Debug] Component ${componentId} initiating profile picture request`);
           const result = await apiService.get('/api/profile/picture', { 
             params: { _t: Date.now() }, // Ajouter un timestamp pour éviter le cache du navigateur
             timeout: 5000, // Timeout court pour les images
             retries: 1 // Limiter les retries
           });
-          
-          console.log(`[Debug] Raw API response:`, result);
           
           // Normaliser les données pour assurer un format cohérent
           // Le format attendu par getProfilePictureUrl est { data: { has_profile_picture: bool, profile_picture_url: string } }
@@ -266,10 +254,8 @@ export function useProfilePicture() {
         }
       );
       
-      console.log(`[Debug] Normalized profile picture response:`, response);
       return response;
     } catch (error) {
-      console.error(`[Debug] Error fetching profile picture:`, error);
       // En cas d'erreur, retourner un objet avec le format attendu
       return { 
         success: false, 
@@ -290,14 +276,8 @@ export function useProfilePicture() {
     refetchOnMount: profilePictureCache.isCacheValid() ? false : true,
     refetchInterval: null,
     onSuccess: (data) => {
-      console.log('[Debug] Query success:', data);
       const url = getProfilePictureUrl(data);
       if (url) {
-        console.log('[Debug] New URL from query:', url);
-        console.log('[Debug] Updating React Query cache with:', {
-          queryKey: PROFILE_QUERY_KEYS.profilePicture,
-          data: data
-        });
         queryClient.setQueryData(PROFILE_QUERY_KEYS.profilePicture, data);
         profilePictureCache.saveToCache(url);
         
@@ -306,10 +286,7 @@ export function useProfilePicture() {
           // Ne déclencher l'invalidation que si ce composant est le seul utilisateur de la route
           // ou si c'est une première requête (pas dans le cadre d'une mise à jour)
           if (!userDataManager.requestRegistry.isRouteShared('/api/profile/picture')) {
-            console.log('[Debug] Not a shared route, safe to invalidate cache with type');
             userDataManager.invalidateCache('profile_picture');
-          } else {
-            console.log('[Debug] Shared route, skipping invalidation to prevent recursive fetching');
           }
         } catch (e) {
           // Ignorer les erreurs silencieusement
@@ -317,7 +294,7 @@ export function useProfilePicture() {
       }
     },
     onError: (error) => {
-      console.error('[Debug] Query error:', error);
+      // Query error
     },
     placeholderData: cachedUrl ? {
       success: true,
@@ -328,23 +305,6 @@ export function useProfilePicture() {
     } : undefined
   });
 
-  // Log detailed query state changes
-  useEffect(() => {
-    const queryData = queryClient.getQueryData(PROFILE_QUERY_KEYS.profilePicture);
-    console.log('[Debug] Detailed Query State:', {
-      isLoading: profilePictureQuery.isLoading,
-      isFetching: profilePictureQuery.isFetching,
-      isError: profilePictureQuery.isError,
-      data: profilePictureQuery.data,
-      cachedUrl,
-      queryClientCache: queryData,
-      localStorage: {
-        profilePicture: localStorage.getItem(CACHE_KEYS.PROFILE_PICTURE),
-        timestamp: localStorage.getItem(CACHE_KEYS.TIMESTAMP)
-      }
-    });
-  }, [profilePictureQuery.data, profilePictureQuery.isLoading, profilePictureQuery.isFetching, profilePictureQuery.isError, cachedUrl]);
-
   // Ajouter un état pour contrôler la fréquence des actualisations
   const [lastRefreshTime, setLastRefreshTime] = useState(0);
   const REFRESH_THROTTLE_MS = 2000; // 2 secondes minimum entre les rafraîchissements
@@ -354,7 +314,6 @@ export function useProfilePicture() {
     // Vérifier si nous devons respecter la limite de fréquence et si le temps minimum est écoulé
     const now = Date.now();
     if (!skipThrottle && now - lastRefreshTime < REFRESH_THROTTLE_MS) {
-      console.log(`[Debug] Throttling profile picture refresh (last refresh: ${now - lastRefreshTime}ms ago)`);
       return null; // Ne pas rafraîchir si trop récent
     }
     
@@ -416,8 +375,6 @@ export function useProfilePicture() {
         return { previousData };
       },
       onSuccess: async (data) => {
-        console.log('[Debug] Upload success:', data);
-        
         // Notifier le gestionnaire de données utilisateur de l'invalidation
         userDataManager.invalidateCache('profile_picture'); // Passer un type spécifique
         
@@ -523,18 +480,14 @@ export function useProfilePicture() {
       // Ne déclencher le forceRefresh que si la mise à jour n'est pas liée à la photo de profil
       // Cela empêche la boucle infinie où la mise à jour de la photo déclenche une mise à jour des données
       if (updateType === 'profile_picture') {
-        console.log('[Debug] Ignoring profile_picture update to prevent recursive fetching');
         return;
       }
       
       // Vérifier si la route est partagée entre plusieurs composants
       // Si oui, être encore plus prudent pour éviter les cascades de mises à jour
       if (userDataManager.requestRegistry.isRouteShared('/api/profile/picture')) {
-        console.log('[Debug] Route is shared, being extra cautious with updates');
-        
         // Si un autre composant est en train de faire une requête, ne pas en lancer une nouvelle
         if (userDataManager.requestRegistry.getActiveRequest('/api/profile/picture')) {
-          console.log('[Debug] Active request detected, skipping update');
           return;
         }
       }
@@ -542,7 +495,6 @@ export function useProfilePicture() {
       // Vérifier la fréquence des mises à jour
       const now = Date.now();
       if (now - recentUpdateTimestamp < UPDATE_THROTTLE_MS) {
-        console.log('[Debug] Throttling update event, too many updates');
         return;
       }
       

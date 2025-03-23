@@ -27,37 +27,30 @@ export function useUserData(options = {}) {
   const [isInitialLoading, setIsInitialLoading] = useState(false);
   const sessionId = getSessionId();
   
-  // Générer un ID unique pour ce composant
   const [componentId] = useState(() => 
     `user_data_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
   );
   
-  // Optimisation : récupérer les données du localStorage immédiatement
   const [localStorageUser, setLocalStorageUser] = useState(() => {
     try {
       const stored = localStorage.getItem('user');
       if (stored) return JSON.parse(stored);
     } catch (e) {
-      console.error('Error parsing user from localStorage:', e);
+      // Error parsing user from localStorage
     }
     return null;
   });
 
-  // Déterminer la route à utiliser
   const routeKey = preferComprehensiveData ? '/profile/consolidated' : '/api/me';
   
-  // Enregistrer/désenregistrer ce composant comme utilisateur des routes pertinentes
   useEffect(() => {
-    // Enregistrer ce composant au montage
     userDataManager.requestRegistry.registerRouteUser(routeKey, componentId);
     
-    // Si on utilise les données complètes, on est aussi potentiellement intéressé par la photo de profil
     if (preferComprehensiveData) {
       userDataManager.requestRegistry.registerRouteUser('/api/profile/picture', componentId);
     }
     
     return () => {
-      // Désenregistrer ce composant au démontage
       userDataManager.requestRegistry.unregisterRouteUser(routeKey, componentId);
       
       if (preferComprehensiveData) {
@@ -66,16 +59,12 @@ export function useUserData(options = {}) {
     };
   }, [routeKey, componentId, preferComprehensiveData]);
   
-  // Force une requête au démarrage, que le composant soit monté ou non
   useEffect(() => {
-    // Ne pas exécuter si désactivé ou pas de sessionId
     if (!enabled || !sessionId) return;
     
-    // Vérifie si nous avons un token dans localStorage
     const hasToken = !!localStorage.getItem('token');
     if (!hasToken) return;
     
-    console.log(`🔄 useUserData: Forcing initial data fetch for ${routeKey}`);
     const fetchData = async () => {
       try {
         const freshData = await userDataManager.getUserData({
@@ -84,119 +73,90 @@ export function useUserData(options = {}) {
           useCache: false,
         });
         
-        // Mettre à jour le cache React Query
         if (freshData) {
           queryClient.setQueryData(['unified-user-data', routeKey, sessionId], freshData);
           
-          // Mettre à jour le localStorage avec les données fraîches
           try {
             localStorage.setItem('user', JSON.stringify(freshData));
             setLocalStorageUser(freshData);
           } catch (e) {
-            console.error('Error saving to localStorage:', e);
+            // Error saving to localStorage
           }
         }
       } catch (error) {
-        console.error('Error in initial data fetch:', error);
+        // Error in initial data fetch
       }
     };
     
     fetchData();
   }, [enabled, sessionId, routeKey, queryClient]);
 
-  // Récupérer les données initiales du cache si disponibles
   const getCachedData = useCallback(() => {
-    // D'abord essayer depuis userDataManager
     const cached = userDataManager.getCachedUserData();
     if (cached) {
-      console.log(`🔄 useUserData: Retrieved cached data from userDataManager:`, cached);
       return cached;
     }
     
-    // Ensuite essayer depuis localStorage
     if (localStorageUser) {
-      console.log(`🔄 useUserData: Retrieved cached data from localStorage:`, localStorageUser);
       return localStorageUser;
     }
     
     return null;
   }, [localStorageUser]);
 
-  // Créer une fonction pour fetcher les données avec coordination
   const fetchUserData = useCallback(async () => {
-    console.log(`🔄 useUserData: queryFn executing for ${routeKey}`);
     setIsInitialLoading(true);
     
     try {
-      // Utiliser le système de coordination pour éviter les requêtes dupliquées
       const response = await userDataManager.coordinateRequest(
         routeKey,
         componentId,
         async () => {
-          console.log(`🔄 Component ${componentId} initiating user data request to ${routeKey}`);
-          
-          // Check existing cache directly
           const existingCache = queryClient.getQueryData(['unified-user-data', routeKey, sessionId]);
-          console.log(`🔄 useUserData: Existing query cache:`, existingCache);
           
-          // Faire l'appel API directement pour mieux contrôler le comportement
           return await apiService.get(routeKey, {
-            noCache: true,  // Forcer le rafraîchissement des données
-            retries: 2,     // Nombre de tentatives en cas d'échec
-            timeout: 12000  // Timeout en ms
+            noCache: true,
+            retries: 2,
+            timeout: 12000
           });
         }
       );
       
-      console.log(`🔄 useUserData: Raw response from API:`, response);
-      
-      // Normaliser les données pour assurer une structure cohérente
       let normalizedData;
       
       if (response) {
-        // Cas 1: La réponse est déjà normalisée avec une structure "user"
         if (response.user && typeof response.user === 'object') {
           normalizedData = response;
         } 
-        // Cas 2: La réponse contient directement les données utilisateur
         else if (response.id || response.email) {
           normalizedData = {
             ...response,
-            // Assurer que les champs essentiels existent
             firstName: response.firstName || response.first_name || "",
             lastName: response.lastName || response.last_name || "",
             email: response.email || "",
             profilePictureUrl: response.profilePictureUrl || response.profile_picture_url || "",
-            // Assurer que les collections sont des tableaux
             diplomas: Array.isArray(response.diplomas) ? response.diplomas : [],
             addresses: Array.isArray(response.addresses) ? response.addresses : [],
-            // Assurer que stats existe
             stats: response.stats || { profile: { completionPercentage: 0 } }
           };
         }
-        // Cas 3: La réponse est dans un format API avec data ou success
         else if ((response.data && typeof response.data === 'object') || response.success) {
           const userData = response.data || {};
           normalizedData = {
             ...userData,
-            // Assurer que les champs essentiels existent
             firstName: userData.firstName || userData.first_name || "",
             lastName: userData.lastName || userData.last_name || "",
             email: userData.email || "",
             profilePictureUrl: userData.profilePictureUrl || userData.profile_picture_url || "",
-            // Assurer que les collections sont des tableaux
             diplomas: Array.isArray(userData.diplomas) ? userData.diplomas : [],
             addresses: Array.isArray(userData.addresses) ? userData.addresses : [],
-            // Assurer que stats existe
             stats: userData.stats || { profile: { completionPercentage: 0 } }
           };
         }
-        // Cas 4: Format inconnu, utiliser tel quel
         else {
           normalizedData = response;
         }
       } else {
-        // Si pas de données, créer un objet vide mais avec la structure attendue
         normalizedData = {
           firstName: "",
           lastName: "",
@@ -208,28 +168,23 @@ export function useUserData(options = {}) {
         };
       }
       
-      console.log(`🔄 useUserData: Normalized response:`, normalizedData);
-      
-      // Si nous avons des données, les sauvegarder dans localStorage
       if (normalizedData) {
         try {
           localStorage.setItem('user', JSON.stringify(normalizedData));
           setLocalStorageUser(normalizedData);
         } catch (e) {
-          console.error('Error saving user data to localStorage:', e);
+          // Error saving user data to localStorage
         }
       }
       
       setIsInitialLoading(false);
       return normalizedData;
     } catch (error) {
-      console.error(`🔄 useUserData: Error fetching data:`, error);
       setIsInitialLoading(false);
       throw error;
     }
   }, [routeKey, componentId, queryClient, sessionId]);
 
-  // Utiliser React Query pour gérer l'état et le cache
   const {
     data: userData,
     isLoading: isQueryLoading,
@@ -241,50 +196,40 @@ export function useUserData(options = {}) {
     queryFn: fetchUserData,
     initialData: getCachedData,
     enabled: enabled && !!sessionId,
-    staleTime: 1 * 60 * 1000, // 1 minute (réduit pour forcer des actualisations plus fréquentes)
-    cacheTime: 20 * 60 * 1000, // 20 minutes
-    refetchOnWindowFocus: true, // Activé pour assurer des données fraîches lors du retour sur l'onglet
+    staleTime: 1 * 60 * 1000,
+    cacheTime: 20 * 60 * 1000,
+    refetchOnWindowFocus: true,
     refetchOnMount: true,
     refetchInterval: false,
-    retry: 2, // Augmenté pour améliorer la résilience
+    retry: 2,
     retryDelay: 1000,
     ...queryOptions,
     onSuccess: (data) => {
-      console.log(`🔄 useUserData: onSuccess with data:`, data);
-      
-      // Mettre à jour le localStorage
       if (data) {
         try {
           localStorage.setItem('user', JSON.stringify(data));
           setLocalStorageUser(data);
         } catch (e) {
-          console.error('Error saving user data to localStorage:', e);
+          // Error saving user data to localStorage
         }
       }
       
       if (onSuccess) onSuccess(data);
     },
     onError: (err) => {
-      console.error(`🔄 useUserData: onError:`, err);
       if (onError) onError(err);
     }
   });
 
-  // Forcer un rechargement des données avec coordination
   const forceRefresh = useCallback(async () => {
-    // Vérifier si une requête est déjà en cours pour cette route
     if (userDataManager.requestRegistry.getActiveRequest(routeKey)) {
-      console.log(`🔄 useUserData: Active request detected for ${routeKey}, skipping refresh`);
       return null;
     }
     
-    // Vérifier s'il faut limiter la fréquence des requêtes
     if (userDataManager.requestRegistry.shouldThrottleRequest(routeKey)) {
-      console.log(`🔄 useUserData: Throttling refresh request to ${routeKey}`);
       return null;
     }
     
-    // Si tout est OK, lancer la requête
     try {
       setIsInitialLoading(true);
       const freshData = await userDataManager.coordinateRequest(
@@ -297,16 +242,14 @@ export function useUserData(options = {}) {
         })
       );
       
-      // Mettre à jour le cache React Query avec les nouvelles données
       queryClient.setQueryData(['unified-user-data', routeKey, sessionId], freshData);
       
-      // Mettre à jour également le localStorage
       if (freshData) {
         try {
           localStorage.setItem('user', JSON.stringify(freshData));
           setLocalStorageUser(freshData);
         } catch (e) {
-          console.error('Error saving user data to localStorage:', e);
+          // Error saving user data to localStorage
         }
       }
       
@@ -318,9 +261,7 @@ export function useUserData(options = {}) {
     }
   }, [routeKey, sessionId, queryClient, componentId]);
 
-  // Vérifier si l'utilisateur a un rôle spécifique
   const hasRole = useCallback((role) => {
-    // Utiliser userData ou localStorageUser comme fallback
     const userToCheck = userData || localStorageUser;
     
     if (!userToCheck || !userToCheck.roles) return false;
@@ -346,21 +287,16 @@ export function useUserData(options = {}) {
     
     // S'abonner à l'événement de mise à jour avec contrôle de fréquence
     const unsubscribe = userDataManager.subscribe(USER_DATA_EVENTS.UPDATED, (updateType) => {
-      console.log(`🔄 useUserData: Received UPDATE event with type:`, updateType);
-      
       // Si c'est une mise à jour de photo de profil uniquement, ne pas refetch toutes les données
       if (updateType === 'profile_picture') {
-        console.log('🔄 useUserData: Ignoring profile_picture update to prevent recursive fetching');
         return;
       }
       
       // Vérifier si la route est partagée entre plusieurs composants
       if (userDataManager.requestRegistry.isRouteShared(routeKey)) {
-        console.log(`🔄 useUserData: Route ${routeKey} is shared, being cautious with updates`);
         
         // Si une requête est déjà en cours, ne pas en lancer une nouvelle
         if (userDataManager.requestRegistry.getActiveRequest(routeKey)) {
-          console.log(`🔄 useUserData: Active request detected for ${routeKey}, skipping update`);
           return;
         }
       }
@@ -368,13 +304,11 @@ export function useUserData(options = {}) {
       // Vérifier si une mise à jour est déjà en attente ou si la dernière mise à jour est trop récente
       const now = Date.now();
       if (pendingUpdate || (now - lastUpdateTime < UPDATE_THROTTLE_MS)) {
-        console.log(`🔄 useUserData: Throttling update, last update was ${now - lastUpdateTime}ms ago`);
         
         // Si aucune mise à jour n'est en attente, programmer une mise à jour différée
         if (!pendingUpdate) {
           pendingUpdate = true;
           setTimeout(() => {
-            console.log('🔄 useUserData: Processing delayed update');
             lastUpdateTime = Date.now();
             pendingUpdate = false;
             
@@ -440,7 +374,6 @@ export function useUserData(options = {}) {
   // Normaliser les données de l'utilisateur pour assurer une structure cohérente
   const normalizedUser = useMemo(() => {
     const rawData = userData || localStorageUser || {};
-    console.log('Normalisation des données utilisateur:', rawData);
     
     // Vérifier si les données sont déjà à la racine ou dans un sous-objet
     const hasNestedUser = rawData.user && typeof rawData.user === 'object';
@@ -536,9 +469,6 @@ export function useUserData(options = {}) {
       documents: Array.isArray(userSource.documents) ? userSource.documents : [],
       stats: userSource.stats || { profile: { completionPercentage: 0 } }
     };
-    
-    // Log de la normalisation pour débogage
-    console.log('Données utilisateur normalisées:', normalizedObj);
     
     return normalizedObj;
   }, [userData, localStorageUser]);

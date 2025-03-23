@@ -66,20 +66,14 @@ const requestRegistry = {
       this.routeUsers.set(route, new Set());
     }
     this.routeUsers.get(route).add(componentId);
-    console.log(`🔄 Registry: Component ${componentId} registered for route ${route}`);
-    console.log(`🔄 Registry: Route ${route} now has ${this.routeUsers.get(route).size} users`);
   },
   
   // Désenregistrer un composant
   unregisterRouteUser(route, componentId) {
     if (this.routeUsers.has(route)) {
       this.routeUsers.get(route).delete(componentId);
-      console.log(`🔄 Registry: Component ${componentId} unregistered from route ${route}`);
       if (this.routeUsers.get(route).size === 0) {
         this.routeUsers.delete(route);
-        console.log(`🔄 Registry: Route ${route} has no more users`);
-      } else {
-        console.log(`🔄 Registry: Route ${route} still has ${this.routeUsers.get(route).size} users`);
       }
     }
   },
@@ -99,7 +93,6 @@ const requestRegistry = {
     
     const timeSinceLastRequest = now - this.lastRequestTime.get(route);
     if (timeSinceLastRequest < this.requestDebounceTime) {
-      console.log(`🔄 Registry: Throttling request to ${route} (${timeSinceLastRequest}ms since last request)`);
       return true;
     }
     
@@ -128,7 +121,6 @@ const requestRegistry = {
   coordinateRequest(route, requestFn) {
     // Si la route a une requête active, réutiliser cette requête
     if (this.activeRequests.has(route)) {
-      console.log(`🔄 Registry: Reusing active request for ${route}`);
       return this.activeRequests.get(route);
     }
     
@@ -171,7 +163,6 @@ const userDataManager = {
     const now = Date.now();
     const recentDeduplicationEntry = userDataCache.deduplicationMap.get(deduplicationKey);
     if (recentDeduplicationEntry && now - recentDeduplicationEntry.timestamp < 30) {
-      console.log(`🔄 Requête dupliquée détectée et dédupliquée pour ${routeKey}`);
       return recentDeduplicationEntry.promise;
     }
 
@@ -182,7 +173,6 @@ const userDataManager = {
     if (userDataCache.consecutiveErrors >= userDataCache.errorThreshold) {
       const timeInBreak = now - userDataCache.lastCircuitBreak;
       if (timeInBreak < userDataCache.circuitBreakDuration) {
-        console.warn(`Circuit breaker actif, attente de ${(userDataCache.circuitBreakDuration - timeInBreak) / 1000}s avant nouvelles requêtes`);
         
         // Si on a des données en cache, les retourner même si elles sont anciennes
         if (userDataCache.data) {
@@ -196,7 +186,7 @@ const userDataManager = {
             return JSON.parse(cachedUserStr);
           }
         } catch (e) {
-          console.error('Erreur lors de la récupération des données utilisateur du localStorage:', e);
+          // Erreur lors de la récupération des données utilisateur du localStorage
         }
         
         // Si tout échoue, attendre que le circuit breaker se réinitialise
@@ -209,7 +199,6 @@ const userDataManager = {
 
     // Si une requête est déjà en cours pour la même route, retourner la promesse existante
     if (userDataCache.pendingRequests.has(routeKey) && !forceRefresh) {
-      console.log(`Requête UserData déjà en cours pour ${routeKey}, réutilisation de la promesse existante`);
       return userDataCache.pendingRequests.get(routeKey);
     }
 
@@ -224,16 +213,14 @@ const userDataManager = {
       const isSuperFresh = now - userDataCache.timestamp < userDataCache.freshnessDuration;
       
       if (isSuperFresh) {
-        console.log('Utilisation des données utilisateur en cache (très fraîches)');
         return userDataCache.data;
       }
       
       // Si les données sont moins fraîches mais utilisables, les retourner et déclencher un rafraîchissement en arrière-plan
-      console.log('Utilisation des données utilisateur en cache (actualisation en arrière-plan)');
       
       // Déclencher un rafraîchissement en arrière-plan sans attendre le résultat
       this._loadUserData(routeKey, { background: true })
-        .catch(e => console.warn('Erreur lors du rafraîchissement en arrière-plan:', e));
+        .catch(e => {});
         
       return userDataCache.data;
     }
@@ -273,9 +260,6 @@ const userDataManager = {
   async _loadUserData(routeKey, options = {}) {
     const { forceRefresh = false, background = false } = options;
     
-    // DEBUG - Log the request
-    console.log(`🔍 userDataManager._loadUserData: Starting request to ${routeKey}, forceRefresh=${forceRefresh}, background=${background}`);
-    
     // Notifier que le chargement a commencé si ce n'est pas un chargement en arrière-plan
     if (!background) {
       userDataCache.isLoading = true;
@@ -292,14 +276,8 @@ const userDataManager = {
           timeout: background ? 8000 : 12000, // Timeout plus court pour les requêtes en arrière-plan
         };
 
-        // DEBUG - Log API call
-        console.log(`🔍 userDataManager: Calling apiService.get(${routeKey})`, apiOptions);
-
         // Appeler l'API pour obtenir les données utilisateur
         const response = await apiService.get(routeKey, apiOptions);
-        
-        // DEBUG - Log raw response
-        console.log(`🔍 userDataManager: Raw API response from ${routeKey}:`, response);
         
         // Extraire les données utilisateur de la réponse
         let userData = response;
@@ -311,9 +289,6 @@ const userDataManager = {
           userData = response.user;
         }
 
-        // DEBUG - Log extracted data 
-        console.log(`🔍 userDataManager: Extracted user data:`, userData);
-
         // Stocker les données dans le cache
         userDataCache.data = userData;
         userDataCache.timestamp = Date.now();
@@ -322,14 +297,6 @@ const userDataManager = {
 
         // Stocker les données utilisateur dans le localStorage
         localStorage.setItem('user', JSON.stringify(userData));
-        
-        // DEBUG - Verify localStorage
-        try {
-          const savedData = localStorage.getItem('user');
-          console.log(`🔍 userDataManager: Data saved to localStorage:`, savedData ? JSON.parse(savedData) : null);
-        } catch (e) {
-          console.error(`🔍 userDataManager: Error checking localStorage:`, e);
-        }
         
         // Mettre à jour le cache React Query
         const queryClient = getQueryClient();
@@ -343,9 +310,6 @@ const userDataManager = {
           
           // Also update the unified key used by useUserData hook
           queryClient.setQueryData(['unified-user-data', routeKey, sessionId], userData);
-          
-          // DEBUG - Log QueryClient update
-          console.log(`🔍 userDataManager: Updated query cache for ['unified-user-data', '${routeKey}', '${sessionId}']`);
         }
 
         // Notifier que les données ont été chargées
@@ -358,7 +322,6 @@ const userDataManager = {
 
         resolve(userData);
       } catch (error) {
-        console.error(`Erreur lors du chargement des données utilisateur depuis ${routeKey}:`, error);
         
         userDataCache.isLoading = false;
         userDataCache.consecutiveErrors++; // Incrémenter le compteur d'erreurs consécutives
@@ -366,7 +329,6 @@ const userDataManager = {
         // Si le seuil d'erreur est atteint, activer le circuit breaker
         if (userDataCache.consecutiveErrors >= userDataCache.errorThreshold) {
           userDataCache.lastCircuitBreak = Date.now();
-          console.warn(`Circuit breaker activé pour les requêtes utilisateur (${userDataCache.consecutiveErrors} erreurs consécutives)`);
         }
 
         // Notifier l'erreur
@@ -374,14 +336,12 @@ const userDataManager = {
         
         // Essayer de récupérer les données du cache ou du localStorage
         if (userDataCache.data) {
-          console.log('Échec de la requête, utilisation des données en cache');
           resolve(userDataCache.data);
         } else {
           try {
             const cachedUserStr = localStorage.getItem('user');
             if (cachedUserStr) {
               const cachedUser = JSON.parse(cachedUserStr);
-              console.log('Échec de la requête, utilisation des données du localStorage');
               resolve(cachedUser);
             } else {
               reject(error);
@@ -429,7 +389,7 @@ const userDataManager = {
         return JSON.parse(userStr);
       }
     } catch (e) {
-      console.error('Erreur lors de la récupération des données utilisateur du localStorage:', e);
+      // Erreur lors de la récupération des données utilisateur du localStorage
     }
     
     return null;
@@ -440,7 +400,6 @@ const userDataManager = {
    * @param {string} [updateType] - Type optionnel de mise à jour (ex: 'profile_picture', 'address')
    */
   invalidateCache(updateType = null) {
-    console.log(`🔄 userDataManager.invalidateCache(${updateType}): Invalidating user data cache`);
     
     // Réinitialiser le cache
     userDataCache.timestamp = 0;
@@ -451,17 +410,14 @@ const userDataManager = {
     
     // Si un événement du même type est déjà programmé, ne rien faire
     if (eventThrottleState.pendingEvents.has(eventKey)) {
-      console.log(`🔄 userDataManager: Event ${eventKey} already pending, skipping`);
       return;
     }
     
     // Si l'intervalle minimum n'est pas écoulé depuis le dernier événement, programmer l'événement
     if (now - eventThrottleState.lastEventTime < eventThrottleState.throttleInterval) {
-      console.log(`🔄 userDataManager: Throttling event ${eventKey}`);
       
       // Programmer l'événement pour plus tard
       const timeoutId = setTimeout(() => {
-        console.log(`🔄 userDataManager: Emitting delayed event ${eventKey}`);
         eventThrottleState.lastEventTime = Date.now();
         eventThrottleState.pendingEvents.delete(eventKey);
         
@@ -505,7 +461,6 @@ const userDataManager = {
    */
   subscribe(eventName, callback) {
     if (!Object.values(USER_DATA_EVENTS).includes(eventName)) {
-      console.warn(`Événement inconnu: ${eventName}`);
       return () => {};
     }
     
@@ -561,7 +516,6 @@ const userDataManager = {
     
     // Vérifier si la requête doit être limitée en fréquence
     if (this.requestRegistry.shouldThrottleRequest(route)) {
-      console.log(`🔄 userDataManager: Throttling request to ${route} from ${componentId}`);
       
       // Si une requête est déjà active, la réutiliser
       const activeRequest = this.requestRegistry.getActiveRequest(route);

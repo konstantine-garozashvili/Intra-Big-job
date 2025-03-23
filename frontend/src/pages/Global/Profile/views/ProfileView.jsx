@@ -9,6 +9,7 @@ import { useUserData } from "@/hooks/useUserData";
 import { useProfilePicture } from "../hooks/useProfilePicture";
 import { isGuest } from "../utils/roleUtils";
 import documentService from "../services/documentService";
+import apiService from "@/lib/services/apiService";
 
 const ProfileView = () => {
   const { userId } = useParams();
@@ -38,8 +39,7 @@ const ProfileView = () => {
       
       const fetchPublicProfile = async () => {
         try {
-          const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/profile/public/${userId}`);
-          const data = await response.json();
+          const data = await apiService.get(`/profile/public/${userId}`);
           
           if (data && (data.success === true || data.data)) {
             setPublicProfileData(data.data || data);
