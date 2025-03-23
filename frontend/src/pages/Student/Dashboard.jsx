@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useStudentDashboardData } from '@/hooks/useDashboardQueries';
 import DashboardLayout from '@/components/DashboardLayout';
@@ -30,6 +30,7 @@ import * as RechartsPrimitive from "recharts";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Variants d'animation
 const containerVariants = {
@@ -64,7 +65,42 @@ const fadeInVariants = {
  * Tableau de bord pour les étudiants
  */
 const StudentDashboard = () => {
-  const { user, dashboardData, isLoading, isError, error } = useStudentDashboardData();
+  const { user, isLoading, isError, error } = useStudentDashboardData();
+  const [showSkeleton, setShowSkeleton] = useState(false);
+  const skeletonTimerRef = useRef(null);
+  const hasDataLoadedRef = useRef(false);
+  
+  // Effet pour gérer l'affichage du skeleton uniquement quand nécessaire
+  useEffect(() => {
+    // Si les données sont en cours de chargement et que le timer n'est pas déjà programmé
+    if (isLoading && !skeletonTimerRef.current && !hasDataLoadedRef.current) {
+      // Programmer l'affichage du skeleton après un délai
+      skeletonTimerRef.current = setTimeout(() => {
+        if (isLoading) {
+          setShowSkeleton(true);
+        }
+      }, 300); // délai court pour éviter les flashs sur les chargements rapides
+    }
+    
+    // Si les données sont chargées
+    if (!isLoading && user) {
+      hasDataLoadedRef.current = true;
+      setShowSkeleton(false);
+      // Nettoyer le timer si nécessaire
+      if (skeletonTimerRef.current) {
+        clearTimeout(skeletonTimerRef.current);
+        skeletonTimerRef.current = null;
+      }
+    }
+    
+    // Nettoyage à la destruction du composant
+    return () => {
+      if (skeletonTimerRef.current) {
+        clearTimeout(skeletonTimerRef.current);
+        skeletonTimerRef.current = null;
+      }
+    };
+  }, [isLoading, user]);
   
   // Format current date for display
   const formattedDate = useMemo(() => {
@@ -105,6 +141,16 @@ const StudentDashboard = () => {
 
   // Cartes principales
   const mainCards = [
+    {
+      title: 'Emploi du temps',
+      description: 'Consultez votre planning de cours',
+      icon: Calendar,
+      color: 'from-blue-500 to-blue-600',
+      textColor: 'text-blue-50',
+      link: '/student/schedule',
+      stats: '3 cours aujourd\'hui',
+      progress: 75
+    },
     {
       title: 'Notes et résultats',
       description: 'Suivez vos performances académiques',
@@ -173,72 +219,34 @@ const StudentDashboard = () => {
     // Chart options...
   };
 
+  // Composant de carte avec skeleton
+  const CardSkeleton = () => (
+    <div className="h-full overflow-hidden rounded-xl shadow-sm bg-white dark:bg-gray-800">
+      <div className="p-5 h-full flex flex-col">
+        <div className="flex items-center justify-between mb-4">
+          <Skeleton className="h-10 w-10 rounded-lg" />
+          <Skeleton className="h-7 w-7 rounded-full" />
+        </div>
+        <Skeleton className="h-6 w-2/3 mb-1" />
+        <Skeleton className="h-4 w-1/2 mb-4" />
+        <div className="mt-auto">
+          <Skeleton className="h-4 w-1/3 mb-2" />
+          <Skeleton className="h-2 w-full rounded-full" />
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <DashboardLayout 
       loading={isLoading} 
       error={isError ? error?.message || 'Une erreur est survenue lors du chargement des données' : null}
       className="p-0"
-      user={user} 
+      user={user}
       headerIcon={GraduationCap}
       headerTitle="Tableau de bord étudiant"
-      showHeader={false} // Désactiver le header intégré car on a un header personnalisé
     >
       <div className="container mx-auto px-4 py-6 space-y-8">
-        {/* En-tête personnalisé */}
-        <motion.div 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="relative bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 overflow-hidden"
-        >
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between relative z-10">
-            <div className="flex items-center">
-              <Avatar className="h-14 w-14 border-2 border-primary">
-                <AvatarImage src={user?.profilePicture} alt={user?.firstName} />
-                <AvatarFallback className="bg-primary text-primary-foreground">{userInitials}</AvatarFallback>
-              </Avatar>
-              <div className="ml-4">
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
-                  Bonjour, {user?.firstName || 'Étudiant'}{' '}
-                  <span className="inline-block ml-2">
-                    <motion.div 
-                      className="w-5 h-5 text-yellow-500"
-                      animate={{
-                        rotate: [0, 20, 0, -20, 0],
-                        scale: [1, 1.2, 1, 1.2, 1],
-                      }}
-                      transition={{
-                        duration: 2,
-                        repeat: Infinity,
-                        ease: "easeInOut"
-                      }}
-                    />
-                  </span>
-                </h1>
-                <p className="text-gray-600 dark:text-gray-400 flex items-center gap-1.5 mt-1">
-                  <Sparkles className="h-3.5 w-3.5 text-primary" />
-                  <span>Tableau de bord étudiant</span>
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center mt-4 md:mt-0 gap-3">
-              <div className="flex items-center mr-4">
-                <Clock className="w-5 h-5 mr-2 text-blue-500 dark:text-blue-400" />
-                <span className="text-lg font-semibold text-gray-800 dark:text-gray-200">
-                  {new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                </span>
-              </div>
-              <Link to="/profile">
-                <Button size="sm" className="gap-2 bg-primary hover:bg-primary/90">
-                  <User className="h-4 w-4" />
-                  <span className="hidden sm:inline">Mon profil</span>
-                </Button>
-              </Link>
-            </div>
-          </div>
-          <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-indigo-600"></div>
-        </motion.div>
-
         {/* Cartes principales */}
         <motion.div 
           variants={containerVariants}
@@ -246,45 +254,52 @@ const StudentDashboard = () => {
           animate="visible"
           className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 mb-8"
         >
-          {mainCards.map((card, index) => (
-            <motion.div key={index} variants={itemVariants} className="h-full">
-              <Link to={card.link} className="block h-full">
-                <div className="relative h-full overflow-hidden rounded-xl shadow-sm hover:shadow-md transition-all duration-300 group">
-                  <div className={`absolute inset-0 bg-gradient-to-br ${card.color} opacity-90 group-hover:opacity-100 transition-opacity`}></div>
-                  <div className="relative p-5 h-full flex flex-col">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="p-2.5 rounded-lg bg-white/20 backdrop-blur-sm">
-                        <card.icon className="w-5 h-5 text-white" />
+          {showSkeleton ? (
+            // Skeleton pour les cartes principales
+            Array(4).fill(0).map((_, index) => (
+              <motion.div key={`skeleton-card-${index}`} variants={itemVariants} className="h-full">
+                <CardSkeleton />
+              </motion.div>
+            ))
+          ) : (
+            // Cartes principales réelles
+            mainCards.map((card, index) => (
+              <motion.div key={index} variants={itemVariants} className="h-full">
+                <Link to={card.link} className="block h-full">
+                  <div className="relative h-full overflow-hidden rounded-xl shadow-sm hover:shadow-md transition-all duration-300 group">
+                    <div className={`absolute inset-0 bg-gradient-to-br ${card.color} opacity-90 group-hover:opacity-100 transition-opacity`}></div>
+                    <div className="relative p-5 h-full flex flex-col">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="p-2.5 rounded-lg bg-white/20 backdrop-blur-sm">
+                          <card.icon className="w-5 h-5 text-white" />
+                        </div>
+                        <div className="p-1.5 rounded-full bg-white/20 backdrop-blur-sm">
+                          <ChevronRight className="w-4 h-4 text-white" />
+                        </div>
                       </div>
-                      <div className="p-1.5 rounded-full bg-white/20 backdrop-blur-sm">
-                        <ChevronRight className="w-4 h-4 text-white" />
-                      </div>
-                    </div>
-                    
-                    <h2 className="text-xl font-semibold text-white mb-1">
-                      {card.title}
-                    </h2>
-                    <p className="text-white/80 text-sm mb-4">
-                      {card.description}
-                    </p>
-                    
-                    <div className="mt-auto">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-white/90">{card.stats}</span>
-                        <span className="text-sm font-medium text-white/90">{card.progress}%</span>
-                      </div>
-                      <div className="w-full bg-white/30 rounded-full h-1.5">
-                        <div 
-                          className="h-1.5 rounded-full bg-white"
-                          style={{ width: `${card.progress}%` }}
-                        />
+                      
+                      <h2 className="text-xl font-semibold text-white mb-1">
+                        {card.title}
+                      </h2>
+                      <p className="text-white/80 text-sm mb-4">
+                        {card.description}
+                      </p>
+                      
+                      <div className="mt-auto">
+                        <p className={`${card.textColor} text-sm font-medium mb-1`}>{card.stats}</p>
+                        <div className="w-full bg-white/20 rounded-full h-1.5">
+                          <div 
+                            className="bg-white h-1.5 rounded-full" 
+                            style={{ width: `${card.progress}%` }}
+                          ></div>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </Link>
-            </motion.div>
-          ))}
+                </Link>
+              </motion.div>
+            ))
+          )}
         </motion.div>
 
         {/* Section principale - Graphique et événements */}
@@ -312,55 +327,57 @@ const StudentDashboard = () => {
                 </div>
               </div>
               <div className="aspect-square w-full p-4">
-                <RechartsPrimitive.ResponsiveContainer width="100%" height="100%">
-                  <RechartsPrimitive.RadarChart 
-                    data={competencesData}
-                    margin={{ top: 20, right: 30, bottom: 20, left: 30 }}
-                  >
-                    <RechartsPrimitive.PolarGrid 
-                      gridType="circle"
-                      stroke="rgba(148, 163, 184, 0.2)"
-                      strokeWidth={1}
-                    />
-                    <RechartsPrimitive.PolarAngleAxis 
-                      dataKey="name"
-                      tick={{
-                        fill: '#64748b',
-                        fontSize: 11,
-                        fontWeight: 500
-                      }}
-                    />
-                    <RechartsPrimitive.PolarRadiusAxis 
-                      angle={30}
-                      domain={[0, 100]}
-                      axisLine={false}
-                      tick={{
-                        fill: '#94a3b8',
-                        fontSize: 10
-                      }}
-                      tickCount={5}
-                    />
-                    <RechartsPrimitive.Radar
-                      name="Compétences"
-                      dataKey="value"
-                      stroke="rgba(99, 102, 241, 0.8)"
-                      fill="rgba(99, 102, 241, 0.4)"
-                      fillOpacity={0.6}
-                      dot
-                      activeDot={{ r: 4 }}
-                    />
-                    <RechartsPrimitive.Tooltip 
-                      formatter={(value) => [`${value}%`, 'Niveau']}
-                      contentStyle={{
-                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                        borderRadius: '6px',
-                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-                        border: 'none',
-                        padding: '8px 12px'
-                      }}
-                    />
-                  </RechartsPrimitive.RadarChart>
-                </RechartsPrimitive.ResponsiveContainer>
+                {!showSkeleton && (
+                  <RechartsPrimitive.ResponsiveContainer width="100%" height="100%">
+                    <RechartsPrimitive.RadarChart 
+                      data={competencesData}
+                      margin={{ top: 20, right: 30, bottom: 20, left: 30 }}
+                    >
+                      <RechartsPrimitive.PolarGrid 
+                        gridType="circle"
+                        stroke="rgba(148, 163, 184, 0.2)"
+                        strokeWidth={1}
+                      />
+                      <RechartsPrimitive.PolarAngleAxis 
+                        dataKey="name"
+                        tick={{
+                          fill: '#64748b',
+                          fontSize: 11,
+                          fontWeight: 500
+                        }}
+                      />
+                      <RechartsPrimitive.PolarRadiusAxis 
+                        angle={30}
+                        domain={[0, 100]}
+                        axisLine={false}
+                        tick={{
+                          fill: '#94a3b8',
+                          fontSize: 10
+                        }}
+                        tickCount={5}
+                      />
+                      <RechartsPrimitive.Radar
+                        name="Compétences"
+                        dataKey="value"
+                        stroke="rgba(99, 102, 241, 0.8)"
+                        fill="rgba(99, 102, 241, 0.4)"
+                        fillOpacity={0.6}
+                        dot
+                        activeDot={{ r: 4 }}
+                      />
+                      <RechartsPrimitive.Tooltip 
+                        formatter={(value) => [`${value}%`, 'Niveau']}
+                        contentStyle={{
+                          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                          borderRadius: '6px',
+                          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                          border: 'none',
+                          padding: '8px 12px'
+                        }}
+                      />
+                    </RechartsPrimitive.RadarChart>
+                  </RechartsPrimitive.ResponsiveContainer>
+                )}
               </div>
               <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-700">
                 <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">

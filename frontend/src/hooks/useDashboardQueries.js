@@ -14,21 +14,26 @@ export const useUserData = () => {
   return useQuery({
     queryKey: ['user'],
     queryFn: async () => {
+      console.log("useUserData - Starting user data fetch");
       try {
         // Récupérer les données complètes de l'utilisateur
+        console.log("useUserData - Calling authService.getCurrentUser()");
         const userData = await authService.getCurrentUser();
+        console.log("useUserData - Received user data:", userData);
         return userData;
       } catch (error) {
-        console.error("Erreur lors de la récupération des données utilisateur:", error);
+        console.error("useUserData - Error fetching user data:", error);
         
         // En cas d'erreur, essayer de récupérer les données minimales du localStorage
         try {
+          console.log("useUserData - Attempting to get minimal data from localStorage");
           const minimalData = authService.getMinimalUserData();
+          console.log("useUserData - Minimal data from localStorage:", minimalData);
           if (minimalData) {
             return minimalData;
           }
         } catch (localError) {
-          console.error("Erreur lors de la récupération des données minimales:", localError);
+          console.error("useUserData - Error retrieving minimal data:", localError);
         }
         
         // Si toutes les tentatives échouent, propager l'erreur
@@ -42,8 +47,11 @@ export const useUserData = () => {
     refetchOnMount: true,
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+    onSuccess: (data) => {
+      console.log("useUserData - Success callback with data:", data);
+    },
     onError: (error) => {
-      console.error("Erreur lors de la récupération des données utilisateur:", error);
+      console.error("useUserData - Error callback:", error);
     }
   });
 };

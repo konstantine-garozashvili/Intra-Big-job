@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { motion } from 'framer-motion';
 import { AlertCircle } from 'lucide-react';
@@ -53,6 +53,13 @@ const DashboardLayout = ({
   headerTitle,
   showHeader = true
 }) => {
+  // Ajouter des logs pour tracer les données utilisateur
+  useEffect(() => {
+    console.log("DashboardLayout - Received user data:", user);
+    console.log("DashboardLayout - Loading state:", isLoading);
+    console.log("DashboardLayout - Show header:", showHeader);
+  }, [user, isLoading, showHeader]);
+  
   // Récupérer le contexte de chargement depuis le MainLayout
   const context = useOutletContext() || {};
   
@@ -61,6 +68,7 @@ const DashboardLayout = ({
   
   // Afficher le squelette pendant le chargement si demandé
   if (isLoadingState && showSkeleton) {
+    console.log("DashboardLayout - Rendering skeleton due to loading state");
     return (
       <div className={`container mx-auto p-8 ${className}`}>
         <DashboardSkeleton />
@@ -70,6 +78,7 @@ const DashboardLayout = ({
   
   // Afficher l'erreur si présente
   if (error) {
+    console.log("DashboardLayout - Rendering error display:", error);
     return (
       <div className={`container mx-auto p-8 ${className}`}>
         <ErrorDisplay errorMessage={error} />

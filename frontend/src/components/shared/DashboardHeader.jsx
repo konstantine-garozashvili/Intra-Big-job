@@ -5,6 +5,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
+import { authService } from '@/lib/services/authService';
+import userDataManager from '@/lib/services/userDataManager';
 
 const getInitials = (firstName, lastName) => {
   if (!firstName || !lastName) return '?';
@@ -34,11 +36,72 @@ const DashboardHeader = ({ user, icon: Icon, roleTitle }) => {
   // Données utilisateur stables (ne seront jamais réinitialisées à null une fois définies)
   const stableUserDataRef = useRef(null);
   
-  // État de chargement initial et affiché
-  const [loading, setLoading] = useState(true);
+  // État local pour forcer les re-rendus quand les données stables changent
+  const [userData, setUserData] = useState({});
+  
+  // Ajouter des logs pour déboguer les données utilisateur
+  useEffect(() => {
+    console.log("DashboardHeader - User data received:", user);
+    console.log("DashboardHeader - Current stable user data:", stableUserDataRef.current);
+    console.log("DashboardHeader - Has complete data:", hasCompleteUserData(user));
+    
+    // Si nous n'avons pas de données utilisateur valides, essayer de les récupérer de différentes sources
+    if (!hasCompleteUserData(user) && !stableUserDataRef.current) {
+      // 1. Essayer d'abord userDataManager (cache optimisé)
+      try {
+        const cachedUserData = userDataManager.getCachedUserData();
+        console.log("DashboardHeader - Attempting to get data from userDataManager:", cachedUserData);
+        
+        if (hasCompleteUserData(cachedUserData)) {
+          // Mettre à jour les données stables avec les données du userDataManager
+          const newUserData = {
+            firstName: cachedUserData.firstName,
+            lastName: cachedUserData.lastName,
+            profilePicture: cachedUserData.profilePicture || cachedUserData.avatar,
+            fullName: `${cachedUserData.firstName} ${cachedUserData.lastName}`
+          };
+          
+          stableUserDataRef.current = newUserData;
+          // IMPORTANT: Mettre à jour l'état pour forcer un re-rendu
+          setUserData(newUserData);
+          
+          console.log("DashboardHeader - Using userDataManager cache data as fallback");
+          return;
+        }
+      } catch (error) {
+        console.error("DashboardHeader - Error retrieving data from userDataManager:", error);
+      }
+      
+      // 2. Sinon, essayer authService.getMinimalUserData (localStorage)
+      try {
+        const localStorageData = authService.getMinimalUserData();
+        console.log("DashboardHeader - Attempting to get data from localStorage:", localStorageData);
+        
+        if (hasCompleteUserData(localStorageData)) {
+          // Mettre à jour les données stables avec les données du localStorage
+          const newUserData = {
+            firstName: localStorageData.firstName,
+            lastName: localStorageData.lastName,
+            profilePicture: localStorageData.profilePicture || localStorageData.avatar,
+            fullName: `${localStorageData.firstName} ${localStorageData.lastName}`
+          };
+          
+          stableUserDataRef.current = newUserData;
+          // IMPORTANT: Mettre à jour l'état pour forcer un re-rendu
+          setUserData(newUserData);
+          
+          console.log("DashboardHeader - Using localStorage data as fallback");
+        }
+      } catch (error) {
+        console.error("DashboardHeader - Error retrieving data from localStorage:", error);
+      }
+    }
+  }, [user]);
+  
+  // État pour gérer l'affichage du skeleton
   const [showSkeleton, setShowSkeleton] = useState(false);
   
-  // Délai avant d'afficher le skeleton pour éviter les flashs sur les chargements rapides
+  // Référence pour le timer de skeleton
   const skeletonTimerRef = useRef(null);
   // Référence pour suivre si les données complètes ont déjà été reçues
   const hasReceivedCompleteDataRef = useRef(false);
@@ -47,71 +110,98 @@ const DashboardHeader = ({ user, icon: Icon, roleTitle }) => {
 
   // Obtenir les initiales de l'utilisateur pour l'avatar
   const userInitials = useMemo(() => {
-    if (!stableUserDataRef.current?.firstName || !stableUserDataRef.current?.lastName) {
+    if (!userData.firstName || !userData.lastName) {
       return user?.firstName && user?.lastName 
         ? `${user.firstName[0]}${user.lastName[0]}` 
         : 'U';
     }
-    return `${stableUserDataRef.current.firstName[0]}${stableUserDataRef.current.lastName[0]}`;
-  }, [user, stableUserDataRef.current]);
+    return `${userData.firstName[0]}${userData.lastName[0]}`;
+  }, [user, userData]);
 
   useEffect(() => {
-    // Phase 1: Démarrer le timer pour afficher le skeleton après un délai
-    // seulement si on n'a pas encore de données stables
-    if (!stableUserDataRef.current && !skeletonTimerRef.current) {
-      skeletonTimerRef.current = setTimeout(() => {
-        setShowSkeleton(true);
-      }, 300); // délai court pour éviter le flash de skeleton
-    }
-
-    // Phase 2: Mettre à jour les données stables si on reçoit des données complètes
-    if (hasCompleteUserData(user)) {
-      // Marquer qu'on a reçu des données complètes
+    // Si les données utilisateur sont partiellement complètes (au moins prénom OU nom)
+    if (user && (user.firstName || user.lastName)) {
+      console.log("DashboardHeader - Updating with partial data:", { firstName: user.firstName, lastName: user.lastName });
+      
+      // Mettre à jour les données stables de façon incrémentale
+      const newUserData = {
+        firstName: user.firstName || stableUserDataRef.current?.firstName,
+        lastName: user.lastName || stableUserDataRef.current?.lastName,
+        profilePicture: user.profilePicture || user.avatar || stableUserDataRef.current?.profilePicture,
+        fullName: `${user.firstName || ''} ${user.lastName || ''}`.trim()
+      };
+      
+      stableUserDataRef.current = newUserData;
+      // IMPORTANT: Mettre à jour l'état pour forcer un re-rendu
+      setUserData(newUserData);
+      
+      // Marquer que nous avons reçu des données
       hasReceivedCompleteDataRef.current = true;
       lastDataChangeRef.current = Date.now();
       
-      // Mettre à jour les données stables seulement si nécessaire
+      // Masquer le skeleton
+      setShowSkeleton(false);
+      
+      // Nettoyer le timer
+      if (skeletonTimerRef.current) {
+        clearTimeout(skeletonTimerRef.current);
+        skeletonTimerRef.current = null;
+      }
+    }
+    // Si les données utilisateur sont complètes (les deux prénom ET nom)
+    else if (hasCompleteUserData(user)) {
+      console.log("DashboardHeader - Updating with complete data");
+      
+      // Marquer que nous avons reçu des données complètes
+      hasReceivedCompleteDataRef.current = true;
+      lastDataChangeRef.current = Date.now();
+      
+      // Mettre à jour les données stables si nécessaire
       if (!stableUserDataRef.current || 
           stableUserDataRef.current.firstName !== user.firstName || 
           stableUserDataRef.current.lastName !== user.lastName) {
-        stableUserDataRef.current = {
+        const newUserData = {
           firstName: user.firstName,
           lastName: user.lastName,
           profilePicture: user.profilePicture || user.avatar,
           fullName: `${user.firstName} ${user.lastName}`
         };
+        
+        stableUserDataRef.current = newUserData;
+        // IMPORTANT: Mettre à jour l'état pour forcer un re-rendu
+        setUserData(newUserData);
       }
       
-      // Enlever l'état de chargement
-      setLoading(false);
+      // Masquer le skeleton
       setShowSkeleton(false);
       
-      // Nettoyer le timer si nécessaire
+      // Nettoyer le timer
       if (skeletonTimerRef.current) {
         clearTimeout(skeletonTimerRef.current);
         skeletonTimerRef.current = null;
       }
-    } 
-    // Phase 3: Si les données deviennent incomplètes après avoir eu des données complètes
-    else if (stableUserDataRef.current && hasReceivedCompleteDataRef.current) {
-      // Si nous avons déjà des données stables, ne pas revenir au skeleton
-      // à moins que cela ne persiste pendant une longue période (10 secondes)
-      const timeSinceLastValidData = Date.now() - lastDataChangeRef.current;
-      if (timeSinceLastValidData > 10000) {
-        // Si ça fait plus de 10s sans données valides, montrer le skeleton
-        setShowSkeleton(true);
-      } else {
-        // Sinon, continuer à utiliser les données stables - pas de skeleton
-        setShowSkeleton(false);
-      }
     }
-    // Phase 4: Si on a un user mais sans données complètes et qu'on n'a jamais reçu de données complètes
-    else if (user && !hasReceivedCompleteDataRef.current) {
-      // Après 2 secondes, montrer le skeleton si on n'a toujours pas de données complètes
+    // Si les données sont absentes mais que nous n'avons pas encore de données stables
+    else if (!hasCompleteUserData(user) && !stableUserDataRef.current) {
+      console.log("DashboardHeader - No data available, showing skeleton soon");
+      // Si le timer n'est pas déjà programmé, programmer l'affichage du skeleton
       if (!skeletonTimerRef.current) {
         skeletonTimerRef.current = setTimeout(() => {
           setShowSkeleton(true);
-        }, 2000);
+        }, 300); // Délai court pour éviter les flashs lors des chargements rapides
+      }
+    }
+    // Si les données redeviennent incomplètes après avoir été complètes
+    else if (stableUserDataRef.current && hasReceivedCompleteDataRef.current) {
+      // Calculer le temps écoulé depuis les dernières données valides
+      const timeSinceLastValidData = Date.now() - lastDataChangeRef.current;
+      console.log("DashboardHeader - Using stable data, time since last valid data:", timeSinceLastValidData);
+      
+      // Ne montrer le skeleton que si les données sont absentes depuis longtemps (10s)
+      // Sinon, continuer à utiliser les données stables
+      if (timeSinceLastValidData > 10000) {
+        console.log("DashboardHeader - Data missing for too long, showing skeleton");
+        setShowSkeleton(true);
       }
     }
     
@@ -123,10 +213,40 @@ const DashboardHeader = ({ user, icon: Icon, roleTitle }) => {
     };
   }, [user]);
   
-  // Récupérer les données à afficher (données stables ou skeleton)
-  const displayData = stableUserDataRef.current || {};
-  const { firstName, lastName, profilePicture } = displayData;
+  // Log final des données affichées
+  useEffect(() => {
+    console.log("DashboardHeader - Final display data:", userData);
+  }, [userData]);
   
+  // Récupérer les données à afficher directement depuis l'état
+  const { firstName, lastName, profilePicture } = userData;
+  
+  // Skeleton pour le header
+  if (showSkeleton) {
+    return (
+      <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 overflow-hidden mb-8">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between relative z-10">
+          <div className="flex items-center">
+            <Skeleton className="h-14 w-14 rounded-full" />
+            <div className="ml-4">
+              <Skeleton className="h-7 w-40 mb-2" />
+              <Skeleton className="h-4 w-24" />
+            </div>
+          </div>
+          <div className="flex items-center mt-4 md:mt-0 gap-3">
+            <div className="flex items-center mr-4">
+              <Skeleton className="w-5 h-5 mr-2 rounded-full" />
+              <Skeleton className="h-6 w-16" />
+            </div>
+            <Skeleton className="h-9 w-24 rounded-md" />
+          </div>
+        </div>
+        <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-indigo-600"></div>
+      </div>
+    );
+  }
+  
+  // Contenu réel du header
   return (
     <motion.div 
       initial={{ opacity: 0, y: -20 }}
@@ -136,45 +256,32 @@ const DashboardHeader = ({ user, icon: Icon, roleTitle }) => {
     >
       <div className="flex flex-col md:flex-row md:items-center md:justify-between relative z-10">
         <div className="flex items-center">
-          {showSkeleton ? (
-            <Skeleton className="h-14 w-14 rounded-full" />
-          ) : (
-            <Avatar className="h-14 w-14 border-2 border-primary">
-              <AvatarImage src={profilePicture} alt={firstName} />
-              <AvatarFallback className="bg-primary text-primary-foreground">{userInitials}</AvatarFallback>
-            </Avatar>
-          )}
+          <Avatar className="h-14 w-14 border-2 border-primary">
+            <AvatarImage src={profilePicture} alt={firstName} />
+            <AvatarFallback className="bg-primary text-primary-foreground">{userInitials}</AvatarFallback>
+          </Avatar>
           <div className="ml-4">
-            {showSkeleton ? (
-              <div className="space-y-2">
-                <Skeleton className="h-7 w-40" />
-                <Skeleton className="h-4 w-24" />
-              </div>
-            ) : (
-              <>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
-                  Bonjour, {firstName || 'Utilisateur'}{' '}
-                  <span className="inline-block ml-2">
-                    <motion.div 
-                      className="w-5 h-5 text-yellow-500"
-                      animate={{
-                        rotate: [0, 20, 0, -20, 0],
-                        scale: [1, 1.2, 1, 1.2, 1],
-                      }}
-                      transition={{
-                        duration: 2,
-                        repeat: Infinity,
-                        ease: "easeInOut"
-                      }}
-                    />
-                  </span>
-                </h1>
-                <p className="text-gray-600 dark:text-gray-400 flex items-center gap-1.5 mt-1">
-                  {Icon ? <Icon className="h-3.5 w-3.5 text-primary" /> : <Sparkles className="h-3.5 w-3.5 text-primary" />}
-                  <span>{roleTitle}</span>
-                </p>
-              </>
-            )}
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
+              Bonjour, {firstName || 'Utilisateur'}{' '}
+              <span className="inline-block ml-2">
+                <motion.div 
+                  className="w-5 h-5 text-yellow-500"
+                  animate={{
+                    rotate: [0, 20, 0, -20, 0],
+                    scale: [1, 1.2, 1, 1.2, 1],
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                />
+              </span>
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 flex items-center gap-1.5 mt-1">
+              {Icon ? <Icon className="h-3.5 w-3.5 text-primary" /> : <Sparkles className="h-3.5 w-3.5 text-primary" />}
+              <span>{roleTitle}</span>
+            </p>
           </div>
         </div>
         <div className="flex items-center mt-4 md:mt-0 gap-3">
