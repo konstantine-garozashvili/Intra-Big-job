@@ -1,7 +1,10 @@
-import React, { memo } from 'react';
+import React, { memo, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { motion } from 'framer-motion';
 import { AlertCircle } from 'lucide-react';
+import { useOutletContext } from 'react-router-dom';
+import DashboardSkeleton from './DashboardSkeleton';
+import DashboardHeader from './shared/DashboardHeader';
 
 // Composant d'erreur optimisé
 const ErrorDisplay = memo(({ errorMessage }) => (
@@ -36,10 +39,46 @@ ErrorDisplay.propTypes = {
 
 /**
  * Composant de base pour tous les dashboards
- * Gère l'affichage des états d'erreur
+ * Gère l'affichage des états d'erreur et de chargement
+ * Inclut maintenant le DashboardHeader directement
  */
-const DashboardLayout = ({ error, children, className = "" }) => {
+const DashboardLayout = ({ 
+  error, 
+  children, 
+  className = "", 
+  isLoading, 
+  showSkeleton = true,
+  user,
+  headerIcon,
+  headerTitle,
+  showHeader = true
+}) => {
+  // Ajouter des logs pour tracer les données utilisateur
+  useEffect(() => {
+    console.log("DashboardLayout - Received user data:", user);
+    console.log("DashboardLayout - Loading state:", isLoading);
+    console.log("DashboardLayout - Show header:", showHeader);
+  }, [user, isLoading, showHeader]);
+  
+  // Récupérer le contexte de chargement depuis le MainLayout
+  const context = useOutletContext() || {};
+  
+  // Utiliser l'état de chargement passé en prop ou depuis le contexte
+  const isLoadingState = isLoading || (context.isLoading && !context.hasMinimalData);
+  
+  // Afficher le squelette pendant le chargement si demandé
+  if (isLoadingState && showSkeleton) {
+    console.log("DashboardLayout - Rendering skeleton due to loading state");
+    return (
+      <div className={`container mx-auto p-8 ${className}`}>
+        <DashboardSkeleton />
+      </div>
+    );
+  }
+  
+  // Afficher l'erreur si présente
   if (error) {
+    console.log("DashboardLayout - Rendering error display:", error);
     return (
       <div className={`container mx-auto p-8 ${className}`}>
         <ErrorDisplay errorMessage={error} />
@@ -47,22 +86,32 @@ const DashboardLayout = ({ error, children, className = "" }) => {
     );
   }
 
+  // Contenu normal sans animation
   return (
-    <motion.div 
-      className={`container mx-auto p-8 ${className}`}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.3 }}
-    >
+    <div className={`container mx-auto p-8 ${className}`}>
+      {/* Intégrer le DashboardHeader ici si showHeader est true */}
+      {showHeader && user && (
+        <DashboardHeader 
+          user={user}
+          icon={headerIcon}
+          roleTitle={headerTitle}
+        />
+      )}
       {children}
-    </motion.div>
+    </div>
   );
 };
 
 DashboardLayout.propTypes = {
   error: PropTypes.string,
   children: PropTypes.node.isRequired,
-  className: PropTypes.string
+  className: PropTypes.string,
+  isLoading: PropTypes.bool,
+  showSkeleton: PropTypes.bool,
+  user: PropTypes.object,
+  headerIcon: PropTypes.elementType,
+  headerTitle: PropTypes.string,
+  showHeader: PropTypes.bool
 };
 
 // Utiliser memo pour éviter les re-rendus inutiles

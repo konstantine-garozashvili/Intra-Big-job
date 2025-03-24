@@ -85,17 +85,13 @@ const Calendar = () => {
         }
     }, [showAddModal]);
 
-    const fetchEvents = async () => {
+    const fetchEvents = async (retryCount = 0) => {
         setLoading(true);
         setError(null);
         try {
-            // Vérifier si le token existe avant de faire la requête
-            const token = localStorage.getItem('token');
-            if (!token) {
-                throw new Error("Vous n'êtes pas authentifié. Veuillez vous reconnecter.");
-            }
-            
-            const response = await apiService.get('/get-user-events');
+            const response = await apiService.get('/get-user-events', {
+                timeout: 15000 // 15 seconds timeout
+            });
 
             if (response) {
                 const formattedEvents = response.map(event => ({
@@ -117,9 +113,16 @@ const Calendar = () => {
                 setError("Aucun événement trouvé.");
             }
         } catch (error) {
-            console.error("Erreur lors de la récupération des événements:", error);
-            // Message d'erreur plus descriptif
-            setError(error.response?.data?.error || error.message || "Impossible de charger les événements. Veuillez vous déconnecter et vous reconnecter.");
+            console.error("Erreur lors du chargement des événements:", error);
+            
+            // Retry logic for network errors
+            if (retryCount < 3 && (error.code === 'ECONNABORTED' || error.message.includes('timeout'))) {
+                console.log(`Retrying events fetch attempt ${retryCount + 1}/3...`);
+                setTimeout(() => fetchEvents(retryCount + 1), 1000 * (retryCount + 1));
+                return;
+            }
+            
+            setError("Impossible de charger les événements. Veuillez réessayer plus tard.");
         } finally {
             setLoading(false);
         }

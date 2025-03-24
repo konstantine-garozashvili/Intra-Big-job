@@ -40,7 +40,16 @@ export default defineConfig({
     },
     hmr: {
       clientPort: 5173,
-      overlay: true
+      overlay: true,
+      timeout: 120000,
+      protocol: 'ws'
+    },
+    proxy: {
+      '/api': {
+        target: 'http://nginx:80',
+        changeOrigin: true,
+        secure: false,
+      }
     }
   },
   build: {
@@ -74,8 +83,19 @@ export default defineConfig({
       'axios',
       'react-hook-form',
       'zod',
-      'framer-motion'
+      'framer-motion',
+      '@radix-ui/react-switch',
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-dropdown-menu',
+      '@radix-ui/react-navigation-menu',
+      '@radix-ui/react-popover',
+      '@radix-ui/react-slot'
     ],
-    force: true
-  }
+    force: false,
+    esbuildOptions: {
+      target: 'es2020',
+      treeShaking: false
+    }
+  },
+  cacheDir: 'node_modules/.vite'
 })

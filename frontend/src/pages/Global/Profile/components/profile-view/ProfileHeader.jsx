@@ -51,9 +51,6 @@ const ProfileHeader = ({ userData, isPublicProfile = false, profilePictureUrl })
 
     fetchDomainData();
   }, [userData]);
-
-  // Logs pour le débogage
-  console.log("DEBUGGING HEADER - userData reçu:", userData);
   
   // Récupération sécurisée des propriétés utilisateur
   const getUserProperty = (propName, defaultValue = '') => {

@@ -1,26 +1,109 @@
 import axios from 'axios';
 
-// Créer une instance axios avec des configurations par défaut
-const axiosInstance = axios.create({
-  timeout: 8000, // Réduit de 15000ms à 8000ms
-  headers: {
-    'Accept': 'application/json',
-    'X-Requested-With': 'XMLHttpRequest'
-    // Remove default Content-Type header to allow axios to set it correctly for FormData
-  }
-});
+// Import the low performance mode detection from loadingUtils
+import { setLowPerformanceMode } from '../utils/loadingUtils';
 
-// Configurer des intercepteurs pour les requêtes et réponses
-axiosInstance.interceptors.request.use(request => {
-  // Ajouter le token d'authentification à toutes les requêtes si disponible
-  const token = localStorage.getItem('token');
-  if (token) {
-    request.headers.Authorization = `Bearer ${token}`;
+// Système de verrouillage pour éviter les requêtes en parallèle
+const pendingRequests = new Map();
+
+// Détection des performances de l'appareil
+function detectDevicePerformance() {
+  // Si déjà détecté, utiliser la valeur en cache
+  if (window._devicePerformanceScore !== undefined) {
+    return window._devicePerformanceScore;
   }
   
-  // Set Content-Type only for non-FormData requests
-  if (request.data && !(request.data instanceof FormData)) {
-    request.headers['Content-Type'] = 'application/json';
+  try {
+    const startTime = performance.now();
+    
+    // Test simple de performance - calcul intense
+    let result = 0;
+    for (let i = 0; i < 100000; i++) {
+      result += Math.sqrt(i);
+    }
+    
+    const endTime = performance.now();
+    const executionTime = endTime - startTime;
+    
+    // Score basé sur le temps d'exécution (0-100)
+    // Plus bas = meilleure performance
+    const performanceScore = Math.min(100, Math.max(0, executionTime / 10));
+    
+    // Stocker le score pour la session
+    window._devicePerformanceScore = performanceScore;
+    
+    // Définir également le mode performance basse si nécessaire
+    if (performanceScore > 70) {
+      setLowPerformanceMode(true);
+    }
+    
+    return performanceScore;
+  } catch (e) {
+    return 50; // Score moyen par défaut
+  }
+}
+
+// Calculer les timeouts adaptatifs en fonction de la performance du dispositif
+function getAdaptiveTimeout(baseTimeout, isImportant = false) {
+  const performanceScore = detectDevicePerformance();
+  
+  // Pour les requêtes importantes, limiter l'augmentation du timeout
+  const multiplier = isImportant ? 
+    Math.max(1, 1 + (performanceScore / 100)) : // Max 2x pour importantes
+    Math.max(1, 1.5 + (performanceScore / 50));  // Max 3.5x pour non-importantes
+  
+  return Math.round(baseTimeout * multiplier);
+}
+
+// Determine if we're in low performance mode
+const isLowPerformanceMode = () => {
+  // Run the performance detection on first call
+  if (window._devicePerformanceScore === undefined) {
+    detectDevicePerformance();
+  }
+  return localStorage.getItem('preferLowPerformanceMode') === 'true' || window._devicePerformanceScore > 70;
+};
+
+// Configure default timeouts based on performance mode
+const getDefaultTimeout = (isProfileRequest = false) => {
+  const lowPerformance = isLowPerformanceMode();
+  
+  if (isProfileRequest) {
+    return lowPerformance ? 3000 : 2000; // Increase timeout for profile requests on low-perf devices
+  }
+  
+  return lowPerformance ? 15000 : 30000; // Shorter timeout for low-perf devices to avoid hanging
+};
+
+// Configure des intercepteurs pour logger les requêtes et réponses
+axios.interceptors.request.use(request => {
+  // Ne pas afficher les informations sensibles comme les mots de passe
+  const requestData = { ...request.data };
+  if (requestData.password) {
+    requestData.password = '********';
+  }
+  
+  // Identifier les requêtes d'authentification
+  let isAuthRequest = false;
+  if (request.url) {
+    isAuthRequest = request.url.includes('/login_check') || 
+                   request.url.includes('/token/refresh') ||
+                   request.url.includes('/token/revoke');
+  }
+  
+  // Set default timeout based on performance mode
+  if (!request.timeout) {
+    const isProfileRequest = request.url && (request.url.includes('/profile/') || request.url.includes('/me'));
+    request.timeout = getDefaultTimeout(isProfileRequest);
+  }
+  
+  // Ajouter les credentials et les headers CORS
+  request.withCredentials = true;
+  
+  // Récupérer le token depuis le localStorage si disponible
+  const token = localStorage.getItem('token');
+  if (token) {
+    request.headers['Authorization'] = `Bearer ${token}`;
   }
   
   return request;
@@ -28,49 +111,45 @@ axiosInstance.interceptors.request.use(request => {
   return Promise.reject(error);
 });
 
-// Ajouter un cache simple pour les requêtes GET
-const cache = new Map();
-
-// Define cache keys that should never be cached or have short TTL
-const CACHE_CONFIG = {
-  // Never cache these endpoints (always fetch fresh data)
-  neverCache: [
-    '/api/profile/picture',
-    '/api/documents/type/CV',
-    '/api/documents/type'
-  ],
-  // Short TTL for these endpoints (10 seconds)
-  shortTtl: [
-    '/api/profile',
-    '/api/documents'
-  ]
-};
-
-// Function to get a session-aware cache key
-const getCacheKey = (url, params = {}) => {
-  const sessionId = localStorage.getItem('session_id') || 'anonymous';
-  return `session_${sessionId}:${url}:${JSON.stringify(params || {})}`;
-};
-
-axiosInstance.interceptors.response.use(response => {
-  // Mettre en cache les réponses GET
-  if (response.config.method === 'get' && response.config.url) {
-    const url = response.config.url;
-    const cacheKey = getCacheKey(url, response.config.params || {});
-    
-    // Skip caching for endpoints that should never be cached
-    const shouldNeverCache = CACHE_CONFIG.neverCache.some(endpoint => url.includes(endpoint));
-    if (!shouldNeverCache) {
-      cache.set(cacheKey, {
-        data: response.data,
-        timestamp: Date.now()
-      });
-    }
+axios.interceptors.response.use(response => {
+  // Identifier les réponses d'authentification
+  let isAuthResponse = false;
+  if (response.config?.url) {
+    isAuthResponse = response.config.url.includes('/login_check') || 
+                    response.config.url.includes('/token/refresh') ||
+                    response.config.url.includes('/token/revoke');
   }
+  
   return response;
 }, error => {
   return Promise.reject(error);
 });
+
+// Configuration de base pour axios
+axios.defaults.withCredentials = true;
+axios.defaults.timeout = 15000; // Augmenter le délai d'attente global à 15 secondes
+
+// Create a simple in-memory request cache with expiration
+const apiCache = new Map();
+const DEFAULT_CACHE_TTL = isLowPerformanceMode() ? 120000 : 60000; // 2 minutes for low-perf, 1 minute otherwise
+
+// Add cache size limits for memory management
+const MAX_CACHE_SIZE = isLowPerformanceMode() ? 50 : 100; // Fewer items for low-perf devices
+
+// Add cache cleanup function
+const cleanupCache = () => {
+  if (apiCache.size <= MAX_CACHE_SIZE) return;
+  
+  // Convert to array for sorting
+  const entries = Array.from(apiCache.entries());
+  
+  // Sort by expiry (oldest first)
+  entries.sort((a, b) => a[1].expiry - b[1].expiry);
+  
+  // Remove oldest entries until we're under the limit
+  const toRemove = entries.slice(0, entries.length - MAX_CACHE_SIZE);
+  toRemove.forEach(([key]) => apiCache.delete(key));
+};
 
 /**
  * Normalise une URL d'API en gérant les doublons de "/api"
@@ -78,15 +157,40 @@ axiosInstance.interceptors.response.use(response => {
  * @returns {string} - L'URL complète normalisée
  */
 export const normalizeApiUrl = (path) => {
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
+  // Handle null or undefined paths
+  if (!path) return '/api';
   
-  // Supprimer le "/api" à la fin de baseUrl si path commence par "/api"
-  if (path.startsWith('/api')) {
-    return `${baseUrl.replace(/\/api$/, '')}${path}`;
-  } 
+  // Remove trailing slashes for consistency
+  const trimmedPath = path.replace(/\/+$/, '');
   
-  // Ajouter un "/" si nécessaire
-  return `${baseUrl}${baseUrl.endsWith('/') || path.startsWith('/') ? '' : '/'}${path}`;
+  // If the path starts with http:// or https://, it's an absolute URL - return it as is
+  if (trimmedPath.match(/^https?:\/\//)) {
+    return trimmedPath;
+  }
+  
+  // Check if the path already has the /api prefix
+  if (trimmedPath.startsWith('/api/')) {
+    return trimmedPath;
+  }
+  
+  // Simplify handling of the /api prefix
+  // Add /api prefix if it's not already there
+  if (trimmedPath.startsWith('/')) {
+    return `/api${trimmedPath}`;
+  } else {
+    return `/api/${trimmedPath}`;
+  }
+};
+
+/**
+ * Generates a cache key for a request
+ * @param {string} method - HTTP method
+ * @param {string} url - Request URL
+ * @param {Object} params - Query parameters
+ * @returns {string} - Cache key
+ */
+export const generateCacheKey = (method, url, params = {}) => {
+  return `${method}:${url}:${JSON.stringify(params)}`;
 };
 
 /**
@@ -97,46 +201,107 @@ const apiService = {
    * Effectue une requête GET
    * @param {string} path - Chemin de l'API
    * @param {Object} options - Options de la requête (headers, params, etc.)
-   * @param {boolean} useCache - Utiliser le cache si disponible
-   * @param {number} cacheDuration - Durée de validité du cache en ms (défaut: 5 minutes)
    * @returns {Promise<Object>} - Réponse de l'API
    */
-  async get(path, options = {}, useCache = true, cacheDuration = 5 * 60 * 1000) {
+  async get(path, options = {}) {
     try {
       const url = normalizeApiUrl(path);
-      const authOptions = this.withAuth(options);
       
-      // Check if this endpoint should never be cached
-      const shouldNeverCache = CACHE_CONFIG.neverCache.some(endpoint => path.includes(endpoint));
-      if (shouldNeverCache) {
-        useCache = false;
+      // Générer une clé unique pour cette requête
+      const requestKey = `${path}${JSON.stringify(options.params || {})}`;
+      
+      // Vérifier si une requête identique est déjà en cours
+      if (pendingRequests.has(requestKey)) {
+        return pendingRequests.get(requestKey);
       }
       
-      // Check if this endpoint should have a short TTL
-      const shouldHaveShortTtl = CACHE_CONFIG.shortTtl.some(endpoint => path.includes(endpoint));
-      if (shouldHaveShortTtl) {
-        cacheDuration = 10 * 1000; // 10 seconds
-      }
-      
-      // Add cache busting for profile picture requests
-      if (path.includes('/profile/picture')) {
-        const timestamp = Date.now();
-        authOptions.params = { ...authOptions.params, _t: timestamp };
-      }
-      
-      // Vérifier si la réponse est en cache et toujours valide
-      if (useCache) {
-        const cacheKey = getCacheKey(url, authOptions.params || {});
-        const cachedResponse = cache.get(cacheKey);
+      // Check for in-memory cache if caching is not disabled
+      if (!options.noCache) {
+        const cacheKey = generateCacheKey('GET', url, options.params);
+        const cached = apiCache.get(cacheKey);
         
-        if (cachedResponse && (Date.now() - cachedResponse.timestamp) < cacheDuration) {
-          return cachedResponse.data;
+        if (cached && cached.expiry > Date.now()) {
+          return cached.data;
         }
       }
       
-      // Si pas en cache ou cache expiré, faire la requête
-      const response = await axiosInstance.get(url, authOptions);
-      return response.data;
+      // Identifier le type de requête pour optimiser les timeouts
+      const isProfileRequest = path.includes('/profile') || path.includes('/me');
+      const isMessagesRequest = path.includes('/messages');
+      const isCriticalRequest = path.includes('/auth') || options.critical === true;
+      
+      // Définir les timeouts de base selon le type de requête
+      const baseTimeout = isProfileRequest ? 3000 : 
+                          isMessagesRequest ? 5000 : 
+                          isCriticalRequest ? 8000 : 10000;
+      
+      // Appliquer le timeout adaptatif en fonction des performances de l'appareil
+      const adaptiveTimeout = options.timeout || getAdaptiveTimeout(baseTimeout, isCriticalRequest);
+      
+      // Configure axios request with appropriate timeouts
+      const requestConfig = {
+        ...options,
+        timeout: adaptiveTimeout
+      };
+      
+      // Implement retries for profile and messages requests
+      const maxRetries = options.retries !== undefined ? Math.min(options.retries, 2) : 
+                         (isProfileRequest || isMessagesRequest) ? 1 : 0;
+      
+      // Créer une promesse pour cette requête
+      const requestPromise = (async () => {
+        let retries = 0;
+        let lastError = null;
+        
+        // Utiliser une boucle while au lieu d'une récursion pour éviter des problèmes de pile
+        while (retries <= maxRetries) {
+          try {
+            const response = await axios.get(url, requestConfig);
+            
+            // Si success, mettre en cache si le caching n'est pas désactivé
+            if (!options.noCache) {
+              const cacheKey = generateCacheKey('GET', url, options.params);
+              const ttl = options.cacheDuration || DEFAULT_CACHE_TTL;
+              apiCache.set(cacheKey, {
+                data: response.data,
+                expiry: Date.now() + ttl
+              });
+              cleanupCache();
+            }
+            
+            return response.data;
+          } catch (error) {
+            lastError = error;
+            
+            // Ne pas retenter si c'est une erreur 4xx (sauf timeout)
+            if (error.response && error.response.status >= 400 && error.response.status < 500) {
+              break;
+            }
+            
+            // Attendre avant de réessayer avec backoff exponentiel
+            if (retries < maxRetries) {
+              const backoffDelay = Math.min(1000 * Math.pow(2, retries), 8000);
+              await new Promise(resolve => setTimeout(resolve, backoffDelay));
+              retries++;
+            } else {
+              break;
+            }
+          }
+        }
+        
+        // Toutes les tentatives ont échoué
+        throw lastError;
+      })();
+      
+      // Enregistrer cette promesse
+      pendingRequests.set(requestKey, requestPromise);
+      
+      try {
+        return await requestPromise;
+      } finally {
+        // Libérer le verrou quand la requête est terminée
+        pendingRequests.delete(requestKey);
+      }
     } catch (error) {
       throw error;
     }
@@ -152,51 +317,26 @@ const apiService = {
   async post(path, data = {}, options = {}) {
     try {
       const url = normalizeApiUrl(path);
-      
-      // Check if data is FormData
-      const isFormData = data instanceof FormData;
-      
-      if (isFormData) {
-        // Create a new options object without modifying the original
-        const formDataOptions = { ...options };
-        
-        // Ensure headers exist
-        formDataOptions.headers = formDataOptions.headers || {};
-        
-        // For FormData, we must NOT set Content-Type so browser can set it with boundary
-        delete formDataOptions.headers['Content-Type'];
-        
-        // Add authentication to the request for protected routes
-        const authOptions = path.includes('/login_check') || path.includes('/register') 
-          ? formDataOptions 
-          : this.withAuth(formDataOptions);
-        
-        const response = await axiosInstance.post(url, data, authOptions);
-        
-        // Invalidate related caches for profile picture operations
-        if (path.includes('/profile/picture')) {
-          this.invalidateProfileCache();
-        }
-        
-        return response.data;
-      } else {
-        // For regular JSON data
-        // Add authentication to the request for protected routes
-        const authOptions = path.includes('/login_check') || path.includes('/register') 
-          ? options 
-          : this.withAuth(options);
-        
-        const response = await axiosInstance.post(url, data, authOptions);
-        
-        // Invalidate related caches for profile operations
-        if (path.includes('/profile')) {
-          this.invalidateProfileCache();
-        }
-        
-        return response.data;
-      }
+      const response = await axios.post(url, data, options);
+      return response.data;
     } catch (error) {
-      throw error;
+      // Pour login_check, on ne doit PAS transformer l'erreur, mais la rejeter
+      // afin que le composant d'authentification puisse la traiter correctement
+      if (path.includes('login_check')) {
+        throw error;
+      }
+      
+      // Gestion spécifique des erreurs CORS
+      if (error.message && error.message.includes('Network Error')) {
+        return { success: false, message: 'Erreur de communication avec le serveur' };
+      }
+      
+      // Retourner une réponse formatée en cas d'erreur pour éviter les crashes
+      if (error.response && error.response.data) {
+        return { success: false, message: error.response.data.message || 'Une erreur est survenue' };
+      }
+      
+      return { success: false, message: 'Une erreur est survenue' };
     }
   },
   
@@ -209,18 +349,21 @@ const apiService = {
    */
   async put(path, data = {}, options = {}) {
     try {
-      // Add authentication to the request
-      const authOptions = this.withAuth(options);
-      const response = await axiosInstance.put(normalizeApiUrl(path), data, authOptions);
-      
-      // Invalidate related caches for profile operations
-      if (path.includes('/profile')) {
-        this.invalidateProfileCache();
-      }
-      
+      const url = normalizeApiUrl(path);
+      const response = await axios.put(url, data, options);
       return response.data;
     } catch (error) {
-      throw error;
+      // Gestion spécifique des erreurs CORS
+      if (error.message && error.message.includes('Network Error')) {
+        return { success: false, message: 'Erreur de communication avec le serveur' };
+      }
+      
+      // Retourner une réponse formatée en cas d'erreur pour éviter les crashes
+      if (error.response && error.response.data) {
+        return { success: false, message: error.response.data.message || 'Une erreur est survenue' };
+      }
+      
+      return { success: false, message: 'Une erreur est survenue' };
     }
   },
   
@@ -232,33 +375,37 @@ const apiService = {
    */
   async delete(path, options = {}) {
     try {
-      // Add authentication to the request
-      const authOptions = this.withAuth(options);
-      
-      // Add cache busting for profile picture requests
-      if (path.includes('/profile/picture')) {
-        const timestamp = Date.now();
-        if (!options.params) options.params = {};
-        options.params._t = timestamp;
-      }
-      
-      // Pour Axios delete, le second paramètre doit être un objet de configuration
-      // avec une propriété 'headers'
-      const response = await axiosInstance.delete(normalizeApiUrl(path), {
-        headers: authOptions.headers,
-        params: options.params,
-        data: options.data // Si vous avez besoin d'envoyer des données dans le corps
-      });
-      
-      // Invalidate related caches for profile picture operations
-      if (path.includes('/profile/picture')) {
-        this.invalidateProfileCache();
-      }
-      
+      const response = await axios.delete(normalizeApiUrl(path), options);
       return response.data;
     } catch (error) {
       throw error;
     }
+  },
+  
+  /**
+   * Fonctions spécifiques pour la gestion des rôles utilisateurs
+   */
+  async getUsersByRole(roleName) {
+    return this.get(`/user-roles/users/${roleName}`);
+  },
+  
+  async getAllRoles() {
+    return this.get('/user-roles/roles');
+  },
+  
+  /**
+   * Change a user's role (for admins, superadmins, and recruiters)
+   * @param {number} userId - The user's ID
+   * @param {string} oldRoleName - The user's current role name
+   * @param {string} newRoleName - The new role name to assign
+   * @returns {Promise<Object>} - API response
+   */
+  async changeUserRole(userId, oldRoleName, newRoleName) {
+    return this.post('/user-roles/change-role', {
+      userId,
+      oldRoleName,
+      newRoleName
+    });
   },
   
   /**
@@ -272,80 +419,81 @@ const apiService = {
       return options;
     }
     
-    // Create a new options object to avoid modifying the original
-    const newOptions = { ...options };
-    
-    // Ensure headers exist (avec vérification)
-    newOptions.headers = { ...(options.headers || {}) };
-    
-    // Add Authorization header
-    newOptions.headers.Authorization = `Bearer ${token}`;
-    
-    return newOptions;
+    return {
+      ...options,
+      headers: {
+        ...options.headers,
+        Authorization: `Bearer ${token}`
+      }
+    };
   },
-  
+
   /**
-   * Vide le cache
+   * Invalide le cache pour un chemin spécifique
+   * @param {string} path - Chemin de l'API à invalider
    */
-  clearCache() {
-    // Just clear everything - safer and simpler
-    cache.clear();
+  invalidateCache(path) {
+    // Logique d'invalidation du cache pour un chemin spécifique
+    // Ici, on pourrait implémenter une logique avec localStorage ou IndexedDB si nécessaire
   },
-  
+
   /**
-   * Supprime une entrée spécifique du cache
-   * @param {string} path - Chemin de l'API
-   * @param {Object} params - Paramètres de la requête
-   */
-  invalidateCache(path, params = {}) {
-    const url = normalizeApiUrl(path);
-    const cacheKey = getCacheKey(url, params);
-    cache.delete(cacheKey);
-  },
-  
-  /**
-   * Invalide toutes les entrées du cache liées au profil
+   * Invalide le cache lié au profil utilisateur
    */
   invalidateProfileCache() {
-    // Get all cache keys
-    const keys = Array.from(cache.keys());
-    
-    // Filter keys related to profile
-    const profileKeys = keys.filter(key => 
-      key.includes('/profile') || 
-      key.includes('/profil')
-    );
-    
-    // Delete all profile-related cache entries
-    profileKeys.forEach(key => cache.delete(key));
+    // Logique d'invalidation du cache spécifique au profil
+    this.invalidateCache('/profile');
+    this.invalidateCache('/api/me');
   },
-  
+
   /**
-   * Invalide toutes les entrées du cache liées aux documents
+   * Invalide le cache lié aux documents
    */
   invalidateDocumentCache() {
-    // Get all cache keys
-    const keys = Array.from(cache.keys());
+    // Logique d'invalidation du cache spécifique aux documents
+    this.invalidateCache('/documents');
+  },
+
+  /**
+   * Vide complètement le cache API
+   */
+  clearCache() {
+    // Clear in-memory cache - much faster than localStorage operations
+    apiCache.clear();
     
-    // Filter keys related to documents
-    const documentKeys = keys.filter(key => 
-      key.includes('/documents') || 
-      key.includes('/document')
-    );
+    // Only clear critical localStorage items, not everything
+    const criticalKeys = [
+      'token', 
+      'refresh_token',
+      'user',
+      'userRoles'
+    ];
     
-    // Delete all document-related cache entries
-    documentKeys.forEach(key => cache.delete(key));
+    // Remove only the critical keys
+    criticalKeys.forEach(key => {
+      try {
+        if (localStorage.getItem(key)) {
+          localStorage.removeItem(key);
+        }
+      } catch (e) {
+        // Silent error handling
+      }
+    });
+    
+    // Notify the application that the cache has been cleared
+    window.dispatchEvent(new Event('api-cache-cleared'));
   },
   
   /**
-   * Vérifie si l'entrée de cache est toujours valide
-   * @param {string} cacheKey - Clé de cache
-   * @param {number} cacheDuration - Durée de validité du cache
-   * @returns {boolean} - True si l'entrée est valide
+   * Invalidate a specific cache entry
+   * @param {string} method - The HTTP method
+   * @param {string} path - The API path
+   * @param {Object} params - Query parameters if any
    */
-  isCacheValid(cacheKey, cacheDuration) {
-    const cachedResponse = cache.get(cacheKey);
-    return cachedResponse && (Date.now() - cachedResponse.timestamp) < cacheDuration;
+  invalidateCacheEntry(method, path, params = {}) {
+    const url = normalizeApiUrl(path);
+    const cacheKey = generateCacheKey(method, url, params);
+    apiCache.delete(cacheKey);
   }
 };
 

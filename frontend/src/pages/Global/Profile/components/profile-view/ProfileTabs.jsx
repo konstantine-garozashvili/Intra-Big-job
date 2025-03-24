@@ -3,10 +3,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { motion } from "framer-motion";
 import AboutTab from "./tabs/AboutTab";
 import ExperienceTab from "./tabs/ExperienceTab";
-import { isGuest } from "@/pages/Global/Profile/utils/roleUtils";
-import DeactivateAccountButton from "./DeactivateAccountButton";
 
-const ProfileTabs = ({ userData, isPublicProfile = false }) => {
+const ProfileTabs = ({ userData, isPublicProfile = false, documents = [] }) => {
   // Animation variants
   const containerVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -66,11 +64,6 @@ const ProfileTabs = ({ userData, isPublicProfile = false }) => {
   
   // Si l'utilisateur est un formateur, toujours afficher l'onglet "Expérience et Cours"
   const shouldShowExperienceTab = mainRole === "TEACHER" || hasDiplomas;
-  
-  // Vérifier si l'utilisateur est un invité et si c'est son propre profil
-  const isGuestUser = isGuest(mainRole);
-  const isOwnProfile = !isPublicProfile;
-  const showDeactivateButton = isGuestUser && isOwnProfile;
 
   return (
     <motion.div
@@ -146,18 +139,11 @@ const ProfileTabs = ({ userData, isPublicProfile = false }) => {
             value="about" 
             className="mt-0 space-y-6 focus-visible:outline-none focus-visible:ring-0"
           >
-            <AboutTab userData={userData} isPublicProfile={isPublicProfile} />
-            
-            {/* Bouton de désactivation de compte pour les invités */}
-            {showDeactivateButton && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: 0.5 }}
-              >
-                <DeactivateAccountButton />
-              </motion.div>
-            )}
+            <AboutTab 
+              userData={userData} 
+              isPublicProfile={isPublicProfile} 
+              documents={documents} 
+            />
           </TabsContent>
           
           {shouldShowExperienceTab && (
@@ -165,7 +151,11 @@ const ProfileTabs = ({ userData, isPublicProfile = false }) => {
               value="experience" 
               className="mt-0 space-y-6 focus-visible:outline-none focus-visible:ring-0"
             >
-              <ExperienceTab userData={userData} isPublicProfile={isPublicProfile} />
+              <ExperienceTab 
+                userData={userData} 
+                isPublicProfile={isPublicProfile} 
+                documents={documents} 
+              />
             </TabsContent>
           )}
         </motion.div>

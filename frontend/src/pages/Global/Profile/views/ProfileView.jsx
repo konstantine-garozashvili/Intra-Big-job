@@ -4,27 +4,58 @@ import ProfileTabs from "../components/profile-view/ProfileTabs";
 import { motion } from "framer-motion";
 import { useParams } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useCurrentProfile, usePublicProfile } from "../hooks/useProfileQueries";
+// Using the centralized useUserData hook for better state management and data consistency
+import { useUserData } from "@/hooks/useUserData";
 import { useProfilePicture } from "../hooks/useProfilePicture";
 import { isGuest } from "../utils/roleUtils";
 import documentService from "../services/documentService";
+import apiService from "@/lib/services/apiService";
 
 const ProfileView = () => {
   const { userId } = useParams();
   const [documents, setDocuments] = useState([]);
+  const isPublicProfile = !!userId;
   
-  // Use the appropriate query hook based on whether we're viewing our own profile or someone else's
+  // Use the useUserData hook for current profile data - now with normalized structure
   const { 
-    data: currentProfileData, 
+    user: currentProfileData, 
     isLoading: isLoadingCurrentProfile,
-    error: currentProfileError 
-  } = useCurrentProfile();
+    error: currentProfileError,
+    forceRefresh: refetchCurrentProfile
+  } = useUserData({
+    preferComprehensiveData: true,
+    enabled: !isPublicProfile
+  });
   
-  const { 
-    data: publicProfileData, 
-    isLoading: isLoadingPublicProfile,
-    error: publicProfileError 
-  } = usePublicProfile(userId);
+  // For public profile, we'll still use the existing hook/API call
+  const [publicProfileData, setPublicProfileData] = useState(null);
+  const [isLoadingPublicProfile, setIsLoadingPublicProfile] = useState(false);
+  const [publicProfileError, setPublicProfileError] = useState(null);
+  
+  // Fetch public profile data if userId is provided
+  useEffect(() => {
+    if (isPublicProfile && userId) {
+      setIsLoadingPublicProfile(true);
+      
+      const fetchPublicProfile = async () => {
+        try {
+          const data = await apiService.get(`/profile/public/${userId}`);
+          
+          if (data && (data.success === true || data.data)) {
+            setPublicProfileData(data.data || data);
+          } else {
+            setPublicProfileError(data.error || 'Failed to fetch profile data');
+          }
+        } catch (error) {
+          setPublicProfileError(error.message || 'Error fetching profile data');
+        } finally {
+          setIsLoadingPublicProfile(false);
+        }
+      };
+      
+      fetchPublicProfile();
+    }
+  }, [userId, isPublicProfile]);
   
   // Fetch profile picture using the custom hook
   const {
@@ -34,15 +65,34 @@ const ProfileView = () => {
   } = useProfilePicture();
   
   // Determine which data to use
-  const isPublicProfile = !!userId;
   const data = isPublicProfile ? publicProfileData : currentProfileData;
   const isLoading = (isPublicProfile ? isLoadingPublicProfile : isLoadingCurrentProfile) || isLoadingProfilePicture;
   const error = isPublicProfile ? publicProfileError : currentProfileError;
   
   // Refetch profile picture when component mounts or userId changes
   useEffect(() => {
-    refetchProfilePicture();
-  }, [userId, refetchProfilePicture]);
+    // Only refetch if there's no cached URL available
+    if (!profilePictureUrl && !isLoadingProfilePicture) {
+      refetchProfilePicture();
+    }
+  }, [userId]); // Only run when userId changes, not on every render
+  
+  // Always use the latest profile picture URL when rendering
+  useEffect(() => {
+    if (data && profilePictureUrl) {
+      if (isPublicProfile) {
+        // For public profile
+        if (data.profilePictureUrl !== profilePictureUrl) {
+          data.profilePictureUrl = profilePictureUrl;
+        }
+      } else {
+        // For current user profile
+        if (data.profilePictureUrl !== profilePictureUrl) {
+          data.profilePictureUrl = profilePictureUrl;
+        }
+      }
+    }
+  }, [data, profilePictureUrl, isPublicProfile]);
   
   // Fetch documents separately
   useEffect(() => {
@@ -192,155 +242,50 @@ const ProfileView = () => {
     );
   }
 
-  // Extract user data based on the profile type
+  // Prepare userData for components with proper structure
   let userData;
   
   if (isPublicProfile) {
-    // Ajout d'un log pour déboguer
-    console.log("DEBUGGING - Profile data received:", data);
-    
-    // Handle public profile data specifically
-    if (data) {
-      // Accepter directement les données telles qu'elles sont
-      userData = data;
-      
-      console.log("DEBUGGING - Using data directly:", userData);
-    } else {
-      // Fallback if no data
-      console.warn("No data received for public profile");
-      userData = null;
-    }
-    
-    // Normalize userData structure if it exists
-    if (userData) {
-      // Ensure all required collections exist with default values
-      userData.diplomas = userData.diplomas || [];
-      userData.addresses = userData.addresses || [];
-      userData.documents = userData.documents || [];
-      userData.stats = userData.stats || { profile: { completionPercentage: 0 } };
-
-      // Ensure user object exists
-      if (!userData.user) {
-        console.warn("User data missing in profile data");
-        userData.user = {};
-      }
-      
-      // Ensure studentProfile exists with default values if missing
-      if (!userData.studentProfile) {
-        userData.studentProfile = {
-          isSeekingInternship: false,
-          isSeekingApprenticeship: false,
-          currentInternshipCompany: null,
-          internshipStartDate: null,
-          internshipEndDate: null,
-          portfolioUrl: null,
-          situationType: null
-        };
-      }
-      
-      // Standardize roles format - ensure it's always an array of objects with name property
-      if (!userData.user.roles) {
-        userData.user.roles = [{ id: 0, name: 'USER' }];
-      } else if (!Array.isArray(userData.user.roles)) {
-        // Convert string to object
-        userData.user.roles = [{ id: 0, name: String(userData.user.roles) }];
-      } else {
-        // Normalize array elements to ensure each has a name property
-        userData.user.roles = userData.user.roles.map(role => {
-          if (typeof role === 'string') {
-            return { id: 0, name: role };
-          } else if (typeof role === 'object' && role !== null) {
-            return { id: role.id || 0, name: role.name || 'USER' };
-          } else {
-            return { id: 0, name: 'USER' };
-          }
-        });
-      }
-      
-      console.log("DEBUGGING - Normalized userData:", userData);
-    }
-  } else {
-    // For current profile, the data is directly available
-    userData = data ? {
-      user: data.user || {},
+    // Normalize public profile data
+    userData = {
+      user: {
+        id: data.id || data.user?.id,
+        firstName: data.firstName || data.user?.firstName || "",
+        lastName: data.lastName || data.user?.lastName || "",
+        email: data.email || data.user?.email || "",
+        phoneNumber: data.phoneNumber || data.user?.phoneNumber || "",
+        profilePictureUrl: profilePictureUrl || data.profilePictureUrl || data.user?.profilePictureUrl || "",
+        roles: Array.isArray(data.roles) 
+          ? data.roles.map(role => typeof role === 'string' ? { name: role } : role)
+          : (data.user?.roles || [{ name: 'USER' }]),
+        specialization: data.specialization || data.user?.specialization || {},
+        linkedinUrl: data.linkedinUrl || data.user?.linkedinUrl || "",
+        city: data.city || ""
+      },
       studentProfile: data.studentProfile || {
         isSeekingInternship: false,
         isSeekingApprenticeship: false
       },
       diplomas: data.diplomas || [],
       addresses: data.addresses || [],
-      stats: data.stats || { profile: { completionPercentage: 0 } },
-      documents: documents || []
-    } : null;
-  }
-  
-  if (!userData || (!userData.user && !Object.keys(userData).includes('firstName'))) {
-    return (
-      <div className="w-full max-w-7xl mx-auto px-4 py-6" data-testid="profile-invalid-data">
-        <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded relative" role="alert">
-          <strong className="font-bold">Attention :</strong>
-          <span className="block sm:inline"> La structure des données du profil est invalide.</span>
-          <div className="mt-2">
-            <p className="text-sm">Données reçues :</p>
-            <pre className="mt-2 text-xs overflow-auto max-h-80 whitespace-pre-wrap bg-gray-100 p-2 rounded">
-              {JSON.stringify(data, null, 2)}
-            </pre>
-          </div>
-        </div>
-      </div>
-    );
-  }
-  
-  // S'assurer que userData.user existe, même si les données sont directement au niveau racine
-  if (!userData.user && userData.firstName) {
+      documents: data.documents || [],
+      stats: data.stats || { profile: { completionPercentage: 0 } }
+    };
+  } else {
+    // For current profile, the useUserData hook now returns normalized data
     userData = {
-      user: {
-        firstName: userData.firstName,
-        lastName: userData.lastName,
-        profilePictureUrl: userData.profilePictureUrl,
-        profilePicturePath: userData.profilePicturePath,
-        roles: userData.roles || [{ id: 0, name: 'USER' }],
-        specialization: userData.specialization,
-        linkedinUrl: userData.linkedinUrl
-      },
-      studentProfile: userData.studentProfile || {
+      user: data,  // Use the normalized user data directly
+      studentProfile: data.studentProfile || {
         isSeekingInternship: false,
         isSeekingApprenticeship: false
       },
-      diplomas: userData.diplomas || [],
-      addresses: userData.addresses || [],
-      documents: userData.documents || [],
-      stats: userData.stats || { profile: { completionPercentage: 0 } }
+      diplomas: data.diplomas || [],
+      addresses: data.addresses || [],
+      documents: documents.length > 0 ? documents : (data.documents || []),
+      stats: data.stats || { profile: { completionPercentage: 0 } }
     };
-    console.log("DEBUGGING - Restructured userData:", userData);
   }
-  
-  // Toujours utiliser la photo de profil la plus récente du hook useProfilePicture
-  if (profilePictureUrl) {
-    userData.user.profilePictureUrl = profilePictureUrl;
-  }
-  
-  // Log the condition result
-  const isGuestUser = () => {
-    // Check if user has roles array
-    if (userData.user.roles && userData.user.roles.length > 0) {
-      // If roles is an array of objects with name property
-      if (typeof userData.user.roles[0] === 'object' && userData.user.roles[0].name) {
-        return isGuest(userData.user.roles[0].name);
-      }
-      // If roles is an array of strings
-      if (typeof userData.user.roles[0] === 'string') {
-        return isGuest(userData.user.roles[0]);
-      }
-    }
-    
-    // Check if user has a single role property
-    if (userData.user.role) {
-      return isGuest(userData.user.role);
-    }
-    
-    return false;
-  };
+
 
   return (
     <motion.div

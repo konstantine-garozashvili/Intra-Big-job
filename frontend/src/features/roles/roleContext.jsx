@@ -1,6 +1,7 @@
-import { createContext, useContext, useMemo, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { authService } from '../../lib/services/authService';
+import userDataManager from '../../lib/services/userDataManager';
 
 // Create the context
 const RoleContext = createContext(null);
@@ -20,44 +21,87 @@ export const RoleProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [lastRole, setLastRole] = useState(null);
   const queryClient = useQueryClient();
+  const refreshInProgressRef = useRef(false);
+  const lastRefreshTimestampRef = useRef(0);
   
-  // Function to fetch user data
+  // Function to fetch user data with deduplication logic
   const fetchUser = useCallback(async (forceRefresh = false) => {
-    if (authService.isLoggedIn()) {
-      try {
-        const userData = await authService.getCurrentUser(forceRefresh);
-        setUser(userData);
-        
-        // Check if role has changed
-        const currentRole = userData?.roles?.[0];
-        if (currentRole && lastRole && currentRole !== lastRole) {
-          // Clear role-specific caches
-          queryClient.removeQueries(['admin-users']);
-          queryClient.removeQueries(['admin-dashboard']);
-          queryClient.removeQueries(['student-dashboard']);
-          queryClient.removeQueries(['teacher-dashboard']);
-          queryClient.removeQueries(['hr-dashboard']);
-        }
-        
-        // Update last role
-        if (currentRole) {
-          setLastRole(currentRole);
-        }
-        
-        return userData;
-      } catch (error) {
-        setUser(null);
-        return null;
-      }
-    } else {
+    if (!authService.isLoggedIn()) {
       setUser(null);
+      setLastRole(null);
+      queryClient.setQueryData(['userRoles'], []);
+      return null;
+    }
+    
+    try {
+      // Prevent multiple fetches in a short time window (50ms)
+      const now = Date.now();
+      if (refreshInProgressRef.current || (!forceRefresh && now - lastRefreshTimestampRef.current < 50)) {
+        // Use cached user data instead of making a new request
+        const cachedUser = userDataManager.getCachedUserData();
+        if (cachedUser) {
+          console.log('🔵 RoleContext: Using cached user data to avoid duplicate request');
+          return cachedUser;
+        }
+      }
+      
+      refreshInProgressRef.current = true;
+      lastRefreshTimestampRef.current = now;
+      
+      // Add a unique requestId for tracing/deduplication
+      const userData = await authService.getCurrentUser(forceRefresh, { requestSource: 'roleContext' });
+      setUser(userData);
+      
+      // Check if role has changed
+      const currentRole = userData?.roles?.[0];
+      if (currentRole && lastRole && currentRole !== lastRole) {
+        // Clear role-specific caches
+        queryClient.removeQueries(['admin-users']);
+        queryClient.removeQueries(['admin-dashboard']);
+        queryClient.removeQueries(['student-dashboard']);
+        queryClient.removeQueries(['teacher-dashboard']);
+        queryClient.removeQueries(['hr-dashboard']);
+      }
+      
+      // Update last role
+      if (currentRole) {
+        setLastRole(currentRole);
+      }
+      
+      refreshInProgressRef.current = false;
+      return userData;
+    } catch (error) {
+      refreshInProgressRef.current = false;
+      setUser(null);
+      setLastRole(null);
+      // Clear query data to ensure consistent state
+      queryClient.setQueryData(['userRoles'], []);
       return null;
     }
   }, [queryClient, lastRole]);
   
   // Fetch user data when the component mounts
   useEffect(() => {
-    fetchUser();
+    // On mount, use cached data first if available to avoid a new request
+    const cachedUser = userDataManager.getCachedUserData();
+    if (cachedUser) {
+      setUser(cachedUser);
+      if (cachedUser.roles && cachedUser.roles.length > 0) {
+        setLastRole(cachedUser.roles[0]);
+      }
+      
+      // Then refresh in the background only if data is stale
+      const cachedTimestamp = userDataManager.getStats().lastUpdated 
+        ? new Date(userDataManager.getStats().lastUpdated).getTime() 
+        : 0;
+      
+      const now = Date.now();
+      if (now - cachedTimestamp > 2 * 60 * 1000) { // 2 minutes
+        fetchUser(false).catch(console.error);
+      }
+    } else {
+      fetchUser(false).catch(console.error);
+    }
     
     // Listen for authentication events
     const handleLoginSuccess = () => {
@@ -77,6 +121,12 @@ export const RoleProvider = ({ children }) => {
     };
     
     const handleRoleChange = () => {
+      // Check if a refresh is already in progress
+      if (refreshInProgressRef.current) {
+        console.log('🔵 RoleContext: Refresh already in progress, skipping');
+        return;
+      }
+      
       fetchUser(true).then(() => {
         // Invalidate all role-related queries
         queryClient.invalidateQueries(['userRoles']);
@@ -110,18 +160,18 @@ export const RoleProvider = ({ children }) => {
       }
       
       // If user has roles already, use those
-      if (user.roles) {
+      if (user.roles && Array.isArray(user.roles) && user.roles.length > 0) {
         return user.roles;
       }
       
-      // Otherwise, you could fetch roles from an API endpoint if needed
-      // const response = await fetch(`/api/users/${user.id}/roles`);
-      // return response.json();
       return [];
     },
     enabled: !!user,
     staleTime: 5 * 60 * 1000, // 5 minutes
     cacheTime: 10 * 60 * 1000, // 10 minutes
+    onError: () => {
+      return [];
+    }
   });
 
   // Create memoized value for the context
@@ -133,15 +183,20 @@ export const RoleProvider = ({ children }) => {
       hasRole: (role) => {
         // Si toujours en chargement, on retourne null pour indiquer l'indécision
         if (isLoading) return null;
-        return userRoles?.some(r => r === role);
+        const result = userRoles?.some(r => r === role);
+        return result;
       },
       hasAnyRole: (roles) => {
         if (isLoading) return null;
-        return roles.some(role => userRoles?.some(r => r === role));
+        if (!roles || !Array.isArray(roles)) return false;
+        const result = roles.some(role => userRoles?.some(r => r === role));
+        return result;
       },
       hasAllRoles: (roles) => {
         if (isLoading) return null;
-        return roles.every(role => userRoles?.some(r => r === role));
+        if (!roles || !Array.isArray(roles)) return false;
+        const result = roles.every(role => userRoles?.some(r => r === role));
+        return result;
       },
       // Add a function to refresh roles
       refreshRoles: () => {
@@ -165,5 +220,49 @@ export const useRoles = () => {
   if (!context) {
     throw new Error('useRoles must be used within a RoleProvider');
   }
-  return context;
+  
+  // Add a robust version of hasRole that handles empty arrays
+  const hasRoleRobust = useCallback((role) => {
+    // If we have roles in context, check those first
+    if (context.roles && context.roles.length > 0) {
+      if (context.roles.some(r => r === role)) {
+        return true;
+      }
+    }
+    
+    // If no roles in context or role not found, check localStorage
+    try {
+      const userRoles = JSON.parse(localStorage.getItem('userRoles') || '[]');
+      if (userRoles.length > 0) {
+        // Check if the exact role exists
+        if (userRoles.some(r => r === role)) {
+          return true;
+        }
+        
+        // Check for variant formats (with/without ROLE_ prefix, case-insensitive)
+        const targetRole = role.toUpperCase().replace('ROLE_', '');
+        if (userRoles.some(r => r.toUpperCase().replace('ROLE_', '') === targetRole)) {
+          return true;
+        }
+      }
+      
+      // Special case for STUDENT role if no roles are found
+      if (userRoles.length === 0 && (role === 'ROLE_STUDENT' || role === 'STUDENT')) {
+        console.log('No roles found, assuming student role for testing');
+        return true;
+      }
+    } catch (error) {
+      console.error('Error checking roles in localStorage:', error);
+    }
+    
+    return false;
+  }, [context.roles]);
+  
+  // Enhance the context with our robust version
+  return {
+    ...context,
+    hasRoleRobust,
+    // Override hasRole with our robust version
+    hasRole: hasRoleRobust
+  };
 }; 

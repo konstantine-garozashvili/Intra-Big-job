@@ -7,11 +7,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useQueryClient } from '@tanstack/react-query';
 import { profileService } from '../services/profileService';
 import ProfilePicture from './settings/ProfilePicture';
-import { useProfilePicture } from '../hooks/useProfilePicture';
 import { isValidEmail, isValidPhone, isValidLinkedInUrl, isValidName, isValidUrl } from '@/lib/utils/validation';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Upload, FileText, Trash2, Send } from 'lucide-react';
+// Importer notre hook centralisé
+import { useUserDataCentralized } from '@/hooks';
 
 // Import our components using the barrel export
 import {
@@ -48,29 +49,33 @@ const UserProfileSettings = () => {
     academic: {},
   });
 
-  // Fetch user profile data using React Query
+  // Utiliser notre hook centralisé pour récupérer les données utilisateur
   const { 
-    data: profileData, 
+    user: userData, 
     isLoading: isProfileLoading, 
     isError: isProfileError,
     error: profileError,
-    refetch: refetchProfile
-  } = useApiQuery('/api/profil/consolidated', 'userProfileData', {
+    forceRefresh: refetchProfile
+  } = useUserDataCentralized({
+    preferComprehensiveData: true, // Utiliser la route '/profile/consolidated'
     refetchOnWindowFocus: false,
     staleTime: 0, // Ensure we always get fresh data
-    cacheTime: 0, // Disable caching to prevent stale data
-    timeout: 4000, // Ajouter un timeout de 4 secondes
     onError: (error) => {
-      toast.error('Failed to load profile data: ' + (error.response?.data?.message || error.message));
+      toast.error('Failed to load profile data: ' + (error.message || 'Unknown error'));
     }
   });
 
-  // Extract user data from the response
-  const userData = React.useMemo(() => ({
-    ...(profileData?.data?.user || {}),
-    addresses: profileData?.data?.addresses || [],
-    studentProfile: profileData?.data?.studentProfile || null,
-  }), [profileData]);
+  // Transformer les données utilisateur pour maintenir la compatibilité
+  const profileData = React.useMemo(() => {
+    if (!userData) return null;
+    return {
+      data: {
+        user: userData,
+        addresses: userData.addresses || [],
+        studentProfile: userData.studentProfile || null,
+      }
+    };
+  }, [userData]);
   
   // Determine if user is a student and get role - memoized to prevent unnecessary recalculations
   const { userRole, isStudent } = React.useMemo(() => {
@@ -81,7 +86,7 @@ const UserProfileSettings = () => {
     
     const isStudent = rolesArray.some(role => 
       typeof role === 'string' && role.includes('STUDENT')
-    ) || (userData.studentProfile && Object.keys(userData.studentProfile).length > 0);
+    ) || (userData?.studentProfile && Object.keys(userData?.studentProfile || {}).length > 0);
     
     let userRole = '';
     if (isStudent) {

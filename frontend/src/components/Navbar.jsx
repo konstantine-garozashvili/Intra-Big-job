@@ -1,6 +1,7 @@
 import React, { memo, useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { authService } from "../lib/services/authService";
+import userDataManager from "../lib/services/userDataManager";
 import { profileService } from "../pages/Global/Profile/services/profileService";
 import { Button } from "./ui/button";
 import {
@@ -11,6 +12,7 @@ import {
   User,
   Bell,
   Search,
+  Clipboard,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -31,6 +33,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { MenuBurger } from "./MenuBurger";
 import { SearchBar } from "./SearchBar";
 import { useRolePermissions } from "../features/roles/useRolePermissions";
+import { Skeleton } from './ui/skeleton';
 
 // Style personnalisé pour le menu dropdown et le bouton burger
 const customStyles = `
@@ -82,6 +85,8 @@ const customStyles = `
     max-width: 400px;
     width: 100%;
     margin: 0 1rem;
+    isolation: isolate;
+    z-index: 90;
   }
   
   .search-container input {
@@ -106,6 +111,8 @@ const customStyles = `
     top: 0;
     z-index: 100;
     width: 100%;
+    overflow-x: hidden;
+    isolation: isolate;
   }
   
   @media (max-width: 1024px) {
@@ -266,15 +273,15 @@ const UserMenu = ({ onLogout, userData, setLogoutDialogOpen }) => {
 };
 
 // Utilisation de React.memo pour éviter les rendus inutiles de la barre de navigation
-const Navbar = memo(({ user }) => {
+const Navbar = memo(() => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [userData, setUserData] = useState(null);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const permissions = useRolePermissions();
   const navigate = useNavigate();
   const location = useLocation();
-  const permissions = useRolePermissions();
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Vérifier l'état d'authentification
   const checkAuthStatus = async () => {
@@ -286,18 +293,53 @@ const Navbar = memo(({ user }) => {
       // Si l'utilisateur est connecté, charger ses données
       if (status) {
         try {
-          // Si un utilisateur est passé en props, l'utiliser
-          if (user) {
-            setUserData(user);
-
+          // Utiliser le cache si disponible pour éviter les appels API en doublon
+          const cachedUserData = userDataManager.getCachedUserData();
+          
+          if (cachedUserData) {
+            // Utiliser les données en cache d'abord
+            setUserData(cachedUserData);
+            setIsLoading(false);
+            
             // Déclencher un événement de changement de rôle si l'état d'authentification a changé
             if (!wasAuthenticated) {
               window.dispatchEvent(new Event("role-change"));
             }
+            
+            // Vérifier si une mise à jour est nécessaire (données plus vieilles que 2 min)
+            const stats = userDataManager.getStats();
+            const dataAge = stats.dataAge || Infinity;
+            
+            if (dataAge > 2 * 60 * 1000) {
+              // Récupérer les données en arrière-plan sans bloquer l'interface
+              userDataManager.getUserData({
+                routeKey: '/api/me',
+                forceRefresh: false,
+                background: true,
+                requestId: 'navbar_background_refresh'
+              }).then(freshData => {
+                if (freshData && JSON.stringify(freshData) !== JSON.stringify(cachedUserData)) {
+                  setUserData(freshData);
+                }
+              }).catch(e => {
+                console.warn('Erreur lors du rafraîchissement des données utilisateur:', e);
+              });
+            }
           } else {
-            // Sinon, essayer de récupérer les données depuis l'API
-            const userData = await authService.getCurrentUser();
+            // Si le cache est vide, nettoyer le cache avant de recharger les données utilisateur
+            if (!wasAuthenticated) {
+              const queryClient = window.queryClient || authService.getQueryClient();
+              if (queryClient) {
+                queryClient.invalidateQueries({ queryKey: ['user'] });
+                queryClient.invalidateQueries({ queryKey: ['profile'] });
+              }
+            }
+            
+            // Faire un appel API uniquement si nécessaire
+            // Ajouter un identifiant unique pour la requête
+            const userData = await authService.getCurrentUser(false, { requestSource: 'navbar' });
             setUserData(userData);
+            setIsLoading(false);
 
             // Déclencher un événement de changement de rôle si l'état d'authentification a changé
             if (!wasAuthenticated) {
@@ -305,6 +347,7 @@ const Navbar = memo(({ user }) => {
             }
           }
         } catch (userError) {
+          console.warn('Erreur lors de la récupération des données utilisateur:', userError);
           // Fallback: essayer de récupérer les données du profil
           try {
             const profileData = await profileService.getAllProfileData();
@@ -316,6 +359,7 @@ const Navbar = memo(({ user }) => {
             } else {
               setUserData(profileData);
             }
+            setIsLoading(false);
 
             // Déclencher un événement de changement de rôle si l'état d'authentification a changé
             if (!wasAuthenticated) {
@@ -323,10 +367,12 @@ const Navbar = memo(({ user }) => {
             }
           } catch (profileError) {
             // Gestion silencieuse de l'erreur
+            setIsLoading(false);
           }
         }
       } else {
         setUserData(null);
+        setIsLoading(false);
 
         // Déclencher un événement de changement de rôle si l'état d'authentification a changé
         if (wasAuthenticated) {
@@ -334,65 +380,50 @@ const Navbar = memo(({ user }) => {
         }
       }
     } catch (error) {
-      setIsAuthenticated(false);
-      setUserData(null);
+      console.error('Erreur lors de la vérification de l\'authentification:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   // Vérifier l'état d'authentification au chargement et lors des changements de route
   useEffect(() => {
     checkAuthStatus();
-  }, [location.pathname, user]);
+  }, [location.pathname]);
 
-  // Ajouter un écouteur d'événement pour les changements d'authentification
+  // Ajouter un écouteur pour l'événement de connexion réussie
   useEffect(() => {
-    // Fonction pour gérer l'événement de connexion
-    const handleAuthChange = () => {
+    const handleLoginSuccess = () => {
+      // Forcer un re-chargement des données utilisateur
       checkAuthStatus();
     };
-
-    // Ajouter des écouteurs d'événements personnalisés
-    window.addEventListener("login-success", handleAuthChange);
-    window.addEventListener("logout-success", handleAuthChange);
-
-    // Nettoyage lors du démontage du composant
+    
+    window.addEventListener('login-success', handleLoginSuccess);
+    
     return () => {
-      window.removeEventListener("login-success", handleAuthChange);
-      window.removeEventListener("logout-success", handleAuthChange);
+      window.removeEventListener('login-success', handleLoginSuccess);
     };
   }, []);
 
   // Fonction de déconnexion
   const handleLogout = async () => {
     try {
-      setIsLoggingOut(true);
-
-      // Fermer la boîte de dialogue de déconnexion
+      // Close the logout dialog
       setLogoutDialogOpen(false);
-
-      // Anticiper la déconnexion en nettoyant d'abord les états UI
-      setUserData(null);
-      setIsAuthenticated(false);
       
-      // Déclencher un pré-événement de déconnexion pour que les hooks et composants puissent se préparer
+      // Prevent duplicate logout attempts
+      if (window.__isLoggingOut) return;
+      
+      // Déclencher un événement de pré-déconnexion pour préparer l'interface
       window.dispatchEvent(new Event('logout-start'));
       
-      // Appeler le service de déconnexion avec le chemin de redirection
-      await authService.logout('/');
-      
-      // Il n'est plus nécessaire de naviguer manuellement ici car
-      // l'événement logout-success s'en chargera via le gestionnaire dans App.jsx
-      setTimeout(() => {
-        setIsLoggingOut(false);
-      }, 100);
+      // Call the logout service directly - no need for timeout
+      authService.logout('/login');
     } catch (error) {
-      console.error('Error during logout:', error);
+      console.error('Erreur lors de la déconnexion:', error);
       
-      // En cas d'erreur, forcer quand même la déconnexion
-      authService.logout('/');
-      setUserData(null);
-      setIsAuthenticated(false);
-      setIsLoggingOut(false);
+      // En cas d'erreur, forcer une déconnexion propre
+      authService.clearAuthData(true, 'Une erreur est survenue lors de la déconnexion.');
     }
   };
 
@@ -401,118 +432,132 @@ const Navbar = memo(({ user }) => {
       {/* Injection des styles personnalisés */}
       <style>{customStyles}</style>
 
-      <nav className="bg-[#02284f] shadow-lg navbar-fixed">
-        <div className="container px-4 mx-auto">
-          <div className="flex items-center justify-between h-16">
-            {/* Partie gauche: Logo et burger menu */}
-            <div className="flex items-center">
-              <div className="menu-burger-wrapper">
-                <MenuBurger />
+      <header className="navbar-fixed bg-[#02284f] shadow-lg">
+        <nav className="bg-[#02284f] w-full">
+          <div className="container px-4 mx-auto">
+            <div className="flex items-center justify-between h-16">
+              {/* Partie gauche: Logo et burger menu */}
+              <div className="flex items-center">
+                <div className="menu-burger-wrapper">
+                  <MenuBurger />
+                </div>
+                <div className="flex-shrink-0">
+                  <Link
+                    to={
+                      isAuthenticated
+                        ? permissions.getRoleDashboardPath()
+                        : "/login"
+                    }
+                    className="text-2xl font-black tracking-tight text-white"
+                  >
+                    Big<span className="text-[#528eb2]">Project</span>
+                  </Link>
+                </div>
               </div>
-              <div className="flex-shrink-0">
-                <Link
-                  to={
-                    isAuthenticated
-                      ? permissions.getRoleDashboardPath()
-                      : "/login"
-                  }
-                  className="text-2xl font-black tracking-tight text-white"
-                >
-                  Big<span className="text-[#528eb2]">Project</span>
-                </Link>
+
+              {/* Partie centrale: Barre de recherche */}
+              {isAuthenticated && (
+                <div className="hidden md:flex flex-1 justify-center mx-4">
+                  <div className="search-container w-full max-w-md flex justify-end">
+                    <SearchBar />
+                  </div>
+                </div>
+              )}
+
+              {/* Partie droite: Authentification */}
+              <div className="flex items-center">
+                {/* Attendance button based on role */}
+                {isAuthenticated && (permissions.isStudent() || permissions.isTeacher()) && (
+                  <Link 
+                    to={permissions.isTeacher() ? "/teacher/attendance" : "/student/attendance"}
+                    className="mr-4 px-3 py-2 rounded-md bg-green-700 text-white font-medium hover:bg-green-800 transition-colors flex items-center gap-2"
+                  >
+                    <Clipboard className="w-4 h-4" />
+                    Présence
+                  </Link>
+                )}
+
+                {/* Barre de recherche mobile */}
+                {isAuthenticated && (
+                  <div className="md:hidden mr-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="rounded-full w-10 h-10 p-0 bg-transparent text-gray-200 hover:bg-[#02284f]/80 hover:text-white"
+                      onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
+                    >
+                      <Search className="h-5 w-5" />
+                    </Button>
+                  </div>
+                )}
+                
+                {/* Menu utilisateur */}
+                {isLoading ? (
+                  <div className="flex items-center space-x-3">
+                    <Skeleton className="h-8 w-24 rounded-md" />
+                    <Skeleton className="h-10 w-10 rounded-full" />
+                  </div>
+                ) : isAuthenticated ? (
+                  <UserMenu
+                    onLogout={() => setLogoutDialogOpen(true)}
+                    userData={userData}
+                    setLogoutDialogOpen={setLogoutDialogOpen}
+                  />
+                ) : (
+                  <div className="mobile-auth-buttons">
+                    <AuthButtons />
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Partie centrale: Barre de recherche */}
-            {isAuthenticated && (
-              <div className="hidden md:flex flex-1 justify-center mx-4">
-                <div className="search-container w-full max-w-md flex justify-end">
-                  <SearchBar />
-                </div>
+            {/* Barre de recherche mobile */}
+            {isAuthenticated && mobileSearchOpen && (
+              <div className="md:hidden px-4 pb-4">
+                <SearchBar />
               </div>
             )}
-
-            {/* Partie droite: Authentification */}
-            <div className="flex items-center">
-              {/* Barre de recherche mobile */}
-              {isAuthenticated && (
-                <div className="md:hidden mr-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="rounded-full w-10 h-10 p-0 bg-transparent text-gray-200 hover:bg-[#02284f]/80 hover:text-white"
-                    onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
-                  >
-                    <Search className="h-5 w-5" />
-                  </Button>
-                </div>
-              )}
-              
-              {/* Menu utilisateur */}
-              {isAuthenticated ? (
-                <UserMenu
-                  onLogout={() => setLogoutDialogOpen(true)}
-                  userData={userData}
-                  setLogoutDialogOpen={setLogoutDialogOpen}
-                />
-              ) : (
-                <div className="mobile-auth-buttons">
-                  <AuthButtons />
-                </div>
-              )}
-            </div>
           </div>
 
-          {/* Barre de recherche mobile */}
-          {isAuthenticated && mobileSearchOpen && (
-            <div className="md:hidden px-4 pb-4">
-              <SearchBar />
-            </div>
+          {/* Dialogue de confirmation de déconnexion */}
+          {logoutDialogOpen && (
+            <Dialog
+              open={logoutDialogOpen}
+              onOpenChange={(open) => setLogoutDialogOpen(open)}
+            >
+              <DialogContent className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-hidden rounded-2xl border-0 shadow-xl">
+                <div className="overflow-y-auto max-h-[70vh] fade-in-up">
+                  <DialogHeader>
+                    <DialogTitle className="text-xl font-semibold">
+                      Confirmation de déconnexion
+                    </DialogTitle>
+                    <DialogDescription className="text-base mt-2">
+                      Êtes-vous sûr de vouloir vous déconnecter de votre compte ?
+                      Toutes vos sessions actives seront fermées.
+                    </DialogDescription>
+                  </DialogHeader>
+                </div>
+                <DialogFooter className="mt-6 flex justify-end space-x-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setLogoutDialogOpen(false)}
+                    className="rounded-full border-2 hover:bg-gray-100 transition-all duration-200"
+                  >
+                    Annuler
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={handleLogout}
+                    className="rounded-full bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 transition-all duration-200"
+                  >
+                    Se déconnecter
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           )}
-        </div>
-
-        {/* Dialogue de confirmation de déconnexion */}
-        {logoutDialogOpen && (
-          <Dialog
-            open={logoutDialogOpen}
-            onOpenChange={(open) => !isLoggingOut && setLogoutDialogOpen(open)}
-          >
-            <DialogContent className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-hidden rounded-2xl border-0 shadow-xl">
-              <div className="overflow-y-auto max-h-[70vh] fade-in-up">
-                <DialogHeader>
-                  <DialogTitle className="text-xl font-semibold">
-                    Confirmation de déconnexion
-                  </DialogTitle>
-                  <DialogDescription className="text-base mt-2">
-                    Êtes-vous sûr de vouloir vous déconnecter de votre compte ?
-                    Toutes vos sessions actives seront fermées.
-                  </DialogDescription>
-                </DialogHeader>
-              </div>
-              <DialogFooter className="mt-6 flex justify-end space-x-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setLogoutDialogOpen(false)}
-                  disabled={isLoggingOut}
-                  className="rounded-full border-2 hover:bg-gray-100 transition-all duration-200"
-                >
-                  Annuler
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={handleLogout}
-                  disabled={isLoggingOut}
-                  className={`rounded-full bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 transition-all duration-200 ${
-                    isLoggingOut ? "opacity-80" : ""
-                  }`}
-                >
-                  {isLoggingOut ? "Déconnexion..." : "Se déconnecter"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        )}
-      </nav>
+        </nav>
+      </header>
     </>
   );
 });

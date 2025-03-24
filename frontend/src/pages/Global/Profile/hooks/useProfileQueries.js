@@ -1,8 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { profileService } from '../services/profileService';
 import documentService from '../services/documentService';
-import axios from 'axios';
+import axiosInstance from '@/lib/axios';
 import authService from '@services/authService';
+import apiService from '@/lib/services/apiService';
+import { useUserDataCentralized } from '@/hooks';
+import userDataManager from '@/lib/services/userDataManager';
 
 // API URL
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
@@ -20,12 +23,25 @@ export const profileKeys = {
 
 // Hook for fetching current user's profile
 export const useCurrentProfile = () => {
-  return useQuery({
-    queryKey: profileKeys.current(),
-    queryFn: () => profileService.getAllProfileData(),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+  const { user, isLoading, isError, error, forceRefresh } = useUserDataCentralized({
+    preferComprehensiveData: true,
+    staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
+  
+  return {
+    data: user ? {
+      user: user,
+      studentProfile: user.studentProfile || null,
+      diplomas: user.diplomas || [],
+      addresses: user.addresses || [],
+      stats: user.stats || { profile: { completionPercentage: 0 } }
+    } : null,
+    isLoading,
+    isError,
+    error,
+    refetch: forceRefresh
+  };
 };
 
 // Hook for fetching a public profile by user ID
@@ -127,29 +143,22 @@ export const useUserCV = (userId = null) => {
     queryFn: async () => {
       try {
         // If userId is provided, we need to fetch the CV for that specific user
-        // This would require a backend endpoint that supports this
         if (userId) {
-          // This assumes there's an endpoint to get documents by user ID and type
-          // You might need to implement this endpoint on the backend
-          const response = await axios.get(
-            `${API_URL}/documents/user/${userId}/type/CV`,
-            {
-              headers: {
-                'Authorization': `Bearer ${authService.getToken()}`
-              }
-            }
-          );
-          return response.data;
+          // Use the documented endpoint for getting documents by type
+          const response = await apiService.get(`/documents/type/CV`);
+          return response.data || { success: true, data: [] };
         } else {
           // For current user, use the existing method
           const documents = await documentService.getDocumentByType('CV');
           return { success: true, data: documents };
         }
       } catch (error) {
-        // console.error('Error fetching CV document:', error);
-        return { success: false, error: error.message };
+        console.warn('Error fetching CV document:', error.message);
+        return { success: false, error: error.message, data: [] };
       }
     },
     enabled: true,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: false, // Don't retry on error since we handle errors gracefully
   });
 }; 

@@ -28,63 +28,63 @@ const ProtectedRoute = () => {
     
     const path = location.pathname;
     
-    // Check for role-specific paths
-    if (path.startsWith('/admin') && !permissions.isAdmin()) {
-      toast.error("Accès refusé: Vous n'avez pas les droits d'administrateur nécessaires", {
-        duration: 3000,
-        position: 'top-center',
-      });
-      return false;
+    // Check for role-specific paths in order of specificity
+    // SuperAdmin has access to everything
+    if (hasRole('ROLE_SUPERADMIN')) {
+      return true;
     }
-    
-    if (path.startsWith('/student') && !permissions.isStudent()) {
-      toast.error("Accès refusé: Cette page est réservée aux étudiants", {
-        duration: 3000,
-        position: 'top-center',
-      });
-      return false;
+
+    // Check specific role paths
+    const roleChecks = [
+      {
+        path: '/superadmin',
+        check: () => hasRole('ROLE_SUPERADMIN'),
+        message: "Accès refusé: Cette page est réservée aux super administrateurs"
+      },
+      {
+        path: '/admin',
+        check: () => permissions.isAdmin(),
+        message: "Accès refusé: Vous n'avez pas les droits d'administrateur nécessaires"
+      },
+      {
+        path: '/teacher',
+        check: () => permissions.isTeacher(),
+        message: "Accès refusé: Cette page est réservée aux formateurs"
+      },
+      {
+        path: '/student',
+        check: () => permissions.isStudent(),
+        message: "Accès refusé: Cette page est réservée aux étudiants"
+      },
+      {
+        path: '/hr',
+        check: () => permissions.isHR(),
+        message: "Accès refusé: Cette page est réservée aux ressources humaines"
+      },
+      {
+        path: '/recruiter',
+        check: () => permissions.isRecruiter() || permissions.isAdmin() || permissions.isSuperAdmin(),
+        message: "Accès refusé: Cette page est réservée aux recruteurs"
+      },
+      {
+        path: '/guest',
+        check: () => permissions.isGuest(),
+        message: "Accès refusé: Cette page est réservée aux invités"
+      }
+    ];
+
+    // Find the first matching path and check its permissions
+    const matchingRole = roleChecks.find(role => path.startsWith(role.path));
+    if (matchingRole) {
+      if (!matchingRole.check()) {
+        toast.error(matchingRole.message, {
+          duration: 3000,
+          position: 'top-center',
+        });
+        return false;
+      }
     }
-    
-    if (path.startsWith('/teacher') && !permissions.isTeacher()) {
-      toast.error("Accès refusé: Cette page est réservée aux formateurs", {
-        duration: 3000,
-        position: 'top-center',
-      });
-      return false;
-    }
-    
-    if (path.startsWith('/hr') && !permissions.isHR()) {
-      toast.error("Accès refusé: Cette page est réservée aux ressources humaines", {
-        duration: 3000,
-        position: 'top-center',
-      });
-      return false;
-    }
-    
-    if (path.startsWith('/superadmin') && !hasRole("ROLE_SUPERADMIN")) {
-      toast.error("Accès refusé: Cette page est réservée aux super administrateurs", {
-        duration: 3000,
-        position: 'top-center',
-      });
-      return false;
-    }
-    
-    if (path.startsWith('/recruiter') && !permissions.isRecruiter()) {
-      toast.error("Accès refusé: Cette page est réservée aux recruteurs", {
-        duration: 3000,
-        position: 'top-center',
-      });
-      return false;
-    }
-    
-    if (path.startsWith('/guest') && !permissions.isGuest()) {
-      toast.error("Accès refusé: Cette page est réservée aux invités", {
-        duration: 3000,
-        position: 'top-center',
-      });
-      return false;
-    }
-    
+
     return true;
   };
 

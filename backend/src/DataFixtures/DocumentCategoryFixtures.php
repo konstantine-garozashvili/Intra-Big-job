@@ -44,7 +44,19 @@ class DocumentCategoryFixtures extends Fixture
             ],
         ];
 
+        $repository = $manager->getRepository(DocumentCategory::class);
+
         foreach ($categories as $reference => $data) {
+            // Check if the category already exists
+            $existingCategory = $repository->findOneBy(['code' => $data['code']]);
+            
+            if ($existingCategory) {
+                // If it exists, use the existing one as reference
+                $this->addReference($reference, $existingCategory);
+                continue;
+            }
+            
+            // Otherwise create a new one
             $category = new DocumentCategory();
             $category->setCode($data['code']);
             $category->setName($data['name']);

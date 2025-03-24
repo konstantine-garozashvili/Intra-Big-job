@@ -3,7 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Specialization;
-use App\Repository\SpecializationRepository;
+use App\Domains\Global\Repository\SpecializationRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;

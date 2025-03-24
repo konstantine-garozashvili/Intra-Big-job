@@ -3,56 +3,111 @@ import { authService, getSessionId } from '@/lib/services/authService';
 import { teacherService } from '@/lib/services/teacherService';
 import apiService from '@/lib/services/apiService';
 import { getQueryClient } from '@/lib/services/queryClient';
+import useUserDataHook from './useUserData';
+import { useQuery } from '@tanstack/react-query';
 
 /**
- * Hook pour récupérer les données utilisateur avec React Query
- * @returns {Object} - Données utilisateur et état de la requête
+ * Hook pour récupérer et gérer les données de l'utilisateur
+ * Optimisé pour éviter les problèmes d'affichage intermittent
  */
 export const useUserData = () => {
-  // Récupérer l'ID de l'utilisateur actuel depuis le localStorage pour l'utiliser comme partie de la clé de requête
-  // Cela garantit que les données sont actualisées lors d'un changement d'utilisateur
-  const getUserKey = () => {
-    try {
-      const userStr = localStorage.getItem('user');
-      if (userStr) {
-        const user = JSON.parse(userStr);
-        return user.id || 'anonymous';
+  return useQuery({
+    queryKey: ['user'],
+    queryFn: async () => {
+      console.log("useUserData - Starting user data fetch");
+      try {
+        // Récupérer les données complètes de l'utilisateur
+        console.log("useUserData - Calling authService.getCurrentUser()");
+        const userData = await authService.getCurrentUser();
+        console.log("useUserData - Received user data:", userData);
+        return userData;
+      } catch (error) {
+        console.error("useUserData - Error fetching user data:", error);
+        
+        // En cas d'erreur, essayer de récupérer les données minimales du localStorage
+        try {
+          console.log("useUserData - Attempting to get minimal data from localStorage");
+          const minimalData = authService.getMinimalUserData();
+          console.log("useUserData - Minimal data from localStorage:", minimalData);
+          if (minimalData) {
+            return minimalData;
+          }
+        } catch (localError) {
+          console.error("useUserData - Error retrieving minimal data:", localError);
+        }
+        
+        // Si toutes les tentatives échouent, propager l'erreur
+        throw error;
       }
-    } catch (e) {
-      console.error('Erreur lors de la récupération de l\'ID utilisateur:', e);
-    }
-    return 'anonymous';
-  };
-
-  // Utiliser l'identifiant de session dans la clé de requête pour garantir que les données sont actualisées
-  // lors d'un changement de session (connexion/déconnexion)
-  const sessionId = getSessionId();
-
-  // Get minimal user data from token if available
-  const getMinimalUserData = () => {
-    try {
-      const userStr = localStorage.getItem('user');
-      if (userStr) {
-        return JSON.parse(userStr);
-      }
-    } catch (e) {
-      console.error('Error parsing user data from localStorage:', e);
-    }
-    return null;
-  };
-
-  const minimalUserData = getMinimalUserData();
-
-  return useApiQuery('/me', ['user-data', getUserKey(), sessionId], {
-    staleTime: 30 * 60 * 1000, // 30 minutes
+    },
+    // Paramètres optimisés pour la stabilité et la performance
+    staleTime: 5 * 60 * 1000, // 5 minutes
     cacheTime: 60 * 60 * 1000, // 1 heure
     refetchOnWindowFocus: false,
     refetchOnMount: true,
-    refetchOnReconnect: false,
-    initialData: minimalUserData, // Use minimal data from token while loading
-    select: (data) => {
-      return data.user || data;
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+    onSuccess: (data) => {
+      console.log("useUserData - Success callback with data:", data);
+    },
+    onError: (error) => {
+      console.error("useUserData - Error callback:", error);
     }
+  });
+};
+
+/**
+ * Hook pour récupérer les statistiques du tableau de bord
+ */
+export const useDashboardStats = () => {
+  return useQuery({
+    queryKey: ['dashboardStats'],
+    queryFn: async () => {
+      // TODO: Implémenter l'appel API pour récupérer les statistiques
+      return {
+        totalStudents: 120,
+        activeFormations: 8,
+        completionRate: 85,
+        upcomingEvents: 3
+      };
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
+
+/**
+ * Hook pour récupérer les activités récentes
+ */
+export const useRecentActivities = () => {
+  return useQuery({
+    queryKey: ['recentActivities'],
+    queryFn: async () => {
+      // TODO: Implémenter l'appel API pour récupérer les activités récentes
+      return [
+        {
+          id: 1,
+          type: 'formation',
+          title: 'Développement Web Avancé',
+          date: new Date(Date.now() - 3600000),
+          status: 'completed'
+        },
+        {
+          id: 2,
+          type: 'course',
+          title: 'Introduction à React',
+          date: new Date(Date.now() - 86400000),
+          status: 'in-progress'
+        },
+        {
+          id: 3,
+          type: 'assignment',
+          title: 'Projet Final JavaScript',
+          date: new Date(Date.now() - 172800000),
+          status: 'pending'
+        }
+      ];
+    },
+    staleTime: 2 * 60 * 1000, // 2 minutes
   });
 };
 
@@ -61,7 +116,7 @@ export const useUserData = () => {
  * @returns {Object} - Données du dashboard formateur et état de la requête
  */
 export const useTeacherDashboardData = () => {
-  // Utiliser useApiQuery pour récupérer les données utilisateur
+  // Utiliser notre propre hook useUserData exporté ci-dessus (pas le hook importé)
   const userQuery = useUserData();
   const sessionId = getSessionId();
   
@@ -171,7 +226,7 @@ export const useAdminDashboardData = () => {
   );
   
   // Load full user data in parallel
-  const userQuery = useApiQuery('/me', ['user-data', sessionId], {
+  const userQuery = useApiQuery('/api/me', ['user-data', sessionId], {
     staleTime: 30 * 60 * 1000, // 30 minutes
     cacheTime: 60 * 60 * 1000, // 1 hour
     refetchOnWindowFocus: false,
@@ -206,7 +261,7 @@ export const useAdminDashboardData = () => {
  * @returns {Object} - Données du dashboard étudiant et état de la requête
  */
 export const useStudentDashboardData = () => {
-  // Utiliser useApiQuery pour récupérer les données utilisateur avec des options optimisées
+  // Utiliser notre propre hook useUserData exporté ci-dessus (pas le hook importé)
   const userQuery = useUserData();
   
   // Pour l'instant, nous n'avons pas de données spécifiques à récupérer pour le dashboard étudiant
@@ -228,15 +283,63 @@ export const useStudentDashboardData = () => {
  * @returns {Object} - Données du dashboard RH et état de la requête
  */
 export const useHRDashboardData = () => {
-  // Utiliser useApiQuery pour récupérer les données utilisateur avec des options optimisées
-  const userQuery = useUserData();
+  const sessionId = getSessionId();
   
-  // Pour l'instant, nous n'avons pas de données spécifiques à récupérer pour le dashboard RH
-  // Mais nous pouvons préparer la structure pour les futures requêtes
+  // Get minimal user data from token if available
+  const getMinimalUserData = () => {
+    try {
+      return authService.getMinimalUserData();
+    } catch (e) {
+      console.error('Error retrieving minimal user data:', e);
+    }
+    return null;
+  };
+  
+  // Use minimal user data from localStorage while full data loads
+  const minimalUserData = getMinimalUserData();
+  
+  // S'assurer que le token est disponible
+  const token = localStorage.getItem('token');
+  const isAuthenticated = !!token;
+  
+  // Load full user data
+  const userQuery = useApiQuery('/api/me', ['user-data-hr', sessionId], {
+    staleTime: 30 * 60 * 1000, // 30 minutes
+    cacheTime: 60 * 60 * 1000, // 1 hour
+    refetchOnWindowFocus: false,
+    refetchOnMount: true,
+    refetchOnReconnect: false,
+    retry: 1,
+    retryDelay: 1000,
+    timeout: 4000,
+    // N'activer la requête que si l'utilisateur est authentifié
+    enabled: isAuthenticated,
+    select: (data) => {
+      return data.user || data;
+    },
+    // Utiliser initialData pour éviter l'affichage de chargement si possible
+    initialData: () => {
+      // Si nous avons des données minimales, les utiliser comme initialData
+      if (minimalUserData) return minimalUserData;
+      
+      try {
+        // Vérifier si des données sont déjà en cache
+        const cachedData = getQueryClient().getQueryData(['user-data-hr', sessionId]);
+        if (cachedData) return cachedData;
+        return undefined;
+      } catch (e) {
+        return undefined;
+      }
+    }
+  });
+  
+  // Pour l'instant, nous n'avons pas de données spécifiques supplémentaires à récupérer pour le dashboard HR
+  // Mais la structure est prête pour les futures extensions
   
   return {
-    user: userQuery.data,
-    isLoading: userQuery.isLoading,
+    // Use minimal user data as fallback if full data is still loading
+    user: userQuery.data || minimalUserData,
+    isLoading: userQuery.isLoading && !minimalUserData,
     isError: userQuery.isError,
     error: userQuery.error,
     refetch: () => {
