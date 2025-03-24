@@ -35,7 +35,6 @@ function decodeToken(token) {
     }).join(''));
     return JSON.parse(jsonPayload);
   } catch (error) {
-    console.error('Erreur lors du décodage du token:', error);
     return null;
   }
 }
@@ -51,10 +50,7 @@ export const authService = {
    */
   async register(userData) {
     try {
-      console.log('[authService] Début de l\'inscription:', { ...userData, password: '***' });
       const response = await apiService.post('/register', userData);
-      
-      console.log('[authService] Inscription réussie:', response);
       
       // Si la réponse contient un token (certaines API peuvent fournir un token immédiatement)
       if (response && response.token) {
@@ -67,8 +63,6 @@ export const authService = {
         data: response
       };
     } catch (error) {
-      console.error('[authService] Erreur lors de l\'inscription:', error);
-      console.error('[authService] Détails:', error.response?.data || error.message);
       throw error;
     }
   },
@@ -170,7 +164,6 @@ export const authService = {
           }
         } catch (tokenError) {
           // Silently handle token parsing errors
-          console.error('Error parsing token:', tokenError);
         }
       }
       
@@ -182,8 +175,8 @@ export const authService = {
       window.dispatchEvent(new Event('login-success'));
       
       // Initiate user data loading in the background without blocking navigation
-      this.lazyLoadUserData(true).catch(err => {
-        console.warn('Background data loading error:', err);
+      this.lazyLoadUserData(true).catch(() => {
+        // Silent catch
       });
       
       return response;
@@ -192,8 +185,6 @@ export const authService = {
       sessionStorage.removeItem('login_in_progress');
       
       hideGlobalLoader();
-      console.error('Erreur lors de la connexion:', error);
-      console.error('Détails de l\'erreur:', error.response?.data || error.message);
       throw error;
     }
   },
@@ -206,8 +197,6 @@ export const authService = {
   async lazyLoadUserData(isInitialLoad = false) {
     const cachedUser = this.getUser();
     if (!cachedUser) return null;
-    
-    console.log('🔄 authService.lazyLoadUserData: starting with isInitialLoad=', isInitialLoad);
     
     try {
       // Démarrer le chargement des données en parallèle
@@ -226,8 +215,6 @@ export const authService = {
       // Attendre que les données critiques soient chargées
       const results = await Promise.allSettled(loadPromises);
       
-      console.log('🔄 authService.lazyLoadUserData: profile data loaded, results:', results);
-      
       // Récupérer le résultat du chargement du profil
       const profileResult = results[0];
       let enhancedUser = cachedUser;
@@ -237,7 +224,6 @@ export const authService = {
         
         // Ensure data is properly saved to localStorage
         localStorage.setItem('user', JSON.stringify(enhancedUser));
-        console.log('🔄 authService.lazyLoadUserData: saved enhanced user to localStorage');
         
         // Update React Query cache
         try {
@@ -247,10 +233,9 @@ export const authService = {
             queryClient.setQueryData(['user', 'current'], enhancedUser);
             queryClient.setQueryData(['unified-user-data', '/api/me', sessionId], enhancedUser);
             queryClient.setQueryData(['user-data', enhancedUser?.id || 'anonymous', sessionId], enhancedUser);
-            console.log('🔄 authService.lazyLoadUserData: updated React Query cache');
           }
         } catch (cacheError) {
-          console.warn('🔄 authService.lazyLoadUserData: Error updating cache:', cacheError);
+          // Ignore cache error
         }
       }
       
@@ -264,16 +249,13 @@ export const authService = {
       
       // Also dispatch the specific event that AuthForm is waiting for
       window.dispatchEvent(new Event('user-data-loaded'));
-      console.log('🔄 authService.lazyLoadUserData: dispatched user-data-loaded event');
       
       return enhancedUser;
     } catch (error) {
-      console.warn('Erreur lors du chargement des données utilisateur:', error);
       sessionStorage.removeItem('login_in_progress');
       
       // Even in case of error, dispatch the event to unblock navigation
       window.dispatchEvent(new Event('user-data-loaded'));
-      console.log('🔄 authService.lazyLoadUserData: dispatched user-data-loaded event (after error)');
       
       return cachedUser;
     }
@@ -286,11 +268,8 @@ export const authService = {
    */
   async _loadProfileData() {
     try {
-      console.log('🔄 authService._loadProfileData: Starting profile data fetch');
-      
       // Éviter de charger les données si l'utilisateur n'est pas connecté
       if (!this.isLoggedIn()) {
-        console.log('🔄 authService._loadProfileData: Not logged in, aborting');
         return null;
       }
       
@@ -300,8 +279,6 @@ export const authService = {
         timeout: 10000,
         retries: 1
       });
-      
-      console.log('🔄 authService._loadProfileData: /api/me response:', response);
       
       // Extract user data from response
       let userData = null;
@@ -318,18 +295,14 @@ export const authService = {
       }
       
       if (!userData) {
-        console.warn('🔄 authService._loadProfileData: No valid user data found in response');
         return null;
       }
-      
-      console.log('🔄 authService._loadProfileData: Extracted user data:', userData);
       
       // Store the comprehensive user data in localStorage
       localStorage.setItem('user', JSON.stringify(userData));
       
       return userData;
     } catch (error) {
-      console.error('🔄 authService._loadProfileData: Error loading profile data:', error);
       return null;
     }
   },
@@ -367,8 +340,6 @@ export const authService = {
       
       return response;
     } catch (error) {
-      console.error('Erreur lors du rafraîchissement du token:', error);
-      console.error('Détails de l\'erreur de rafraîchissement:', error.response?.data || error.message);
       // Si le refresh token est invalide, déconnecter l'utilisateur
       if (error.response && (error.response.status === 401 || error.response.status === 403)) {
         this.logout();
@@ -475,8 +446,6 @@ export const authService = {
       // Vider le cache React Query
       clearQueryCache();
     } catch (error) {
-      console.error('Erreur lors de la déconnexion de tous les appareils:', error);
-      console.error('Détails:', error.response?.data || error.message);
       throw error;
     }
   },
@@ -489,8 +458,6 @@ export const authService = {
       const devices = await apiService.get('/token/devices');
       return devices;
     } catch (error) {
-      console.error('Erreur lors de la récupération des appareils:', error);
-      console.error('Détails:', error.response?.data || error.message);
       throw error;
     }
   },
@@ -591,9 +558,6 @@ export const authService = {
       throw new Error('Aucun token d\'authentification trouvé');
     }
 
-    // Ajouter du contexte de débogage pour tracer l'origine des appels
-    console.log(`🔍 getCurrentUser appelé depuis: ${requestSource || 'non spécifié'} (force=${forceRefresh})`);
-
     // Utiliser le nouveau gestionnaire de données utilisateur
     try {
       const userData = await userDataManager.getUserData({
@@ -612,12 +576,9 @@ export const authService = {
       
       return userData;
     } catch (error) {
-      console.error(`Error in getCurrentUser (source: ${requestSource}):`, error);
-      
       // Essayer d'utiliser les données en cache si disponibles
       const cachedUser = userDataManager.getCachedUserData();
       if (cachedUser) {
-        console.log(`Utilisation des données en cache pour getCurrentUser (source: ${requestSource})`);
         return cachedUser;
       }
       
@@ -678,7 +639,6 @@ export const authService = {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
-        console.warn('Cannot ensure user data - no token found');
         return false;
       }
       
@@ -691,7 +651,7 @@ export const authService = {
         // First try to get from the basic me endpoint
         userData = await authService.getCurrentUser(true);
       } catch (err) {
-        console.warn('Failed to get user data from /me endpoint, trying backup methods');
+        // Silent catch
       }
       
       // If we have user data, save it
@@ -712,10 +672,6 @@ export const authService = {
           localStorage.setItem('userRoles', JSON.stringify(['ROLE_STUDENT']));
         }
         
-        console.log('Successfully ensured user data in localStorage', {
-          userData, 
-          roles: JSON.parse(localStorage.getItem('userRoles') || '[]')
-        });
         return true;
       }
       
@@ -737,14 +693,8 @@ export const authService = {
         localStorage.setItem('userRoles', JSON.stringify(['ROLE_STUDENT']));
       }
       
-      console.log('Created fallback user data in localStorage', {
-        user: JSON.parse(localStorage.getItem('user') || '{}'),
-        roles: JSON.parse(localStorage.getItem('userRoles') || '[]')
-      });
-      
       return true;
     } catch (error) {
-      console.error('Error ensuring user data:', error);
       return false;
     }
   },
@@ -755,12 +705,9 @@ export const authService = {
    */
   async fixProfileDataIssues() {
     try {
-      console.log('Attempting to fix profile data issues...');
-      
       // Check if user is logged in
       const token = localStorage.getItem('token');
       if (!token) {
-        console.warn('No authentication token found. User is not logged in.');
         return { success: false, message: 'Not authenticated' };
       }
       
@@ -783,7 +730,6 @@ export const authService = {
         if (userData) {
           // Update localStorage with fresh data
           localStorage.setItem('user', JSON.stringify(userData));
-          console.log('Profile data fixed successfully');
           
           // Update React Query cache
           if (queryClient) {
@@ -793,7 +739,7 @@ export const authService = {
           return { success: true, message: 'Profile data fixed successfully' };
         }
       } catch (apiError) {
-        console.error('Error fetching fresh profile data:', apiError);
+        // Silent catch
       }
       
       // If we couldn't fetch fresh data, create minimal profile data
@@ -813,17 +759,15 @@ export const authService = {
             localStorage.setItem('user', JSON.stringify(minimalUser));
             localStorage.setItem('userRoles', JSON.stringify(minimalUser.roles));
             
-            console.log('Created minimal profile data from token');
             return { success: true, message: 'Created minimal profile data' };
           }
         }
       } catch (tokenError) {
-        console.error('Error creating fallback profile data:', tokenError);
+        // Silent catch
       }
       
       return { success: false, message: 'Could not fix profile data' };
     } catch (error) {
-      console.error('Error in fixProfileDataIssues:', error);
       return { success: false, message: error.message };
     }
   },
@@ -851,7 +795,6 @@ export const authService = {
         _retrievedAt: Date.now()
       };
     } catch (error) {
-      console.error('Erreur lors de la récupération des données minimales:', error);
       return null;
     }
   }
