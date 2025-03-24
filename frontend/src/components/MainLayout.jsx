@@ -7,6 +7,7 @@ import { authService } from '../lib/services/authService';
 import { profileService } from '../pages/Global/Profile/services/profileService';
 import Footer from './Footer';
 import ChatButton from './chat/ChatButton';
+import { useTheme } from '../context/ThemeContext';
 
 // Create a context for profile data and refresh function
 export const ProfileContext = createContext({
@@ -35,6 +36,7 @@ const MainLayout = () => {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [minContentHeight, setMinContentHeight] = useState('100vh');
   const [initialRender, setInitialRender] = useState(true);
+  const { theme } = useTheme(); // Accéder au thème actuel
 
   // Pages qui doivent être affichées en plein écran sans marges internes
   const fullScreenPages = []; // Removed '/register'
@@ -203,7 +205,7 @@ const MainLayout = () => {
 
   return (
     <ProfileContext.Provider value={profileContextValue}>
-      <div className="flex flex-col min-h-screen bg-gray-50">
+      <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
         {/* Navbar conditionally rendered */}
         {!isFullScreenPage && (
           <Navbar 

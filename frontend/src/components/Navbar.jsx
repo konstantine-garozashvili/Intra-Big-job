@@ -34,6 +34,7 @@ import { MenuBurger } from "./MenuBurger";
 import { SearchBar } from "./SearchBar";
 import { useRolePermissions } from "../features/roles/useRolePermissions";
 import { Skeleton } from './ui/skeleton';
+import { ThemeToggle } from './ui/theme-toggle';
 
 // Style personnalisé pour le menu dropdown et le bouton burger
 const customStyles = `
@@ -432,8 +433,8 @@ const Navbar = memo(() => {
       {/* Injection des styles personnalisés */}
       <style>{customStyles}</style>
 
-      <header className="navbar-fixed bg-[#02284f] shadow-lg">
-        <nav className="bg-[#02284f] w-full">
+      <header className="navbar-fixed bg-[#02284f] dark:bg-[#011627] shadow-lg">
+        <nav className="bg-[#02284f] dark:bg-[#011627] w-full">
           <div className="container px-4 mx-auto">
             <div className="flex items-center justify-between h-16">
               {/* Partie gauche: Logo et burger menu */}
@@ -450,7 +451,7 @@ const Navbar = memo(() => {
                     }
                     className="text-2xl font-black tracking-tight text-white"
                   >
-                    Big<span className="text-[#528eb2]">Project</span>
+                    Big<span className="text-[#528eb2] dark:text-[#78b9dd]">Project</span>
                   </Link>
                 </div>
               </div>
@@ -459,6 +460,7 @@ const Navbar = memo(() => {
               {isAuthenticated && (
                 <div className="hidden md:flex flex-1 justify-center mx-4">
                   <div className="search-container w-full max-w-md flex justify-end">
+                    <ThemeToggle className="mr-2" variant="ghost" size="icon" />
                     <SearchBar />
                   </div>
                 </div>
@@ -470,7 +472,7 @@ const Navbar = memo(() => {
                 {isAuthenticated && (permissions.isStudent() || permissions.isTeacher()) && (
                   <Link 
                     to={permissions.isTeacher() ? "/teacher/attendance" : "/student/attendance"}
-                    className="mr-4 px-3 py-2 rounded-md bg-green-700 text-white font-medium hover:bg-green-800 transition-colors flex items-center gap-2"
+                    className="mr-4 px-3 py-2 rounded-md bg-green-700 dark:bg-green-600 text-white font-medium hover:bg-green-800 dark:hover:bg-green-700 transition-colors flex items-center gap-2"
                   >
                     <Clipboard className="w-4 h-4" />
                     Présence
@@ -514,6 +516,7 @@ const Navbar = memo(() => {
             {/* Barre de recherche mobile */}
             {isAuthenticated && mobileSearchOpen && (
               <div className="md:hidden px-4 pb-4">
+                <ThemeToggle className="mr-2" variant="ghost" size="sm" />
                 <SearchBar />
               </div>
             )}

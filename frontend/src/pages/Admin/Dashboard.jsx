@@ -17,12 +17,12 @@ import { toast } from 'sonner';
 import authService from '@/lib/services/authService';
 
 const ROLE_COLORS = {
-  'ADMIN': 'bg-blue-100 text-blue-800',
-  'SUPERADMIN': 'bg-purple-100 text-purple-800',
-  'HR': 'bg-green-100 text-green-800',
-  'TEACHER': 'bg-yellow-100 text-yellow-800',
-  'STUDENT': 'bg-indigo-100 text-indigo-800',
-  'GUEST': 'bg-gray-100 text-gray-800'
+  'ADMIN': 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300',
+  'SUPERADMIN': 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300',
+  'HR': 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300',
+  'TEACHER': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300',
+  'STUDENT': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300',
+  'GUEST': 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
 };
 
 const containerVariants = {
@@ -225,7 +225,7 @@ const AdminDashboard = () => {
 
         <Card className="border-0 shadow-md mb-6">
           <CardContent className="p-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-6">Accès rapide</h2>
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-6">Accès rapide</h2>
             
             <motion.div 
               variants={containerVariants}
@@ -265,19 +265,19 @@ const AdminDashboard = () => {
         
         <Card className="border-0 shadow-md">
           <Tabs defaultValue="calendar" value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <div className="flex items-center justify-between px-4 py-2 border-b">
-              <h1 className="text-xl font-semibold text-gray-800">Tableau de bord administrateur</h1>
-              <TabsList className="grid w-auto grid-cols-2 bg-gray-100 no-focus-outline">
+            <div className="flex items-center justify-between px-4 py-2 border-b dark:border-gray-700">
+              <h1 className="text-xl font-semibold text-gray-800 dark:text-gray-100">Tableau de bord administrateur</h1>
+              <TabsList className="grid w-auto grid-cols-2 bg-gray-100 dark:bg-gray-700 no-focus-outline">
                 <TabsTrigger 
                   value="calendar" 
-                  className="flex items-center gap-1.5 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white no-focus-outline"
+                  className="flex items-center gap-1.5 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white dark:text-gray-300 dark:data-[state=inactive]:bg-gray-800 no-focus-outline"
                 >
                   <CalendarIcon className="w-4 h-4" />
                   <span>Emploi du temps</span>
                 </TabsTrigger>
                 <TabsTrigger 
                   value="users" 
-                  className="flex items-center gap-1.5 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white no-focus-outline"
+                  className="flex items-center gap-1.5 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white dark:text-gray-300 dark:data-[state=inactive]:bg-gray-800 no-focus-outline"
                 >
                   <Users className="w-4 h-4" />
                   <span>Utilisateurs</span>
@@ -293,7 +293,7 @@ const AdminDashboard = () => {
               <TabsContent value="users" className="mt-0 no-focus-outline">
                 <div className="p-4">
                   <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-3">
-                    <h2 className="text-lg font-medium text-gray-800">Utilisateurs de la formation</h2>
+                    <h2 className="text-lg font-medium text-gray-800 dark:text-gray-200">Utilisateurs de la formation</h2>
                     <div className="flex items-center space-x-3">
                       <Select value={roleFilter} onValueChange={setRoleFilter}>
                         <SelectTrigger className="w-[180px] no-focus-outline">
@@ -320,7 +320,7 @@ const AdminDashboard = () => {
                   </div>
 
                   {editUserMutation.isError && (
-                    <div className="p-3 mb-3 text-sm text-red-700 bg-red-100 rounded-lg">
+                    <div className="p-3 mb-3 text-sm text-red-700 bg-red-100 dark:bg-red-900/30 dark:text-red-300 rounded-lg">
                       <p>Erreur: {editUserMutation.error?.message || 'Une erreur est survenue'}</p>
                       <p className="mt-1 font-mono text-xs">Vérifiez la console pour plus de détails.</p>
                     </div>
@@ -338,10 +338,10 @@ const AdminDashboard = () => {
                       </div>
                     </div>
                   ) : (
-                    <div className="overflow-x-auto bg-white rounded-lg shadow">
+                    <div className="overflow-x-auto bg-white dark:bg-gray-800 rounded-lg shadow">
                       <table className="w-full">
                         <thead>
-                          <tr className="text-xs font-medium tracking-wider text-left text-gray-500 uppercase border-b bg-gray-50">
+                          <tr className="text-xs font-medium tracking-wider text-left text-gray-500 dark:text-gray-400 uppercase border-b bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
                             <th className="px-4 py-3">Nom</th>
                             <th className="px-4 py-3">Email</th>
                             <th className="px-4 py-3">Téléphone</th>
@@ -349,20 +349,20 @@ const AdminDashboard = () => {
                             <th className="px-4 py-3">Actions</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-200">
+                        <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                           {filteredUsers.length > 0 ? (
                             filteredUsers.map((user) => (
-                              <tr key={user.id} className="hover:bg-gray-50">
-                                <td className="px-4 py-3 text-sm font-medium text-gray-800">
+                              <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                <td className="px-4 py-3 text-sm font-medium text-gray-800 dark:text-gray-200">
                                   {user.firstName} {user.lastName}
                                 </td>
-                                <td className="px-4 py-3 text-sm text-gray-500">{user.email}</td>
-                                <td className="px-4 py-3 text-sm text-gray-500">{user.phoneNumber}</td>
+                                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{user.email}</td>
+                                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{user.phoneNumber}</td>
                                 <td className="px-4 py-3 text-sm">
                                   {user.roles && user.roles.map((role) => (
                                     <span
                                       key={role.id}
-                                      className={`inline-block px-2 py-1 mr-1 mb-1 text-xs font-medium rounded-full ${ROLE_COLORS[role.name] || 'bg-gray-100 text-gray-800'}`}
+                                      className={`inline-block px-2 py-1 mr-1 mb-1 text-xs font-medium rounded-full ${ROLE_COLORS[role.name] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'}`}
                                     >
                                       {role.name}
                                     </span>
@@ -371,7 +371,7 @@ const AdminDashboard = () => {
                                 <td className="px-4 py-3 text-sm">
                                   <div className="flex items-center space-x-2">
                                     <button
-                                      className="p-1 text-blue-600 bg-blue-100 rounded hover:bg-blue-200 no-focus-outline"
+                                      className="p-1 text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 rounded hover:bg-blue-200 dark:hover:bg-blue-800/50 no-focus-outline"
                                       title="Modifier"
                                       onClick={() => openEditModal(user)}
                                     >
@@ -383,7 +383,7 @@ const AdminDashboard = () => {
                             ))
                           ) : (
                             <tr>
-                              <td colSpan="5" className="px-4 py-6 text-center text-gray-500">
+                              <td colSpan="5" className="px-4 py-6 text-center text-gray-500 dark:text-gray-400">
                                 {error ? 'Impossible de charger les utilisateurs' : 'Aucun utilisateur trouvé'}
                               </td>
                             </tr>

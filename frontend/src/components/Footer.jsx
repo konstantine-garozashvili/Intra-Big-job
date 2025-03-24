@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 const Footer = () => {
   const [extraPadding, setExtraPadding] = useState(0);
@@ -34,7 +35,7 @@ const Footer = () => {
 
   return (
     <footer 
-      className="bg-[#02284f] pt-12 pb-6 mt-auto"
+      className="bg-[#02284f] dark:bg-[#011627] pt-12 pb-6 mt-auto"
       style={{ marginTop: extraPadding ? `${extraPadding}px` : 'auto' }}
     >
       <div className="container px-4 mx-auto">
@@ -45,7 +46,7 @@ const Footer = () => {
               to="/"
               className="text-2xl font-black tracking-tight text-white inline-block mb-4"
             >
-              Big<span className="text-[#528eb2]">Project</span>
+              Big<span className="text-[#528eb2] dark:text-[#78b9dd]">Project</span>
             </Link>
             <div className="mt-4 text-gray-300">
               <p className="mb-4 text-sm">
@@ -88,7 +89,7 @@ const Footer = () => {
                 },
               ].map((section, index) => (
                 <div key={index}>
-                  <h3 className="text-white font-semibold mb-4 pb-1 border-b border-[#528eb2]/30">
+                  <h3 className="text-white font-semibold mb-4 pb-1 border-b border-[#528eb2]/30 dark:border-[#78b9dd]/50">
                     {section.title}
                   </h3>
                   <ul className="space-y-2">
@@ -96,7 +97,7 @@ const Footer = () => {
                       <li key={idx}>
                         <a 
                           href={link.href} 
-                          className="text-gray-300 hover:text-[#528eb2] transition-colors duration-300 text-sm"
+                          className="text-gray-300 hover:text-[#528eb2] dark:hover:text-[#78b9dd] transition-colors duration-300 text-sm"
                         >
                           {link.name}
                         </a>
@@ -112,11 +113,17 @@ const Footer = () => {
         {/* Footer Bas */}
         <div className="pt-6 border-t border-gray-700 flex flex-col sm:flex-row justify-between items-center">
           <p className="text-sm text-gray-400 mb-4 sm:mb-0">
-            © Copyright 2025 - Big<span className="text-[#528eb2]">Project</span> - Tous droits réservés.
+            © Copyright 2025 - Big<span className="text-[#528eb2] dark:text-[#78b9dd]">Project</span> - Tous droits réservés.
           </p>
-          {/* Icônes Réseaux Sociaux */}
+          {/* Icônes Réseaux Sociaux et Thème */}
           <div className="flex items-center space-x-4 text-gray-400">
-            {/* Placeholder pour les icônes de réseaux sociaux */}
+            {/* Thème */}
+            <div className="mr-2 py-1 px-2 bg-gray-800 dark:bg-gray-700 rounded-md flex items-center">
+              <span className="text-xs text-gray-300 mr-2">Thème</span>
+              <ThemeToggle size="sm" variant="ghost" />
+            </div>
+            
+            {/* Réseaux sociaux */}
             <a href="#" className="hover:text-[#528eb2] transition-colors">
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path fillRule="evenodd" d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" clipRule="evenodd"></path>

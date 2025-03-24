@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import App from './App.jsx'
 import './index.css'
+import { ThemeProvider } from './context/ThemeContext'
 
 // Configuration du QueryClient avec des options par défaut optimisées
 const queryClient = new QueryClient({
@@ -29,16 +30,18 @@ const queryClient = new QueryClient({
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <App />
-      {/* Les DevTools ne sont affichés qu'en développement */}
-      {import.meta.env.DEV && (
-        <ReactQueryDevtools 
-          initialIsOpen={false} 
-          position="bottom-right"
-          buttonPosition="bottom-right"
-          styleNonce="rq-devtools"
-        />
-      )}
+      <ThemeProvider>
+        <App />
+        {/* Les DevTools ne sont affichés qu'en développement */}
+        {import.meta.env.DEV && (
+          <ReactQueryDevtools 
+            initialIsOpen={false} 
+            position="bottom-right"
+            buttonPosition="bottom-right"
+            styleNonce="rq-devtools"
+          />
+        )}
+      </ThemeProvider>
     </QueryClientProvider>
   </StrictMode>
 )

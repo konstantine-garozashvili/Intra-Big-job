@@ -22,8 +22,8 @@ export const SearchSuggestionItem = ({ user, index, activeSuggestion, handleSugg
       onClick={(e) => handleSuggestionClick(user, e)}
       onMouseEnter={() => setActiveSuggestion(index)}
       className={cn(
-        "flex items-center px-4 py-3 cursor-pointer transition-all hover:bg-blue-50/50",
-        index === activeSuggestion ? "bg-[rgba(82,142,178,0.08)]" : ""
+        "flex items-center px-4 py-3 cursor-pointer transition-all hover:bg-blue-50/50 dark:hover:bg-blue-800/20",
+        index === activeSuggestion ? "bg-[rgba(82,142,178,0.08)] dark:bg-[rgba(120,185,221,0.15)]" : ""
       )}
       role="button"
       tabIndex={0}
@@ -38,7 +38,7 @@ export const SearchSuggestionItem = ({ user, index, activeSuggestion, handleSugg
         <User className="w-5 h-5 text-white" />
       </div>
       <div className="flex-1 min-w-0">
-        <div className="font-medium text-gray-800 truncate">
+        <div className="font-medium text-gray-800 truncate dark:text-white">
           {user.firstName} {user.lastName}
         </div>
         <div className="flex items-center mt-1">
@@ -51,8 +51,8 @@ export const SearchSuggestionItem = ({ user, index, activeSuggestion, handleSugg
               {getFrenchRoleDisplayName(user.roles[0])}
             </span>
           ) : (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-700">
-              <User className="w-3 h-3 mr-1 text-gray-600" />
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+              <User className="w-3 h-3 mr-1 text-gray-600 dark:text-gray-400" />
               Utilisateur
             </span>
           )}
@@ -60,7 +60,7 @@ export const SearchSuggestionItem = ({ user, index, activeSuggestion, handleSugg
       </div>
       <button 
         onClick={(e) => handleSuggestionClick(user, e)} 
-        className="ml-2 text-[#528eb2] p-2 rounded-full hover:bg-blue-100 transition-colors"
+        className="ml-2 text-[#528eb2] p-2 rounded-full hover:bg-blue-100 transition-colors dark:text-[#78b9dd] dark:hover:bg-blue-900/30"
         aria-label={`Voir le profil de ${user.firstName} ${user.lastName}`}
       >
         <Search className="w-4 h-4" />
