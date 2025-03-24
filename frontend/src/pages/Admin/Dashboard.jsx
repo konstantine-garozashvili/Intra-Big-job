@@ -46,7 +46,7 @@ const itemVariants = {
 };
 
 const AdminDashboard = () => {
-  const { user, users, isLoading, isError, error, refetch } = useAdminDashboardData();
+  const { user, users, isLoading, isError, error, refetch, } = useAdminDashboardData();
   
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -80,7 +80,38 @@ const AdminDashboard = () => {
       link: '/formations',
     }
   ];
-
+  const downloadCSV = () => {
+    if (!filteredUsers || filteredUsers.length === 0) {
+      toast.error("Aucune donnée à exporter.");
+      return;
+    }
+  
+    const headers = ["Prénom", "Nom", "Email", "Téléphone", "Rôle(s)"];
+    const csvRows = [
+      headers.join(","), 
+      ...filteredUsers.map(user => [
+        user.firstName,
+        user.lastName,
+        user.email,
+        user.phoneNumber,
+        user.roles?.map(role => role.name).join(" | ") || ""
+      ].map(value => `"${value}"`).join(","))
+    ];
+  
+    const csvContent = csvRows.join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+  
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "utilisateurs.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  
+    toast.success("Le fichier CSV a été téléchargé.");
+  };
+  
   const editUserMutation = useApiMutation(
     (data) => data && data.id ? `/users/${data.id}` : '/users',
     'put',
@@ -316,6 +347,10 @@ const AdminDashboard = () => {
                       >
                         Actualiser la liste
                       </Button>
+                      <Button onClick={downloadCSV} className="no-focus-outline">
+                       Télécharger sous format CSV
+                      </Button>
+
                     </div>
                   </div>
 
