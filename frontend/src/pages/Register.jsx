@@ -3,7 +3,7 @@ import RegisterForm from "@/components/register/RegisterForm";
 
 const Register = () => {
   return (
-    <div className="flex flex-col md:flex-row w-full min-h-[calc(100vh-64px)]">
+    <div className="flex flex-col md:flex-row w-full">
       {/* Colonne gauche - Fond bleu foncé */}
       <div className="md:w-5/12 bg-[#02284f] text-white p-8 flex flex-col justify-center items-center">
         <div className="max-w-md mx-auto text-center">

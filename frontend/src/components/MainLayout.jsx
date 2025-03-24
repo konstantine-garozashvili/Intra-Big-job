@@ -37,7 +37,7 @@ const MainLayout = () => {
   const [initialRender, setInitialRender] = useState(true);
 
   // Pages qui doivent être affichées en plein écran sans marges internes
-  const fullScreenPages = ['/register'];
+  const fullScreenPages = []; // Removed '/register'
   const isFullScreenPage = fullScreenPages.includes(location.pathname);
 
   // Function to calculate and set the minimum content height
