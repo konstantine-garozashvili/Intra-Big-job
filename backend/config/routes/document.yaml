@@ -1,0 +1,4 @@
+document_routes:
+    resource: '../../src/Domains/Global/Document/Controller/'
+    type: attribute
+    prefix: /api
