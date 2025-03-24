@@ -1,0 +1,213 @@
+/* Styles pour le calendrier */
+.modern-calendar {
+  width: 100% !important;
+  max-width: 400px !important;
+  margin: 0 auto !important;
+  box-sizing: border-box !important;
+  padding: 16px !important;
+  border-radius: 12px !important;
+  background: white !important;
+  font-family: system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+/* Navigation du calendrier */
+.modern-calendar .react-calendar__navigation {
+  display: flex;
+  height: 44px;
+  margin-bottom: 20px;
+  background-color: white;
+}
+
+/* Pour faire en sorte que le texte du mois soit centré */
+.modern-calendar .react-calendar__navigation button.react-calendar__navigation__label {
+  background: none;
+  font-weight: 500;
+  font-size: 22px;
+  color: #0066ff;
+  text-transform: lowercase;
+  flex-grow: 1;
+  text-align: center;
+  cursor: pointer;
+}
+
+/* Pour ajuster la largeur des boutons de navigation */
+.modern-calendar .react-calendar__navigation button.react-calendar__navigation__arrow {
+  min-width: 44px;
+  background: none;
+  border: none;
+  color: #0066ff;
+  font-size: 20px;
+  flex-grow: 0;
+  cursor: pointer;
+}
+
+/* Hover et focus sur boutons navigation */
+.modern-calendar .react-calendar__navigation button:enabled:hover,
+.modern-calendar .react-calendar__navigation button:enabled:focus {
+  background-color: #f8f8fa;
+  border-radius: 8px;
+}
+
+/* Style des jours de la semaine */
+.modern-calendar .react-calendar__month-view__weekdays {
+  text-align: center;
+  text-transform: uppercase;
+  font-weight: 600;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.modern-calendar .react-calendar__month-view__weekdays__weekday {
+  padding: 8px;
+  color: #6c6c6c;
+}
+
+.modern-calendar .react-calendar__month-view__weekdays__weekday abbr {
+  text-decoration: none;
+  font-size: 14px;
+}
+
+/* Style des tuiles (jours) */
+.modern-calendar .react-calendar__tile {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  text-align: center;
+  line-height: 16px;
+  font-size: 14px;
+  font-weight: 400;
+  padding: 0;
+  position: relative;
+  border-radius: 8px;
+  border: none;
+  margin: 2px;
+  color: #333;
+  cursor: pointer;
+  pointer-events: auto !important; /* Force les événements de clic */
+}
+
+/* Style spécifique pour les vues année et décennie */
+.modern-calendar .react-calendar__year-view__months__month,
+.modern-calendar .react-calendar__decade-view__years__year,
+.modern-calendar .react-calendar__century-view__decades__decade {
+  border-radius: 8px !important;
+  height: 60px !important;
+  font-size: 16px !important;
+  font-weight: 500 !important;
+}
+
+/* Style du jour actif/sélectionné */
+.modern-calendar .react-calendar__tile--active,
+.modern-calendar .react-calendar__tile--active:enabled:hover,
+.modern-calendar .react-calendar__tile--active:enabled:focus {
+  background: #0066ff !important;
+  color: white !important;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+/* Style du jour actuel */
+.modern-calendar .react-calendar__tile--now {
+  background: #f0f7ff;
+  color: #0066ff;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+/* Style des jours du mois actuel */
+.modern-calendar .react-calendar__month-view__days__day {
+  font-weight: 400;
+  color: #333;
+}
+
+/* Style des jours des mois voisins */
+.modern-calendar .react-calendar__month-view__days__day--neighboringMonth {
+  color: #b0b0b0;
+}
+
+/* Style pour les jours futurs (grisés) */
+.calendar-future-date {
+  color: #d0d0d0 !important;
+  background-color: #f5f5f5 !important;
+  cursor: not-allowed !important;
+  opacity: 0.6 !important;
+}
+
+/* Bouton de confirmation */
+.calendar-confirm-button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+  padding: 0 20px;
+  background-color: #0066ff;
+  color: white;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 14px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.calendar-confirm-button:hover {
+  background-color: #0055d4;
+}
+
+/* Bouton pour choisir l'année */
+.calendar-year-button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+  padding: 0 20px;
+  background-color: #f0f7ff;
+  color: #0066ff;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 14px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.calendar-year-button:hover {
+  background-color: #e0e7ff;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .modern-calendar {
+    padding: 12px !important;
+    max-width: 100% !important;
+  }
+
+  .modern-calendar .react-calendar__tile {
+    height: 36px;
+    font-size: 13px;
+  }
+  
+  .modern-calendar .react-calendar__year-view__months__month,
+  .modern-calendar .react-calendar__decade-view__years__year,
+  .modern-calendar .react-calendar__century-view__decades__decade {
+    height: 50px !important;
+    font-size: 14px !important;
+  }
+}
+
+/* Style global conteneur du calendrier */
+.calendar-container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+/* Correction de l'alignement de la grille des jours */
+.modern-calendar .react-calendar__month-view__days {
+  display: grid !important;
+  grid-template-columns: repeat(7, 1fr);
+} 
