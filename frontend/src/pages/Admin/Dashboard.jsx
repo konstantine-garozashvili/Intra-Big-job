@@ -15,6 +15,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from 'sonner';
 import authService from '@/lib/services/authService';
+import { Checkbox } from '@/components/ui/checkbox';
+import apiService from '@/lib/services/apiService';
 
 const ROLE_COLORS = {
   'ADMIN': 'bg-blue-100 text-blue-800',
@@ -60,15 +62,26 @@ const AdminDashboard = () => {
     phoneNumber: '',
   });
   const hasAttemptedRefresh = useRef(false);
+  const [availableRoles, setAvailableRoles] = useState([]);
+  const [selectedRoles, setSelectedRoles] = useState([]);
+  const [isLoadingRoles, setIsLoadingRoles] = useState(false);
 
   // Définir les cartes pour les accès rapides
   const quickAccessCards = [
     {
       title: 'Gestion des rôles',
-      description: 'Gérer les rôles des étudiants invités',
+      description: 'Gérer les rôles des utilisateurs',
       icon: Users,
       color: 'from-blue-500 to-blue-600',
       textColor: 'text-blue-50',
+      link: '/admin/user-roles',
+    },
+    {
+      title: 'Gestion des invités',
+      description: 'Gérer les rôles des étudiants invités',
+      icon: Users,
+      color: 'from-indigo-500 to-indigo-600',
+      textColor: 'text-indigo-50',
       link: '/recruiter/guest-student-roles',
     },
     {
@@ -115,6 +128,27 @@ const AdminDashboard = () => {
     }
   );
 
+  const fetchAvailableRoles = async () => {
+    setIsLoadingRoles(true);
+    try {
+      const response = await apiService.get('/user-roles/roles');
+      if (response.success && response.data) {
+        setAvailableRoles(response.data);
+      } else {
+        toast.error('Impossible de récupérer les rôles disponibles');
+      }
+    } catch (error) {
+      console.error('Erreur lors de la récupération des rôles:', error);
+      toast.error('Échec de la récupération des rôles');
+    } finally {
+      setIsLoadingRoles(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAvailableRoles();
+  }, []);
+
   const handleEditUser = async (e) => {
     e.preventDefault();
     if (!selectedUser || !selectedUser.id) {
@@ -124,7 +158,8 @@ const AdminDashboard = () => {
 
     const userData = {
       ...editFormData,
-      id: selectedUser.id
+      id: selectedUser.id,
+      roles: selectedRoles
     };
 
     try {
@@ -163,6 +198,14 @@ const AdminDashboard = () => {
       email: user.email || '',
       phoneNumber: user.phoneNumber || '',
     });
+    
+    if (user.roles && Array.isArray(user.roles)) {
+      const roleIds = user.roles.map(role => role.id);
+      setSelectedRoles(roleIds);
+    } else {
+      setSelectedRoles([]);
+    }
+    
     setIsEditModalOpen(true);
   };
 
@@ -183,6 +226,16 @@ const AdminDashboard = () => {
       ...prev,
       [name]: value
     }));
+  };
+
+  const handleRoleChange = (roleId) => {
+    setSelectedRoles(prev => {
+      if (prev.includes(roleId)) {
+        return prev.filter(id => id !== roleId);
+      } else {
+        return [...prev, roleId];
+      }
+    });
   };
 
   const filteredUsers = users?.filter(user => {
@@ -449,6 +502,33 @@ const AdminDashboard = () => {
                   className="no-focus-outline"
                 />
               </div>
+              
+              <div>
+                <Label className="mb-2 block">Rôles</Label>
+                {isLoadingRoles ? (
+                  <div className="py-2 text-sm text-gray-500">Chargement des rôles...</div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    {availableRoles.map(role => (
+                      <div key={role.id} className="flex items-center space-x-2">
+                        <Checkbox 
+                          id={`role-${role.id}`}
+                          checked={selectedRoles.includes(role.id)}
+                          onCheckedChange={() => handleRoleChange(role.id)}
+                          className="no-focus-outline"
+                        />
+                        <Label 
+                          htmlFor={`role-${role.id}`}
+                          className="text-sm font-normal"
+                        >
+                          {role.name}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)} className="no-focus-outline">
                   Annuler
