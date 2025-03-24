@@ -1,15 +1,11 @@
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { CheckCircle } from 'lucide-react';
 
 const VerificationSuccess = () => {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-md space-y-8 rounded-xl bg-white p-10 shadow-lg"
+      <div 
+        className="w-full max-w-md space-y-8 rounded-xl bg-white p-10 shadow-lg fade-in-up"
       >
         <div className="flex flex-col items-center justify-center text-center">
           <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
@@ -30,7 +26,7 @@ const VerificationSuccess = () => {
             </Link>
           </div>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 };

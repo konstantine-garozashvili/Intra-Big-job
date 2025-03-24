@@ -8,8 +8,13 @@
  * @returns {boolean} - True si l'email est valide
  */
 export const isValidEmail = (email) => {
-  const regex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-  return regex.test(email);
+  // Regex plus robuste qui accepte :
+  // - Les caractères spéciaux dans la partie locale (avant @)
+  // - Les domaines internationaux (IDN)
+  // - Les sous-domaines multiples
+  // - Les TLD de 2 à 63 caractères
+  const regex = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,63}))$/;
+  return regex.test(String(email).toLowerCase());
 };
 
 /**
@@ -63,17 +68,40 @@ export const isValidPostalCode = (postalCode) => {
  * @returns {boolean} - True si le numéro est valide
  */
 export const isValidPhone = (phone) => {
-  // Nettoyer le numéro (enlever les espaces, tirets, etc.)
+  // Si vide ou non défini
+  if (!phone) return false;
+  
+  // Nettoyer le numéro (enlever les espaces, +, etc.)
   const cleanPhone = phone.replace(/\D/g, '');
   
-  // Vérifier qu'il s'agit de 9 chiffres (sans le +33)
-  if (cleanPhone.length !== 9) {
-    return false;
+  // Accepter les formats internationaux
+  // Format français: 10 chiffres commençant par 0, ou +33 suivi de 9 chiffres
+  // Format international: accepter les numéros de 8 à 15 chiffres
+  
+  // Cas 1: Format français standard (0X XX XX XX XX)
+  if (cleanPhone.length === 10 && cleanPhone.startsWith('0')) {
+    // Vérifier que le deuxième chiffre est entre 1-9
+    return /^0[1-9]/.test(cleanPhone);
   }
   
-  // Vérifier que le premier chiffre est correct (0, 6, 7, 9)
-  const firstDigit = parseInt(cleanPhone[0]);
-  return [0, 6, 7, 9].includes(firstDigit);
+  // Cas 2: Format international français (+33 X XX XX XX XX)
+  if ((cleanPhone.startsWith('33') && cleanPhone.length === 11) || 
+      (cleanPhone.startsWith('330') && cleanPhone.length === 12)) {
+    // Extraire le numéro sans l'indicatif
+    const withoutPrefix = cleanPhone.startsWith('330') 
+      ? cleanPhone.substring(3) 
+      : '0' + cleanPhone.substring(2);
+    
+    // Vérifier que le deuxième chiffre est entre 1-9
+    return /^0[1-9]/.test(withoutPrefix);
+  }
+  
+  // Cas 3: Autres formats internationaux (entre 8 et 15 chiffres)
+  if (cleanPhone.length >= 8 && cleanPhone.length <= 15) {
+    return true;
+  }
+  
+  return false;
 };
 
 /**
@@ -83,21 +111,29 @@ export const isValidPhone = (phone) => {
  */
 export const formatPhone = (phone) => {
   // Nettoyer le numéro (enlever les espaces, tirets, etc.)
-  const cleanPhone = phone.replace(/\D/g, '');
+  let cleanPhone = phone.replace(/\D/g, '');
   
-  // Limiter à 9 chiffres
-  const digits = cleanPhone.slice(0, 9);
+  // Si le numéro commence par 33 (indicatif français), on l'enlève
+  if (cleanPhone.startsWith('33')) {
+    cleanPhone = '0' + cleanPhone.substring(2);
+  }
   
-  // Formater avec des espaces (0X XX XX XX XX)
-  if (digits.length === 0) return '';
+  // S'assurer que le numéro commence par 0
+  if (!cleanPhone.startsWith('0') && cleanPhone.length === 9) {
+    cleanPhone = '0' + cleanPhone;
+  }
   
-  let formatted = digits[0];
+  // Limiter à 10 chiffres
+  cleanPhone = cleanPhone.slice(0, 10);
   
-  for (let i = 1; i < digits.length; i += 2) {
-    formatted += ' ';
-    formatted += digits[i];
-    if (i + 1 < digits.length) {
-      formatted += digits[i + 1];
+  // Formater avec des espaces (XX XX XX XX XX)
+  if (cleanPhone.length === 0) return '';
+  
+  let formatted = '';
+  for (let i = 0; i < cleanPhone.length; i += 2) {
+    formatted += cleanPhone.substring(i, Math.min(i+2, cleanPhone.length));
+    if (i+2 < cleanPhone.length) {
+      formatted += ' ';
     }
   }
   
@@ -126,7 +162,7 @@ export const isValidBirthDate = (date) => {
   if (!date) return false;
   
   const now = new Date();
-  const minAge = 18;
+  const minAge = 16;
   const maxAge = 120;
   
   // Calculer l'âge
@@ -141,4 +177,64 @@ export const isValidBirthDate = (date) => {
   const adjustedAge = hasBirthdayOccurred ? age : age - 1;
   
   return adjustedAge >= minAge && adjustedAge <= maxAge;
+};
+
+/**
+ * Valide un URL LinkedIn
+ * @param {string} url - URL LinkedIn à valider
+ * @returns {boolean} - True si l'URL est valide et commence par https://www.linkedin.com/in/
+ */
+export const isValidLinkedInUrl = (url) => {
+  if (!url) return false;
+  
+  try {
+    const urlObj = new URL(url);
+
+    // Vérifier que l'URL commence par https://www.linkedin.com/in/
+    if (urlObj.protocol === 'https:' && urlObj.hostname === 'www.linkedin.com' && urlObj.pathname.startsWith('/in/')) {
+      return true;
+    }
+    
+    return false;
+  } catch (e) {
+    return false;
+  }
+};
+
+
+/**
+ * Valide un URL général
+ * @param {string} url - URL à valider
+ * @returns {boolean} - True si l'URL est valide
+ */
+export const isValidUrl = (url) => {
+  if (!url) return false;
+  
+  try {
+    const urlObj = new URL(url);
+    return urlObj.protocol === 'https:';
+  } catch (e) {
+    return false;
+  }
+};
+
+/**
+ * Valide un nom ou prénom
+ * @param {string} name - Nom ou prénom à valider
+ * @returns {boolean} - True si le nom est valide
+ */
+export const isValidName = (name) => {
+  if (!name) return false;
+  
+  // Nettoyer le nom (enlever les espaces en début et fin)
+  const cleanName = name.trim();
+  
+  // Vérifier la longueur minimale
+  if (cleanName.length < 2) return false;
+  
+  // Vérifier que le nom contient uniquement des lettres, espaces, tirets et apostrophes
+  // Accepte les caractères accentués et les caractères internationaux
+  const nameRegex = /^[a-zA-ZÀ-ÿ\u00C0-\u017F\s\-']+$/;
+  
+  return nameRegex.test(cleanName);
 }; 

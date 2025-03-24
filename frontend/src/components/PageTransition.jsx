@@ -45,7 +45,8 @@ const PageTransition = memo(({ children }) => {
   );
 });
 
-// Ajout d'un nom d'affichage pour les outils de développement
+// Add display name for better debugging
 PageTransition.displayName = 'PageTransition';
 
-export default PageTransition; 
+export default PageTransition;
+

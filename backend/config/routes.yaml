@@ -26,3 +26,6 @@ api_token_devices:
     path: /api/token/devices
     methods: ['GET']
     controller: App\Controller\RefreshTokenController::listDevices
+
+document_routes:
+    resource: './routes/document.yaml'

@@ -13,7 +13,7 @@ use App\Entity\Theme;
 use App\Repository\NationalityRepository;
 use App\Repository\CityRepository;
 use App\Repository\PostalCodeRepository;
-use App\Repository\RoleRepository;
+use App\Domains\Global\Repository\RoleRepository;
 use App\Repository\ThemeRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -58,6 +58,28 @@ class RegistrationService
      */
     public function registerUser(array $data): User
     {
+        // Vérifier l'âge minimum (16 ans)
+        $birthDate = new \DateTime($data['birthDate']);
+        $now = new \DateTime();
+        $minimumAge = 16;
+        
+        // Calculer l'âge
+        $age = $birthDate->diff($now)->y;
+        
+        // Vérifier si l'anniversaire est déjà passé cette année
+        $hasBirthdayOccurred = 
+            ($now->format('m') > $birthDate->format('m')) || 
+            (($now->format('m') == $birthDate->format('m')) && ($now->format('d') >= $birthDate->format('d')));
+        
+        $adjustedAge = $hasBirthdayOccurred ? $age : $age - 1;
+        
+        // Si l'âge est inférieur à l'âge minimum, lever une exception
+        if ($adjustedAge < $minimumAge) {
+            throw new \InvalidArgumentException(json_encode([
+                'birthDate' => "Vous devez avoir au moins {$minimumAge} ans pour vous inscrire."
+            ]));
+        }
+        
         // Créer un nouvel utilisateur
         $user = new User();
         $user->setFirstName($data['firstName']);
@@ -81,7 +103,7 @@ class RegistrationService
         $defaultTheme = $this->getDefaultTheme();
         $user->setTheme($defaultTheme);
         
-        // Marquer l'email comme déjà vérifié (désactive la vérification par email)
+        // Marquer l'email comme vérifié directement (temporairement)
         $user->setIsEmailVerified(true);
         
         // Ajouter le rôle utilisateur par défaut
@@ -108,7 +130,7 @@ class RegistrationService
         // Sauvegarder en base de données
         $this->entityManager->flush();
         
-        // Ne plus envoyer l'email de vérification
+        // Commenté temporairement: Ne pas envoyer d'email de vérification
         // $this->verificationService->sendVerificationEmail($user);
         
         return $user;
@@ -190,22 +212,28 @@ class RegistrationService
      */
     private function createAddress(User $user, array $addressData): void
     {
+        // S'assurer que les données d'adresse sont correctement encodées en UTF-8
+        $cityName = mb_convert_encoding($addressData['city'], 'UTF-8', 'auto');
+        $addressName = mb_convert_encoding($addressData['name'], 'UTF-8', 'auto');
+        $complement = isset($addressData['complement']) ? mb_convert_encoding($addressData['complement'], 'UTF-8', 'auto') : null;
+        $postalCode = $addressData['postalCode'];
+
         // Récupérer ou créer la ville
-        $city = $this->getOrCreateCity($addressData['city']);
+        $city = $this->getOrCreateCity($cityName);
         
         // Récupérer ou créer le code postal
-        $postalCode = $this->getOrCreatePostalCode($addressData['postalCode'], $city);
+        $postalCode = $this->getOrCreatePostalCode($postalCode, $city);
         
         // Créer l'adresse
         $address = new Address();
-        $address->setName($addressData['name']);
+        $address->setName($addressName);
         $address->setCity($city);
         $address->setPostalCode($postalCode);
         $address->setUser($user);
         
         // Ajouter le complément d'adresse s'il existe
-        if (isset($addressData['complement']) && !empty($addressData['complement'])) {
-            $address->setComplement($addressData['complement']);
+        if ($complement) {
+            $address->setComplement($complement);
         }
         
         $this->entityManager->persist($address);

@@ -1,17 +1,26 @@
-import React, { memo, useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { authService } from '../lib/services/authService';
-import profilService from '../lib/services/profilService';
-import { Button } from './ui/button';
-import { UserRound, LayoutDashboard, LogOut, Settings, User, Bell } from 'lucide-react';
+import React, { memo, useState, useEffect, useRef } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { authService } from "../lib/services/authService";
+import userDataManager from "../lib/services/userDataManager";
+import { profileService } from "../pages/Global/Profile/services/profileService";
+import { Button } from "./ui/button";
+import {
+  UserRound,
+  LayoutDashboard,
+  LogOut,
+  Settings,
+  User,
+  Bell,
+  Search,
+  Clipboard,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
-  DropdownMenuLabel,
-} from './ui/dropdown-menu';
+} from "./ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -19,11 +28,15 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from './ui/dialog';
-import { motion, AnimatePresence } from 'framer-motion';
+} from "./ui/dialog";
+import { motion, AnimatePresence } from "framer-motion";
+import { MenuBurger } from "./MenuBurger";
+import { SearchBar } from "./SearchBar";
+import { useRolePermissions } from "../features/roles/useRolePermissions";
+import { Skeleton } from './ui/skeleton';
 
-// Style personnalisé pour le menu dropdown
-const customDropdownStyles = `
+// Style personnalisé pour le menu dropdown et le bouton burger
+const customStyles = `
   .navbar-dropdown-item {
     display: flex !important;
     align-items: center !important;
@@ -45,49 +58,331 @@ const customDropdownStyles = `
     background-color: rgba(225, 29, 72, 0.1) !important;
     color: #be123c !important;
   }
+  
+  .menu-burger-btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+    margin-right: 0.75rem;
+  }
+  
+  .menu-burger-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    transform: scale(1.05);
+  }
+  
+  .menu-burger-btn:active {
+    transform: scale(0.95);
+  }
+  
+  .search-container {
+    position: relative;
+    max-width: 400px;
+    width: 100%;
+    margin: 0 1rem;
+    isolation: isolate;
+    z-index: 90;
+  }
+  
+  .search-container input {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    color: white !important;
+  }
+  
+  .search-container input::placeholder {
+    color: rgba(255, 255, 255, 0.6) !important;
+  }
+  
+  .search-container input:focus {
+    background-color: rgba(255, 255, 255, 0.15) !important;
+    border-color: #528eb2 !important;
+    box-shadow: 0 0 0 2px rgba(82, 142, 178, 0.25) !important;
+  }
+  
+  /* Fixed navbar styles */
+  .navbar-fixed {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    width: 100%;
+    overflow-x: hidden;
+    isolation: isolate;
+  }
+  
+  @media (max-width: 1024px) {
+    .search-container {
+      max-width: 300px;
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .menu-burger-btn {
+      margin-right: 0.5rem;
+    }
+    
+    .mobile-auth-buttons {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .mobile-auth-buttons a {
+      font-size: 0.875rem;
+      padding: 0.5rem 0.75rem;
+    }
+    
+    .search-container {
+      display: none;
+    }
+  }
 `;
+
+// Composant pour les boutons d'authentification
+const AuthButtons = () => (
+  <>
+    <Link
+      to="/login"
+      className="px-4 py-2 text-gray-200 transition-colors rounded-md hover:text-white"
+    >
+      Connexion
+    </Link>
+    <Link
+      to="/register"
+      className="ml-2 px-4 py-2 bg-[#528eb2] rounded-md text-white font-medium hover:bg-[#528eb2]/90 transition-all transform hover:scale-105"
+    >
+      Inscription
+    </Link>
+  </>
+);
+
+// Composant pour le menu utilisateur
+const UserMenu = ({ onLogout, userData, setLogoutDialogOpen }) => {
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const navigate = useNavigate();
+  const dropdownMenuRef = useRef(null);
+
+  // Style personnalisé pour le menu dropdown
+  const dropdownMenuStyles = {
+    enter: {
+      opacity: 0,
+      y: -10,
+      scale: 0.95,
+      transition: { duration: 0.2, ease: "easeOut" },
+    },
+    visible: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: { duration: 0.2, ease: "easeOut" },
+    },
+    exit: {
+      opacity: 0,
+      y: -10,
+      scale: 0.95,
+      transition: { duration: 0.1, ease: "easeIn" },
+    },
+  };
+
+  return (
+    <div className="flex items-center">
+      {/* Notification icon (placeholder) */}
+      <Button
+        variant="ghost"
+        className="rounded-full w-10 h-10 p-0 bg-transparent text-gray-200 hover:bg-[#02284f]/80 hover:text-white mr-2"
+      >
+        <Bell className="h-5 w-5" />
+      </Button>
+
+      {/* Dropdown menu */}
+      <DropdownMenu modal={true}>
+        <DropdownMenuTrigger asChild>
+          <Button 
+            variant="outline" 
+            className={`rounded-full w-10 h-10 p-0 ${dropdownOpen ? 'bg-[#528eb2]/20 border-[#528eb2]' : 'bg-transparent border-gray-500'} hover:bg-[#02284f]/80 hover:text-white hover:border-gray-400 transition-all duration-300`}
+          >
+            <UserRound className={`h-5 w-5 ${dropdownOpen ? 'text-white' : 'text-gray-200'}`} />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent 
+          align="end" 
+          className="w-64 mt-2 p-0 overflow-hidden border border-gray-100 shadow-xl rounded-xl"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          sideOffset={5}
+          ref={dropdownMenuRef}
+        >
+          {/* En-tête du dropdown avec avatar et nom */}
+          <div className="bg-gradient-to-r from-[#02284f] to-[#03386b] p-4 text-white">
+            <div className="flex items-center">
+              <div className="bg-white/20 rounded-full p-2.5">
+                <UserRound className="h-6 w-6" />
+              </div>
+              <div className="ml-3">
+                <h3 className="font-medium text-sm">
+                  {userData?.firstName && userData?.lastName 
+                    ? `${userData.firstName} ${userData.lastName}`
+                    : userData?.user?.firstName && userData?.user?.lastName
+                      ? `${userData.user.firstName} ${userData.user.lastName}`
+                      : 'Utilisateur'}
+                </h3>
+                <p className="text-xs text-gray-300">
+                  {userData?.email || userData?.user?.email || 'utilisateur@example.com'}
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          {/* Corps du dropdown avec les options */}
+          <div className="py-1 bg-white">
+            <DropdownMenuItem 
+              className="navbar-dropdown-item"
+              onClick={() => navigate('/profile')}
+            >
+              <User className="mr-2 h-4 w-4 text-[#528eb2]" />
+              <span>Mon profil</span>
+            </DropdownMenuItem>
+            
+            <DropdownMenuItem 
+              className="navbar-dropdown-item"
+              onClick={() => navigate('/settings/profile')}
+            >
+              <Settings className="mr-2 h-4 w-4 text-[#528eb2]" />
+              <span>Paramètres</span>
+            </DropdownMenuItem>
+            
+            <DropdownMenuSeparator className="my-1 bg-gray-100" />
+            
+            <DropdownMenuItem 
+              className="navbar-dropdown-item danger"
+              onClick={() => setLogoutDialogOpen(true)}
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Déconnexion</span>
+            </DropdownMenuItem>
+          </div>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+};
 
 // Utilisation de React.memo pour éviter les rendus inutiles de la barre de navigation
 const Navbar = memo(() => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [userData, setUserData] = useState(null);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const permissions = useRolePermissions();
   const navigate = useNavigate();
   const location = useLocation();
+  const [isLoading, setIsLoading] = useState(true);
 
   // Vérifier l'état d'authentification
   const checkAuthStatus = async () => {
     try {
       const status = authService.isLoggedIn();
+      const wasAuthenticated = isAuthenticated;
       setIsAuthenticated(status);
-      
+
       // Si l'utilisateur est connecté, charger ses données
       if (status) {
         try {
-          const profilData = await profilService.getAllProfilData();
-          // Vérifions la structure des données et adaptons l'accès en fonction
-          if (profilData && profilData.user) {
-            setUserData(profilData.user);
-          } else if (profilData && profilData.data && profilData.data.user) {
-            // Alternative si la structure est différente
-            setUserData(profilData.data.user);
+          // Utiliser le cache si disponible pour éviter les appels API en doublon
+          const cachedUserData = userDataManager.getCachedUserData();
+          
+          if (cachedUserData) {
+            // Utiliser les données en cache d'abord
+            setUserData(cachedUserData);
+            setIsLoading(false);
+            
+            // Déclencher un événement de changement de rôle si l'état d'authentification a changé
+            if (!wasAuthenticated) {
+              window.dispatchEvent(new Event("role-change"));
+            }
+            
+            // Vérifier si une mise à jour est nécessaire (données plus vieilles que 2 min)
+            const stats = userDataManager.getStats();
+            const dataAge = stats.dataAge || Infinity;
+            
+            if (dataAge > 2 * 60 * 1000) {
+              // Récupérer les données en arrière-plan sans bloquer l'interface
+              userDataManager.getUserData({
+                routeKey: '/api/me',
+                forceRefresh: false,
+                background: true,
+                requestId: 'navbar_background_refresh'
+              }).then(freshData => {
+                if (freshData && JSON.stringify(freshData) !== JSON.stringify(cachedUserData)) {
+                  setUserData(freshData);
+                }
+              }).catch(e => {
+                console.warn('Erreur lors du rafraîchissement des données utilisateur:', e);
+              });
+            }
           } else {
-            // Fallback: essayons de récupérer directement les données utilisateur
-            const userData = await profilService.getUserData();
+            // Si le cache est vide, nettoyer le cache avant de recharger les données utilisateur
+            if (!wasAuthenticated) {
+              const queryClient = window.queryClient || authService.getQueryClient();
+              if (queryClient) {
+                queryClient.invalidateQueries({ queryKey: ['user'] });
+                queryClient.invalidateQueries({ queryKey: ['profile'] });
+              }
+            }
+            
+            // Faire un appel API uniquement si nécessaire
+            // Ajouter un identifiant unique pour la requête
+            const userData = await authService.getCurrentUser(false, { requestSource: 'navbar' });
             setUserData(userData);
+            setIsLoading(false);
+
+            // Déclencher un événement de changement de rôle si l'état d'authentification a changé
+            if (!wasAuthenticated) {
+              window.dispatchEvent(new Event("role-change"));
+            }
           }
-        } catch (profileError) {
-          console.error('Erreur lors de la récupération des données du profil:', profileError);
+        } catch (userError) {
+          console.warn('Erreur lors de la récupération des données utilisateur:', userError);
+          // Fallback: essayer de récupérer les données du profil
+          try {
+            const profileData = await profileService.getAllProfileData();
+
+            if (profileData?.user) {
+              setUserData(profileData.user);
+            } else if (profileData?.data?.user) {
+              setUserData(profileData.data.user);
+            } else {
+              setUserData(profileData);
+            }
+            setIsLoading(false);
+
+            // Déclencher un événement de changement de rôle si l'état d'authentification a changé
+            if (!wasAuthenticated) {
+              window.dispatchEvent(new Event("role-change"));
+            }
+          } catch (profileError) {
+            // Gestion silencieuse de l'erreur
+            setIsLoading(false);
+          }
         }
       } else {
         setUserData(null);
+        setIsLoading(false);
+
+        // Déclencher un événement de changement de rôle si l'état d'authentification a changé
+        if (wasAuthenticated) {
+          window.dispatchEvent(new Event("role-change"));
+        }
       }
     } catch (error) {
-      console.error('Erreur lors de la vérification du statut d\'authentification:', error);
-      setIsAuthenticated(false);
-      setUserData(null);
+      console.error('Erreur lors de la vérification de l\'authentification:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -96,236 +391,156 @@ const Navbar = memo(() => {
     checkAuthStatus();
   }, [location.pathname]);
 
-  // Ajouter un écouteur d'événement pour les changements d'authentification
+  // Ajouter un écouteur pour l'événement de connexion réussie
   useEffect(() => {
-    // Fonction pour gérer l'événement de connexion
-    const handleAuthChange = () => {
+    const handleLoginSuccess = () => {
+      // Forcer un re-chargement des données utilisateur
       checkAuthStatus();
     };
-
-    // Ajouter des écouteurs d'événements personnalisés
-    window.addEventListener('login-success', handleAuthChange);
-    window.addEventListener('logout-success', handleAuthChange);
     
-    // Nettoyage lors du démontage du composant
+    window.addEventListener('login-success', handleLoginSuccess);
+    
     return () => {
-      window.removeEventListener('login-success', handleAuthChange);
-      window.removeEventListener('logout-success', handleAuthChange);
+      window.removeEventListener('login-success', handleLoginSuccess);
     };
   }, []);
 
   // Fonction de déconnexion
   const handleLogout = async () => {
     try {
-      setIsLoggingOut(true);
-      
-      await authService.logout();
-      
-      // Déclencher un événement personnalisé pour informer la navbar de la déconnexion
-      window.dispatchEvent(new Event('logout-success'));
-      
+      // Close the logout dialog
       setLogoutDialogOpen(false);
-      setIsAuthenticated(false);
-      navigate('/login');
+      
+      // Prevent duplicate logout attempts
+      if (window.__isLoggingOut) return;
+      
+      // Déclencher un événement de pré-déconnexion pour préparer l'interface
+      window.dispatchEvent(new Event('logout-start'));
+      
+      // Call the logout service directly - no need for timeout
+      authService.logout('/login');
     } catch (error) {
       console.error('Erreur lors de la déconnexion:', error);
-      setIsLoggingOut(false);
-    }
-  };
-
-  // Style personnalisé pour le menu dropdown
-  const dropdownMenuStyles = {
-    enter: {
-      opacity: 0,
-      y: -10,
-      scale: 0.95,
-      transition: { duration: 0.2, ease: "easeOut" }
-    },
-    visible: {
-      opacity: 1,
-      y: 0,
-      scale: 1,
-      transition: { duration: 0.2, ease: "easeOut" }
-    },
-    exit: {
-      opacity: 0,
-      y: -10,
-      scale: 0.95,
-      transition: { duration: 0.1, ease: "easeIn" }
+      
+      // En cas d'erreur, forcer une déconnexion propre
+      authService.clearAuthData(true, 'Une erreur est survenue lors de la déconnexion.');
     }
   };
 
   return (
     <>
       {/* Injection des styles personnalisés */}
-      <style>{customDropdownStyles}</style>
-      
-      <nav className="bg-[#02284f] shadow-lg">
-        <div className="container px-4 mx-auto">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex-shrink-0">
-              <Link to={isAuthenticated ? "/dashboard" : "/login"} className="text-2xl font-black tracking-tight text-white">
-                Big<span className="text-[#528eb2]">Project</span>
-              </Link>
-            </div>
+      <style>{customStyles}</style>
 
-            <div className="hidden md:block">
-              <div className="flex items-center ml-10 space-x-1">
-                
-                {/* Élements affichés uniquement pour les utilisateurs connectés */}
-                {isAuthenticated && (
-                  <>
-                    <Link 
-                      to="/dashboard" 
-                      className="px-3 py-2 rounded-md text-gray-200 hover:text-white hover:bg-[#02284f]/80 transition-colors flex items-center"
-                    >
-                      <LayoutDashboard className="h-4 w-4 mr-2" />
-                      Tableau de bord
-                    </Link>
-                    {authService.hasRole('ROLE_TEACHER') && (
-                      <Link 
-                        to="/formations" 
-                        className="px-3 py-2 rounded-md text-gray-200 hover:text-white hover:bg-[#02284f]/80 transition-colors flex items-center"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
-                        </svg>
-                        Formations
-                      </Link>
-                    )}
-                  </>
-                )}
+      <header className="navbar-fixed bg-[#02284f] shadow-lg">
+        <nav className="bg-[#02284f] w-full">
+          <div className="container px-4 mx-auto">
+            <div className="flex items-center justify-between h-16">
+              {/* Partie gauche: Logo et burger menu */}
+              <div className="flex items-center">
+                <div className="menu-burger-wrapper">
+                  <MenuBurger />
+                </div>
+                <div className="flex-shrink-0">
+                  <Link
+                    to={
+                      isAuthenticated
+                        ? permissions.getRoleDashboardPath()
+                        : "/login"
+                    }
+                    className="text-2xl font-black tracking-tight text-white"
+                  >
+                    Big<span className="text-[#528eb2]">Project</span>
+                  </Link>
+                </div>
               </div>
-            </div>
 
-            <div className="hidden md:block">
-              <div className="flex items-center ml-4">
-                {isAuthenticated ? (
-                  <div className="flex items-center">
-                    {/* Notification icon (placeholder) */}
-                    <Button 
-                      variant="ghost" 
-                      className="rounded-full w-10 h-10 p-0 bg-transparent text-gray-200 hover:bg-[#02284f]/80 hover:text-white mr-2"
-                    >
-                      <Bell className="h-5 w-5" />
-                    </Button>
-                    
-                    {/* Dropdown menu */}
-                    <DropdownMenu onOpenChange={setDropdownOpen}>
-                      <DropdownMenuTrigger asChild>
-                        <Button 
-                          variant="outline" 
-                          className={`rounded-full w-10 h-10 p-0 ${dropdownOpen ? 'bg-[#528eb2]/20 border-[#528eb2]' : 'bg-transparent border-gray-500'} hover:bg-[#02284f]/80 hover:text-white hover:border-gray-400 transition-all duration-300`}
-                        >
-                          <UserRound className={`h-5 w-5 ${dropdownOpen ? 'text-white' : 'text-gray-200'}`} />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <AnimatePresence>
-                        {dropdownOpen && (
-                          <DropdownMenuContent 
-                            align="end" 
-                            className="w-64 mt-2 p-0 overflow-hidden border border-gray-100 shadow-xl rounded-xl"
-                            asChild
-                            forceMount
-                          >
-                            <motion.div
-                              initial="enter"
-                              animate="visible"
-                              exit="exit"
-                              variants={dropdownMenuStyles}
-                            >
-                              {/* En-tête du dropdown avec avatar et nom */}
-                              <div className="bg-gradient-to-r from-[#02284f] to-[#03386b] p-4 text-white">
-                                <div className="flex items-center">
-                                  <div className="bg-white/20 rounded-full p-2.5">
-                                    <UserRound className="h-6 w-6" />
-                                  </div>
-                                  <div className="ml-3">
-                                    <h3 className="font-medium text-sm">{userData ? `${userData.firstName} ${userData.lastName}` : 'Utilisateur'}</h3>
-                                    <p className="text-xs text-gray-300">{userData ? userData.email : 'utilisateur@example.com'}</p>
-                                  </div>
-                                </div>
-                              </div>
-                              
-                              {/* Corps du dropdown avec les options */}
-                              <div className="py-1 bg-white">
-                                <DropdownMenuItem 
-                                  className="flex items-center p-3" 
-                                  onClick={() => navigate('/profil')}
-                                >
-                                  <User className="mr-2 h-4 w-4 text-[#528eb2]" />
-                                  <span>Mon profil</span>
-                                </DropdownMenuItem>
-                                
-                                <DropdownMenuItem 
-                                  className="flex items-center p-3"
-                                >
-                                  <Settings className="mr-2 h-4 w-4 text-[#528eb2]" />
-                                  <span>Paramètres</span>
-                                </DropdownMenuItem>
-                                
-                                <DropdownMenuSeparator className="my-1 bg-gray-100" />
-                                
-                                <DropdownMenuItem 
-                                  className="flex items-center p-3 text-red-600"
-                                  onClick={() => setLogoutDialogOpen(true)}
-                                >
-                                  <LogOut className="mr-2 h-4 w-4" />
-                                  <span>Déconnexion</span>
-                                </DropdownMenuItem>
-                              </div>
-                            </motion.div>
-                          </DropdownMenuContent>
-                        )}
-                      </AnimatePresence>
-                    </DropdownMenu>
+              {/* Partie centrale: Barre de recherche */}
+              {isAuthenticated && (
+                <div className="hidden md:flex flex-1 justify-center mx-4">
+                  <div className="search-container w-full max-w-md flex justify-end">
+                    <SearchBar />
                   </div>
+                </div>
+              )}
+
+              {/* Partie droite: Authentification */}
+              <div className="flex items-center">
+                {/* Attendance button based on role */}
+                {isAuthenticated && (permissions.isStudent() || permissions.isTeacher()) && (
+                  <Link 
+                    to={permissions.isTeacher() ? "/teacher/attendance" : "/student/attendance"}
+                    className="mr-4 px-3 py-2 rounded-md bg-green-700 text-white font-medium hover:bg-green-800 transition-colors flex items-center gap-2"
+                  >
+                    <Clipboard className="w-4 h-4" />
+                    Présence
+                  </Link>
+                )}
+
+                {/* Barre de recherche mobile */}
+                {isAuthenticated && (
+                  <div className="md:hidden mr-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="rounded-full w-10 h-10 p-0 bg-transparent text-gray-200 hover:bg-[#02284f]/80 hover:text-white"
+                      onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
+                    >
+                      <Search className="h-5 w-5" />
+                    </Button>
+                  </div>
+                )}
+                
+                {/* Menu utilisateur */}
+                {isLoading ? (
+                  <div className="flex items-center space-x-3">
+                    <Skeleton className="h-8 w-24 rounded-md" />
+                    <Skeleton className="h-10 w-10 rounded-full" />
+                  </div>
+                ) : isAuthenticated ? (
+                  <UserMenu
+                    onLogout={() => setLogoutDialogOpen(true)}
+                    userData={userData}
+                    setLogoutDialogOpen={setLogoutDialogOpen}
+                  />
                 ) : (
-                  <>
-                    <Link to="/login" className="px-4 py-2 text-gray-200 transition-colors rounded-md hover:text-white">
-                      Connexion
-                    </Link>
-                    <Link to="/register" className="ml-2 px-4 py-2 bg-[#528eb2] rounded-md text-white font-medium hover:bg-[#528eb2]/90 transition-all transform hover:scale-105">
-                      Inscription
-                    </Link>
-                  </>
+                  <div className="mobile-auth-buttons">
+                    <AuthButtons />
+                  </div>
                 )}
               </div>
             </div>
 
-            <div className="md:hidden">
-              <button className="text-gray-200 hover:text-white focus:outline-none">
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-            </div>
+            {/* Barre de recherche mobile */}
+            {isAuthenticated && mobileSearchOpen && (
+              <div className="md:hidden px-4 pb-4">
+                <SearchBar />
+              </div>
+            )}
           </div>
-        </div>
 
-        {/* Dialogue de confirmation de déconnexion */}
-        <AnimatePresence>
+          {/* Dialogue de confirmation de déconnexion */}
           {logoutDialogOpen && (
-            <Dialog open={logoutDialogOpen} onOpenChange={(open) => !isLoggingOut && setLogoutDialogOpen(open)}>
+            <Dialog
+              open={logoutDialogOpen}
+              onOpenChange={(open) => setLogoutDialogOpen(open)}
+            >
               <DialogContent className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-hidden rounded-2xl border-0 shadow-xl">
-                <motion.div
-                  className="overflow-y-auto max-h-[70vh]"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                >
+                <div className="overflow-y-auto max-h-[70vh] fade-in-up">
                   <DialogHeader>
-                    <DialogTitle className="text-xl font-semibold">Confirmation de déconnexion</DialogTitle>
+                    <DialogTitle className="text-xl font-semibold">
+                      Confirmation de déconnexion
+                    </DialogTitle>
                     <DialogDescription className="text-base mt-2">
-                      Êtes-vous sûr de vouloir vous déconnecter de votre compte ? Toutes vos sessions actives seront fermées.
+                      Êtes-vous sûr de vouloir vous déconnecter de votre compte ?
+                      Toutes vos sessions actives seront fermées.
                     </DialogDescription>
                   </DialogHeader>
-                </motion.div>
+                </div>
                 <DialogFooter className="mt-6 flex justify-end space-x-2">
                   <Button
                     variant="outline"
                     onClick={() => setLogoutDialogOpen(false)}
-                    disabled={isLoggingOut}
                     className="rounded-full border-2 hover:bg-gray-100 transition-all duration-200"
                   >
                     Annuler
@@ -333,41 +548,21 @@ const Navbar = memo(() => {
                   <Button
                     variant="destructive"
                     onClick={handleLogout}
-                    disabled={isLoggingOut}
-                    className={`rounded-full bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 transition-all duration-200 ${isLoggingOut ? 'opacity-80' : ''}`}
+                    className="rounded-full bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 transition-all duration-200"
                   >
-                    {isLoggingOut ? (
-                      <>
-                        <motion.div
-                          animate={{ rotate: 360 }}
-                          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                          className="mr-2 h-4 w-4"
-                        >
-                          <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                        </motion.div>
-                        Déconnexion en cours...
-                      </>
-                    ) : (
-                      <>
-                        <LogOut className="mr-2 h-4 w-4" />
-                        Se déconnecter
-                      </>
-                    )}
+                    Se déconnecter
                   </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
           )}
-        </AnimatePresence>
-      </nav>
+        </nav>
+      </header>
     </>
   );
 });
 
 // Ajout d'un nom d'affichage pour les outils de développement
-Navbar.displayName = 'Navbar';
+Navbar.displayName = "Navbar";
 
 export default Navbar;

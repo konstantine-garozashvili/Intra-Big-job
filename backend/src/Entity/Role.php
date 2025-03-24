@@ -2,17 +2,17 @@
 
 namespace App\Entity;
 
-use App\Repository\RoleRepository;
+use App\Domains\Global\Repository\RoleRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: RoleRepository::class)]
-#[ORM\Table(name: '`role`')]
 class Role
 {
     #[ORM\Id]
+    #[ORM\GeneratedValue]
     #[ORM\Column]
     #[Groups(['role:read', 'user:read'])]
     private ?int $id = null;
@@ -97,4 +97,4 @@ class Role
 
         return $this;
     }
-}
+} 

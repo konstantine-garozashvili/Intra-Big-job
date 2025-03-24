@@ -13,6 +13,8 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use App\Entity\Nationality;
 use App\Entity\Theme;
 use App\Entity\Role;
+use App\Domains\Student\Entity\StudentProfile;
+use App\Entity\UserSituationType;
 
 class UserFixtures extends Fixture implements DependentFixtureInterface
 {
@@ -25,177 +27,84 @@ class UserFixtures extends Fixture implements DependentFixtureInterface
 
     public function load(ObjectManager $manager): void
     {
-        // Définition des données utilisateurs pour chaque rôle
-        $usersData = [
-            // Administrateurs
-            [
-                'firstName' => 'Admin',
-                'lastName' => 'User',
-                'email' => 'admin@bigproject.com',
-                'roleName' => RoleFixtures::ROLE_ADMIN,
-                'birthDate' => '1990-01-01',
-                'phoneNumber' => '0123456789',
+        // Création des utilisateurs pour chaque rôle
+        $users = [
+            RoleFixtures::ROLE_SUPERADMIN => [
+                'firstName' => 'Alexandre',
+                'lastName' => 'Dupont',
+                'email' => 'superadmin@bigproject.com',
+                'birthDate' => '1985-01-01',
+                'phoneNumber' => '0600000001'
             ],
-            [
+            RoleFixtures::ROLE_ADMIN => [
                 'firstName' => 'Sophie',
                 'lastName' => 'Martin',
-                'email' => 'sophie.martin@bigproject.com',
-                'roleName' => RoleFixtures::ROLE_ADMIN,
-                'birthDate' => '1988-05-15',
-                'phoneNumber' => '0623456789',
+                'email' => 'admin@bigproject.com',
+                'birthDate' => '1988-02-15',
+                'phoneNumber' => '0600000002'
             ],
-            
-            // Super Administrateurs
-            [
-                'firstName' => 'Superadmin',
-                'lastName' => 'User',
-                'email' => 'superadmin@bigproject.com',
-                'roleName' => RoleFixtures::ROLE_SUPERADMIN,
-                'birthDate' => '1985-03-20',
-                'phoneNumber' => '0723456789',
-            ],
-            [
-                'firstName' => 'Pierre',
-                'lastName' => 'Dupont',
-                'email' => 'pierre.dupont@bigproject.com',
-                'roleName' => RoleFixtures::ROLE_SUPERADMIN,
-                'birthDate' => '1983-07-12',
-                'phoneNumber' => '0623456780',
-            ],
-            
-            // Ressources Humaines
-            [
-                'firstName' => 'HR',
-                'lastName' => 'User',
+            RoleFixtures::ROLE_HR => [
+                'firstName' => 'Camille',
+                'lastName' => 'Bernard',
                 'email' => 'hr@bigproject.com',
-                'roleName' => RoleFixtures::ROLE_HR,
-                'birthDate' => '1985-11-30',
-                'phoneNumber' => '0623456781',
+                'birthDate' => '1990-03-20',
+                'phoneNumber' => '0600000003'
             ],
-            [
-                'firstName' => 'Emma',
-                'lastName' => 'Dubois',
-                'email' => 'emma.dubois@bigproject.com',
-                'roleName' => RoleFixtures::ROLE_HR,
-                'birthDate' => '1987-09-25',
-                'phoneNumber' => '0623456782',
-            ],
-            
-            // Professeurs
-            [
-                'firstName' => 'Teacher',
-                'lastName' => 'User',
-                'email' => 'teacher@bigproject.com',
-                'roleName' => RoleFixtures::ROLE_TEACHER,
-                'birthDate' => '1980-06-15',
-                'phoneNumber' => '0623456783',
-            ],
-            [
+            RoleFixtures::ROLE_TEACHER => [
                 'firstName' => 'Thomas',
                 'lastName' => 'Petit',
-                'email' => 'thomas.petit@bigproject.com',
-                'roleName' => RoleFixtures::ROLE_TEACHER,
-                'birthDate' => '1983-04-18',
-                'phoneNumber' => '0623456784',
+                'email' => 'teacher@bigproject.com',
+                'birthDate' => '1982-04-10',
+                'phoneNumber' => '0600000004'
             ],
-            [
-                'firstName' => 'Marie',
-                'lastName' => 'Robert',
-                'email' => 'marie.robert@bigproject.com',
-                'roleName' => RoleFixtures::ROLE_TEACHER,
-                'birthDate' => '1982-08-22',
-                'phoneNumber' => '0623456785',
-            ],
-            
-            // Étudiants
-            [
-                'firstName' => 'Student',
-                'lastName' => 'User',
+            RoleFixtures::ROLE_STUDENT => [
+                'firstName' => 'Emma',
+                'lastName' => 'Dubois',
                 'email' => 'student@bigproject.com',
-                'roleName' => RoleFixtures::ROLE_STUDENT,
-                'birthDate' => '2000-02-10',
-                'phoneNumber' => '0623456786',
+                'birthDate' => '2000-05-25',
+                'phoneNumber' => '0600000005'
             ],
-            [
-                'firstName' => 'Léa',
+            RoleFixtures::ROLE_RECRUITER => [
+                'firstName' => 'Lucas',
                 'lastName' => 'Moreau',
-                'email' => 'lea.moreau@bigproject.com',
-                'roleName' => RoleFixtures::ROLE_STUDENT,
-                'birthDate' => '2001-05-20',
-                'phoneNumber' => '0623456787',
+                'email' => 'recruiter@bigproject.com',
+                'birthDate' => '1992-06-15',
+                'phoneNumber' => '0600000006'
             ],
-            [
-                'firstName' => 'Hugo',
-                'lastName' => 'Roux',
-                'email' => 'hugo.roux@bigproject.com',
-                'roleName' => RoleFixtures::ROLE_STUDENT,
-                'birthDate' => '2000-11-15',
-                'phoneNumber' => '0623456788',
-            ],
-            [
-                'firstName' => 'Chloé',
-                'lastName' => 'Simon',
-                'email' => 'chloe.simon@bigproject.com',
-                'roleName' => RoleFixtures::ROLE_STUDENT,
-                'birthDate' => '2002-03-30',
-                'phoneNumber' => '0623456789',
-            ],
-            
-            // Invités
-            [
-                'firstName' => 'Guest',
-                'lastName' => 'User',
+            RoleFixtures::ROLE_GUEST => [
+                'firstName' => 'Marie',
+                'lastName' => 'Lambert',
                 'email' => 'guest@bigproject.com',
-                'roleName' => RoleFixtures::ROLE_GUEST,
-                'birthDate' => '1995-12-05',
-                'phoneNumber' => '0623456790',
-            ],
-            [
-                'firstName' => 'Julie',
-                'lastName' => 'Laurent',
-                'email' => 'julie.laurent@bigproject.com',
-                'roleName' => RoleFixtures::ROLE_GUEST,
-                'birthDate' => '1993-10-08',
-                'phoneNumber' => '0623456791',
-            ],
+                'birthDate' => '1995-07-30',
+                'phoneNumber' => '0600000007'
+            ]
         ];
 
-        // Mot de passe commun pour tous les utilisateurs
-        $plainPassword = 'Password123@';
-
-        // Nationalité française par défaut pour tous les utilisateurs
-        $frenchNationality = $this->getReference(NationalityFixtures::NATIONALITY_FRENCH, Nationality::class);
-        
-        // Thème light par défaut pour tous les utilisateurs
-        $lightTheme = $this->getReference(ThemeFixtures::THEME_LIGHT, Theme::class);
-
-        // Création des utilisateurs
-        foreach ($usersData as $userData) {
+        foreach ($users as $roleReference => $userData) {
             $user = new User();
+            $user->setEmail($userData['email']);
+            $user->setPassword($this->passwordHasher->hashPassword($user, 'Password123@'));
             $user->setFirstName($userData['firstName']);
             $user->setLastName($userData['lastName']);
-            $user->setEmail($userData['email']);
             $user->setBirthDate(new DateTime($userData['birthDate']));
             $user->setPhoneNumber($userData['phoneNumber']);
-            $user->setNationality($frenchNationality);
-            $user->setTheme($lightTheme);
+            $user->setNationality($this->getReference(NationalityFixtures::NATIONALITY_FRENCH, Nationality::class));
+            $user->setTheme($this->getReference(ThemeFixtures::THEME_LIGHT, Theme::class));
             $user->setIsEmailVerified(true);
-            $user->setCreatedAt(new DateTimeImmutable());
-
-            // Hachage du mot de passe
-            $hashedPassword = $this->passwordHasher->hashPassword(
-                $user,
-                $plainPassword
-            );
-            $user->setPassword($hashedPassword);
-
             $manager->persist($user);
 
-            // Création de l'association UserRole
             $userRole = new UserRole();
             $userRole->setUser($user);
-            $userRole->setRole($this->getReference($userData['roleName'], Role::class));
+            $userRole->setRole($this->getReference($roleReference, Role::class));
             $manager->persist($userRole);
+
+            // Créer un profil étudiant si c'est un étudiant
+            if ($roleReference === RoleFixtures::ROLE_STUDENT) {
+                $studentProfile = new StudentProfile();
+                $studentProfile->setUser($user);
+                $studentProfile->setSituationType($this->getReference(UserSituationTypeFixtures::SITUATION_INITIAL, UserSituationType::class));
+                $manager->persist($studentProfile);
+            }
         }
 
         $manager->flush();
@@ -207,6 +116,7 @@ class UserFixtures extends Fixture implements DependentFixtureInterface
             RoleFixtures::class,
             ThemeFixtures::class,
             NationalityFixtures::class,
+            UserSituationTypeFixtures::class,
         ];
     }
 } 

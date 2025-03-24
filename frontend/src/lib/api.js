@@ -1,4 +1,7 @@
-import apiService from './services/apiService';
+import { addressApiInstance } from './axios';
+
+// Configuration de l'API Adresse du gouvernement français
+const API_ADRESSE_URL = 'https://api-adresse.data.gouv.fr';
 
 /**
  * Service pour l'API Adresse du gouvernement français
@@ -11,50 +14,62 @@ export const adresseApi = {
    * @returns {Promise} - Promesse contenant les résultats de la recherche
    */
   searchAddress: async (query, limit = 5) => {
+    // Ne pas faire de requête si la requête est trop courte
     if (!query || query.length < 3) return [];
     
-    console.log("Recherche d'adresse pour:", query);
+    // Filtres améliorés pour éviter les requêtes problématiques
+    const trimmedQuery = query.trim();
+    
+    // Cas spécial: si c'est un code postal complet (5 chiffres), on l'accepte
+    const isFullPostalCode = /^\d{5}$/.test(trimmedQuery);
+    
+    // Cas problématiques à filtrer:
+    // 1. Code postal partiel
+    // 2. Requête trop courte avec un seul mot
+    if (!isFullPostalCode) {
+      if (/^\d+$/.test(trimmedQuery) && trimmedQuery.length < 5) {
+        return [];
+      }
+      if (trimmedQuery.split(/\s+/).length === 1 && trimmedQuery.length < 4) {
+        return [];
+      }
+    }
     
     try {
-      // Utiliser directement l'API avec CORS-Anywhere
-      const url = `https://api-adresse.data.gouv.fr/search?q=${encodeURIComponent(query)}&limit=${limit}&type=housenumber&autocomplete=1`;
-      console.log("URL de l'API:", url);
+      // Paramètres optimisés selon la documentation officielle
+      const params = {
+        q: trimmedQuery,
+        limit: limit,
+        // Paramètres qui aident à améliorer la qualité des résultats
+        autocomplete: 1
+      };
       
-      // Créer une requête avec fetch pour éviter les problèmes CORS
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-        },
-        mode: 'cors', // Mode CORS explicite
+      const response = await axios.get(`${API_ADRESSE_URL}/search`, { params });
+      
+      if (!response.data || !response.data.features || response.data.features.length === 0) {
+        return [];
+      }
+      
+      // Transformer les résultats en format utilisable
+      return response.data.features.map(feature => {
+        const properties = feature.properties || {};
+        return {
+          id: properties.id || `temp-${Math.random()}`,
+          label: properties.label || '',
+          houseNumber: properties.housenumber || '',
+          street: properties.street || '',
+          postcode: properties.postcode || '',
+          city: properties.city || '',
+          context: properties.context || '',
+          coordinates: feature.geometry?.coordinates || [0, 0],
+          score: properties.score || 0
+        };
       });
-      
-      if (!response.ok) {
-        console.error('Erreur HTTP:', response.status);
-        return [];
-      }
-      
-      const data = await response.json();
-      console.log("Résultats reçus:", data);
-      
-      if (!data.features || !Array.isArray(data.features)) {
-        console.error('Format de réponse inattendu:', data);
-        return [];
-      }
-      
-      return data.features.map(feature => ({
-        id: feature.properties.id,
-        label: feature.properties.label,
-        houseNumber: feature.properties.housenumber || '',
-        street: feature.properties.street || '',
-        postcode: feature.properties.postcode || '',
-        city: feature.properties.city || '',
-        context: feature.properties.context || '',
-        coordinates: feature.geometry.coordinates,
-        score: feature.properties.score
-      }));
     } catch (error) {
-      console.error('Erreur lors de la recherche d\'adresse:', error);
+      // Gestion silencieuse des erreurs en production
+      if (import.meta.env.DEV) {
+        console.error('Erreur lors de la recherche d\'adresse:', error);
+      }
       return [];
     }
   },
@@ -67,29 +82,18 @@ export const adresseApi = {
    */
   reverseGeocode: async (lon, lat) => {
     try {
-      // Utiliser directement l'API avec fetch
-      const url = `https://api-adresse.data.gouv.fr/reverse?lon=${lon}&lat=${lat}`;
-      
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-        },
-        mode: 'cors', // Mode CORS explicite
+      const response = await addressApiInstance.get('/reverse', {
+        params: {
+          lon,
+          lat
+        }
       });
       
-      if (!response.ok) {
-        console.error('Erreur HTTP:', response.status);
+      if (response.data.features.length === 0) {
         return null;
       }
       
-      const data = await response.json();
-      
-      if (data.features.length === 0) {
-        return null;
-      }
-      
-      const feature = data.features[0];
+      const feature = response.data.features[0];
       return {
         id: feature.properties.id,
         label: feature.properties.label,
@@ -105,4 +109,4 @@ export const adresseApi = {
       return null;
     }
   }
-};
+}; 

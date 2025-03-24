@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { Navigate } from 'react-router-dom';
 import { authService } from '@/lib/services/authService';
+import { useRolePermissions } from '@/features/roles/useRolePermissions';
+import { useNavigate } from 'react-router-dom';
 
 /**
  * Composant pour la page d'accueil qui redirige vers la page appropriée 
@@ -9,36 +11,89 @@ import { authService } from '@/lib/services/authService';
 const HomePage = () => {
   const [isChecking, setIsChecking] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [dashboardPath, setDashboardPath] = useState('/login');
+  const permissions = useRolePermissions();
+  const navigate = useNavigate();
+  const isProcessingRef = useRef(false);
+  const navigationTimeoutRef = useRef(null);
+  const mountedRef = useRef(true);
   
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const isLoggedIn = authService.isLoggedIn();
-        setIsAuthenticated(isLoggedIn);
-      } catch (error) {
-        console.error('Erreur lors de la vérification de l\'authentification:', error);
-      } finally {
+  // Memoize the auth check function
+  const checkAuth = useCallback(async () => {
+    if (isProcessingRef.current || !mountedRef.current) return;
+    
+    isProcessingRef.current = true;
+    try {
+      const isLoggedIn = authService.isLoggedIn();
+      
+      if (!mountedRef.current) return;
+      
+      if (isLoggedIn) {
+        const roleDashboardPath = permissions.getRoleDashboardPath();
+        setDashboardPath(roleDashboardPath);
+        setIsAuthenticated(true);
+      } else {
+        setIsAuthenticated(false);
+      }
+    } catch (error) {
+      console.error('Error checking authentication:', error);
+      if (mountedRef.current) {
+        setIsAuthenticated(false);
+      }
+    } finally {
+      if (mountedRef.current) {
         setIsChecking(false);
       }
-    };
+      isProcessingRef.current = false;
+    }
+  }, [permissions]);
 
+  // Initial auth check
+  useEffect(() => {
     checkAuth();
-  }, []);
+    
+    return () => {
+      mountedRef.current = false;
+      if (navigationTimeoutRef.current) {
+        clearTimeout(navigationTimeoutRef.current);
+      }
+    };
+  }, [checkAuth]);
 
-  if (isChecking) {
-    // Afficher un indicateur de chargement minimaliste au lieu de rien
-    return (
-      <div className="flex justify-center items-center min-h-[50vh]">
-        <div className="w-8 h-8 border-4 border-[#528eb2] border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
+  // Handle navigation after auth check
+  useEffect(() => {
+    if (!isChecking && !isAuthenticated && mountedRef.current) {
+      // Clear any pending navigation
+      if (navigationTimeoutRef.current) {
+        clearTimeout(navigationTimeoutRef.current);
+      }
+      
+      // Add a small delay before navigation to prevent rapid redirects
+      navigationTimeoutRef.current = setTimeout(() => {
+        if (mountedRef.current && window.location.pathname === '/') {
+          navigate('/login', { replace: true });
+        }
+      }, 100);
+      
+      return () => {
+        if (navigationTimeoutRef.current) {
+          clearTimeout(navigationTimeoutRef.current);
+        }
+      };
+    }
+  }, [isChecking, isAuthenticated, navigate]);
+
+  // Prevent rendering during processing
+  if (isProcessingRef.current || isChecking) {
+    return null;
   }
 
-  // Redirection en fonction de l'état d'authentification
-  // Si connecté -> Tableau de bord, sinon -> Login
-  return isAuthenticated 
-    ? <Navigate to="/dashboard" replace /> 
-    : <Navigate to="/login" replace />;
+  // Only render Navigate component when we're sure about the auth state
+  return isAuthenticated ? (
+    <Navigate to={dashboardPath} replace />
+  ) : (
+    <Navigate to="/login" replace />
+  );
 };
 
 export default HomePage; 

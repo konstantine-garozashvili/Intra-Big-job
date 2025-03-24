@@ -27,6 +27,19 @@ class UserRoleController extends AbstractController
     #[IsGranted('IS_AUTHENTICATED_FULLY')]
     public function getUsersByRole(string $roleName): JsonResponse
     {
+        // Vérifier si l'utilisateur a l'un des rôles requis
+        $user = $this->getUser();
+        $userRoles = $user->getRoles();
+        
+        if (!in_array('ROLE_RECRUITER', $userRoles) && 
+            !in_array('ROLE_ADMIN', $userRoles) && 
+            !in_array('ROLE_SUPERADMIN', $userRoles)) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Accès refusé'
+            ], 403);
+        }
+        
         try {
             $users = $this->userRoleService->getUsersByRole($roleName);
             
@@ -54,6 +67,19 @@ class UserRoleController extends AbstractController
     #[IsGranted('IS_AUTHENTICATED_FULLY')]
     public function changeUserRole(Request $request): JsonResponse
     {
+        // Vérifier si l'utilisateur a l'un des rôles requis
+        $user = $this->getUser();
+        $userRoles = $user->getRoles();
+        
+        if (!in_array('ROLE_RECRUITER', $userRoles) && 
+            !in_array('ROLE_ADMIN', $userRoles) && 
+            !in_array('ROLE_SUPERADMIN', $userRoles)) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Accès refusé'
+            ], 403);
+        }
+        
         try {
             $data = json_decode($request->getContent(), true);
             
@@ -95,6 +121,19 @@ class UserRoleController extends AbstractController
     #[IsGranted('IS_AUTHENTICATED_FULLY')]
     public function getAllRoles(): JsonResponse
     {
+        // Vérifier si l'utilisateur a l'un des rôles requis
+        $user = $this->getUser();
+        $userRoles = $user->getRoles();
+        
+        if (!in_array('ROLE_RECRUITER', $userRoles) && 
+            !in_array('ROLE_ADMIN', $userRoles) && 
+            !in_array('ROLE_SUPERADMIN', $userRoles)) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Accès refusé'
+            ], 403);
+        }
+        
         try {
             $roles = $this->userRoleService->getAllRoles();
             

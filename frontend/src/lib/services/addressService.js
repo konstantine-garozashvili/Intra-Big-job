@@ -1,7 +1,4 @@
-import axios from 'axios';
-
-// Configuration de l'API d'adresses
-const API_BASE_URL = 'https://api-adresse.data.gouv.fr';
+import { addressApiInstance } from '@/lib/axios';
 
 /**
  * Service pour la recherche et la gestion des adresses
@@ -15,7 +12,7 @@ export const addressService = {
    */
   async searchAddresses(query, limit = 5) {
     try {
-      const response = await axios.get(`${API_BASE_URL}/search`, {
+      const response = await addressApiInstance.get('/search', {
         params: {
           q: query,
           limit,
@@ -26,7 +23,7 @@ export const addressService = {
       
       return response.data.features || [];
     } catch (error) {
-      console.error('Erreur lors de la recherche d\'adresses:', error);
+      // console.error('Erreur lors de la recherche d\'adresses:', error);
       throw error;
     }
   },
@@ -39,7 +36,7 @@ export const addressService = {
    */
   async reverseGeocode(lat, lon) {
     try {
-      const response = await axios.get(`${API_BASE_URL}/reverse`, {
+      const response = await addressApiInstance.get('/reverse', {
         params: {
           lat,
           lon
@@ -48,7 +45,7 @@ export const addressService = {
       
       return response.data.features[0] || null;
     } catch (error) {
-      console.error('Erreur lors du géocodage inverse:', error);
+      // console.error('Erreur lors du géocodage inverse:', error);
       throw error;
     }
   },

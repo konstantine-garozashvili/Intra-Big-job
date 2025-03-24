@@ -45,7 +45,8 @@ class FormationApiController extends AbstractController
         
         if (!in_array('ROLE_TEACHER', $userRoles) && 
             !in_array('ROLE_ADMIN', $userRoles) && 
-            !in_array('ROLE_SUPERADMIN', $userRoles)) {
+            !in_array('ROLE_SUPERADMIN', $userRoles) &&
+            !in_array('ROLE_RECRUITER', $userRoles)) {
             return new JsonResponse(['error' => 'Accès refusé'], Response::HTTP_FORBIDDEN);
         }
         
@@ -85,7 +86,8 @@ class FormationApiController extends AbstractController
         
         if (!in_array('ROLE_TEACHER', $userRoles) && 
             !in_array('ROLE_ADMIN', $userRoles) && 
-            !in_array('ROLE_SUPERADMIN', $userRoles)) {
+            !in_array('ROLE_SUPERADMIN', $userRoles) &&
+            !in_array('ROLE_RECRUITER', $userRoles)) {
             return new JsonResponse(['error' => 'Accès refusé'], Response::HTTP_FORBIDDEN);
         }
         
@@ -124,26 +126,29 @@ class FormationApiController extends AbstractController
         
         if (!in_array('ROLE_TEACHER', $userRoles) && 
             !in_array('ROLE_ADMIN', $userRoles) && 
-            !in_array('ROLE_SUPERADMIN', $userRoles)) {
+            !in_array('ROLE_SUPERADMIN', $userRoles) &&
+            !in_array('ROLE_RECRUITER', $userRoles)) {
             return new JsonResponse(['error' => 'Accès refusé'], Response::HTTP_FORBIDDEN);
         }
         
         $formationId = $request->query->get('formationId');
         $formation = $formationId ? $this->formationRepository->find($formationId) : null;
 
-        // Récupérer tous les utilisateurs avec le rôle ROLE_STUDENT
-        $students = $this->userRepository->findByRole('ROLE_STUDENT');
+        // Create query builder to get students
+        $qb = $this->userRepository->createQueryBuilder('u')
+            ->select('u')
+            ->leftJoin('u.userRoles', 'ur')
+            ->leftJoin('ur.role', 'r')
+            ->where('r.name = :roleName')
+            ->setParameter('roleName', 'STUDENT');
 
-        // Si une formation est spécifiée, exclure les étudiants déjà inscrits
+        // If a formation is specified, exclude students already enrolled
         if ($formation) {
-            $enrolledStudentIds = array_map(function($student) {
-                return $student->getId();
-            }, $formation->getStudents()->toArray());
-
-            $students = array_filter($students, function($student) use ($enrolledStudentIds) {
-                return !in_array($student->getId(), $enrolledStudentIds);
-            });
+            $qb->andWhere('u NOT IN (SELECT s FROM App\Entity\User s JOIN s.formations f WHERE f.id = :formationId)')
+               ->setParameter('formationId', $formationId);
         }
+
+        $students = $qb->getQuery()->getResult();
 
         $data = array_map(function($student) {
             return [
@@ -167,7 +172,8 @@ class FormationApiController extends AbstractController
         
         if (!in_array('ROLE_TEACHER', $userRoles) && 
             !in_array('ROLE_ADMIN', $userRoles) && 
-            !in_array('ROLE_SUPERADMIN', $userRoles)) {
+            !in_array('ROLE_SUPERADMIN', $userRoles) &&
+            !in_array('ROLE_RECRUITER', $userRoles)) {
             return new JsonResponse(['error' => 'Accès refusé'], Response::HTTP_FORBIDDEN);
         }
         

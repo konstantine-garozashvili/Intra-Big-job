@@ -21,12 +21,21 @@ services:
     volumes:
       - ../backend:/var/www/symfony
       - backend_vendor:/var/www/symfony/vendor
+      - backend_var:/var/www/symfony/var
       - jwt_keys:/var/www/symfony/config/jwt
     depends_on:
       - database
+      - redis
     networks:
       - app-network
-    command: bash -c "composer install --no-interaction && sleep 10 && php bin/console doctrine:database:create --if-not-exists --no-interaction && php bin/console doctrine:migrations:migrate --no-interaction || true && exec php-fpm"
+    environment:
+      REDIS_URL: redis://redis:6379
+    command: bash -c "composer install --no-interaction && 
+      sleep 15 && 
+      php bin/console doctrine:database:create --if-not-exists --no-interaction && 
+      php bin/console doctrine:schema:update --force --no-interaction && 
+      php bin/console doctrine:fixtures:load --no-interaction --append || php bin/console doctrine:fixtures:load --no-interaction && 
+      exec php-fpm"
 
   nginx:
     image: nginx:alpine
@@ -55,6 +64,16 @@ services:
     networks:
       - app-network
 
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - app-network
+    command: redis-server --appendonly yes
+
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
     ports:
@@ -77,4 +96,6 @@ volumes:
   database_data:
   frontend_node_modules:
   backend_vendor:
+  backend_var:
   jwt_keys:
+  redis_data:

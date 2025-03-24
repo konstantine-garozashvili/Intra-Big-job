@@ -1,11 +1,13 @@
-import React, { lazy, Suspense, memo } from "react";
+import React, { lazy, Suspense, memo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CalendarIcon } from "lucide-react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { CountrySelector } from "@/components/ui/country-selector";
-import { useRegisterContext } from "../RegisterContext";
+import { PhoneInput } from "@/components/ui/phone-input";
+import { useUserData, useValidation } from "../RegisterContext";
 import 'react-calendar/dist/Calendar.css';
 import '../../../styles/custom-calendar.css'; // Import du CSS personnalisé pour le calendrier
+import { isValidPhone } from "@/lib/utils/validation";
 
 // Chargement dynamique du calendrier pour améliorer les performances
 const Calendar = lazy(() => import('react-calendar'));
@@ -21,27 +23,26 @@ CalendarFallback.displayName = 'CalendarFallback';
 
 const Step2Form = ({ goToNextStep, goToPrevStep }) => {
   const {
-    // États
     birthDate, 
     nationality, setNationality,
     phone,
-    calendarOpen, setCalendarOpen,
-    formattedBirthDate,
-    
-    // Fonctions
     handleDateChange,
     handlePhoneChange,
-    
-    // Erreurs
-    step2Tried
-  } = useRegisterContext();
+  } = useUserData();
 
-  // État local pour les erreurs
+  const {
+    step2Tried
+  } = useValidation();
+
+  // État local pour le calendrier et les erreurs
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [localErrors, setLocalErrors] = React.useState({});
+
+  // Formater la date pour l'affichage
+  const formattedBirthDate = birthDate ? new Intl.DateTimeFormat('fr-FR').format(birthDate) : null;
 
   // Validation de l'étape 2
   const validateStep2 = () => {
-    console.log("Validation étape 2...");
     
     const newErrors = {};
     let valid = true;
@@ -62,8 +63,8 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
     if (!phone || phone.trim() === "") {
       newErrors.phone = "Le numéro de téléphone est requis";
       valid = false;
-    } else if (!/^[0-9]{9,10}$/.test(phone.replace(/\s/g, ''))) {
-      newErrors.phone = "Veuillez entrer un numéro de téléphone valide";
+    } else if (!isValidPhone(phone)) {
+      newErrors.phone = "Veuillez entrer un numéro de téléphone français valide";
       valid = false;
     }
     
@@ -115,9 +116,12 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
           <Dialog open={calendarOpen} onOpenChange={setCalendarOpen}>
             <DialogContent className="p-0 sm:max-w-[425px] bg-white rounded-lg shadow-xl border-none overflow-hidden">
               <div className="p-4 pb-0">
-                <h2 className="text-xl font-semibold text-center text-gray-900">
+                <DialogTitle className="text-xl font-semibold text-center text-gray-900">
                   Sélectionnez votre date de naissance
-                </h2>
+                </DialogTitle>
+                <DialogDescription className="text-sm text-center text-gray-500 mt-1">
+                  Vous devez avoir au moins 16 ans pour vous inscrire.
+                </DialogDescription>
               </div>
               <div className="calendar-container w-full p-4">
                 <Suspense fallback={<CalendarFallback />}>
@@ -186,26 +190,20 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
       </div>
 
       {/* Téléphone */}
-      <div>
+      <div className="mb-6">
         <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
           Numéro de téléphone
         </label>
-        <div className={`flex w-full rounded-md border ${shouldShowError('phone') ? 'border-red-500' : 'border-gray-300'} transition-colors hover:border-[#0066ff]`}>
-          <div className="flex items-center justify-center px-3 bg-gray-50 border-r rounded-l-md">
-            <span className="text-gray-700 font-medium">+33</span>
-          </div>
-          <input
-            id="phone"
-            type="tel"
-            className="flex-1 px-4 py-3 focus:outline-none focus:ring-1 focus:ring-[#0066ff] rounded-r-md"
-            value={phone}
-            onChange={handlePhoneChange}
-            placeholder="6 12 34 56 78"
-          />
-        </div>
-        {shouldShowError('phone') && (
-          <p className="text-red-500 text-xs mt-1">{getErrorMessage('phone')}</p>
-        )}
+        <PhoneInput
+          id="phone"
+          value={phone}
+          onChange={handlePhoneChange}
+          error={shouldShowError('phone') ? getErrorMessage('phone') : null}
+          placeholder="06 12 34 56 78"
+        />
+        <p className="text-xs text-gray-500 mt-1">
+          Format français uniquement (+33). Exemple: 06 12 34 56 78
+        </p>
       </div>
       
       {/* Boutons de navigation */}

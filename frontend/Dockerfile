@@ -2,9 +2,16 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-COPY package.json package-lock.json* ./
-RUN npm install --legacy-peer-deps
+# Nettoyage du cache npm
+RUN npm cache clean --force
 
+# Copie des fichiers de dépendances
+COPY package.json ./
+
+# Installation des dépendances
+RUN npm install
+
+# Copie du reste du code
 COPY . .
 
 EXPOSE 5173
