@@ -1,7 +1,7 @@
 import React, { lazy, Suspense, memo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CalendarIcon } from "lucide-react";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { CountrySelector } from "@/components/ui/country-selector";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { useUserData, useValidation } from "../RegisterContext";
@@ -119,9 +119,9 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
                 <DialogTitle className="text-xl font-semibold text-center text-gray-900">
                   Sélectionnez votre date de naissance
                 </DialogTitle>
-                <p className="text-sm text-center text-gray-500 mt-1">
+                <DialogDescription className="text-sm text-center text-gray-500 mt-1">
                   Vous devez avoir au moins 16 ans pour vous inscrire.
-                </p>
+                </DialogDescription>
               </div>
               <div className="calendar-container w-full p-4">
                 <Suspense fallback={<CalendarFallback />}>
@@ -200,9 +200,8 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
           onChange={handlePhoneChange}
           error={shouldShowError('phone') ? getErrorMessage('phone') : null}
           placeholder="06 12 34 56 78"
-          aria-describedby="phone-description"
         />
-        <p id="phone-description" className="text-xs text-gray-500 mt-1">
+        <p className="text-xs text-gray-500 mt-1">
           Format français uniquement (+33). Exemple: 06 12 34 56 78
         </p>
       </div>

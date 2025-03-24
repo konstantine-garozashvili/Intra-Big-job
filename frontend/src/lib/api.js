@@ -14,31 +14,62 @@ export const adresseApi = {
    * @returns {Promise} - Promesse contenant les résultats de la recherche
    */
   searchAddress: async (query, limit = 5) => {
+    // Ne pas faire de requête si la requête est trop courte
     if (!query || query.length < 3) return [];
     
+    // Filtres améliorés pour éviter les requêtes problématiques
+    const trimmedQuery = query.trim();
+    
+    // Cas spécial: si c'est un code postal complet (5 chiffres), on l'accepte
+    const isFullPostalCode = /^\d{5}$/.test(trimmedQuery);
+    
+    // Cas problématiques à filtrer:
+    // 1. Code postal partiel
+    // 2. Requête trop courte avec un seul mot
+    if (!isFullPostalCode) {
+      if (/^\d+$/.test(trimmedQuery) && trimmedQuery.length < 5) {
+        return [];
+      }
+      if (trimmedQuery.split(/\s+/).length === 1 && trimmedQuery.length < 4) {
+        return [];
+      }
+    }
+    
     try {
-      const response = await addressApiInstance.get('/search', {
-        params: {
-          q: query,
-          limit,
-          type: 'housenumber',
-          autocomplete: 1
-        }
-      });
+      // Paramètres optimisés selon la documentation officielle
+      const params = {
+        q: trimmedQuery,
+        limit: limit,
+        // Paramètres qui aident à améliorer la qualité des résultats
+        autocomplete: 1
+      };
       
-      return response.data.features.map(feature => ({
-        id: feature.properties.id,
-        label: feature.properties.label,
-        houseNumber: feature.properties.housenumber || '',
-        street: feature.properties.street || '',
-        postcode: feature.properties.postcode || '',
-        city: feature.properties.city || '',
-        context: feature.properties.context || '',
-        coordinates: feature.geometry.coordinates,
-        score: feature.properties.score
-      }));
+      const response = await axios.get(`${API_ADRESSE_URL}/search`, { params });
+      
+      if (!response.data || !response.data.features || response.data.features.length === 0) {
+        return [];
+      }
+      
+      // Transformer les résultats en format utilisable
+      return response.data.features.map(feature => {
+        const properties = feature.properties || {};
+        return {
+          id: properties.id || `temp-${Math.random()}`,
+          label: properties.label || '',
+          houseNumber: properties.housenumber || '',
+          street: properties.street || '',
+          postcode: properties.postcode || '',
+          city: properties.city || '',
+          context: properties.context || '',
+          coordinates: feature.geometry?.coordinates || [0, 0],
+          score: properties.score || 0
+        };
+      });
     } catch (error) {
-      // console.error('Erreur lors de la recherche d\'adresse:', error);
+      // Gestion silencieuse des erreurs en production
+      if (import.meta.env.DEV) {
+        console.error('Erreur lors de la recherche d\'adresse:', error);
+      }
       return [];
     }
   },
@@ -74,7 +105,7 @@ export const adresseApi = {
         coordinates: feature.geometry.coordinates
       };
     } catch (error) {
-      // console.error('Erreur lors de la géolocalisation inverse:', error);
+      console.error('Erreur lors de la géolocalisation inverse:', error);
       return null;
     }
   }

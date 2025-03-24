@@ -14,6 +14,8 @@ parameters:
     aws.bucket_name: '%env(AWS_BUCKET)%'
     aws.region: '%env(AWS_REGION)%'
     aws.use_s3_storage: true  # Set to false to use local storage instead of S3
+    # URL du frontend (from group3)
+    app.frontend_url: 'http://localhost:5173'  # URL du frontend
 
 services:
     # default configuration for services in *this* file
@@ -94,3 +96,22 @@ services:
     # Notre gestionnaire d'erreur d'authentification personnalisé
     lexik_jwt_authentication.handler.authentication_failure:
         class: App\Security\AuthenticationFailureHandler
+
+    # Générateur de token pour la réinitialisation de mot de passe
+    Symfony\Component\Security\Csrf\TokenGenerator\TokenGeneratorInterface:
+        class: Symfony\Component\Security\Csrf\TokenGenerator\UriSafeTokenGenerator
+    
+    # Configuration du service de réinitialisation de mot de passe
+    App\Service\ResetPasswordService:
+        arguments:
+            $emailService: '@App\Service\EmailService'
+    # Message cleanup listener for automatic cleanup of old messages
+    App\EventListener\MessageCleanupListener:
+        arguments:
+            $messageCleanupService: '@App\Service\MessageCleanupService'
+            $logger: '@logger'
+            $cacheDir: '%kernel.cache_dir%'
+            $cleanupInterval: 86400  # 24 hours in seconds
+            $daysToKeep: 15  # Keep messages for 15 days
+        tags:
+            - { name: kernel.event_listener, event: kernel.terminate, method: onKernelTerminate }

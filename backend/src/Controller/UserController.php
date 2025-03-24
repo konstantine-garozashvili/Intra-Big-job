@@ -10,6 +10,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -101,5 +102,37 @@ class UserController extends AbstractController
             'success' => true,
             'message' => 'API Symfony fonctionnelle !'
         ]);
+    }
+    
+    /**
+     * Endpoint to list users for chat functionality
+     */
+    #[Route('/users/list', name: 'api_users_list', methods: ['GET'])]
+    public function listUsers(): JsonResponse
+    {
+        try {
+            // Get current user
+            $currentUser = $this->getUser();
+            if (!$currentUser) {
+                return $this->json(['message' => 'User not authenticated'], JsonResponse::HTTP_UNAUTHORIZED);
+            }
+            
+            // Find all users except the current user
+            $users = $this->userRepository->findAllExcept($currentUser->getId());
+            
+            // Serialize with user roles included
+            $serializedUsers = $this->serializer->serialize(
+                $users, 
+                'json', 
+                ['groups' => ['user:read', 'message:read']]
+            );
+            
+            return new JsonResponse($serializedUsers, JsonResponse::HTTP_OK, [], true);
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Error fetching users: ' . $e->getMessage()
+            ], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 }

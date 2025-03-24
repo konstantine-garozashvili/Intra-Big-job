@@ -1,9 +1,9 @@
-import React, { memo, useState, useEffect, useRef, useCallback } from 'react';
+import React, { memo, useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { authService } from '../lib/services/authService';
 import { Link, useNavigate } from 'react-router-dom';
 import { useRoles, ROLES } from '../features/roles/roleContext';
 import { useRoleUI } from '../features/roles/useRolePermissions';
+import { useUserData } from '@/hooks/useUserData';
 import {
   User, 
   UserPlus, 
@@ -25,7 +25,8 @@ import {
   ChevronDown,
   ChevronRight,
   X,
-  Menu
+  Menu,
+  ClipboardCheck
 } from 'lucide-react';
 import { useRolePermissions } from '@/features/roles/useRolePermissions';
 
@@ -114,7 +115,7 @@ const customStyles = `
 `;
 
 const MenuBurger = memo(() => {
-  const [userData, setUserData] = useState(null);
+  const { user: userData, isLoading } = useUserData();
   const [menuOpen, setMenuOpen] = useState(false);
   const [openSubMenus, setOpenSubMenus] = useState({});
   const menuRef = useRef(null);
@@ -125,24 +126,6 @@ const MenuBurger = memo(() => {
   const { roles, hasRole, hasAnyRole, refreshRoles } = useRoles();
   const { translateRoleName } = useRoleUI();
   const permissions = useRolePermissions();
-
-  // Fonction pour vérifier l'authentification et mettre à jour les données utilisateur
-  const checkAuthentication = useCallback(async () => {
-    try {
-      if (authService.isLoggedIn()) {
-        const user = await authService.getCurrentUser();
-        if (user) {
-          setUserData(user);
-        } else {
-          setUserData(null);
-        }
-      } else {
-        setUserData(null);
-      }
-    } catch (error) {
-      setUserData(null);
-    }
-  }, []);
 
   // Gestionnaire de clic à l'extérieur du menu
   useEffect(() => {
@@ -158,54 +141,17 @@ const MenuBurger = memo(() => {
       }
     };
 
-    // Ajouter l'écouteur d'événement lorsque le menu est ouvert
     if (menuOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
-    // Nettoyer l'écouteur d'événement
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [menuOpen]);
 
-  // Effet pour vérifier l'authentification et écouter les événements d'authentification
-  useEffect(() => {
-    // Vérifier l'authentification au chargement
-    checkAuthentication();
-  
-    // Gestionnaires d'événements pour les changements d'authentification
-    const handleLoginEvent = async () => {
-      await checkAuthentication();
-      refreshRoles(); // Rafraîchir les rôles après connexion
-    };
-  
-    const handleLogoutEvent = async () => {
-      setUserData(null);
-      // Les rôles seront automatiquement mis à jour par le contexte
-    };
-  
-    const handleRoleChangeEvent = async () => {
-      await checkAuthentication();
-      refreshRoles(); // Rafraîchir les rôles après changement de rôle
-    };
-  
-    // Ajouter les écouteurs d'événements
-    window.addEventListener('login-success', handleLoginEvent);
-    window.addEventListener('logout-success', handleLogoutEvent);
-    window.addEventListener('role-change', handleRoleChangeEvent);
-  
-    // Nettoyer les écouteurs d'événements
-    return () => {
-      window.removeEventListener('login-success', handleLoginEvent);
-      window.removeEventListener('logout-success', handleLogoutEvent);
-      window.removeEventListener('role-change', handleRoleChangeEvent);
-    };
-  }, [checkAuthentication, refreshRoles]);
-  
   // Effet pour fermer le menu lorsque les rôles changent
   useEffect(() => {
-    // Fermer le menu si les rôles changent et que le menu est ouvert
     if (menuOpen) {
       setMenuOpen(false);
     }
@@ -214,30 +160,15 @@ const MenuBurger = memo(() => {
   const toggleMenu = () => setMenuOpen(!menuOpen);
 
   const toggleSubMenu = (menu) => {
-    setOpenSubMenus((prev) => {
-      // If the clicked menu is already open, close it
-      if (prev[menu]) {
-        return {
-          ...prev,
-          [menu]: false
-        };
-      }
-      
-      // Otherwise, close all menus and open only the clicked one
-      const newState = {};
-      Object.keys(prev).forEach(key => {
-        newState[key] = false;
-      });
-      
-      return {
-        ...newState,
-        [menu]: true
-      };
-    });
+    setOpenSubMenus((prev) => ({
+      ...Object.keys(prev).reduce((acc, key) => ({ ...acc, [key]: false }), {}),
+      [menu]: !prev[menu]
+    }));
   };
   
 
   const menuItems = [
+    // --- STUDENT ROLE SECTION ---
     {
       key: 'dashboard',
       label: 'Tableau de bord',
@@ -246,36 +177,11 @@ const MenuBurger = memo(() => {
       to: '/dashboard',
     },
     {
-      key: 'centres_formations',
-      label: 'Centres de formations',
-      icon: <School className="w-5 h-5 mr-2 text-[#528eb2]" />,
-      roles: [ROLES.SUPERADMIN],
-      to: '/centres_formations',
-    },
-    {
-      key: 'eleves',
-      label: 'Élèves',
-      icon: <GraduationCap className="w-5 h-5 mr-2 text-[#528eb2]" />,
-      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.HR],
-      links: [
-        { name: 'Gestion des élèves', to: '/admin/searchbyrole?role=student', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER] },
-        { name: 'Résultats', to: '/eleves/resultats', roles: [ROLES.SUPERADMIN, ROLES.TEACHER] },
-        { name: 'Dossiers', to: '/eleves/dossiers', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR, ROLES.TEACHER] },
-        { name: 'Certificats et Diplômes', to: '/eleves/certificats', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER] },
-        { name: 'Historique des Absences', to: '/eleves/absences', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.HR] },
-      ],
-    },
-    {
-      key: 'formateurs',
-      label: 'Formateurs',
-      icon: <User className="w-5 h-5 mr-2 text-[#528eb2]" />,
-      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
-      links: [
-        { name: 'Liste des formateurs', to: '/admin/searchbyrole?role=teacher', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR] },
-        { name: 'Statistiques et Rapports', to: '/formateurs/statistiques', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR] },
-        { name: 'Gestion des Projets', to: '/formateurs/projets', roles: [ROLES.SUPERADMIN, ROLES.ADMIN] },
-        { name: 'Commentaires', to: '/formateurs/commentaires', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR] },
-      ],
+      key: 'notifications',
+      label: 'Notifications',
+      icon: <Bell className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.STUDENT],
+      to: '/notifications',
     },
     {
       key: 'messagerie',
@@ -285,34 +191,25 @@ const MenuBurger = memo(() => {
       to: '/messagerie',
     },
     {
-      key: 'admins',
-      label: 'Administration',
-      icon: <Shield className="w-5 h-5 mr-2 text-[#528eb2]" />,
-      roles: [ROLES.SUPERADMIN],
-      links: [
-        { name: 'Gestion des utilisateurs', to: '/admin/searchbyrole', roles: [ROLES.SUPERADMIN] },
-        { name: 'Gestion des Formations', to: '/admin/formations', roles: [ROLES.SUPERADMIN] },
-        { name: 'Suivi des Inscriptions', to: '/admin/inscriptions', roles: [ROLES.SUPERADMIN] },
-        { name: 'Gestion des Paiements', to: '/admin/paiements', roles: [ROLES.SUPERADMIN] },
-        { name: 'Suivi des Absences', to: '/admin/absences', roles: [ROLES.SUPERADMIN] },
-        { name: 'Statistiques Administratives', to: '/admin/statistiques', roles: [ROLES.SUPERADMIN] },
-        { name: 'Les logs', to: '/admin/logs', roles: [ROLES.SUPERADMIN] },
-        { name: 'Gestion des partenaires', to: '/admin/partenariats', roles: [ROLES.SUPERADMIN] },
-      ],
+      key: 'cours',
+      label: 'Mes Cours',
+      icon: <Clipboard className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.STUDENT, ROLES.TEACHER],
+      to: '/cours',
     },
     {
-      key: 'rh',
-      label: 'Ressources Humaines',
-      icon: <Users className="w-5 h-5 mr-2 text-[#528eb2]" />,
-      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
-      links: [
-        { name: 'Gestion des RH', to: '/admin/searchbyrole?role=hr', roles: [ROLES.SUPERADMIN, ROLES.HR, ROLES.ADMIN] },
-        { name: 'Gestion des Candidatures', to: '/rh/candidatures', roles: [ROLES.SUPERADMIN, ROLES.HR, ROLES.ADMIN] },
-        { name: 'Suivi des Absences et Congés', to: '/rh/absences', roles: [ROLES.SUPERADMIN, ROLES.HR, ROLES.ADMIN] },
-        { name: 'Planning des Formateurs', to: '/rh/planning', roles: [ROLES.SUPERADMIN, ROLES.HR, ROLES.ADMIN] },
-        { name: 'Archivage des Dossiers', to: '/rh/archivage', roles: [ROLES.SUPERADMIN, ROLES.HR, ROLES.ADMIN] },
-        { name: 'Suivi des Recrutements', to: '/rh/recrutement', roles: [ROLES.SUPERADMIN, ROLES.HR, ROLES.ADMIN] },
-      ],
+      key: 'projet',
+      label: 'Mes Projets',
+      icon: <Briefcase className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.STUDENT, ROLES.TEACHER],
+      to: '/projet',
+    },
+    {
+      key: 'justification_absence',
+      label: 'Justifier une absence',
+      icon: <Clipboard className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.STUDENT],
+      to: '/justification-absence',
     },
     {
       key: 'plannings',
@@ -325,6 +222,130 @@ const MenuBurger = memo(() => {
         { name: 'Réservation de salle', to: '/plannings/reservation-salle', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER] },
         { name: 'Réservation de matériel', to: '/plannings/reservation-materiel', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER] },
       ],
+    },
+    {
+      key: 'cagnottes',
+      label: 'Cagnottes',
+      icon: <PiggyBank className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.STUDENT],
+      to: '/cagnottes',
+    },
+    {
+      key: 'sponsors',
+      label: 'Sponsors',
+      icon: <Handshake className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.STUDENT],
+      to: '/sponsors',
+    },
+    {
+      key: 'trombinoscope',
+      label: 'Trombinoscope',
+      icon: <Camera className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.STUDENT, ROLES.RECRUITER],
+      to: '/Trombinoscope',
+    },
+    
+    // --- TEACHER ROLE SECTION ---
+    {
+      key: 'eleves',
+      label: 'Élèves',
+      icon: <GraduationCap className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.HR],
+      links: [
+        { name: 'Gestion des élèves', to: '/eleves', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER] },
+        { name: 'Résultats', to: '/eleves/resultats', roles: [ROLES.SUPERADMIN, ROLES.TEACHER] },
+        { name: 'Dossiers', to: '/eleves/dossiers', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR, ROLES.TEACHER] },
+        { name: 'Certificats et Diplômes', to: '/eleves/certificats', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER] },
+        { name: 'Historique des Absences', to: '/eleves/absences', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.HR] },
+      ],
+    },
+    {
+      key: 'formations_management',
+      label: 'Gestion des formations',
+      icon: <BookOpen className="w-5 h-5 mr-2 text-white" />,
+      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.RECRUITER],
+      to: '/formations',
+    },
+    
+    // --- ADMIN ROLE SECTION ---
+    {
+      key: 'formateurs',
+      label: 'Formateurs',
+      icon: <User className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
+      links: [
+        { name: 'Liste des formateurs', to: '/formateurs', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR] },
+        { name: 'Statistiques et Rapports', to: '/formateurs/statistiques', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR] },
+        { name: 'Gestion des Projets', to: '/formateurs/projets', roles: [ROLES.SUPERADMIN, ROLES.ADMIN] },
+        { name: 'Commentaires', to: '/formateurs/commentaires', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR] },
+      ],
+    },
+    {
+      key: 'roles_management',
+      label: 'Gestion des rôles',
+      icon: <UserPlus className="w-5 h-5 mr-2 text-white" />,
+      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.RECRUITER],
+      to: '/recruiter/guest-student-roles',
+    },
+    {
+      key: 'invites',
+      label: 'Invités',
+      icon: <UserPlus className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
+      links: [
+        { name: 'Liste des invités', to: '/invites', roles: [ROLES.ADMIN, ROLES.SUPERADMIN] },
+        { name: 'Gestion des invités', to: '/invites/', roles: [ROLES.ADMIN, ROLES.SUPERADMIN] },
+        { name: 'Test d\'admission', to: '/invites/test_admission', roles: [ROLES.ADMIN, ROLES.HR, ROLES.SUPERADMIN] },
+        { name: 'Statistiques des Invités', to: '/admin/invite/statistiques', roles: [ROLES.ADMIN, ROLES.SUPERADMIN] },
+      ],
+    },
+    {
+      key: 'rh',
+      label: 'Ressources Humaines',
+      icon: <Users className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
+      links: [
+        { name: 'Gestion des Formateurs', to: '/rh/formateurs', roles: [ROLES.SUPERADMIN, ROLES.HR] },
+        { name: 'Gestion des Candidatures', to: '/rh/candidatures', roles: [ROLES.SUPERADMIN, ROLES.HR] },
+        { name: 'Suivi des Absences et Congés', to: '/rh/absences', roles: [ROLES.SUPERADMIN, ROLES.HR] },
+        { name: 'Planning des Formateurs', to: '/rh/planning', roles: [ROLES.SUPERADMIN, ROLES.HR] },
+        { name: 'Archivage des Dossiers', to: '/rh/archivage', roles: [ROLES.SUPERADMIN, ROLES.HR] },
+        { name: 'Suivi des Recrutements', to: '/rh/recrutement', roles: [ROLES.SUPERADMIN, ROLES.HR] },
+      ],
+    },
+    {
+      key: 'admins',
+      label: 'Administration',
+      icon: <Shield className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.SUPERADMIN, ROLES.ADMIN],
+      links: [
+        { name: 'Gestion des utilisateurs', to: '/admin/utilisateurs', roles: [ROLES.SUPERADMIN] },
+        { name: 'Gestion des Formations', to: '/admin/formations', roles: [ROLES.SUPERADMIN] },
+        { name: 'Suivi des Inscriptions', to: '/admin/inscriptions', roles: [ROLES.SUPERADMIN] },
+        { name: 'Gestion des Paiements', to: '/admin/paiements', roles: [ROLES.SUPERADMIN] },
+        { name: 'Suivi des Absences', to: '/admin/absences', roles: [ROLES.SUPERADMIN] },
+        { name: 'Statistiques Administratives', to: '/admin/statistiques', roles: [ROLES.SUPERADMIN] },
+        { name: 'Les logs', to: '/admin/logs', roles: [ROLES.SUPERADMIN] },
+        { name: 'Gestion des partenaires', to: '/admin/partenariats', roles: [ROLES.SUPERADMIN] },
+      ],
+    },
+    
+    // --- SUPERADMIN ROLE SECTION ---
+    {
+      key: 'centres_formations',
+      label: 'Centres de formations',
+      icon: <School className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.SUPERADMIN],
+      to: '/centres_formations',
+    },
+
+    // --- RECRUITER ROLE SECTION ---
+    {
+      key: 'candidatures',
+      label: 'Candidatures',
+      icon: <Share2 className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.HR, ROLES.RECRUITER],
+      to: '/candidatures',
     },
     {
       key: 'recrutement',
@@ -362,6 +383,8 @@ const MenuBurger = memo(() => {
         { name: 'Présentations Entreprise', to: '/recruiter/company-presentations', roles: [ROLES.RECRUITER] },
       ],
     },
+    
+    // --- GUEST ROLE SECTION ---
     {
       key: 'candidature',
       label: 'Ma Candidature',
@@ -410,6 +433,8 @@ const MenuBurger = memo(() => {
         { name: 'Actualités', to: '/guest/news', roles: [ROLES.GUEST] },
       ],
     },
+    
+    // --- GENERAL ITEMS ---
     {
       key: 'aide',
       label: "Besoin d'aide ?",
@@ -479,11 +504,21 @@ const MenuBurger = memo(() => {
               <div className="flex flex-col h-full">
                 {roles.length > 0 && (
                   <div className="flex items-center p-4 border-b border-blue-700 bg-gradient-to-r from-[#00284f] to-[#003a6b]">
-                    <div className="w-12 h-12 bg-white/20 rounded-full mr-3 flex items-center justify-center">
+                    <div className="w-12 h-12 bg-white/20 rounded-full mr-3 flex items-center justify-center cursor-pointer hover:bg-white/30 transition-colors" 
+                         onClick={() => {
+                           setMenuOpen(false);
+                           navigate('/profile');
+                         }}>
                       <User className="w-6 h-6 text-white" />
                     </div>
-                    <div>
-                      <p className="font-semibold">{userData ? `${userData.firstName} ${userData.lastName}` : 'Utilisateur'}</p>
+                    <div className="cursor-pointer" 
+                         onClick={() => {
+                           setMenuOpen(false);
+                           navigate('/profile');
+                         }}>
+                      <p className="font-semibold hover:underline transition-all">
+                        {userData ? `${userData.firstName} ${userData.lastName}` : 'Chargement...'}
+                      </p>
                       <p className="text-sm text-blue-200">{translateRoleName(roles[0])}</p>
                     </div>
                     <button 
@@ -496,7 +531,7 @@ const MenuBurger = memo(() => {
                   </div>
                 )}
                 
-                {!roles.length && (
+                {!roles.length && !isLoading && (
                   <div className="p-4 border-b border-blue-700 bg-gradient-to-r from-[#00284f] to-[#003a6b]">
                     <div className="flex items-center justify-between mb-3">
                       <h2 className="text-xl font-semibold text-white">Bienvenue</h2>

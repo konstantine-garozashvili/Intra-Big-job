@@ -6,7 +6,6 @@ import { toast } from "sonner"
 import { useRolePermissions } from "@/features/roles/useRolePermissions"
 import { useRoles } from "@/features/roles/roleContext"
 import QuickLoginButtons from './QuickLoginButtons'
-import { showGlobalLoader, hideGlobalLoader } from "@/lib/utils/loadingUtils"
 
 // Separate input component to prevent re-renders of the entire form
 const FormInput = React.memo(({ 
@@ -127,9 +126,6 @@ export function AuthForm() {
     setIsLoading(true)
     
     try {
-      // Show global loading state with higher priority
-      showGlobalLoader()
-      
       const response = await authService.login(formState.email, formState.password)
       
       if (formState.rememberMe) {
@@ -200,17 +196,26 @@ export function AuthForm() {
       const handleUserDataLoaded = () => {
         refreshRoles()
         window.removeEventListener('user-data-loaded', handleUserDataLoaded)
-        // Loading will be handled by global loading utilities now
       }
       
       window.addEventListener('user-data-loaded', handleUserDataLoaded)
       
-    } catch (error) {
-      // Remove loading state on error after a brief delay
-      setTimeout(() => {
-        hideGlobalLoader()
-      }, 200)
+      // After successful login, add some additional error handling for profile data issues
+      const fixProfileIfNeeded = setTimeout(async () => {
+        try {
+          // Check if we can access the user data
+          const user = authService.getUser();
+          if (!user || Object.keys(user).length === 0) {
+            console.warn('User data missing after login, attempting to fix...');
+            await authService.fixProfileDataIssues();
+          }
+        } catch (profileError) {
+          console.error('Error handling profile data after login:', profileError);
+          // No need to show this error to user as login was successful
+        }
+      }, 2000);
       
+    } catch (error) {
       if (error.response) {
         const { data } = error.response
         
@@ -320,6 +325,9 @@ export function AuthForm() {
           </div>
 
           <div className="text-sm">
+            <Link to="/reset-password" className="font-medium text-[#528eb2] hover:text-[#02284f]">
+              Mot de passe oublié?
+            </Link>
           </div>
         </div>
 

@@ -72,12 +72,10 @@ docker exec -it infra-backend-1 composer require symfony/serializer
 
 Toutes ces commandes doivent être exécutées à l'intérieur du conteneur backend :
 
-
 # Lister toutes les commandes disponibles
 php bin/console list
 
 # Vider le cache
-
 
 # Créer un contrôleur
 php bin/console make:controller NomDuController

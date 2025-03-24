@@ -1,19 +1,13 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { authService } from '@/lib/services/authService';
-import { useState, useMemo, memo, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMemo, memo, useCallback } from 'react';
 import {
   User,
-  Shield,
   Bell,
-  Settings,
-  LogOut,
-  FileText,
-  BookOpen,
   Lock,
   Briefcase,
-  Eye,
 } from 'lucide-react';
+import { useUserDataCentralized } from '@/hooks';
+import { authService } from '@/lib/services/authService';
 
 // Memoized navigation button component
 const NavButton = memo(({ item, isActive, onClick }) => (
@@ -45,21 +39,8 @@ const SidebarProfile = memo(({ onNavigate }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Utiliser React Query pour récupérer et mettre en cache les données de l'utilisateur
-  const { data: user, isLoading } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: () => authService.getCurrentUser(),
-    // Options pour optimiser la mise en cache et le rafraîchissement
-    staleTime: 5 * 60 * 1000, // Données considérées fraiches pendant 5 minutes
-    cacheTime: 30 * 60 * 1000, // Données gardées en cache 30 minutes
-    enabled: authService.isLoggedIn(), // Ne pas exécuter si l'utilisateur n'est pas connecté
-    refetchOnWindowFocus: false, // Ne pas rafraîchir à chaque focus de la fenêtre
-    retry: 1, // Limiter les tentatives de nouvelle requête en cas d'échec
-  });
-
-  // Derived state for user roles - only calculated when user changes
-  const isStudent = useMemo(() => user?.roles?.[0] === 'ROLE_STUDENT', [user]);
-  const isGuest = useMemo(() => user?.roles?.[0] === 'ROLE_GUEST', [user]);
+  // Utiliser notre hook centralisé avec son nouveau nom
+  const { user, isLoading, isStudent, isGuest } = useUserDataCentralized();
 
   // Memoized navigation handler to prevent recreation on each render
   const handleNavigation = useCallback((href) => {

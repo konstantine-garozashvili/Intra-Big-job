@@ -4,27 +4,58 @@ import ProfileTabs from "../components/profile-view/ProfileTabs";
 import { motion } from "framer-motion";
 import { useParams } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useCurrentProfile, usePublicProfile } from "../hooks/useProfileQueries";
+// Using the centralized useUserData hook for better state management and data consistency
+import { useUserData } from "@/hooks/useUserData";
 import { useProfilePicture } from "../hooks/useProfilePicture";
 import { isGuest } from "../utils/roleUtils";
 import documentService from "../services/documentService";
+import apiService from "@/lib/services/apiService";
 
 const ProfileView = () => {
   const { userId } = useParams();
   const [documents, setDocuments] = useState([]);
+  const isPublicProfile = !!userId;
   
-  // Use the appropriate query hook based on whether we're viewing our own profile or someone else's
+  // Use the useUserData hook for current profile data - now with normalized structure
   const { 
-    data: currentProfileData, 
+    user: currentProfileData, 
     isLoading: isLoadingCurrentProfile,
-    error: currentProfileError 
-  } = useCurrentProfile();
+    error: currentProfileError,
+    forceRefresh: refetchCurrentProfile
+  } = useUserData({
+    preferComprehensiveData: true,
+    enabled: !isPublicProfile
+  });
   
-  const { 
-    data: publicProfileData, 
-    isLoading: isLoadingPublicProfile,
-    error: publicProfileError 
-  } = usePublicProfile(userId);
+  // For public profile, we'll still use the existing hook/API call
+  const [publicProfileData, setPublicProfileData] = useState(null);
+  const [isLoadingPublicProfile, setIsLoadingPublicProfile] = useState(false);
+  const [publicProfileError, setPublicProfileError] = useState(null);
+  
+  // Fetch public profile data if userId is provided
+  useEffect(() => {
+    if (isPublicProfile && userId) {
+      setIsLoadingPublicProfile(true);
+      
+      const fetchPublicProfile = async () => {
+        try {
+          const data = await apiService.get(`/profile/public/${userId}`);
+          
+          if (data && (data.success === true || data.data)) {
+            setPublicProfileData(data.data || data);
+          } else {
+            setPublicProfileError(data.error || 'Failed to fetch profile data');
+          }
+        } catch (error) {
+          setPublicProfileError(error.message || 'Error fetching profile data');
+        } finally {
+          setIsLoadingPublicProfile(false);
+        }
+      };
+      
+      fetchPublicProfile();
+    }
+  }, [userId, isPublicProfile]);
   
   // Fetch profile picture using the custom hook
   const {
@@ -34,15 +65,34 @@ const ProfileView = () => {
   } = useProfilePicture();
   
   // Determine which data to use
-  const isPublicProfile = !!userId;
   const data = isPublicProfile ? publicProfileData : currentProfileData;
   const isLoading = (isPublicProfile ? isLoadingPublicProfile : isLoadingCurrentProfile) || isLoadingProfilePicture;
   const error = isPublicProfile ? publicProfileError : currentProfileError;
   
   // Refetch profile picture when component mounts or userId changes
   useEffect(() => {
-    refetchProfilePicture();
-  }, [userId, refetchProfilePicture]);
+    // Only refetch if there's no cached URL available
+    if (!profilePictureUrl && !isLoadingProfilePicture) {
+      refetchProfilePicture();
+    }
+  }, [userId]); // Only run when userId changes, not on every render
+  
+  // Always use the latest profile picture URL when rendering
+  useEffect(() => {
+    if (data && profilePictureUrl) {
+      if (isPublicProfile) {
+        // For public profile
+        if (data.profilePictureUrl !== profilePictureUrl) {
+          data.profilePictureUrl = profilePictureUrl;
+        }
+      } else {
+        // For current user profile
+        if (data.profilePictureUrl !== profilePictureUrl) {
+          data.profilePictureUrl = profilePictureUrl;
+        }
+      }
+    }
+  }, [data, profilePictureUrl, isPublicProfile]);
   
   // Fetch documents separately
   useEffect(() => {
@@ -192,61 +242,50 @@ const ProfileView = () => {
     );
   }
 
-  // Extract user data based on the profile type
+  // Prepare userData for components with proper structure
   let userData;
   
   if (isPublicProfile) {
-    // For public profile, the structure is { success: true, data: { user: {...}, ... } }
-    userData = data.success === true && data.data ? data.data : null;
+    // Normalize public profile data
+    userData = {
+      user: {
+        id: data.id || data.user?.id,
+        firstName: data.firstName || data.user?.firstName || "",
+        lastName: data.lastName || data.user?.lastName || "",
+        email: data.email || data.user?.email || "",
+        phoneNumber: data.phoneNumber || data.user?.phoneNumber || "",
+        profilePictureUrl: profilePictureUrl || data.profilePictureUrl || data.user?.profilePictureUrl || "",
+        roles: Array.isArray(data.roles) 
+          ? data.roles.map(role => typeof role === 'string' ? { name: role } : role)
+          : (data.user?.roles || [{ name: 'USER' }]),
+        specialization: data.specialization || data.user?.specialization || {},
+        linkedinUrl: data.linkedinUrl || data.user?.linkedinUrl || "",
+        city: data.city || ""
+      },
+      studentProfile: data.studentProfile || {
+        isSeekingInternship: false,
+        isSeekingApprenticeship: false
+      },
+      diplomas: data.diplomas || [],
+      addresses: data.addresses || [],
+      documents: data.documents || [],
+      stats: data.stats || { profile: { completionPercentage: 0 } }
+    };
   } else {
-    // For current profile, the data is directly available
-    userData = data ? {
-      user: data.user,
-      studentProfile: data.studentProfile,
-      diplomas: data.diplomas,
-      addresses: data.addresses,
-      stats: data.stats,
-      documents: documents
-    } : null;
+    // For current profile, the useUserData hook now returns normalized data
+    userData = {
+      user: data,  // Use the normalized user data directly
+      studentProfile: data.studentProfile || {
+        isSeekingInternship: false,
+        isSeekingApprenticeship: false
+      },
+      diplomas: data.diplomas || [],
+      addresses: data.addresses || [],
+      documents: documents.length > 0 ? documents : (data.documents || []),
+      stats: data.stats || { profile: { completionPercentage: 0 } }
+    };
   }
-  
-  if (!userData || !userData.user) {
-    return (
-      <div className="w-full max-w-7xl mx-auto px-4 py-6" data-testid="profile-invalid-data">
-        <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded relative" role="alert">
-          <strong className="font-bold">Attention :</strong>
-          <span className="block sm:inline"> La structure des données du profil est invalide.</span>
-        </div>
-      </div>
-    );
-  }
-  
-  // Toujours utiliser la photo de profil la plus récente du hook useProfilePicture
-  if (profilePictureUrl) {
-    userData.user.profilePictureUrl = profilePictureUrl;
-  }
-  
-  // Log the condition result
-  const isGuestUser = () => {
-    // Check if user has roles array
-    if (userData.user.roles && userData.user.roles.length > 0) {
-      // If roles is an array of objects with name property
-      if (typeof userData.user.roles[0] === 'object' && userData.user.roles[0].name) {
-        return isGuest(userData.user.roles[0].name);
-      }
-      // If roles is an array of strings
-      if (typeof userData.user.roles[0] === 'string') {
-        return isGuest(userData.user.roles[0]);
-      }
-    }
-    
-    // Check if user has a single role property
-    if (userData.user.role) {
-      return isGuest(userData.user.role);
-    }
-    
-    return false;
-  };
+
 
   return (
     <motion.div

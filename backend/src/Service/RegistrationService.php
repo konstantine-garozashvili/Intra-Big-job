@@ -13,7 +13,7 @@ use App\Entity\Theme;
 use App\Repository\NationalityRepository;
 use App\Repository\CityRepository;
 use App\Repository\PostalCodeRepository;
-use App\Repository\RoleRepository;
+use App\Domains\Global\Repository\RoleRepository;
 use App\Repository\ThemeRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;

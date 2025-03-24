@@ -7,8 +7,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useQueryClient } from '@tanstack/react-query';
 import { profileService } from '../services/profileService';
 import ProfilePicture from './settings/ProfilePicture';
-import { useProfilePicture } from '../hooks/useProfilePicture';
 import { isValidEmail, isValidPhone, isValidLinkedInUrl, isValidName, isValidUrl } from '@/lib/utils/validation';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Upload, FileText, Trash2, Send } from 'lucide-react';
+// Importer notre hook centralisé
+import { useUserDataCentralized } from '@/hooks';
 
 // Import our components using the barrel export
 import {
@@ -38,34 +42,40 @@ const UserProfileSettings = () => {
       phoneNumber: '',
       linkedinUrl: '',
       portfolioUrl: '',
+      nationality: '',
+      birthDate: '',
     },
     address: {},
     academic: {},
   });
 
-  // Fetch user profile data using React Query
+  // Utiliser notre hook centralisé pour récupérer les données utilisateur
   const { 
-    data: profileData, 
+    user: userData, 
     isLoading: isProfileLoading, 
     isError: isProfileError,
     error: profileError,
-    refetch: refetchProfile
-  } = useApiQuery('/api/profil/consolidated', 'userProfileData', {
+    forceRefresh: refetchProfile
+  } = useUserDataCentralized({
+    preferComprehensiveData: true, // Utiliser la route '/profile/consolidated'
     refetchOnWindowFocus: false,
     staleTime: 0, // Ensure we always get fresh data
-    cacheTime: 0, // Disable caching to prevent stale data
-    timeout: 4000, // Ajouter un timeout de 4 secondes
     onError: (error) => {
-      toast.error('Failed to load profile data: ' + (error.response?.data?.message || error.message));
+      toast.error('Failed to load profile data: ' + (error.message || 'Unknown error'));
     }
   });
 
-  // Extract user data from the response
-  const userData = React.useMemo(() => ({
-    ...(profileData?.data?.user || {}),
-    addresses: profileData?.data?.addresses || [],
-    studentProfile: profileData?.data?.studentProfile || null,
-  }), [profileData]);
+  // Transformer les données utilisateur pour maintenir la compatibilité
+  const profileData = React.useMemo(() => {
+    if (!userData) return null;
+    return {
+      data: {
+        user: userData,
+        addresses: userData.addresses || [],
+        studentProfile: userData.studentProfile || null,
+      }
+    };
+  }, [userData]);
   
   // Determine if user is a student and get role - memoized to prevent unnecessary recalculations
   const { userRole, isStudent } = React.useMemo(() => {
@@ -76,7 +86,7 @@ const UserProfileSettings = () => {
     
     const isStudent = rolesArray.some(role => 
       typeof role === 'string' && role.includes('STUDENT')
-    ) || (userData.studentProfile && Object.keys(userData.studentProfile).length > 0);
+    ) || (userData?.studentProfile && Object.keys(userData?.studentProfile || {}).length > 0);
     
     let userRole = '';
     if (isStudent) {
@@ -102,6 +112,8 @@ const UserProfileSettings = () => {
         phoneNumber: userData.phoneNumber ?? '',
         linkedinUrl: userData.linkedinUrl ?? '',
         portfolioUrl: userData.studentProfile?.portfolioUrl ?? '',
+        nationality: userData.nationality ?? '',
+        birthDate: userData.birthDate ?? '',
       };
       
       // Only update if the data has actually changed
@@ -361,6 +373,108 @@ const UserProfileSettings = () => {
     }
   );
 
+  // Fonction pour gérer l'upload de pièces d'identité
+  const handleUploadIdentity = async () => {
+    try {
+      // Créer un élément input caché pour sélectionner le fichier
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.accept = '.pdf,.jpg,.jpeg,.png';
+      fileInput.multiple = false;
+      
+      // Gérer l'événement de changement lorsqu'un fichier est sélectionné
+      fileInput.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        // Vérifier la taille du fichier (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          toast.error('Le fichier est trop volumineux. La taille maximale est de 5MB.');
+          return;
+        }
+        
+        // Vérifier le type du fichier
+        const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+        if (!allowedTypes.includes(file.type)) {
+          toast.error('Type de fichier non pris en charge. Utilisez PDF, JPG ou PNG.');
+          return;
+        }
+        
+        // Créer un objet FormData pour l'upload
+        const formData = new FormData();
+        formData.append('document', file);
+        
+        // Afficher un toast de chargement
+        const loadingToast = toast.loading('Upload en cours...');
+        
+        try {
+          // Appel API pour télécharger le document
+          await profileService.uploadIdentityDocument(formData);
+          
+          toast.dismiss(loadingToast);
+          toast.success('Document téléchargé avec succès');
+          
+          // Rafraîchir les données du profil
+          queryClient.invalidateQueries({ queryKey: ['userProfileData'] });
+          refetchProfile();
+          
+        } catch (error) {
+          toast.dismiss(loadingToast);
+          toast.error('Erreur lors du téléchargement du document');
+          console.error('Error uploading document:', error);
+        }
+      };
+      
+      // Déclencher la sélection de fichier
+      fileInput.click();
+    } catch (error) {
+      console.error('Error initiating file upload:', error);
+      toast.error('Erreur lors de l\'initialisation du téléchargement');
+    }
+  };
+
+  // Fonction pour supprimer un document
+  const handleDeleteDocument = async (documentId) => {
+    try {
+      const loadingToast = toast.loading('Suppression en cours...');
+      
+      // Appel API pour supprimer le document
+      await profileService.deleteIdentityDocument(documentId);
+      
+      toast.dismiss(loadingToast);
+      toast.success('Document supprimé avec succès');
+      
+      // Rafraîchir les données du profil
+      queryClient.invalidateQueries({ queryKey: ['userProfileData'] });
+      refetchProfile();
+      
+    } catch (error) {
+      toast.error('Erreur lors de la suppression du document');
+      console.error('Error deleting document:', error);
+    }
+  };
+
+  // Fonction pour envoyer les documents
+  const handleSubmitDocuments = async () => {
+    try {
+      const loadingToast = toast.loading('Envoi des documents en cours...');
+      
+      // Appel API pour envoyer les documents
+      await profileService.submitIdentityDocuments();
+      
+      toast.dismiss(loadingToast);
+      toast.success('Documents envoyés avec succès');
+      
+      // Rafraîchir les données du profil
+      queryClient.invalidateQueries({ queryKey: ['userProfileData'] });
+      refetchProfile();
+      
+    } catch (error) {
+      toast.error('Erreur lors de l\'envoi des documents');
+      console.error('Error submitting documents:', error);
+    }
+  };
+
   // Render loading state
   if (isProfileLoading) {
     return <ProfileSettingsSkeleton />;
@@ -407,7 +521,109 @@ const UserProfileSettings = () => {
             userRole={userRole}
             onSave={handleSavePersonal}
             onSaveAddress={handleSaveAddress}
-          />
+            onUploadIdentity={handleUploadIdentity}
+            onDeleteDocument={handleDeleteDocument}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="nationality">Nationalité</Label>
+                <Input
+                  id="nationality"
+                  value={editedData.personal.nationality || ''}
+                  onChange={(e) => handleSavePersonal('nationality')}
+                  disabled={!editMode.personal}
+                  placeholder="Votre nationalité"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="birthDate">Date de naissance</Label>
+                <Input
+                  id="birthDate"
+                  type="date"
+                  value={editedData.personal.birthDate || ''}
+                  onChange={(e) => handleSavePersonal('birthDate')}
+                  disabled={!editMode.personal}
+                />
+              </div>
+            </div>
+
+            {/* Section conditionnelle pour les documents d'identité */}
+            <div className="space-y-4 mt-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-base">
+                    {editedData.personal.nationality === 'Français' ? 'Pièces d\'identité' : 'Titre de séjour'}
+                  </Label>
+                  <p className="text-sm text-gray-500">
+                    {editedData.personal.nationality === 'Français' 
+                      ? 'Téléchargez vos documents d\'identité'
+                      : 'Téléchargez votre titre de séjour'}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleUploadIdentity}
+                    className="flex items-center gap-2"
+                  >
+                    <Upload className="h-4 w-4" />
+                    Télécharger
+                  </Button>
+                  {userData.identityDocuments && userData.identityDocuments.length > 0 && (
+                    <Button
+                      type="button"
+                      onClick={handleSubmitDocuments}
+                      className="flex items-center gap-2 bg-primary hover:bg-primary/90"
+                    >
+                      <Send className="h-4 w-4" />
+                      Envoyer
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Liste des documents téléchargés */}
+              {userData.identityDocuments && userData.identityDocuments.length > 0 ? (
+                <div className="space-y-2">
+                  {userData.identityDocuments.map((doc, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                    >
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-5 w-5 text-gray-500" />
+                        <div>
+                          <span className="text-sm block">{doc.name}</span>
+                          <span className="text-xs text-gray-500">
+                            {editedData.personal.nationality === 'Français' 
+                              ? 'Document d\'identité'
+                              : 'Titre de séjour'}
+                          </span>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteDocument(doc.id)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-4 bg-gray-50 rounded-lg">
+                  <p className="text-sm text-gray-500">
+                    {editedData.personal.nationality === 'Français'
+                      ? 'Aucun document d\'identité téléchargé'
+                      : 'Aucun titre de séjour téléchargé'}
+                  </p>
+                </div>
+              )}
+            </div>
+          </PersonalInformation>
         </CardContent>
       </Card>
     </div>

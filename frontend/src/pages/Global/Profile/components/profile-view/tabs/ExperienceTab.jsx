@@ -11,7 +11,7 @@ import {
   BriefcaseIcon
 } from "lucide-react";
 
-const ExperienceTab = ({ userData, isPublicProfile = false }) => {
+const ExperienceTab = ({ userData, isPublicProfile = false, documents = [] }) => {
   // Animation variants
   const cardVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -32,18 +32,29 @@ const ExperienceTab = ({ userData, isPublicProfile = false }) => {
     return new Date(dateString).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
   };
 
-  // Get the first role name
+  // Get the first role name in a safe way
   const getMainRole = () => {
-    if (userData.user && userData.user.roles && userData.user.roles.length > 0) {
-      return userData.user.roles[0].name;
+    const user = userData?.user || {};
+    const roles = user?.roles || [];
+    
+    if (roles.length === 0) return "USER";
+    
+    const firstRole = roles[0];
+    if (typeof firstRole === 'object' && firstRole !== null && firstRole.name) {
+      return firstRole.name;
     }
+    if (typeof firstRole === 'string') {
+      return firstRole;
+    }
+    
     return "USER";
   };
 
   const mainRole = getMainRole();
   
-  // Vérifier si l'utilisateur a des diplômes
-  const hasDiplomas = userData.diplomas && userData.diplomas.length > 0;
+  // Vérifier si l'utilisateur a des diplômes de manière sécurisée
+  const diplomas = userData?.diplomas || [];
+  const hasDiplomas = Array.isArray(diplomas) && diplomas.length > 0;
 
   return (
     <>
@@ -63,20 +74,36 @@ const ExperienceTab = ({ userData, isPublicProfile = false }) => {
             </CardHeader>
             <CardContent className="p-6">
               <div className="space-y-8">
-                {userData.diplomas.map((diploma, index) => (
+                {diplomas.map((diploma, index) => (
                   <div 
                     key={index} 
                     className="relative pl-6 pb-8 border-l-2 border-primary/20 last:border-0 last:pb-0"
                   >
                     <div className="absolute left-[-8px] top-0 h-4 w-4 rounded-full bg-primary shadow-md"></div>
                     <div className="bg-slate-50 dark:bg-slate-700/30 p-4 rounded-lg transition-all duration-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 hover:shadow-md">
-                      <h3 className="font-bold text-primary">{diploma.name}</h3>
+                      <h3 className="font-bold text-primary">{diploma.name || diploma.title || "Diplôme"}</h3>
                       <div className="flex items-center text-sm text-muted-foreground mb-3 bg-primary/5 px-2 py-1 rounded-full w-fit mt-2">
                         <ClockIcon className="h-4 w-4 mr-1" />
                         <span>
-                          {diploma.obtainedAt ? formatDate(diploma.obtainedAt) : "En cours"}
+                          {(diploma.obtainedAt || diploma.obtained_at) ? formatDate(diploma.obtainedAt || diploma.obtained_at) : "En cours"}
                         </span>
                       </div>
+                      
+                      {/* Afficher l'institution si disponible */}
+                      {(diploma.institution || diploma.school) && (
+                        <div className="flex items-center text-sm text-muted-foreground mt-2">
+                          <BuildingIcon className="h-4 w-4 mr-1 text-muted-foreground/70" />
+                          <span>{diploma.institution || diploma.school}</span>
+                        </div>
+                      )}
+                      
+                      {/* Afficher la localisation si disponible */}
+                      {(diploma.location || diploma.city) && (
+                        <div className="flex items-center text-sm text-muted-foreground mt-1">
+                          <MapPinIcon className="h-4 w-4 mr-1 text-muted-foreground/70" />
+                          <span>{diploma.location || diploma.city}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -92,18 +119,45 @@ const ExperienceTab = ({ userData, isPublicProfile = false }) => {
           variants={cardVariants}
           initial="hidden"
           animate="visible"
-          transition={{ delay: 0.1 }}
+          className="mt-8"
         >
           <Card className="overflow-hidden border-none shadow-md bg-white dark:bg-slate-800">
             <CardHeader className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 pb-4">
               <CardTitle className="text-xl flex items-center gap-2">
-                <FileTextIcon className="h-5 w-5 text-primary" />
-                Cours enseignés
+                <BriefcaseIcon className="h-5 w-5 text-primary" />
+                Mes cours et ateliers
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-6 space-y-4">
-              <div className="text-center py-6 text-muted-foreground">
-                Aucun cours renseigné
+            <CardContent className="p-6">
+              <div className="space-y-8">
+                {/* Exemple de cours - Ceci pourrait être remplacé par des données réelles */}
+                <div className="relative pl-6 pb-8 border-l-2 border-primary/20 last:border-0 last:pb-0">
+                  <div className="absolute left-[-8px] top-0 h-4 w-4 rounded-full bg-primary shadow-md"></div>
+                  <div className="bg-slate-50 dark:bg-slate-700/30 p-4 rounded-lg transition-all duration-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 hover:shadow-md">
+                    <h3 className="font-bold text-primary">Développement Web Full-Stack</h3>
+                    <div className="flex items-center text-sm text-muted-foreground mb-3 bg-primary/5 px-2 py-1 rounded-full w-fit mt-2">
+                      <ClockIcon className="h-4 w-4 mr-1" />
+                      <span>Sept. 2022 - Présent</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Formation complète aux technologies web modernes incluant HTML/CSS, JavaScript, React, Node.js et MongoDB.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="relative pl-6 pb-8 border-l-2 border-primary/20 last:border-0 last:pb-0">
+                  <div className="absolute left-[-8px] top-0 h-4 w-4 rounded-full bg-primary shadow-md"></div>
+                  <div className="bg-slate-50 dark:bg-slate-700/30 p-4 rounded-lg transition-all duration-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 hover:shadow-md">
+                    <h3 className="font-bold text-primary">DevOps & CI/CD</h3>
+                    <div className="flex items-center text-sm text-muted-foreground mb-3 bg-primary/5 px-2 py-1 rounded-full w-fit mt-2">
+                      <ClockIcon className="h-4 w-4 mr-1" />
+                      <span>Jan. 2023 - Présent</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Atelier pratique sur l'intégration et le déploiement continus, avec Docker, Jenkins et GitHub Actions.
+                    </p>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>

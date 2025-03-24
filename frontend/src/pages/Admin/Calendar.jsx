@@ -70,7 +70,13 @@ const Calendar = () => {
     });
 
     useEffect(() => {
-        fetchEvents();
+        // Ajouter un petit délai pour s'assurer que le token et les données utilisateur sont chargés
+        const timer = setTimeout(() => {
+            fetchEvents();
+        }, 500);
+        
+        // Nettoyer le timer si le composant est démonté
+        return () => clearTimeout(timer);
     }, []);
 
     useEffect(() => {
@@ -101,8 +107,10 @@ const Calendar = () => {
                         participants: event.participants || []
                     }
                 }));
-
                 setEvents(formattedEvents);
+            } else {
+                setEvents([]);
+                setError("Aucun événement trouvé.");
             }
         } catch (error) {
             console.error("Erreur lors du chargement des événements:", error);
@@ -456,72 +464,45 @@ const Calendar = () => {
     const renderContent = () => {
         if (loading) {
             return (
-                <div className="w-full">
-                    <Card className="overflow-hidden border-0 shadow-lg min-h-[550px]">
-                        <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950">
-                            <div className="flex items-center justify-between w-full">
-                                <div className="flex items-center">
-                                    <CalendarIcon className="w-6 h-6 mr-2 text-blue-600 dark:text-blue-400" />
-                                    <CardTitle className="text-xl">Calendrier</CardTitle>
-                                </div>
-                                <div className="animate-pulse">
-                                    <div className="w-48 h-8 bg-gray-200 rounded-md"></div>
-                                </div>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="flex items-center justify-center p-6">
-                            <div className="text-center">
-                                <div className="w-12 h-12 mx-auto border-4 rounded-full border-t-blue-600 border-b-blue-300 border-l-blue-300 border-r-blue-300 animate-spin"></div>
-                                <p className="mt-4 font-medium text-gray-600">Chargement des événements...</p>
-                            </div>
-                        </CardContent>
-                    </Card>
+                <div className="flex justify-center items-center h-[400px]">
+                    <div className="flex flex-col items-center">
+                        <motion.div
+                            className="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full"
+                            animate={{ rotate: 360 }}
+                            transition={{ repeat: Infinity, ease: "linear", duration: 1 }}
+                        />
+                        <p className="mt-3 text-sm font-medium text-gray-600">Chargement du calendrier...</p>
+                    </div>
                 </div>
             );
         }
 
-        // Rendu en cas d'erreur
         if (error) {
             return (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="w-full"
-                >
-                    <div
-                        className="px-6 py-4 text-red-700 bg-red-100 border border-red-400 rounded-lg shadow-md"
-                        role="alert"
-                    >
-                        <div className="flex items-center">
-                            <svg
-                                className="w-6 h-6 mr-2"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                                ></path>
+                <div className="flex justify-center items-center h-[400px]">
+                    <div className="flex flex-col items-center max-w-md text-center">
+                        <div className="text-red-500 mb-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="8" x2="12" y2="12"></line>
+                                <line x1="12" y1="16" x2="12.01" y2="16"></line>
                             </svg>
-                            <strong className="text-lg font-bold">Erreur!</strong>
                         </div>
-                        <p className="mt-2">{error}</p>
-                        <div className="mt-4">
-                            <Button
-                                onClick={() => fetchEvents()}
-                                className="text-white bg-red-600 hover:bg-red-700"
-                            >
-                                Réessayer
-                            </Button>
-                        </div>
+                        <h3 className="text-lg font-semibold text-gray-800 mb-2">Erreur de chargement</h3>
+                        <p className="text-gray-600 mb-4">{error}</p>
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => fetchEvents()}
+                            className="px-4 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 shadow-sm"
+                        >
+                            Réessayer
+                        </motion.button>
                     </div>
-                </motion.div>
+                </div>
             );
         }
-
+        
         return (
             <motion.div
                 initial={{ opacity: 0 }}

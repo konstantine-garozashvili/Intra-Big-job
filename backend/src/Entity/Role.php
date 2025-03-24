@@ -2,7 +2,7 @@
 
 namespace App\Entity;
 
-use App\Repository\RoleRepository;
+use App\Domains\Global\Repository\RoleRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
@@ -36,6 +36,12 @@ class Role
     public function getId(): ?int
     {
         return $this->id;
+    }
+
+    public function setId(int $id): static
+    {
+        $this->id = $id;
+        return $this;
     }
 
     public function getName(): ?string

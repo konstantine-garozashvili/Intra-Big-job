@@ -14,32 +14,47 @@ import { useUserCV } from "../../../hooks/useProfileQueries";
 import documentService from "../../../services/documentService";
 import { toast } from "sonner";
 
-const AboutTab = ({ userData, isPublicProfile = false }) => {
+const AboutTab = ({ userData, isPublicProfile = false, documents = [] }) => {
   const [isDownloading, setIsDownloading] = useState(false);
   
-  const isStudent = userData.user?.roles?.some(role => role.name === "STUDENT");
-  const userId = isPublicProfile ? userData.user?.id : null;
+  // Vérifications sécurisées pour éviter les erreurs si les données ne sont pas structurées comme prévu
+  const user = userData?.user || {};
+  const isStudent = user?.roles?.some(role => 
+    typeof role === 'object' ? role.name === "STUDENT" : role === "STUDENT"
+  );
+  
+  const userId = isPublicProfile ? user?.id : null;
   const { data: cvData, isLoading: isLoadingCV } = useUserCV(userId);
   
-  const hasCV = cvData?.success && cvData?.data && 
-                (Array.isArray(cvData.data) ? cvData.data.length > 0 : !!cvData.data);
+  // Si nous avons des documents passés en props, on les utilise en priorité
+  const cvDocument = documents?.find(doc => 
+    doc?.documentType?.code === 'CV' || doc?.type === 'CV'
+  );
   
-  const cvDocument = Array.isArray(cvData?.data) ? cvData?.data[0] : cvData?.data;
+  // Sinon on utilise les données du hook useUserCV
+  const apiCvDocument = Array.isArray(cvData?.data) ? cvData?.data[0] : cvData?.data;
+  
+  // On utilise le CV disponible (prop ou API)
+  const hasCV = cvDocument || (cvData?.success && cvData?.data && 
+            (Array.isArray(cvData.data) ? cvData.data.length > 0 : !!cvData.data));
+  
+  // Document final à utiliser
+  const finalCvDocument = cvDocument || apiCvDocument;
 
   const handleDownloadCV = async () => {
-    if (!cvDocument || !cvDocument.id) {
+    if (!finalCvDocument || !finalCvDocument.id) {
       toast.error('CV non disponible');
       return;
     }
     
     setIsDownloading(true);
     try {
-      const blob = await documentService.downloadDocument(cvDocument.id);
+      const blob = await documentService.downloadDocument(finalCvDocument.id);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.style.display = 'none';
       a.href = url;
-      a.download = cvDocument.name || 'cv.pdf';
+      a.download = finalCvDocument.name || 'cv.pdf';
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -92,9 +107,15 @@ const AboutTab = ({ userData, isPublicProfile = false }) => {
     </div>
   );
 
-  // Récupérer l'adresse principale
+  // Récupérer l'adresse principale de manière sécurisée
   const mainAddress = userData?.addresses?.[0];
-  const cityName = mainAddress?.city?.name || "Non renseignée";
+  
+  // Récupérer la ville de manière sécurisée (plusieurs formats possibles)
+  const cityName = 
+    user.city || // Format direct dans user
+    (mainAddress?.city?.name) || // Format objet imbriqué
+    (mainAddress?.city) || // Format chaîne directe
+    "Non renseignée";
 
   return (
     <div className="space-y-8">
@@ -110,13 +131,13 @@ const AboutTab = ({ userData, isPublicProfile = false }) => {
             <InfoCard
               icon={UserIcon}
               title="Nom complet"
-              value={`${userData.user.firstName} ${userData.user.lastName}`}
+              value={`${user.firstName || ''} ${user.lastName || ''}`}
             />
             
             <InfoCard
               icon={MailIcon}
               title="Email"
-              value={userData.user.email}
+              value={user.email}
             />
 
             <InfoCard
@@ -125,12 +146,12 @@ const AboutTab = ({ userData, isPublicProfile = false }) => {
               value={cityName}
             />
 
-            {userData.user.linkedinUrl && (
+            {user.linkedinUrl && (
               <InfoCard
               icon={LinkedinIcon}
               title="LinkedIn"
               value="Voir le profil LinkedIn"
-              link={userData.user.linkedinUrl}
+              link={user.linkedinUrl}
               />
             )}
 
