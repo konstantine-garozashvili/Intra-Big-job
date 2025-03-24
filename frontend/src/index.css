@@ -629,6 +629,32 @@
     @apply text-[#78b9dd];
   }
 
+  /* Styles améliorés pour les éléments destructifs en mode sombre */
+  .dark .danger,
+  .dark .danger-btn,
+  .dark .danger-text,
+  .dark [class*="text-red-"] {
+    @apply text-red-400 font-medium;
+  }
+
+  .dark .danger:hover,
+  .dark .danger-btn:hover,
+  .dark .danger-text:hover {
+    @apply text-red-300 font-semibold;
+  }
+
+  .dark button[class*="destructive"],
+  .dark .destructive,
+  .dark [class*="btn-danger"] {
+    @apply bg-red-500 text-white font-medium shadow-sm shadow-red-900/20;
+  }
+
+  .dark button[class*="destructive"]:hover,
+  .dark .destructive:hover,
+  .dark [class*="btn-danger"]:hover {
+    @apply bg-red-600 text-white font-semibold shadow-md shadow-red-900/30;
+  }
+
   /* Améliorations pour les tableaux en mode sombre */
   .dark table {
     @apply bg-gray-800 text-white border-gray-700;

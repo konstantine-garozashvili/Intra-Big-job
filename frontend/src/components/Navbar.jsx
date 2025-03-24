@@ -60,6 +60,25 @@ const customStyles = `
     color: #be123c !important;
   }
   
+  /* Styles pour le mode sombre */
+  .dark .navbar-dropdown-item:hover {
+    background-color: rgba(120, 185, 221, 0.1) !important;
+    color: #78b9dd !important;
+  }
+  
+  .dark .navbar-dropdown-item.danger {
+    color: #fb7185 !important;
+    background-color: rgba(244, 63, 94, 0.05) !important;
+    font-weight: 500 !important;
+  }
+  
+  .dark .navbar-dropdown-item.danger:hover {
+    background-color: rgba(244, 63, 94, 0.2) !important;
+    color: #fff !important;
+    font-weight: 600 !important;
+    box-shadow: 0 0 0 1px rgba(244, 63, 94, 0.3) !important;
+  }
+  
   .menu-burger-btn {
     position: relative;
     display: flex;
@@ -213,13 +232,13 @@ const UserMenu = ({ onLogout, userData, setLogoutDialogOpen }) => {
         </DropdownMenuTrigger>
         <DropdownMenuContent 
           align="end" 
-          className="w-64 mt-2 p-0 overflow-hidden border border-gray-100 shadow-xl rounded-xl"
+          className="w-64 mt-2 p-0 overflow-hidden border border-gray-100 shadow-xl rounded-xl dark:bg-gray-800 dark:border-gray-700 dark:shadow-black/50"
           onOpenAutoFocus={(e) => e.preventDefault()}
           sideOffset={5}
           ref={dropdownMenuRef}
         >
           {/* En-tête du dropdown avec avatar et nom */}
-          <div className="bg-gradient-to-r from-[#02284f] to-[#03386b] p-4 text-white">
+          <div className="bg-gradient-to-r from-[#02284f] to-[#03386b] p-4 text-white dark:from-[#011627] dark:to-[#01223b]">
             <div className="flex items-center">
               <div className="bg-white/20 rounded-full p-2.5">
                 <UserRound className="h-6 w-6" />
@@ -240,12 +259,12 @@ const UserMenu = ({ onLogout, userData, setLogoutDialogOpen }) => {
           </div>
           
           {/* Corps du dropdown avec les options */}
-          <div className="py-1 bg-white">
+          <div className="py-1 bg-white dark:bg-gray-800">
             <DropdownMenuItem 
               className="navbar-dropdown-item"
               onClick={() => navigate('/profile')}
             >
-              <User className="mr-2 h-4 w-4 text-[#528eb2]" />
+              <User className="mr-2 h-4 w-4 text-[#528eb2] dark:text-[#78b9dd]" />
               <span>Mon profil</span>
             </DropdownMenuItem>
             
@@ -253,11 +272,11 @@ const UserMenu = ({ onLogout, userData, setLogoutDialogOpen }) => {
               className="navbar-dropdown-item"
               onClick={() => navigate('/settings/profile')}
             >
-              <Settings className="mr-2 h-4 w-4 text-[#528eb2]" />
+              <Settings className="mr-2 h-4 w-4 text-[#528eb2] dark:text-[#78b9dd]" />
               <span>Paramètres</span>
             </DropdownMenuItem>
             
-            <DropdownMenuSeparator className="my-1 bg-gray-100" />
+            <DropdownMenuSeparator className="my-1 bg-gray-100 dark:bg-gray-700" />
             
             <DropdownMenuItem 
               className="navbar-dropdown-item danger"
@@ -544,14 +563,17 @@ const Navbar = memo(() => {
                   <Button
                     variant="outline"
                     onClick={() => setLogoutDialogOpen(false)}
-                    className="rounded-full border-2 hover:bg-gray-100 transition-all duration-200"
+                    className="rounded-full border-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200"
                   >
                     Annuler
                   </Button>
                   <Button
                     variant="destructive"
                     onClick={handleLogout}
-                    className="rounded-full bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 transition-all duration-200"
+                    className="rounded-full bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 
+                    dark:from-red-500 dark:to-red-600 dark:text-white dark:font-semibold
+                    dark:hover:from-red-400 dark:hover:to-red-600 dark:hover:text-white dark:hover:font-bold dark:hover:shadow-[0_0_10px_rgba(239,68,68,0.5)]
+                    transition-all duration-200"
                   >
                     Se déconnecter
                   </Button>
