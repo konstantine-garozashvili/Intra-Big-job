@@ -5,9 +5,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Shield, KeyRound, Smartphone, Eye, EyeOff } from 'lucide-react';
+import { Shield, KeyRound, Smartphone, Eye, EyeOff, Power, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import ProfileSettingsSkeleton from '../components/ProfileSettingsSkeleton';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import profilService from '@/lib/services/profilService';
 
 const SecuritySettings = () => {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -15,6 +17,9 @@ const SecuritySettings = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
+  const [deactivateLoading, setDeactivateLoading] = useState(false);
+  const [confirmDeactivate, setConfirmDeactivate] = useState(false);
+  
   // State for password visibility toggles
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -85,6 +90,30 @@ const SecuritySettings = () => {
       toast.error(error.response?.data?.message || 'Erreur lors du changement de mot de passe');
     } finally {
       setLoading(false);
+    }
+  };
+  
+  const handleDeactivateAccount = async () => {
+    setDeactivateLoading(true);
+    try {
+      const result = await profilService.deactivateAccount();
+      
+      if (result.success) {
+        toast.success(result.message || 'Votre compte a été désactivé avec succès');
+        setConfirmDeactivate(false);
+        
+        // Rediriger vers la page de connexion après un délai
+        setTimeout(() => {
+          authService.logout();
+          window.location.href = '/login';
+        }, 3000);
+      } else {
+        toast.error(result.message || 'Erreur lors de la désactivation du compte');
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Erreur lors de la désactivation du compte');
+    } finally {
+      setDeactivateLoading(false);
     }
   };
 
@@ -233,6 +262,61 @@ const SecuritySettings = () => {
           <CardFooter className="bg-muted/50">
             <p className="text-sm text-muted-foreground">
               Vous devrez entrer un code à chaque connexion une fois l'authentification à deux facteurs activée.
+            </p>
+          </CardFooter>
+        </Card>
+        
+        {/* Deactivate Account Card */}
+        <Card className="border-destructive">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Power className="h-5 w-5 text-destructive" />
+              <CardTitle className="text-destructive">Désactiver mon compte</CardTitle>
+            </div>
+            <CardDescription>
+              Désactivez temporairement votre compte. Vous pourrez le réactiver ultérieurement en contactant l'administration.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">
+              La désactivation de votre compte conservera toutes vos données, mais vous n'aurez plus accès à l'application jusqu'à sa réactivation.
+            </p>
+            <Dialog open={confirmDeactivate} onOpenChange={setConfirmDeactivate}>
+              <DialogTrigger asChild>
+                <Button variant="destructive">
+                  Désactiver mon compte
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <AlertCircle className="h-5 w-5 text-destructive" />
+                    <span>Désactiver votre compte ?</span>
+                  </DialogTitle>
+                  <DialogDescription>
+                    Cette action va désactiver votre compte. Vous n'aurez plus accès à l'application jusqu'à ce qu'un administrateur réactive votre compte.
+                    <br /><br />
+                    Toutes vos données seront conservées mais inaccessibles jusqu'à la réactivation.
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setConfirmDeactivate(false)}>
+                    Annuler
+                  </Button>
+                  <Button 
+                    variant="destructive" 
+                    onClick={handleDeactivateAccount}
+                    disabled={deactivateLoading}
+                  >
+                    {deactivateLoading ? 'Désactivation en cours...' : 'Confirmer la désactivation'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </CardContent>
+          <CardFooter className="bg-destructive/10">
+            <p className="text-sm text-destructive">
+              Attention : Un administrateur devra réactiver votre compte si vous souhaitez y accéder à nouveau.
             </p>
           </CardFooter>
         </Card>

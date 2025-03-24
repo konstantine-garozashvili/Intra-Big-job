@@ -19,6 +19,9 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Serializer\SerializerInterface;
 use App\Entity\UserDiploma;
+use App\Repository\UserStatusHistoryRepository;
+use App\Repository\UserStatusRepository;
+use App\Service\UserProfileService;
 
 
 #[Route('/api/profile')]
@@ -31,6 +34,9 @@ class ProfileController extends AbstractController
     private $studentProfileRepository;
     private $documentRepository;
     private $documentTypeRepository;
+    private $userProfileService;
+    private $userStatusRepository;
+    private $userStatusHistoryRepository;
     
     public function __construct(
         Security $security,
@@ -39,7 +45,10 @@ class ProfileController extends AbstractController
         UserRepository $userRepository,
         StudentProfileRepository $studentProfileRepository,
         DocumentRepository $documentRepository,
-        DocumentTypeRepository $documentTypeRepository
+        DocumentTypeRepository $documentTypeRepository,
+        UserProfileService $userProfileService = null,
+        UserStatusRepository $userStatusRepository = null,
+        UserStatusHistoryRepository $userStatusHistoryRepository = null
     ) {
         $this->security = $security;
         $this->serializer = $serializer;
@@ -48,6 +57,9 @@ class ProfileController extends AbstractController
         $this->studentProfileRepository = $studentProfileRepository;
         $this->documentRepository = $documentRepository;
         $this->documentTypeRepository = $documentTypeRepository;
+        $this->userProfileService = $userProfileService;
+        $this->userStatusRepository = $userStatusRepository;
+        $this->userStatusHistoryRepository = $userStatusHistoryRepository;
     }
 
     /**
@@ -668,6 +680,94 @@ class ProfileController extends AbstractController
             return $this->json([
                 'success' => false,
                 'message' => 'Une erreur est survenue lors de la mise à jour de l\'adresse: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * Désactive le compte de l'utilisateur actuellement connecté
+     */
+    #[Route('/deactivate', name: 'api_user_deactivate_account', methods: ['POST'])]
+    public function deactivateAccount(): JsonResponse
+    {
+        try {
+            $user = $this->getUser();
+            
+            if (!$user) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Utilisateur non authentifié'
+                ], 401);
+            }
+            
+            if (!$this->userProfileService) {
+                // Fallback si le service n'est pas injecté, créer une instance locale
+                $userProfileService = new UserProfileService(
+                    $this->entityManager,
+                    $this->userRepository,
+                    $this->serializer,
+                    $this->get('App\Service\DocumentStorageFactory'),
+                    $this->userStatusRepository,
+                    $this->userStatusHistoryRepository
+                );
+                $result = $userProfileService->deactivateAccount($user);
+            } else {
+                $result = $this->userProfileService->deactivateAccount($user);
+            }
+            
+            if (!$result['success']) {
+                return $this->json($result, 500);
+            }
+            
+            return $this->json($result);
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Une erreur est survenue lors de la désactivation de votre compte: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * Récupère le statut actuel de l'utilisateur
+     */
+    #[Route('/status', name: 'api_user_current_status', methods: ['GET'])]
+    public function getCurrentStatus(): JsonResponse
+    {
+        try {
+            $user = $this->getUser();
+            
+            if (!$user) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Utilisateur non authentifié'
+                ], 401);
+            }
+            
+            if (!$this->userProfileService) {
+                // Fallback si le service n'est pas injecté, créer une instance locale
+                $userProfileService = new UserProfileService(
+                    $this->entityManager,
+                    $this->userRepository,
+                    $this->serializer,
+                    $this->get('App\Service\DocumentStorageFactory'),
+                    $this->userStatusRepository,
+                    $this->userStatusHistoryRepository
+                );
+                $result = $userProfileService->getCurrentUserStatus($user);
+            } else {
+                $result = $this->userProfileService->getCurrentUserStatus($user);
+            }
+            
+            if (!$result['success']) {
+                return $this->json($result, $result['message'] === 'Aucun statut n\'est actuellement attribué à votre compte.' ? 404 : 500);
+            }
+            
+            return $this->json($result, 200, [], ['groups' => ['user_status:read']]);
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Une erreur est survenue lors de la récupération du statut: ' . $e->getMessage()
             ], 500);
         }
     }

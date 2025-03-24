@@ -107,6 +107,34 @@ const profilService = {
         throw error; // Renvoyer l'erreur originale
       }
     }
+  },
+  
+  /**
+   * Désactive le compte de l'utilisateur connecté
+   * @returns {Promise<Object>} Résultat de l'opération
+   */
+  deactivateAccount: async () => {
+    try {
+      const response = await apiService.post('/api/profile/deactivate');
+      return response;
+    } catch (error) {
+      console.error('Erreur lors de la désactivation du compte:', error);
+      throw error;
+    }
+  },
+  
+  /**
+   * Récupère le statut actuel de l'utilisateur connecté
+   * @returns {Promise<Object>} Informations sur le statut
+   */
+  getCurrentStatus: async () => {
+    try {
+      const response = await apiService.get('/api/profile/status');
+      return response;
+    } catch (error) {
+      console.error('Erreur lors de la récupération du statut:', error);
+      throw error;
+    }
   }
 };
 

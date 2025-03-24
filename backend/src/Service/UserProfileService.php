@@ -8,6 +8,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Serializer\SerializerInterface;
+use App\Repository\UserStatusRepository;
+use App\Repository\UserStatusHistoryRepository;
 
 /**
  * Service to centralize common user profile operations
@@ -18,17 +20,23 @@ class UserProfileService
     private $userRepository;
     private $serializer;
     private $documentStorageFactory;
+    private $userStatusRepository;
+    private $userStatusHistoryRepository;
     
     public function __construct(
         EntityManagerInterface $entityManager,
         UserRepository $userRepository,
         SerializerInterface $serializer,
-        DocumentStorageFactory $documentStorageFactory
+        DocumentStorageFactory $documentStorageFactory,
+        UserStatusRepository $userStatusRepository = null,
+        UserStatusHistoryRepository $userStatusHistoryRepository = null
     ) {
         $this->entityManager = $entityManager;
         $this->userRepository = $userRepository;
         $this->serializer = $serializer;
         $this->documentStorageFactory = $documentStorageFactory;
+        $this->userStatusRepository = $userStatusRepository;
+        $this->userStatusHistoryRepository = $userStatusHistoryRepository;
     }
     
     /**
@@ -240,6 +248,99 @@ class UserProfileService
             return [
                 'success' => false,
                 'message' => 'Erreur lors de la récupération de la photo de profil: ' . $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * Désactive un compte utilisateur en le marquant comme "Archivé"
+     * @param User $user L'utilisateur à désactiver
+     * @return array Résultat de l'opération
+     */
+    public function deactivateAccount(User $user): array
+    {
+        try {
+            // Vérifier si les repositories nécessaires sont injectés
+            if (!$this->userStatusRepository || !$this->userStatusHistoryRepository) {
+                return [
+                    'success' => false,
+                    'message' => 'Services requis non disponibles pour la désactivation du compte.'
+                ];
+            }
+            
+            // Rechercher le statut "Archivé"
+            $archivedStatus = $this->userStatusRepository->findByName('Archivé');
+            
+            if (!$archivedStatus) {
+                return [
+                    'success' => false,
+                    'message' => 'Le statut "Archivé" n\'existe pas dans le système.'
+                ];
+            }
+            
+            // Rechercher l'entrée de statut actuelle de l'utilisateur
+            $currentStatusHistory = $this->userStatusHistoryRepository->findCurrentByUser($user->getId());
+            
+            // Si l'utilisateur a déjà un statut actif, le terminer
+            if ($currentStatusHistory) {
+                $currentStatusHistory->setEndDate(new \DateTime());
+                $this->entityManager->persist($currentStatusHistory);
+            }
+            
+            // Créer une nouvelle entrée d'historique de statut
+            $newStatusHistory = new \App\Entity\UserStatusHistory();
+            $newStatusHistory->setUser($user);
+            $newStatusHistory->setStatus($archivedStatus);
+            $newStatusHistory->setStartDate(new \DateTime());
+            
+            $this->entityManager->persist($newStatusHistory);
+            $this->entityManager->flush();
+            
+            return [
+                'success' => true,
+                'message' => 'Votre compte a été désactivé avec succès. Vous serez déconnecté lors de votre prochaine connexion.'
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'message' => 'Une erreur est survenue lors de la désactivation de votre compte: ' . $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * Récupère le statut actuel d'un utilisateur
+     * @param User $user L'utilisateur
+     * @return array Informations sur le statut actuel
+     */
+    public function getCurrentUserStatus(User $user): array
+    {
+        try {
+            // Vérifier si les repositories nécessaires sont injectés
+            if (!$this->userStatusHistoryRepository) {
+                return [
+                    'success' => false,
+                    'message' => 'Services requis non disponibles pour récupérer le statut.'
+                ];
+            }
+            
+            $currentStatusHistory = $this->userStatusHistoryRepository->findCurrentByUser($user->getId());
+            
+            if (!$currentStatusHistory) {
+                return [
+                    'success' => false,
+                    'message' => 'Aucun statut n\'est actuellement attribué à votre compte.'
+                ];
+            }
+            
+            return [
+                'success' => true,
+                'status' => $currentStatusHistory->getStatus()
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'message' => 'Une erreur est survenue lors de la récupération du statut: ' . $e->getMessage()
             ];
         }
     }

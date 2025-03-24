@@ -119,7 +119,7 @@ export const authService = {
       // Use JWT standard route directly
       const response = await apiService.post('/login_check', loginData);
       
-      // Store JWT token in localStorage
+      // Cache the token
       if (response.token) {
         localStorage.setItem('token', response.token);
       }
@@ -172,6 +172,24 @@ export const authService = {
           // Silently handle token parsing errors
           console.error('Error parsing token:', tokenError);
         }
+      }
+      
+      // Check user status - new code to verify if account is archived
+      try {
+        const statusResponse = await apiService.get('/api/profile/status');
+        if (statusResponse.success && statusResponse.status && statusResponse.status.name === 'Archivé') {
+          // If account is archived, log out the user
+          this.logout();
+          hideGlobalLoader();
+          throw new Error('Votre compte a été désactivé. Veuillez contacter l\'administration pour le réactiver.');
+        }
+      } catch (statusError) {
+        // We only handle the case where the account is archived
+        if (statusError.message && statusError.message.includes('désactivé')) {
+          throw statusError;
+        }
+        // Otherwise we continue because the status check isn't critical
+        console.warn('Error checking user status:', statusError);
       }
       
       // Hide the global loader immediately after basic auth is completed
