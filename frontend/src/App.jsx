@@ -11,6 +11,7 @@ import ProfileLayout from '@/layouts/ProfileLayout'
 import StudentRoute from './components/StudentRoute'
 import { Toaster } from './components/ui/sonner'
 import { ErrorBoundary } from "react-error-boundary"
+import Trombinoscope from './components/Trombinoscope';
 
 // Create a shared query client for the entire application
 const queryClient = new QueryClient({
@@ -528,6 +529,13 @@ const AppContent = () => {
                         <RecruiterDashboard />
                       </RoleGuard>
                     } />
+
+                    <Route path="/Trombinoscope" element={
+                      <RoleGuard roles={[ROLES.SUPERADMIN, ROLES.TEACHER, ROLES.STUDENT, ROLES.RECRUITER, ROLES.HR]}
+                       fallback={<Navigate to="/dashboard" replace />} >
+                     <Trombinoscope />
+                    </RoleGuard>
+                  } />
                   </Route>
                   
                   {/* Redirection des routes inconnues vers la page d'accueil */}
