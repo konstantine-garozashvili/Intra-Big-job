@@ -254,6 +254,7 @@ class UserProfileService
     
     /**
      * Désactive un compte utilisateur en le marquant comme "Archivé"
+     * Cette fonction ne s'applique qu'aux utilisateurs ayant le rôle Guest/Invité
      * @param User $user L'utilisateur à désactiver
      * @return array Résultat de l'opération
      */
@@ -265,6 +266,23 @@ class UserProfileService
                 return [
                     'success' => false,
                     'message' => 'Services requis non disponibles pour la désactivation du compte.'
+                ];
+            }
+            
+            // Vérifier si l'utilisateur a le rôle GUEST/Invité
+            $hasGuestRole = false;
+            foreach ($user->getUserRoles() as $userRole) {
+                $roleName = $userRole->getRole()->getName();
+                if (strpos(strtoupper($roleName), 'GUEST') !== false || strpos(strtoupper($roleName), 'INVITE') !== false) {
+                    $hasGuestRole = true;
+                    break;
+                }
+            }
+            
+            if (!$hasGuestRole) {
+                return [
+                    'success' => false,
+                    'message' => 'Seuls les utilisateurs avec le rôle Invité peuvent désactiver leur compte.'
                 ];
             }
             

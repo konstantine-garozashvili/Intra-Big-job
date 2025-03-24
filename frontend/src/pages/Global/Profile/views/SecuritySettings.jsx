@@ -19,17 +19,30 @@ const SecuritySettings = () => {
   const [pageLoading, setPageLoading] = useState(true);
   const [deactivateLoading, setDeactivateLoading] = useState(false);
   const [confirmDeactivate, setConfirmDeactivate] = useState(false);
+  const [userRoles, setUserRoles] = useState([]);
+  const [isGuest, setIsGuest] = useState(false);
   
   // State for password visibility toggles
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Simulate data loading on component mount
+  // Load data on component mount
   useEffect(() => {
     const loadSecuritySettings = async () => {
       try {
-        // In a real app, you might load security settings data here
+        // Get user roles from localStorage
+        const storedRoles = localStorage.getItem('userRoles');
+        const roles = storedRoles ? JSON.parse(storedRoles) : [];
+        setUserRoles(roles);
+        
+        // Check if user has Guest/Invité role
+        const hasGuestRole = roles.some(role => 
+          typeof role === 'string' 
+            ? role.includes('GUEST') || role.includes('INVITE') 
+            : (role.name && (role.name.includes('GUEST') || role.name.includes('INVITE')))
+        );
+        setIsGuest(hasGuestRole);
       } catch (error) {
         toast.error('Erreur lors du chargement des paramètres de sécurité');
       } finally {
@@ -266,60 +279,62 @@ const SecuritySettings = () => {
           </CardFooter>
         </Card>
         
-        {/* Deactivate Account Card */}
-        <Card className="border-destructive">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Power className="h-5 w-5 text-destructive" />
-              <CardTitle className="text-destructive">Désactiver mon compte</CardTitle>
-            </div>
-            <CardDescription>
-              Désactivez temporairement votre compte. Vous pourrez le réactiver ultérieurement en contactant l'administration.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">
-              La désactivation de votre compte conservera toutes vos données, mais vous n'aurez plus accès à l'application jusqu'à sa réactivation.
-            </p>
-            <Dialog open={confirmDeactivate} onOpenChange={setConfirmDeactivate}>
-              <DialogTrigger asChild>
-                <Button variant="destructive">
-                  Désactiver mon compte
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
-                    <AlertCircle className="h-5 w-5 text-destructive" />
-                    <span>Désactiver votre compte ?</span>
-                  </DialogTitle>
-                  <DialogDescription>
-                    Cette action va désactiver votre compte. Vous n'aurez plus accès à l'application jusqu'à ce qu'un administrateur réactive votre compte.
-                    <br /><br />
-                    Toutes vos données seront conservées mais inaccessibles jusqu'à la réactivation.
-                  </DialogDescription>
-                </DialogHeader>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setConfirmDeactivate(false)}>
-                    Annuler
+        {/* Deactivate Account Card - Only shown for Guest users */}
+        {isGuest && (
+          <Card className="border-destructive">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Power className="h-5 w-5 text-destructive" />
+                <CardTitle className="text-destructive">Désactiver mon compte</CardTitle>
+              </div>
+              <CardDescription>
+                Désactivez temporairement votre compte. Vous pourrez le réactiver ultérieurement en contactant l'administration.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                La désactivation de votre compte conservera toutes vos données, mais vous n'aurez plus accès à l'application jusqu'à sa réactivation.
+              </p>
+              <Dialog open={confirmDeactivate} onOpenChange={setConfirmDeactivate}>
+                <DialogTrigger asChild>
+                  <Button variant="destructive">
+                    Désactiver mon compte
                   </Button>
-                  <Button 
-                    variant="destructive" 
-                    onClick={handleDeactivateAccount}
-                    disabled={deactivateLoading}
-                  >
-                    {deactivateLoading ? 'Désactivation en cours...' : 'Confirmer la désactivation'}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </CardContent>
-          <CardFooter className="bg-destructive/10">
-            <p className="text-sm text-destructive">
-              Attention : Un administrateur devra réactiver votre compte si vous souhaitez y accéder à nouveau.
-            </p>
-          </CardFooter>
-        </Card>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <AlertCircle className="h-5 w-5 text-destructive" />
+                      <span>Désactiver votre compte ?</span>
+                    </DialogTitle>
+                    <DialogDescription>
+                      Cette action va désactiver votre compte. Vous n'aurez plus accès à l'application jusqu'à ce qu'un administrateur réactive votre compte.
+                      <br /><br />
+                      Toutes vos données seront conservées mais inaccessibles jusqu'à la réactivation.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setConfirmDeactivate(false)}>
+                      Annuler
+                    </Button>
+                    <Button 
+                      variant="destructive" 
+                      onClick={handleDeactivateAccount}
+                      disabled={deactivateLoading}
+                    >
+                      {deactivateLoading ? 'Désactivation en cours...' : 'Confirmer la désactivation'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </CardContent>
+            <CardFooter className="bg-destructive/10">
+              <p className="text-sm text-destructive">
+                Attention : Un administrateur devra réactiver votre compte si vous souhaitez y accéder à nouveau.
+              </p>
+            </CardFooter>
+          </Card>
+        )}
       </div>
     </div>
   );

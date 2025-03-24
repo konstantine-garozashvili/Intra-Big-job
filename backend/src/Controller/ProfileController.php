@@ -686,6 +686,7 @@ class ProfileController extends AbstractController
     
     /**
      * Désactive le compte de l'utilisateur actuellement connecté
+     * Uniquement disponible pour les utilisateurs avec le rôle GUEST/Invité
      */
     #[Route('/deactivate', name: 'api_user_deactivate_account', methods: ['POST'])]
     public function deactivateAccount(): JsonResponse
@@ -698,6 +699,23 @@ class ProfileController extends AbstractController
                     'success' => false,
                     'message' => 'Utilisateur non authentifié'
                 ], 401);
+            }
+            
+            // Vérifier si l'utilisateur a le rôle GUEST/Invité
+            $hasGuestRole = false;
+            foreach ($user->getUserRoles() as $userRole) {
+                $roleName = $userRole->getRole()->getName();
+                if (strpos(strtoupper($roleName), 'GUEST') !== false || strpos(strtoupper($roleName), 'INVITE') !== false) {
+                    $hasGuestRole = true;
+                    break;
+                }
+            }
+            
+            if (!$hasGuestRole) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Seuls les utilisateurs avec le rôle Invité peuvent désactiver leur compte.'
+                ], 403);
             }
             
             if (!$this->userProfileService) {
