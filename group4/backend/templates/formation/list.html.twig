@@ -1,0 +1,141 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Liste des formations{% endblock %}
+
+{% block stylesheets %}
+{{ parent() }}
+<style>
+    .formations-wrapper {
+        margin: 2em auto;
+        max-width: 1200px;
+        padding: 0 20px;
+    }
+    .formations-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2em;
+    }
+    .formations-title {
+        color: #2c3e50;
+        margin: 0;
+    }
+    .formations-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    .formations-table th,
+    .formations-table td {
+        padding: 1rem;
+        text-align: left;
+        border-bottom: 1px solid #e9ecef;
+    }
+    .formations-table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        color: #495057;
+    }
+    .formations-table tr:hover {
+        background-color: #f8f9fa;
+    }
+    .btn {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+    .btn-primary {
+        background-color: #007bff;
+        color: white;
+        border: none;
+    }
+    .btn-primary:hover {
+        background-color: #0056b3;
+        transform: translateY(-1px);
+    }
+    .btn-secondary {
+        background-color: #6c757d;
+        color: white;
+    }
+    .btn-secondary:hover {
+        background-color: #545b62;
+        transform: translateY(-1px);
+    }
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        color: #6c757d;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        margin-top: 2rem;
+    }
+    .flash-messages {
+        margin-bottom: 2rem;
+    }
+    .alert {
+        padding: 1rem;
+        border-radius: 4px;
+        margin-bottom: 1rem;
+    }
+    .alert-success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="formations-wrapper">
+    {% for message in app.flashes('success') %}
+        <div class="flash-messages">
+            <div class="alert alert-success">
+                {{ message }}
+            </div>
+        </div>
+    {% endfor %}
+
+    <div class="formations-header">
+        <h1 class="formations-title">Liste des formations</h1>
+        <a href="{{ path('formation_new') }}" class="btn btn-primary">Créer une formation</a>
+    </div>
+
+    {% if formations is not empty %}
+        <table class="formations-table">
+            <thead>
+                <tr>
+                    <th>Nom de la formation</th>
+                    <th>Promotion</th>
+                    <th>Nombre d'étudiants</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for formation in formations %}
+                    <tr>
+                        <td>{{ formation.name }}</td>
+                        <td>{{ formation.promotion }}</td>
+                        <td>{{ formation.students|length }}</td>
+                        <td>
+                            <a href="{{ path('formation_add_students', {id: formation.id}) }}" class="btn btn-secondary">
+                                Gérer les étudiants
+                            </a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div class="empty-state">
+            <p>Aucune formation n'est disponible pour le moment.</p>
+            <p>Cliquez sur "Créer une formation" pour commencer.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
