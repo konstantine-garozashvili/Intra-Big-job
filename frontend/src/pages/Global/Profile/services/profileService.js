@@ -111,7 +111,6 @@ class ProfileService {
     try {
       // Vérifier si une requête est déjà en cours pour cette route
       if (userDataManager.requestRegistry.getActiveRequest('/profile/consolidated') && !options.forceRefresh) {
-        console.log('Requête consolidée déjà en cours, réutilisation de la requête existante');
         const activeRequest = userDataManager.requestRegistry.getActiveRequest('/profile/consolidated');
         if (activeRequest) {
           return activeRequest;
@@ -123,7 +122,6 @@ class ProfileService {
       if (!options.forceRefresh && 
           profileCache.consolidatedData && 
           (now - profileCache.consolidatedDataTimestamp) < profileCache.cacheDuration) {
-        console.log('Utilisation des données consolidées en cache local');
         return profileCache.consolidatedData;
       }
       
@@ -137,8 +135,6 @@ class ProfileService {
           useCache: !options.forceRefresh
         })
       );
-      
-      console.log('Réponse brute de getAllProfileData:', response);
       
       // Normaliser les données pour assurer une structure cohérente
       let normalizedData;
@@ -206,16 +202,13 @@ class ProfileService {
       try {
         localStorage.setItem('user', JSON.stringify(normalizedData));
       } catch (e) {
-        console.error('Erreur lors de la sauvegarde des données utilisateur dans localStorage:', e);
+        // Ignorer l'erreur silencieusement
       }
       
       return normalizedData;
     } catch (error) {
-      console.warn('Erreur lors de la récupération des données de profil:', error);
-      
       // FALLBACK: Essayer d'utiliser les données en cache local si disponibles
       if (profileCache.consolidatedData) {
-        console.log('Utilisation des données en cache local après erreur');
         return profileCache.consolidatedData;
       }
       
@@ -224,7 +217,6 @@ class ProfileService {
         // Utiliser directement la méthode getCachedUserData de userDataManager
         const cachedData = userDataManager.getCachedUserData();
         if (cachedData) {
-          console.log('Utilisation des données en cache central après erreur');
           return cachedData;
         }
         
@@ -233,14 +225,13 @@ class ProfileService {
         if (storedData) {
           try {
             const parsedData = JSON.parse(storedData);
-            console.log('Utilisation des données depuis localStorage après erreur');
             return parsedData;
           } catch (e) {
-            console.error('Erreur lors du parsing des données utilisateur:', e);
+            // Ignorer l'erreur silencieusement
           }
         }
       } catch (e) {
-        console.error('Erreur lors de la récupération des données en cache:', e);
+        // Ignorer l'erreur silencieusement
       }
       
       // Si tout échoue, lancer l'erreur
@@ -355,7 +346,6 @@ class ProfileService {
       
       return response;
     } catch (error) {
-      console.error('Erreur lors de la récupération de la photo de profil:', error);
       // En cas d'erreur, retourner un objet avec le format attendu
       return { 
         success: false, 
@@ -427,8 +417,6 @@ class ProfileService {
     // Ne pas déclencher l'invalidation trop fréquemment
     if (updateType === 'profile_picture' && 
         userDataManager.requestRegistry.isRouteShared('/api/profile/picture')) {
-      console.log('Route partagée, invalidation de cache limitée pour éviter les boucles');
-      
       // Vider uniquement notre cache local sans propager
       profileCache.userData = null;
       profileCache.userDataTimestamp = 0;

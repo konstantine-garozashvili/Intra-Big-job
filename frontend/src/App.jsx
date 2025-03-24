@@ -74,6 +74,7 @@ const RecruiterDashboard = lazy(() => import('./pages/Recruiter/Dashboard'))
 // Nouvelles pages à importer
 const FormationList = lazy(() => import('./pages/FormationList'))
 const GuestStudentRoleManager = lazy(() => import('./pages/Recruiter/GuestStudentRoleManager'))
+const UserRoleManager = lazy(() => import('./pages/Admin/components/UserRoleManager'))
 
 // Import du composant HomePage 
 const HomePage = lazy(() => import('./components/HomePage'))
@@ -444,6 +445,11 @@ const AppContent = () => {
                     <Route path="/admin/dashboard" element={
                       <RoleGuard roles={ROLES.ADMIN} fallback={<Navigate to="/dashboard" replace />}>
                         <AdminDashboard />
+                      </RoleGuard>
+                    } />
+                    <Route path="/admin/user-roles" element={
+                      <RoleGuard roles={ROLES.ADMIN} fallback={<Navigate to="/dashboard" replace />}>
+                        <UserRoleManager />
                       </RoleGuard>
                     } />
                     
