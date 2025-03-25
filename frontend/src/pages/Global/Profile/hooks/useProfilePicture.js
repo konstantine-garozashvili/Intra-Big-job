@@ -170,7 +170,7 @@ export function useProfilePicture() {
         async () => {
           const result = await apiService.get('/api/profile/picture', { 
             params: { _t: Date.now() }, // Ajouter un timestamp pour éviter le cache du navigateur
-            timeout: 5000, // Timeout court pour les images
+            timeout: 15000, // Timeout court pour les images
             retries: 1 // Limiter les retries
           });
           
