@@ -5,17 +5,13 @@ import { Check, ChevronDown, ChevronUp } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const Select = React.forwardRef(({ ...props }, ref) => {
-  console.log("[Select] Rendu avec props:", {
-    value: props.value,
-    defaultValue: props.defaultValue,
-    name: props.name,
-    disabled: props.disabled,
-  });
+  // Log simplifié
+  console.log("[Select] Rendu avec value:", props.value);
 
   // Intercepter onValueChange pour ajouter des logs
   const originalOnValueChange = props.onValueChange;
   const enhancedOnValueChange = React.useCallback((value) => {
-    console.log("[Select] onValueChange appelé avec:", value);
+    console.log("[Select] onValueChange:", value);
     
     if (originalOnValueChange) {
       originalOnValueChange(value);
@@ -28,7 +24,6 @@ const Select = React.forwardRef(({ ...props }, ref) => {
       onValueChange={enhancedOnValueChange}
       ref={ref}
       onOpenChange={(open) => {
-        console.log("[Select] Dropdown", open ? "ouvert" : "fermé");
         if (props.onOpenChange) props.onOpenChange(open);
       }}
     />
@@ -110,7 +105,7 @@ const SelectLabel = React.forwardRef(({ className, ...props }, ref) => (
 SelectLabel.displayName = SelectPrimitive.Label.displayName
 
 const SelectItem = React.forwardRef(({ className, children, ...props }, ref) => {
-  console.log("[SelectItem] Rendu avec value:", props.value);
+  // Simplification du log
   
   return (
     <SelectPrimitive.Item
@@ -119,9 +114,6 @@ const SelectItem = React.forwardRef(({ className, children, ...props }, ref) => 
         "relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
         className
       )}
-      onMouseDown={() => {
-        console.log("[SelectItem] Option cliquée:", props.value);
-      }}
       {...props}
     >
       <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">

@@ -129,11 +129,10 @@ export default function UserRoleManager() {
     
     // Effet pour mettre à jour le filtre lorsque l'URL change - Approche simplifiée
     useEffect(() => {
-        console.log("[UserRoleManager] URL changée, initialFilter:", initialFilter);
+        console.log("[UserRoleManager] URL changée:", initialFilter);
         
         // Mise à jour directe du lastFilterRoleRef et du filtre
         if (initialFilter !== lastFilterRoleRef.current) {
-            console.log("[UserRoleManager] Mise à jour immédiate du filtre:", initialFilter);
             lastFilterRoleRef.current = initialFilter;
             
             // Mise à jour synchrone du filtre sans setTimeout
