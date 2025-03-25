@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetClose } from '@/components/ui/sheet';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ProfileLayoutProvider, useProfileLayout } from '@/context/ProfileLayoutContext';
+import { ProfileLayoutProvider, useProfileLayout } from '@/contexts/ProfileLayoutContext';
 
 // Inner component to use context hooks
 const ProfileLayoutContent = () => {

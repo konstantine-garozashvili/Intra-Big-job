@@ -21,6 +21,15 @@ export const getSessionId = () => currentSessionId;
 // Lazy loading des informations utilisateur
 let userDataPromise = null;
 
+// Objet pour suivre les appels à getCurrentUser
+const getCurrentUserState = {
+  lastCallTime: 0,
+  minInterval: 2000, // Intervalle minimum entre appels (2 secondes)
+  callStack: [], // Pour détecter les appels récursifs
+  stackLimit: 3, // Limite de profondeur de la pile d'appels
+  currentPromise: null, // Pour réutiliser une promesse en cours
+};
+
 /**
  * Décode un token JWT
  * @param {string} token - Le token JWT à décoder
@@ -173,6 +182,8 @@ export const authService = {
       
       // Trigger the login success event immediately
       window.dispatchEvent(new Event('login-success'));
+      // Also dispatch auth-state-change event
+      window.dispatchEvent(new Event('auth-state-change'));
       
       // Initiate user data loading in the background without blocking navigation
       this.lazyLoadUserData(true).catch(() => {
@@ -408,6 +419,8 @@ export const authService = {
       window.dispatchEvent(new CustomEvent('logout-success', {
         detail: { redirectTo }
       }));
+      // Also dispatch auth-state-change event
+      window.dispatchEvent(new Event('auth-state-change'));
       
       // Use the window.location.replace method for a cleaner page transition
       // This replaces the current history entry instead of adding a new one
@@ -451,7 +464,7 @@ export const authService = {
   },
   
   /**
-   * Récupérer la liste des appareils connectés
+   * Récupère la liste des appareils connectés
    */
   async getDevices() {
     try {
@@ -496,6 +509,14 @@ export const authService = {
     } catch (error) {
       return false;
     }
+  },
+
+  /**
+   * Alias for isLoggedIn to maintain compatibility with components expecting isAuthenticated
+   * @returns {boolean} - True if user is authenticated
+   */
+  isAuthenticated() {
+    return this.isLoggedIn();
   },
 
   /**
@@ -558,12 +579,54 @@ export const authService = {
       throw new Error('Aucun token d\'authentification trouvé');
     }
 
+    // Vérifier les appels récursifs
+    const callerId = `auth_service_${requestSource}_${Date.now()}`;
+    
+    // Ajouter l'appel courant à la pile
+    getCurrentUserState.callStack.push(callerId);
+    
+    // Vérifier si on a une pile d'appels trop profonde (appels récursifs)
+    if (getCurrentUserState.callStack.length > getCurrentUserState.stackLimit) {
+      console.warn(`Detected recursive calls to getCurrentUser. Call stack:`, getCurrentUserState.callStack);
+      
+      // Nettoyer la pile et utiliser le cache
+      getCurrentUserState.callStack = [];
+      const cachedUser = userDataManager.getCachedUserData();
+      
+      if (cachedUser) {
+        return cachedUser;
+      }
+    }
+    
+    // Vérifier l'intervalle minimal entre les appels
+    const now = Date.now();
+    const timeSinceLastCall = now - getCurrentUserState.lastCallTime;
+    
+    if (!forceRefresh && timeSinceLastCall < getCurrentUserState.minInterval) {
+      // Utiliser le cache si l'intervalle est trop court
+      const cachedUser = userDataManager.getCachedUserData();
+      
+      if (cachedUser) {
+        // Supprimer l'appel courant de la pile
+        const index = getCurrentUserState.callStack.indexOf(callerId);
+        if (index !== -1) {
+          getCurrentUserState.callStack.splice(index, 1);
+        }
+        
+        return cachedUser;
+      }
+    }
+    
+    // Mettre à jour le timestamp du dernier appel
+    getCurrentUserState.lastCallTime = now;
+
     // Utiliser le nouveau gestionnaire de données utilisateur
     try {
       const userData = await userDataManager.getUserData({
         forceRefresh,
         routeKey: '/api/me',
-        requestId: `auth_service_${requestSource}_${Date.now()}`
+        requestId: callerId,
+        preventRecursion: options?.preventRecursion || false
       });
       
       // Stocker le rôle principal pour référence (maintenir la compatibilité)
@@ -583,6 +646,12 @@ export const authService = {
       }
       
       throw error;
+    } finally {
+      // Supprimer l'appel courant de la pile
+      const index = getCurrentUserState.callStack.indexOf(callerId);
+      if (index !== -1) {
+        getCurrentUserState.callStack.splice(index, 1);
+      }
     }
   },
   
