@@ -361,28 +361,32 @@ export function useProfilePicture() {
         // Save previous state
         const previousData = queryClient.getQueryData(PROFILE_QUERY_KEYS.profilePicture);
         
-        // Create temporary URL for optimistic update
-        const file = formData.get('profile_picture');
-        if (file instanceof File) {
-          const tempUrl = URL.createObjectURL(file);
-          
-          // Update cache immediately with optimistic data
+        // Don't create a temporary URL for optimistic update - it causes issues
+        // Just return the previous data and wait for the real response
+        return { previousData };
+      },
+      onSuccess: async (data, variables, context) => {
+        // Extract the real URL from the response
+        const serverUrl = data?.data?.profile_picture_url;
+        
+        if (serverUrl) {
+          // Update the cache with the real URL from the server
           queryClient.setQueryData(PROFILE_QUERY_KEYS.profilePicture, {
             success: true,
             data: {
               has_profile_picture: true,
-              profile_picture_url: tempUrl,
-              is_temp_url: true
+              profile_picture_url: serverUrl,
+              is_temp_url: false
             }
           });
           
-          // Also update our local state with the temporary URL
-          setCachedUrl(tempUrl);
+          // Update our local state with the real URL
+          setCachedUrl(serverUrl);
+          
+          // Save to localStorage cache
+          profilePictureCache.saveToCache(serverUrl);
         }
         
-        return { previousData };
-      },
-      onSuccess: async (data) => {
         // Notifier le gestionnaire de données utilisateur de l'invalidation
         userDataManager.invalidateCache('profile_picture'); // Passer un type spécifique
         
@@ -396,6 +400,13 @@ export function useProfilePicture() {
         forceRefresh();
       },
       onError: (error, variables, context) => {
+        // Show error message based on the error type
+        if (error.response && error.response.status === 413) {
+          toast.error('La taille du fichier est trop grande. Veuillez utiliser une image plus petite (max 2MB).');
+        } else {
+          toast.error('Erreur lors de la mise à jour de la photo de profil');
+        }
+        
         // Restore previous state on error
         if (context?.previousData) {
           queryClient.setQueryData(PROFILE_QUERY_KEYS.profilePicture, context.previousData);
@@ -404,14 +415,8 @@ export function useProfilePicture() {
           const prevUrl = getProfilePictureUrl(context.previousData);
           if (prevUrl) {
             setCachedUrl(prevUrl);
+            profilePictureCache.saveToCache(prevUrl);
           }
-        }
-      },
-      onSettled: () => {
-        // Clean up temporary URLs
-        const data = queryClient.getQueryData(PROFILE_QUERY_KEYS.profilePicture);
-        if (data?.data?.is_temp_url && data?.data?.profile_picture_url) {
-          URL.revokeObjectURL(data.data.profile_picture_url);
         }
       }
     }

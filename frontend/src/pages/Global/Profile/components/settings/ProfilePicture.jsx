@@ -80,10 +80,10 @@ const ProfilePicture = ({ userData, onProfilePictureChange, isLoading: externalL
       return;
     }
     
-    // Validate file size (max 5MB)
-    const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+    // Validate file size (max 2MB)
+    const maxSize = 2 * 1024 * 1024; // 2MB in bytes
     if (file.size > maxSize) {
-      toast.error(`La taille du fichier dépasse la limite autorisée (5MB)`);
+      toast.error(`La taille du fichier dépasse la limite autorisée (2MB)`);
       return;
     }
 
@@ -158,6 +158,34 @@ const ProfilePicture = ({ userData, onProfilePictureChange, isLoading: externalL
     return <ProfilePictureSkeleton />;
   }
 
+  // Determine the image source to display
+  const getImageSrc = () => {
+    if (!profilePictureUrl) {
+      return null; // Will use the UserRound fallback
+    }
+    
+    // Check if the URL is a blob URL - but don't try to fetch it as that causes errors
+    if (profilePictureUrl.startsWith('blob:')) {
+      // Just log it and return null - we'll use the fallback
+      console.log("Blob URL detected, using fallback:", profilePictureUrl);
+      return null;
+    }
+    
+    return profilePictureUrl;
+  };
+
+  // Handle image load error
+  const handleImageError = (e) => {
+    console.error("Image failed to load:", e.target.src);
+    e.target.style.display = 'none'; // Hide the broken image
+    e.target.onerror = null; // Prevent infinite error loop
+    
+    // Show the fallback icon
+    const fallbackIcon = document.createElement('div');
+    fallbackIcon.innerHTML = '<div class="w-full h-full flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 text-gray-400"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div>';
+    e.target.parentNode.appendChild(fallbackIcon.firstChild);
+  };
+
   return (
     <div className="p-4 sm:p-6 max-w-md mx-auto">
       <div className="flex flex-col items-center">
@@ -166,13 +194,14 @@ const ProfilePicture = ({ userData, onProfilePictureChange, isLoading: externalL
             className="w-20 h-20 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden group relative cursor-pointer border-2 border-white dark:border-gray-700 shadow-sm"
             onClick={handleProfilePictureClick}
           >
-            {componentIsLoading ? (
+            {(uploadStatus.isPending || isDeleting) ? (
               <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 text-gray-400 animate-spin" />
             ) : profilePictureUrl ? (
               <img 
-                src={profilePictureUrl} 
-                alt="Profile" 
-                className="w-full h-full object-cover"
+                src={getImageSrc()} 
+                alt="Photo de profil" 
+                className="object-cover w-full h-full"
+                onError={handleImageError}
               />
             ) : (
               <UserRound className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 text-gray-400" />
