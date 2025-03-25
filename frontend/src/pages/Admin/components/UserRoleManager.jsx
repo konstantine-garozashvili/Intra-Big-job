@@ -124,7 +124,8 @@ export default function UserRoleManager() {
         setSelectedUser,
         setSelectedRoleId,
         setIsDialogOpen,
-        setIsDeleteDialogOpen
+        setIsDeleteDialogOpen,
+        updateLocalUsers
     } = useUserManagement(initialFilter);
     
     // Effet pour mettre à jour le filtre lorsque l'URL change - Approche simplifiée
@@ -170,7 +171,24 @@ export default function UserRoleManager() {
                 <span className="text-sm opacity-90">{user.firstName} {user.lastName} est maintenant {roleName}</span>
             </div>
         );
-        fetchUsers(filterRole);
+        
+        // Update user in the local state instead of fetching all users
+        const updatedPaginatedUsers = paginatedUsers.map(u => 
+            u.id === user.id ? user : u
+        );
+        
+        // Update the filtered users list as well
+        const updatedFilteredUsers = filteredUsers.map(u => 
+            u.id === user.id ? user : u
+        );
+        
+        // Use the hook's state update mechanism if available
+        if (typeof updateLocalUsers === 'function') {
+            updateLocalUsers(updatedFilteredUsers, updatedPaginatedUsers);
+        } else {
+            // Manually fetch users as fallback if direct state update is not available
+            fetchUsers(filterRole);
+        }
     };
     
     return (

@@ -108,10 +108,19 @@ export function RoleDialog({
                     
                 changeUserRole(selectedUser.id, currentRole, role.name);
                 
-                // Call success callback if provided
+                // Create updated user object to pass to onSuccess
+                const updatedUser = {
+                    ...selectedUser,
+                    roles: [{ id: role.id, name: role.name }]
+                };
+                
+                // Call success callback with updated user if provided
                 if (onSuccess) {
-                    onSuccess(selectedUser, getFrenchRoleDisplayName(role.name));
+                    onSuccess(updatedUser, getFrenchRoleDisplayName(role.name));
                 }
+                
+                // Close dialog
+                setIsDialogOpen(false);
             }
         }
     };

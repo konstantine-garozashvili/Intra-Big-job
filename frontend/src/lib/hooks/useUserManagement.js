@@ -322,6 +322,25 @@ export function useUserManagement(initialFilter = "ALL") {
         );
     };
     
+    // Mettre à jour directement les utilisateurs dans le state local sans appel API
+    const updateLocalUsers = (newFilteredUsers, newPaginatedUsers) => {
+        // Mettre à jour uniquement les utilisateurs qui ont changé
+        setUsers(prevUsers => {
+            const updatedUsers = [...prevUsers];
+            
+            // Pour chaque utilisateur modifié dans les listes filtrées/paginées,
+            // mettre à jour l'utilisateur correspondant dans la liste principale
+            newFilteredUsers.forEach(updatedUser => {
+                const index = updatedUsers.findIndex(u => u.id === updatedUser.id);
+                if (index !== -1) {
+                    updatedUsers[index] = updatedUser;
+                }
+            });
+            
+            return updatedUsers;
+        });
+    };
+    
     // Trier les utilisateurs
     const sortedUsers = useMemo(() => {
         const sortableUsers = [...users];
@@ -428,6 +447,7 @@ export function useUserManagement(initialFilter = "ALL") {
         setSelectedUser,
         setSelectedRoleId,
         setIsDialogOpen,
-        setIsDeleteDialogOpen
+        setIsDeleteDialogOpen,
+        updateLocalUsers
     };
 } 

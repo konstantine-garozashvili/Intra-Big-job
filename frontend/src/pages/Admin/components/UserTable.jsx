@@ -160,9 +160,9 @@ export function UserTable({
                                 <TableCell className="py-3">
                                     {user.roles && user.roles.length > 0 ? (
                                         <div className="flex flex-wrap gap-1.5">
-                                            {user.roles.map((role) => (
+                                            {user.roles.map((role, roleIndex) => (
                                                 <Badge 
-                                                    key={role.id} 
+                                                    key={`${user.id}-role-${roleIndex}`} 
                                                     className={`${getRoleColor(role.name)} transition-all duration-200 hover:scale-105`}
                                                 >
                                                     {getFrenchRoleDisplayName(role.name)}
