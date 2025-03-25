@@ -447,8 +447,8 @@ const AppContent = () => {
                         <AdminDashboard />
                       </RoleGuard>
                     } />
-                    <Route path="/admin/user-roles" element={
-                      <RoleGuard roles={ROLES.ADMIN} fallback={<Navigate to="/dashboard" replace />}>
+                    <Route path="/admin/users" element={
+                      <RoleGuard roles={[ROLES.ADMIN, ROLES.HR, ROLES.TEACHER, ROLES.SUPERADMIN]}>
                         <UserRoleManager />
                       </RoleGuard>
                     } />
