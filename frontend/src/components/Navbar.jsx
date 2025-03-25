@@ -502,7 +502,6 @@ const Navbar = memo(() => {
               {isAuthenticated && (
                 <div className="hidden md:flex flex-1 justify-center mx-4">
                   <div className="search-container w-full max-w-md flex justify-end">
-                    <ThemeToggle className="mr-2" variant="ghost" size="icon" />
                     <SearchBar />
                   </div>
                 </div>
@@ -510,6 +509,11 @@ const Navbar = memo(() => {
 
               {/* Partie droite: Authentification */}
               <div className="flex items-center">
+                {/* Bouton de changement de thème toujours visible (version desktop uniquement) */}
+                <div className="hidden md:block">
+                  <ThemeToggle className="mr-2" variant="ghost" size="icon" />
+                </div>
+                
                 {/* Attendance button based on role */}
                 {isAuthenticated && (permissions.isStudent() || permissions.isTeacher()) && (
                   <Link 
@@ -558,8 +562,9 @@ const Navbar = memo(() => {
             {/* Barre de recherche mobile */}
             {isAuthenticated && mobileSearchOpen && (
               <div className="md:hidden px-4 pb-4">
-                <ThemeToggle className="mr-2" variant="ghost" size="sm" />
-                <SearchBar />
+                <div className="flex items-center w-full">
+                  <SearchBar />
+                </div>
               </div>
             )}
           </div>
