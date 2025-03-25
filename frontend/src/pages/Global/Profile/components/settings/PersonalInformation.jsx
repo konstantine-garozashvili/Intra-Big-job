@@ -91,8 +91,11 @@ const PersonalInformation = ({
       {/* Personal Information Section */}
       <div>
         <h3 className="text-base sm:text-lg font-semibold flex items-center mb-3 sm:mb-5 text-gray-800 dark:text-gray-100">
-          <User className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2 text-blue-600 dark:text-blue-400" />
-          Informations personnelles
+          <User className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2 text-blue-600 dark:text-[#78b9dd]" />
+          <span className="relative">
+            Informations personnelles
+            <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-blue-600 dark:bg-[#78b9dd]"></span>
+          </span>
         </h3>
         <PersonalInfoSection 
           userData={userData}
@@ -112,8 +115,11 @@ const PersonalInformation = ({
       {/* Contact Information Section */}
       <div>
         <h3 className="text-base sm:text-lg font-semibold flex items-center mb-3 sm:mb-5 text-gray-800 dark:text-gray-100">
-          <Phone className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2 text-blue-600 dark:text-blue-400" />
-          Coordonnées
+          <Phone className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2 text-blue-600 dark:text-[#78b9dd]" />
+          <span className="relative">
+            Coordonnées
+            <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-blue-600 dark:bg-[#78b9dd]"></span>
+          </span>
         </h3>
         <ContactInfoSection 
           userData={userData}
@@ -135,8 +141,11 @@ const PersonalInformation = ({
       {/* Professional Information Section */}
       <div>
         <h3 className="text-base sm:text-lg font-semibold flex items-center mb-3 sm:mb-5 text-gray-800 dark:text-gray-100">
-          <Briefcase className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2 text-blue-600 dark:text-blue-400" />
-          Ma carrière
+          <Briefcase className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2 text-blue-600 dark:text-[#78b9dd]" />
+          <span className="relative">
+            Ma carrière
+            <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-blue-600 dark:bg-[#78b9dd]"></span>
+          </span>
         </h3>
         <ProfessionalInfoSection 
           userData={userData}
