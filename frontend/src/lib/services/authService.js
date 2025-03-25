@@ -625,7 +625,8 @@ export const authService = {
       const userData = await userDataManager.getUserData({
         forceRefresh,
         routeKey: '/api/me',
-        requestId: callerId
+        requestId: callerId,
+        preventRecursion: options?.preventRecursion || false
       });
       
       // Stocker le rôle principal pour référence (maintenir la compatibilité)

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { UserRound, Camera, Upload, Loader2, Trash2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { toast } from 'sonner';
@@ -31,7 +31,6 @@ const ProfilePicture = ({ userData, onProfilePictureChange, isLoading: externalL
   const fileInputRef = useRef(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
-  const [previousUrl, setPreviousUrl] = React.useState();
   
   // Use the custom hook for profile picture operations
   const {
@@ -45,14 +44,64 @@ const ProfilePicture = ({ userData, onProfilePictureChange, isLoading: externalL
     deleteStatus
   } = useProfilePicture();
 
-  // Notify parent component when profile picture changes
-  React.useEffect(() => {
-    if (onProfilePictureChange && profilePictureUrl !== undefined && profilePictureUrl !== previousUrl) {
-      console.log("ProfilePicture - Profile picture URL changed, notifying parent");
-      setPreviousUrl(profilePictureUrl);
-      onProfilePictureChange(profilePictureUrl);
+  // Debounce function to prevent multiple calls
+  const debounce = (func, wait) => {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  };
+
+  // Use a ref to track the previous URL to avoid unnecessary updates
+  const previousUrlRef = useRef(null);
+  
+  // Only notify parent when the URL actually changes and is not a blob URL
+  const shouldNotifyParent = (newUrl) => {
+    // Don't notify for blob URLs
+    if (newUrl && newUrl.startsWith('blob:')) {
+      return false;
     }
-  }, [profilePictureUrl, onProfilePictureChange, previousUrl]);
+    
+    // Don't notify if the URL hasn't changed
+    if (newUrl === previousUrlRef.current) {
+      return false;
+    }
+    
+    // Update the ref to track the latest URL
+    previousUrlRef.current = newUrl;
+    return true;
+  };
+  
+  // Notify parent component when profile picture changes - with debounce
+  const debouncedNotify = useRef(
+    debounce((url) => {
+      if (onProfilePictureChange && shouldNotifyParent(url)) {
+        console.log("ProfilePicture - Profile picture URL changed, notifying parent (debounced)");
+        onProfilePictureChange(url);
+      }
+    }, 2000) // 2 second debounce
+  ).current;
+
+  // Use effect to detect changes
+  React.useEffect(() => {
+    // TEMPORARILY DISABLED TO BREAK CIRCULAR DEPENDENCY
+    // This notification was causing an infinite loop with user data updates
+    /*
+    if (profilePictureUrl !== undefined && profilePictureUrl !== previousUrlRef.current) {
+      console.log("ProfilePicture - Profile picture URL changed");
+      
+      // Only notify if the URL is valid and has changed
+      if (profilePictureUrl && !profilePictureUrl.startsWith('blob:')) {
+        debouncedNotify(profilePictureUrl);
+      }
+    }
+    */
+  }, [profilePictureUrl]);
 
   const handleProfilePictureClick = () => {
     if (uploadStatus.isPending || deleteStatus.isPending) return; // Prevent clicks during operations
@@ -123,7 +172,6 @@ const ProfilePicture = ({ userData, onProfilePictureChange, isLoading: externalL
       setIsDeleting(true);
       
       // Optimistic update - supprimer immédiatement l'image dans l'UI
-      setPreviousUrl(profilePictureUrl);
       refetch();
       
       // Use the mutation from the hook
@@ -287,4 +335,4 @@ const ProfilePicture = ({ userData, onProfilePictureChange, isLoading: externalL
   );
 };
 
-export default ProfilePicture; 
+export default ProfilePicture;

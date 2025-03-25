@@ -476,6 +476,39 @@ const UserProfileSettings = () => {
     }
   };
 
+  // Track the last URL we received to avoid duplicate refetches
+  const [lastProfilePictureUrl, setLastProfilePictureUrl] = useState(null);
+  const [lastRefetchTime, setLastRefetchTime] = useState(0);
+  
+  // Handler for profile picture changes - DISABLED TO BREAK CIRCULAR DEPENDENCY
+  const handleProfilePictureChange = useCallback((newUrl) => {
+    // TEMPORARILY DISABLED TO BREAK CIRCULAR DEPENDENCY
+    console.log("UserProfileSettings - Profile picture change handler disabled to prevent infinite loops");
+    
+    /* Original code commented out
+    console.log("UserProfileSettings - Profile picture changed, conditionally refetching");
+    
+    // Skip if the URL is the same as what we already have
+    if (newUrl === lastProfilePictureUrl) {
+      console.log("UserProfileSettings - Skipping refetch (same URL)");
+      return;
+    }
+    
+    // Only refetch if we have a valid URL and it's different from the current one
+    // and we haven't refetched recently
+    if (newUrl && 
+        (!userData?.profilePictureUrl || newUrl !== userData.profilePictureUrl) &&
+        Date.now() - lastRefetchTime > 10000) { // Only refetch if it's been more than 10 seconds
+      console.log("UserProfileSettings - Refetching profile with new URL:", newUrl);
+      setLastProfilePictureUrl(newUrl);
+      setLastRefetchTime(Date.now());
+      refetchProfile();
+    } else {
+      console.log("UserProfileSettings - Skipping refetch (too recent or no change)");
+    }
+    */
+  }, []);
+
   // Render loading state
   if (isProfileLoading) {
     return <ProfileSettingsSkeleton />;
@@ -500,13 +533,7 @@ const UserProfileSettings = () => {
         <div className="flex flex-col xs:flex-row items-center p-2 xs:p-3">
           <ProfilePicture 
             userData={userData} 
-            onProfilePictureChange={(newUrl) => {
-              console.log("UserProfileSettings - Profile picture changed, conditionally refetching");
-              // Only refetch if we have a valid URL and it's different from the current one
-              if (newUrl && (!userData?.profilePictureUrl || newUrl !== userData.profilePictureUrl)) {
-                refetchProfile();
-              }
-            }}
+            onProfilePictureChange={handleProfilePictureChange}
             isLoading={isProfileLoading}
           />
 

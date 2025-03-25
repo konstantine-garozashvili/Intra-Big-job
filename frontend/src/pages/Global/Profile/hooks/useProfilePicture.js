@@ -306,47 +306,67 @@ export function useProfilePicture() {
   });
 
   // Ajouter un état pour contrôler la fréquence des actualisations
-  const [lastRefreshTime, setLastRefreshTime] = useState(0);
-  const REFRESH_THROTTLE_MS = 5000; // Increased from 2s to 5s to reduce refresh frequency
+  const lastRefreshTime = useRef(0);
+  const isRefreshing = useRef(false);
 
-  // Modifier la fonction forceRefresh pour limiter la fréquence des actualisations
-  const forceRefresh = useCallback(async (skipThrottle = false) => {
-    // Vérifier si nous devons respecter la limite de fréquence et si le temps minimum est écoulé
+  // Fonction pour forcer le rafraîchissement des données de la photo de profil
+  const forceRefresh = useCallback((showToast = true) => {
     const now = Date.now();
-    if (!skipThrottle && now - lastRefreshTime < REFRESH_THROTTLE_MS) {
-      console.log("Profile picture refresh throttled - too soon since last refresh");
-      return null; // Ne pas rafraîchir si trop récent
+    
+    // Vérifier si un rafraîchissement est en cours
+    if (isRefreshing.current) {
+      console.log("Profile picture refresh already in progress, skipping");
+      return Promise.resolve();
     }
     
-    // Mettre à jour l'horodatage du dernier rafraîchissement
-    setLastRefreshTime(now);
+    // Vérifier si on a rafraîchi récemment
+    if (now - lastRefreshTime.current < 3000) { // 3 secondes entre les rafraîchissements
+      console.log("Profile picture refresh throttled - too soon since last refresh");
+      return Promise.resolve();
+    }
     
+    // Vérifier si la route est en cours de traitement
+    if (userDataManager.requestRegistry.isRouteProcessing('/api/profile/picture')) {
+      console.log("Profile picture refresh skipped - route is currently being processed");
+      return Promise.resolve();
+    }
+    
+    // Mettre à jour le timestamp du dernier rafraîchissement
+    lastRefreshTime.current = now;
+    
+    // Marquer le début du rafraîchissement
+    isRefreshing.current = true;
     console.log("Refreshing profile picture data");
     
-    // Invalider les requêtes pertinentes
-    await Promise.all([
-      queryClient.invalidateQueries({ 
-        queryKey: PROFILE_QUERY_KEYS.profilePicture,
-        refetchType: 'all'
-      }),
-      // Only invalidate these if they're stale (older than 5 minutes)
-      queryClient.getQueryState(PROFILE_QUERY_KEYS.currentProfile)?.dataUpdatedAt < Date.now() - 300000 
-        ? queryClient.invalidateQueries({ 
-            queryKey: PROFILE_QUERY_KEYS.currentProfile,
-            refetchType: 'all'
-          })
-        : Promise.resolve(),
-      queryClient.getQueryState(PROFILE_QUERY_KEYS.publicProfile)?.dataUpdatedAt < Date.now() - 300000
-        ? queryClient.invalidateQueries({ 
-            queryKey: PROFILE_QUERY_KEYS.publicProfile,
-            refetchType: 'all'
-          })
-        : Promise.resolve()
-    ]);
-    
-    // Forcer un rafraîchissement immédiat
-    return await profilePictureQuery.refetch();
-  }, [queryClient, profilePictureQuery, lastRefreshTime]);
+    // Effectuer la requête
+    return profilePictureQuery.refetch()
+      .then(response => {
+        // Traiter la réponse
+        const data = response.data?.data;
+        if (data?.profile_picture_url) {
+          setCachedUrl(data.profile_picture_url);
+          profilePictureCache.saveToCache(data.profile_picture_url);
+          if (showToast) {
+            toast.success('Photo de profil mise à jour');
+          }
+        }
+        return response;
+      })
+      .catch(error => {
+        console.error("Error refreshing profile picture:", error);
+        if (showToast) {
+          toast.error('Erreur lors du rafraîchissement de la photo de profil');
+        }
+        throw error;
+      })
+      .finally(() => {
+        // Marquer la fin du rafraîchissement après un court délai
+        // pour éviter les rafraîchissements successifs trop rapides
+        setTimeout(() => {
+          isRefreshing.current = false;
+        }, 1000);
+      });
+  }, [profilePictureQuery, setCachedUrl]);
 
   // Upload profile picture mutation
   const uploadProfilePictureMutation = useApiMutation(
@@ -385,10 +405,32 @@ export function useProfilePicture() {
           
           // Save to localStorage cache
           profilePictureCache.saveToCache(serverUrl);
+          
+          // IMPORTANT: Also update the user data cache directly to avoid circular dependencies
+          // This ensures the profile picture is updated everywhere without triggering additional requests
+          try {
+            const userData = userDataManager.getCachedUserData();
+            if (userData) {
+              userData.profilePictureUrl = serverUrl;
+              // Update the cache directly
+              try {
+                localStorage.setItem('user', JSON.stringify(userData));
+              } catch (e) {
+                console.warn('Error storing user data in localStorage:', e);
+              }
+            }
+          } catch (e) {
+            console.warn('Error updating user data cache:', e);
+          }
         }
         
         // Notifier le gestionnaire de données utilisateur de l'invalidation
-        userDataManager.invalidateCache('profile_picture'); // Passer un type spécifique
+        // Use a special flag to prevent circular updates
+        try {
+          userDataManager.invalidateCache('profile_picture', { skipRefresh: true });
+        } catch (e) {
+          console.warn('Error invalidating user data cache:', e);
+        }
         
         // Notify all subscribers
         profilePictureEvents.notify();
@@ -484,27 +526,37 @@ export function useProfilePicture() {
 
   // Modifier l'abonnement aux événements pour mieux gérer les mises à jour
   useEffect(() => {
+    // TEMPORARILY DISABLED TO BREAK CIRCULAR DEPENDENCY
+    // This subscription was causing an infinite loop with user data updates
+    
+    // Return a no-op unsubscribe function
+    return () => {};
+    
+    /* Original code commented out
     // Variables pour suivre les événements récents
     let recentUpdateTimestamp = 0;
-    const UPDATE_THROTTLE_MS = 3000; // Increased from 1s to 3s to reduce update frequency
+    const UPDATE_THROTTLE_MS = 10000; // Increased to 10s to reduce update frequency
+    let isProcessingUpdate = false; // Flag to prevent recursive updates
     
     // Fonction de rappel pour rafraîchir la photo de profil si les données utilisateur sont mises à jour
-    const handleUserDataUpdate = (updateType) => {
-      // Ne déclencher le forceRefresh que si la mise à jour n'est pas liée à la photo de profil
-      // Cela empêche la boucle infinie où la mise à jour de la photo déclenche une mise à jour des données
-      if (updateType === 'profile_picture') {
-        console.log("Ignoring profile_picture update event to prevent infinite loop");
+    const handleUserDataUpdate = (updateType, userData) => {
+      // Ne pas traiter les mises à jour si nous sommes déjà en train d'en traiter une
+      if (isProcessingUpdate) {
+        console.log("Skipping user data update handler - already processing an update");
         return;
       }
       
-      // Vérifier si la route est partagée entre plusieurs composants
-      // Si oui, être encore plus prudent pour éviter les cascades de mises à jour
-      if (userDataManager.requestRegistry.isRouteShared('/api/profile/picture')) {
-        // Si un autre composant est en train de faire une requête, ne pas en lancer une nouvelle
-        if (userDataManager.requestRegistry.getActiveRequest('/api/profile/picture')) {
-          console.log("Skipping profile picture refresh - another component is already making a request");
-          return;
-        }
+      // Ne déclencher le forceRefresh que si la mise à jour n'est pas liée à la photo de profil
+      // Cela empêche la boucle infinie où la mise à jour de la photo déclenche une mise à jour des données
+      if (updateType === 'profile_picture' || updateType === 'profile') {
+        console.log("Ignoring profile update event to prevent infinite loop");
+        return;
+      }
+      
+      // Vérifier si la route est déjà en cours de traitement
+      if (userDataManager.requestRegistry.isRouteProcessing('/api/profile/picture')) {
+        console.log("Skipping profile picture refresh - route is already being processed");
+        return;
       }
       
       // Vérifier la fréquence des mises à jour
@@ -514,11 +566,28 @@ export function useProfilePicture() {
         return;
       }
       
+      // Vérifier si les données contiennent déjà l'URL de la photo de profil
+      if (userData && userData.profilePictureUrl) {
+        // Si l'URL est déjà dans les données, mettre à jour notre cache local
+        setCachedUrl(userData.profilePictureUrl);
+        profilePictureCache.saveToCache(userData.profilePictureUrl);
+        console.log("Using profile picture URL from user data:", userData.profilePictureUrl);
+        return;
+      }
+      
       recentUpdateTimestamp = now;
       console.log("Triggering profile picture refresh due to user data update:", updateType);
       
+      // Marquer que nous sommes en train de traiter une mise à jour
+      isProcessingUpdate = true;
+      
       // Utiliser la version throttled de forceRefresh
-      forceRefresh(false);
+      forceRefresh(false).finally(() => {
+        // Réinitialiser le flag une fois la mise à jour terminée
+        setTimeout(() => {
+          isProcessingUpdate = false;
+        }, 1000); // Attendre 1 seconde avant de permettre de nouvelles mises à jour
+      });
     };
     
     // S'abonner à l'événement UPDATED du gestionnaire de données utilisateur
@@ -526,7 +595,8 @@ export function useProfilePicture() {
     
     // Se désabonner lors du démontage du composant
     return unsubscribe;
-  }, [forceRefresh]);
+    */
+  }, []);
 
   // Determine the profile picture URL to return, prioritizing:
   // 1. API data if available
@@ -560,4 +630,4 @@ export function useProfilePicture() {
       error: deleteProfilePictureMutation.error
     }
   };
-} 
+}
