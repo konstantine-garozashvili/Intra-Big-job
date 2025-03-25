@@ -179,18 +179,6 @@ export default function UserRoleManager() {
             headerIcon={HeaderIcon}
         >
             <div className="container mx-auto py-6 px-4 sm:px-6">
-                {showWelcomeMessage && initialFilter === "ALL" && (
-                    <motion.div 
-                        className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-100 shadow-sm"
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        transition={{ duration: 0.3 }}
-                    >
-                        <p className="text-blue-600 text-sm mt-1 ml-7">Vous pouvez gérer tous les utilisateurs et leurs rôles ici</p>
-                    </motion.div>
-                )}
-
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: animateCard ? 1 : 0, y: animateCard ? 0 : 20 }}
@@ -328,7 +316,7 @@ export default function UserRoleManager() {
                     isOpen={isEditDialogOpen}
                     onClose={closeEditDialog}
                     user={selectedUser}
-                    onUpdateUser={updateUser}
+                    onUpdateUser={(userId, userData) => updateUser(userId, userData, closeEditDialog)}
                     isProcessing={isProcessing}
                     currentUserIsSuperAdmin={isSuperAdmin}
                 />

@@ -276,7 +276,7 @@ export function useUserManagement(initialFilter = "ALL") {
     };
     
     // Mettre à jour un utilisateur
-    const updateUser = async (userId, userData) => {
+    const updateUser = async (userId, userData, onSuccess) => {
         setIsProcessing(true);
         
         // Mise à jour optimiste de l'interface utilisateur
@@ -291,6 +291,10 @@ export function useUserManagement(initialFilter = "ALL") {
             const response = await apiService.updateUser(userId, userData);
             if (response.success) {
                 toast.success("Utilisateur mis à jour avec succès");
+                // Appeler le callback de succès si fourni
+                if (onSuccess) {
+                    onSuccess();
+                }
                 // Pas besoin de rafraîchir toute la liste puisque nous avons déjà mis à jour localement
             } else {
                 toast.error("Impossible de mettre à jour l'utilisateur: " + (response.message || "Erreur inconnue"));
