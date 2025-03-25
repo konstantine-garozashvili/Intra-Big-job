@@ -11,6 +11,8 @@ import ProfileLayout from '@/layouts/ProfileLayout'
 import StudentRoute from './components/StudentRoute'
 import { Toaster } from './components/ui/sonner'
 import { ErrorBoundary } from "react-error-boundary"
+import Regulation from "./components/Regulation";
+
 
 // Create a shared query client for the entire application
 const queryClient = new QueryClient({
@@ -581,7 +583,13 @@ const App = () => {
               {/* Gestionnaire de préchargement */}
               <PrefetchHandler />
               
+              {/* Routes de l'application */}
               <Suspense>
+                <Routes>
+                  {/* Autres routes de ton application */}
+                  <Route path="/regulation" element={<Regulation />} />
+                  {/* Ajoute ici d'autres routes si nécessaire */}
+                </Routes>
                 <AppContent />
               </Suspense>
             </Router>
