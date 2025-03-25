@@ -211,12 +211,6 @@ export default function UserRoleManager() {
                                     </CardTitle>
                                     <div className="text-sm text-muted-foreground max-w-2xl mt-2">
                                         {currentRoleConfig.description}
-                                        {!isSuperAdmin && (
-                                            <div className="text-amber-600 mt-2 text-sm flex items-center">
-                                                <Badge variant="outline" className="mr-2 bg-amber-50 text-amber-700 border-amber-200">Note</Badge>
-                                                Seuls les SuperAdmin peuvent modifier ou supprimer d'autres utilisateurs SuperAdmin.
-                                            </div>
-                                        )}
                                     </div>
                                 </div>
                                 <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 px-3 py-1">
