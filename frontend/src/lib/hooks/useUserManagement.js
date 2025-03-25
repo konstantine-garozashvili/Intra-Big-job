@@ -89,7 +89,6 @@ export function useUserManagement(initialFilter = "ALL") {
     
     // Version simplifiée sans debounce pour éviter les problèmes de synchronisation
     const updateFilterRole = useCallback((newRole) => {
-        console.log("[useUserManagement] Mise à jour du filtre:", newRole);
         // Mise à jour synchrone du filtre
         setFilterRole(newRole);
     }, []);
@@ -106,7 +105,6 @@ export function useUserManagement(initialFilter = "ALL") {
     
     // Rafraîchir les utilisateurs lorsque le filtre change
     useEffect(() => {
-        console.log("[useUserManagement] filterRole changé:", filterRole);
         fetchUsers(filterRole);
     }, [filterRole]);
     
@@ -149,8 +147,6 @@ export function useUserManagement(initialFilter = "ALL") {
                 const formattedRoleName = roleName.startsWith('ROLE_') 
                     ? roleName 
                     : `ROLE_${roleName.replace('ROLE_', '')}`;
-                    
-                console.log(`Récupération des utilisateurs avec le rôle: ${formattedRoleName}`);
                 
                 // Appel à l'API avec le rôle formaté
                 response = await apiService.getUsersByRole(formattedRoleName);
@@ -214,17 +210,34 @@ export function useUserManagement(initialFilter = "ALL") {
     // Changer le rôle d'un utilisateur
     const changeUserRole = async (userId, oldRoleName, newRoleName) => {
         setIsProcessing(true);
+        
+        // Mise à jour optimiste de l'interface utilisateur
+        setUsers(prevUsers => prevUsers.map(user => {
+            if (user.id === userId) {
+                // Créer une copie de l'utilisateur avec le nouveau rôle
+                return {
+                    ...user,
+                    roles: [{ name: newRoleName }]
+                };
+            }
+            return user;
+        }));
+        
         try {
             const response = await apiService.changeUserRole(userId, oldRoleName, newRoleName);
             if (response.success) {
                 toast.success("Rôle modifié avec succès");
-                fetchUsers(filterRole); // Rafraîchir la liste
+                // Pas besoin de rafraîchir toute la liste puisque nous avons déjà mis à jour localement
             } else {
                 toast.error("Impossible de modifier le rôle: " + (response.message || "Erreur inconnue"));
+                // Recharger les données en cas d'erreur pour revenir à l'état précédent
+                fetchUsers(filterRole);
             }
         } catch (error) {
             console.error("Erreur lors de la modification du rôle:", error);
             toast.error("Erreur lors de la modification du rôle");
+            // Recharger les données en cas d'erreur pour revenir à l'état précédent
+            fetchUsers(filterRole);
         } finally {
             setIsProcessing(false);
             setIsDialogOpen(false);
@@ -234,15 +247,26 @@ export function useUserManagement(initialFilter = "ALL") {
     // Supprimer un utilisateur
     const deleteUser = async (userId) => {
         setIsProcessing(true);
+        
+        // Sauvegarder l'état actuel au cas où nous aurions besoin de revenir en arrière
+        const previousUsers = [...users];
+        
+        // Mise à jour optimiste de l'interface utilisateur - suppression locale immédiate
+        setUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
+        
         try {
             const response = await apiService.delete(`/users/${userId}`);
             if (response.success) {
                 toast.success("Utilisateur supprimé avec succès");
-                fetchUsers(filterRole); // Rafraîchir la liste
+                // Pas besoin de rafraîchir toute la liste puisque nous avons déjà mis à jour localement
             } else {
+                // Restaurer l'état précédent en cas d'échec
+                setUsers(previousUsers);
                 toast.error("Impossible de supprimer l'utilisateur: " + (response.message || "Erreur inconnue"));
             }
         } catch (error) {
+            // Restaurer l'état précédent en cas d'erreur
+            setUsers(previousUsers);
             console.error("Erreur lors de la suppression de l'utilisateur:", error);
             toast.error("Erreur lors de la suppression de l'utilisateur");
         } finally {
@@ -254,17 +278,30 @@ export function useUserManagement(initialFilter = "ALL") {
     // Mettre à jour un utilisateur
     const updateUser = async (userId, userData) => {
         setIsProcessing(true);
+        
+        // Mise à jour optimiste de l'interface utilisateur
+        setUsers(prevUsers => prevUsers.map(user => {
+            if (user.id === userId) {
+                return { ...user, ...userData };
+            }
+            return user;
+        }));
+        
         try {
             const response = await apiService.updateUser(userId, userData);
             if (response.success) {
                 toast.success("Utilisateur mis à jour avec succès");
-                fetchUsers(filterRole); // Rafraîchir la liste
+                // Pas besoin de rafraîchir toute la liste puisque nous avons déjà mis à jour localement
             } else {
                 toast.error("Impossible de mettre à jour l'utilisateur: " + (response.message || "Erreur inconnue"));
+                // Recharger les données en cas d'erreur pour revenir à l'état précédent
+                fetchUsers(filterRole);
             }
         } catch (error) {
             console.error("Erreur lors de la mise à jour de l'utilisateur:", error);
             toast.error("Erreur lors de la mise à jour de l'utilisateur");
+            // Recharger les données en cas d'erreur pour revenir à l'état précédent
+            fetchUsers(filterRole);
         } finally {
             setIsProcessing(false);
         }

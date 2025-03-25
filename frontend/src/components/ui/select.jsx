@@ -5,14 +5,9 @@ import { Check, ChevronDown, ChevronUp } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const Select = React.forwardRef(({ ...props }, ref) => {
-  // Log simplifié
-  console.log("[Select] Rendu avec value:", props.value);
-
-  // Intercepter onValueChange pour ajouter des logs
+  // Intercepter onValueChange pour garantir un fonctionnement correct
   const originalOnValueChange = props.onValueChange;
   const enhancedOnValueChange = React.useCallback((value) => {
-    console.log("[Select] onValueChange:", value);
-    
     if (originalOnValueChange) {
       originalOnValueChange(value);
     }
@@ -105,8 +100,6 @@ const SelectLabel = React.forwardRef(({ className, ...props }, ref) => (
 SelectLabel.displayName = SelectPrimitive.Label.displayName
 
 const SelectItem = React.forwardRef(({ className, children, ...props }, ref) => {
-  // Simplification du log
-  
   return (
     <SelectPrimitive.Item
       ref={ref}

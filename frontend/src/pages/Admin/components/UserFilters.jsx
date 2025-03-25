@@ -29,9 +29,6 @@ export function UserFilters({
     fetchUsers, 
     isLoading 
 }) {
-    // Garder un log basique au rendu pour s'assurer que les props sont correctes
-    console.log("[UserFilters] Rendu, filterRole:", filterRole, "roles:", roles?.length);
-    
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const urlFilter = searchParams.get('filter');
@@ -80,18 +77,14 @@ export function UserFilters({
     useEffect(() => {
         // Ne mettre à jour que si selectedRoleValue change réellement et si c'est la première initialisation
         if (selectedRoleValue && localFilterValue !== selectedRoleValue) {
-            console.log("[UserFilters] Initialisation de localFilterValue:", selectedRoleValue);
             setLocalFilterValue(selectedRoleValue);
         }
     }, [selectedRoleValue, localFilterValue]);
     
     // Gérer le changement de valeur du select
     const handleSelectChange = (value) => {
-        console.log("[UserFilters] handleSelectChange:", value);
-        
         // Ajouter une vérification pour voir si la valeur est définie
         if (!value) {
-            console.error("[UserFilters] ERREUR: Valeur du select vide");
             return;
         }
         
@@ -115,7 +108,6 @@ export function UserFilters({
         <select 
             value={localFilterValue}
             onChange={(e) => {
-                console.log("[UserFilters] select HTML standard onChange avec:", e.target.value);
                 handleSelectChange(e.target.value);
             }}
             className="w-full p-2 border rounded bg-white"

@@ -21,6 +21,15 @@ export const getSessionId = () => currentSessionId;
 // Lazy loading des informations utilisateur
 let userDataPromise = null;
 
+// Objet pour suivre les appels à getCurrentUser
+const getCurrentUserState = {
+  lastCallTime: 0,
+  minInterval: 2000, // Intervalle minimum entre appels (2 secondes)
+  callStack: [], // Pour détecter les appels récursifs
+  stackLimit: 3, // Limite de profondeur de la pile d'appels
+  currentPromise: null, // Pour réutiliser une promesse en cours
+};
+
 /**
  * Décode un token JWT
  * @param {string} token - Le token JWT à décoder
@@ -566,12 +575,53 @@ export const authService = {
       throw new Error('Aucun token d\'authentification trouvé');
     }
 
+    // Vérifier les appels récursifs
+    const callerId = `auth_service_${requestSource}_${Date.now()}`;
+    
+    // Ajouter l'appel courant à la pile
+    getCurrentUserState.callStack.push(callerId);
+    
+    // Vérifier si on a une pile d'appels trop profonde (appels récursifs)
+    if (getCurrentUserState.callStack.length > getCurrentUserState.stackLimit) {
+      console.warn(`Detected recursive calls to getCurrentUser. Call stack:`, getCurrentUserState.callStack);
+      
+      // Nettoyer la pile et utiliser le cache
+      getCurrentUserState.callStack = [];
+      const cachedUser = userDataManager.getCachedUserData();
+      
+      if (cachedUser) {
+        return cachedUser;
+      }
+    }
+    
+    // Vérifier l'intervalle minimal entre les appels
+    const now = Date.now();
+    const timeSinceLastCall = now - getCurrentUserState.lastCallTime;
+    
+    if (!forceRefresh && timeSinceLastCall < getCurrentUserState.minInterval) {
+      // Utiliser le cache si l'intervalle est trop court
+      const cachedUser = userDataManager.getCachedUserData();
+      
+      if (cachedUser) {
+        // Supprimer l'appel courant de la pile
+        const index = getCurrentUserState.callStack.indexOf(callerId);
+        if (index !== -1) {
+          getCurrentUserState.callStack.splice(index, 1);
+        }
+        
+        return cachedUser;
+      }
+    }
+    
+    // Mettre à jour le timestamp du dernier appel
+    getCurrentUserState.lastCallTime = now;
+
     // Utiliser le nouveau gestionnaire de données utilisateur
     try {
       const userData = await userDataManager.getUserData({
         forceRefresh,
         routeKey: '/api/me',
-        requestId: `auth_service_${requestSource}_${Date.now()}`
+        requestId: callerId
       });
       
       // Stocker le rôle principal pour référence (maintenir la compatibilité)
@@ -591,6 +641,12 @@ export const authService = {
       }
       
       throw error;
+    } finally {
+      // Supprimer l'appel courant de la pile
+      const index = getCurrentUserState.callStack.indexOf(callerId);
+      if (index !== -1) {
+        getCurrentUserState.callStack.splice(index, 1);
+      }
     }
   },
   
