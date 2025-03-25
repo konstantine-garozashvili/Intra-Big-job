@@ -93,7 +93,31 @@ const requestRegistry = {
   shouldThrottleRequest(route) {
     const now = Date.now();
     
-    // Incrémenter le compteur de requêtes pour cette route
+    // Skip throttling for critical user data routes
+    if (route.includes('/profile') || route.includes('/user-roles') || route.includes('/user/me')) {
+      // Still track the request but don't throttle
+      if (!this.requestCountPerRoute.has(route)) {
+        this.requestCountPerRoute.set(route, { count: 1, timestamp: now });
+      } else {
+        const routeInfo = this.requestCountPerRoute.get(route);
+        // Just reset the counter if needed
+        if (now - routeInfo.timestamp > this.requestCountResetTime) {
+          this.requestCountPerRoute.set(route, { count: 1, timestamp: now });
+        } else {
+          routeInfo.count++;
+          // Log but don't throttle
+          if (routeInfo.count > this.requestThreshold) {
+            console.info(`High request count (${routeInfo.count}) for critical route ${route}, but not throttling.`);
+          }
+        }
+      }
+      
+      // Update last request time but don't throttle
+      this.lastRequestTime.set(route, now);
+      return false;
+    }
+    
+    // Regular throttling for non-critical routes
     if (!this.requestCountPerRoute.has(route)) {
       this.requestCountPerRoute.set(route, { count: 1, timestamp: now });
     } else {
@@ -155,6 +179,7 @@ const requestRegistry = {
     
     // Vérifier si on doit limiter la fréquence des requêtes
     if (this.shouldThrottleRequest(route)) {
+      
       // Si nous avons des données en cache, les retourner
       const cachedData = route.includes('/api/me') 
         ? userDataManager.getCachedUserData()
@@ -393,12 +418,11 @@ const userDataManager = {
             if (cachedUserStr) {
               const cachedUser = JSON.parse(cachedUserStr);
               resolve(cachedUser);
-            } else {
-              reject(error);
             }
           } catch (e) {
-            reject(error);
+            // Erreur lors de la récupération des données utilisateur du localStorage
           }
+          reject(error);
         }
       } finally {
         // Supprimer la requête en cours de la map une fois terminée
@@ -564,7 +588,26 @@ const userDataManager = {
     // Enregistrer le composant comme utilisateur de la route
     this.requestRegistry.registerRouteUser(route, componentId);
     
-    // Vérifier si la requête doit être limitée en fréquence
+    // Prioritize critical user data routes
+    const isCriticalRoute = route.includes('/profile') || 
+                           route.includes('/user-roles') || 
+                           route.includes('/user/me');
+    
+    // Skip throttling for critical routes
+    if (isCriticalRoute) {
+      // If there's an active request for this critical route, reuse it
+      const activeRequest = this.requestRegistry.getActiveRequest(route);
+      if (activeRequest) {
+        return activeRequest;
+      }
+      
+      // Otherwise, make a new request and register it
+      const request = requestFn();
+      this.requestRegistry.registerActiveRequest(route, request);
+      return request;
+    }
+    
+    // For non-critical routes, apply normal throttling
     if (this.requestRegistry.shouldThrottleRequest(route)) {
       
       // Si une requête est déjà active, la réutiliser
