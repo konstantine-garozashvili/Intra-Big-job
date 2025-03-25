@@ -337,6 +337,10 @@
   font-style: italic;
 }
 
+.dark [cmdk-empty] {
+  color: #a3b8cc;
+}
+
 .country-item {
   cursor: pointer !important;
   color: #333 !important;
@@ -347,18 +351,42 @@
   filter: none !important;
   pointer-events: auto !important;
   margin: 2px 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+
+.dark .country-item {
+  color: #e5e7eb !important;
+  border: 1px solid transparent;
 }
 
 .country-item:hover {
-  background-color: transparent !important;
+  background-color: rgba(0, 102, 255, 0.1) !important;
+  transform: translateY(-1px);
+}
+
+.dark .country-item:hover {
+  background: linear-gradient(135deg, rgba(78, 108, 164, 0.2), rgba(100, 130, 200, 0.3)) !important;
+  border-color: rgba(100, 150, 230, 0.2) !important;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
 .country-item:active {
-  background-color: transparent !important;
+  background-color: rgba(0, 102, 255, 0.2) !important;
+}
+
+.dark .country-item:active {
+  background: linear-gradient(135deg, rgba(78, 108, 164, 0.3), rgba(100, 130, 200, 0.4)) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .country-item svg {
-  color: #0062FF;
+  color: #0055cc;
+}
+
+.dark .country-item svg {
+  color: #a5cdff;
 }
 
 /* Command dialog styles */
@@ -371,6 +399,31 @@
   filter: none !important;
 }
 
+/* Dark mode styles for command dialog */
+.dark [cmdk-input] {
+  background: linear-gradient(to right, #1e3556, #263b58) !important;
+  color: #f0f7ff !important;
+  border-color: rgba(78, 108, 164, 0.4) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2) !important;
+}
+
+.dark [cmdk-input]::placeholder {
+  color: #a3b8cc !important;
+}
+
+.dark [cmdk-list] {
+  background: linear-gradient(145deg, #192334, #0f172a) !important;
+  border: 1px solid rgba(78, 108, 164, 0.3) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3) !important;
+  padding: 5px !important;
+}
+
+.dark [cmdk-item][data-selected="true"] {
+  background: linear-gradient(135deg, #2c4a75, #3a5a87) !important;
+  border-radius: 8px !important;
+}
+
 [cmdk-item][aria-selected="true"],
 [cmdk-item]:hover,
 [cmdk-item][data-selected="true"],
@@ -379,13 +432,28 @@
 .country-item[aria-selected],
 .country-item[data-selected],
 .country-item[data-highlighted] {
-  background-color: transparent !important;
+  background-color: rgba(0, 102, 255, 0.1) !important;
+  border-radius: 8px !important;
+}
+
+.dark [cmdk-item][aria-selected="true"],
+.dark [cmdk-item]:hover,
+.dark [cmdk-item][data-selected="true"],
+.dark [cmdk-item][data-highlighted="true"],
+.dark [cmdk-item][aria-selected],
+.dark .country-item[aria-selected],
+.dark .country-item[data-selected],
+.dark .country-item[data-highlighted] {
+  background: linear-gradient(135deg, rgba(78, 108, 164, 0.25), rgba(100, 130, 200, 0.35)) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
 }
 
 [cmdk-list] {
-  max-height: 300px;
+  max-height: 320px;
   overflow-y: auto;
-  padding: 4px;
+  padding: 6px;
+  border-radius: 10px;
 }
 
 [cmdk-group] {
@@ -400,7 +468,6 @@
   border-radius: 0.375rem;
   overflow: hidden;
   transition: all 0.15s ease;
-  
 }
 
 .phone-input-fr .prefix {
@@ -419,6 +486,14 @@
   height: 100%;
 }
 
+/* Phone input - dark mode styles */
+.dark .phone-input-fr .prefix {
+  background-color: #374151;
+  border-color: #4b5563;
+  color: #e5e7eb;
+  font-weight: 600;
+}
+
 .phone-input-fr input {
   flex: 1;
   padding: 0.625rem 0.75rem;
@@ -430,7 +505,19 @@
   transition: all 0.15s ease;
 }
 
+/* Phone input - dark mode input */
+.dark .phone-input-fr input {
+  background-color: #1f2937;
+  border-color: #4b5563;
+  color: #e5e7eb;
+}
+
 .phone-input-fr input::placeholder {
+  color: #9ca3af;
+}
+
+/* Phone input - dark mode placeholder */
+.dark .phone-input-fr input::placeholder {
   color: #9ca3af;
 }
 
@@ -439,13 +526,32 @@
   border-color: #ef4444 !important;
 }
 
+/* Phone input - dark mode error */
+.dark .phone-input-fr.error .prefix,
+.dark .phone-input-fr.error input {
+  border-color: #ef4444 !important;
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
 .phone-input-fr:focus-within input {
   border-color: #528eb2;
   box-shadow: 0 0 0 2px rgba(82, 142, 178, 0.2);
 }
 
+/* Phone input - dark mode focus */
+.dark .phone-input-fr:focus-within input {
+  border-color: #78b9dd;
+  box-shadow: 0 0 0 2px rgba(120, 185, 221, 0.3);
+}
+
 .phone-input-fr:focus-within .prefix {
   border-color: #528eb2;
+  border-right-color: transparent;
+}
+
+/* Phone input - dark mode focus prefix */
+.dark .phone-input-fr:focus-within .prefix {
+  border-color: #78b9dd;
   border-right-color: transparent;
 }
 

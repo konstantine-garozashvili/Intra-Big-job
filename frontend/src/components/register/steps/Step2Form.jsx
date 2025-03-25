@@ -15,7 +15,11 @@ const Calendar = lazy(() => import('react-calendar'));
 // Composant de chargement pour le calendrier - Mémorisé
 const CalendarFallback = memo(() => (
   <div className="flex items-center justify-center p-8">
-    <div className="w-8 h-8 border-t-2 border-b-2 border-[#0066ff] rounded-full animate-spin"></div>
+    <div className="w-12 h-12 relative">
+      <div className="absolute w-full h-full border-4 border-t-[#3b7dff] border-r-[#78b9dd] border-b-[#3b7dff] border-l-[#78b9dd] rounded-full animate-spin"></div>
+      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-8 h-8 border-4 border-t-[#a5cdff] border-r-transparent border-b-[#a5cdff] border-l-transparent rounded-full animate-spin animation-delay-150"></div>
+      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-[#3b7dff] dark:bg-[#a5cdff] rounded-full animate-pulse"></div>
+    </div>
   </div>
 ));
 
@@ -95,31 +99,33 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
     <div className="space-y-6">
       {/* Date de naissance */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
           Date de naissance
         </label>
         <div className="relative">
           <div 
-            className={`w-full px-4 py-3 rounded-md border flex items-center cursor-pointer transition-colors hover:border-[#0066ff] ${shouldShowError('birthDate') ? 'border-red-500' : 'border-gray-300'}`}
+            className={`w-full px-4 py-3 rounded-md border flex items-center cursor-pointer transition-all hover:shadow-md ${shouldShowError('birthDate') ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} 
+            ${formattedBirthDate ? 'hover:border-[#0066ff] dark:hover:border-[#a5cdff]' : 'hover:border-[#0066ff] dark:hover:border-[#a5cdff]'}
+            dark:bg-gradient-to-r dark:from-[#1e3556] dark:to-[#263b58] dark:shadow-inner dark:shadow-black/10 dark:text-gray-200`}
             onClick={() => setCalendarOpen(true)}
           >
             {formattedBirthDate ? (
-              <span className="text-gray-900">
+              <span className="text-gray-900 dark:text-[#f0f7ff] font-medium">
                 {formattedBirthDate}
               </span>
             ) : (
-              <span className="text-gray-500">JJ/MM/AAAA</span>
+              <span className="text-gray-500 dark:text-[#a3b8cc]">JJ/MM/AAAA</span>
             )}
-            <CalendarIcon className="ml-auto h-5 w-5 text-gray-500" />
+            <CalendarIcon className="ml-auto h-5 w-5 text-gray-500 dark:text-[#a5cdff]" />
           </div>
           
           <Dialog open={calendarOpen} onOpenChange={setCalendarOpen}>
-            <DialogContent className="p-0 sm:max-w-[425px] bg-white rounded-lg shadow-xl border-none overflow-hidden">
+            <DialogContent className="p-0 sm:max-w-[450px] md:max-w-[500px] bg-white dark:bg-gradient-to-br dark:from-[#192334] dark:to-[#0f172a] rounded-lg shadow-xl border-none overflow-hidden">
               <div className="p-4 pb-0">
-                <DialogTitle className="text-xl font-semibold text-center text-gray-900">
+                <DialogTitle className="text-xl font-semibold text-center text-gray-900 dark:text-[#f0f7ff]">
                   Sélectionnez votre date de naissance
                 </DialogTitle>
-                <DialogDescription className="text-sm text-center text-gray-500 mt-1">
+                <DialogDescription className="text-sm text-center text-gray-500 dark:text-[#a5cdff] mt-1">
                   Vous devez avoir au moins 16 ans pour vous inscrire.
                 </DialogDescription>
               </div>
@@ -138,10 +144,10 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
                     navigationLabel={({ date }) => 
                       date.toLocaleString('fr', { month: 'long', year: 'numeric' }).toLowerCase()
                     }
-                    next2Label={<span className="text-lg text-[#0066ff]">»</span>}
-                    prev2Label={<span className="text-lg text-[#0066ff]">«</span>}
-                    nextLabel={<span className="text-lg text-[#0066ff]">›</span>}
-                    prevLabel={<span className="text-lg text-[#0066ff]">‹</span>}
+                    next2Label={<span className="text-lg text-[#0055cc] dark:text-[#a5cdff]">»</span>}
+                    prev2Label={<span className="text-lg text-[#0055cc] dark:text-[#a5cdff]">«</span>}
+                    nextLabel={<span className="text-lg text-[#0055cc] dark:text-[#a5cdff]">›</span>}
+                    prevLabel={<span className="text-lg text-[#0055cc] dark:text-[#a5cdff]">‹</span>}
                     showNeighboringMonth={false}
                     tileClassName={({ date, view }) => {
                       // Vérifie si la date est dans le futur
@@ -157,7 +163,7 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
                   />
                 </Suspense>
               </div>
-              <div className="p-4 flex justify-end">
+              <div className="p-4 flex justify-end dark:bg-gray-800">
                 <button 
                   className="calendar-confirm-button"
                   onClick={() => setCalendarOpen(false)}
@@ -176,7 +182,7 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
 
       {/* Nationalité */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
           Nationalité
         </label>
         <CountrySelector
@@ -185,13 +191,13 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
           error={shouldShowError('nationality') ? getErrorMessage('nationality') : null}
         />
         {shouldShowError('nationality') && (
-          <p className="text-red-500 text-xs mt-1">{getErrorMessage('nationality')}</p>
+          <p className="text-red-500 dark:text-red-400 text-xs mt-1">{getErrorMessage('nationality')}</p>
         )}
       </div>
 
       {/* Téléphone */}
       <div className="mb-6">
-        <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
           Numéro de téléphone
         </label>
         <PhoneInput
@@ -201,7 +207,7 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
           error={shouldShowError('phone') ? getErrorMessage('phone') : null}
           placeholder="06 12 34 56 78"
         />
-        <p className="text-xs text-gray-500 mt-1">
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
           Format français uniquement (+33). Exemple: 06 12 34 56 78
         </p>
       </div>
@@ -211,7 +217,7 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
         <Button 
           type="button"
           variant="outline"
-          className="flex-1 h-12 bg-white text-[#02284f] border-[#02284f] hover:bg-gray-50 transition-colors"
+          className="flex-1 h-12 bg-white text-[#02284f] border-[#02284f] hover:bg-gray-50 transition-colors dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700"
           onClick={goToPrevStep}
         >
           <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -222,7 +228,7 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
         
         <Button 
           type="button"
-          className="flex-1 h-12 bg-[#528eb2] hover:bg-[#528eb2]/90 text-white transition-colors"
+          className="flex-1 h-12 bg-[#528eb2] hover:bg-[#528eb2]/90 text-white transition-colors dark:bg-[#3b82f6] dark:hover:bg-[#2563eb]"
           onClick={handleNextStep}
         >
           Continuer
