@@ -27,6 +27,7 @@ import { Loader2, ShieldAlert, UserCog, AlertTriangle } from "lucide-react";
 import { motion } from "framer-motion";
 import { getFrenchRoleDisplayName } from "@/lib/utils/roleDisplay";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Toaster } from "@/components/ui/sonner";
 
 export function RoleDialog({
     isDialogOpen,
@@ -85,6 +86,21 @@ export function RoleDialog({
         if (selectedUser && selectedRoleId) {
             const role = roles.find(r => r.id === selectedRoleId);
             if (role) {
+                // Vérifier si l'utilisateur a déjà ce rôle
+                const hasRole = selectedUser.roles && selectedUser.roles.some(userRole => {
+                    const userRoleName = userRole.name.toLowerCase();
+                    const newRoleName = role.name.toLowerCase();
+                    return userRoleName === newRoleName ||
+                           userRoleName === `role_${newRoleName.replace('role_', '')}` ||
+                           `role_${userRoleName.replace('role_', '')}` === newRoleName;
+                });
+
+                if (hasRole) {
+                    // Utiliser le Toaster pour notifier l'utilisateur
+                    Toaster.warning("L'utilisateur possède déjà ce rôle");
+                    return;
+                }
+
                 // Find the first current role of the user
                 const currentRole = selectedUser.roles && selectedUser.roles.length > 0
                     ? selectedUser.roles[0].name
