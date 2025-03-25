@@ -224,10 +224,7 @@ const userDataManager = {
   getCachedUserData() {
     // Si nous avons des données en mémoire, les utiliser
     if (userDataCache.data) {
-      return {
-        data: userDataCache.data,
-        timestamp: userDataCache.timestamp
-      };
+      return userDataCache.data;
     }
     
     // Sinon, essayer de récupérer depuis le localStorage
@@ -238,10 +235,7 @@ const userDataManager = {
         // Update our in-memory cache with the localStorage data
         userDataCache.data = userData;
         userDataCache.timestamp = Date.now(); // Use current time as we don't know when it was cached
-        return {
-          data: userData,
-          timestamp: userDataCache.timestamp
-        };
+        return userData;
       }
     } catch (e) {
       console.warn('Error retrieving user data from localStorage:', e);
@@ -529,9 +523,9 @@ const userDataManager = {
       const cachedData = this.getCachedUserData();
       
       // If we have fresh cached data (less than 30 seconds old), use it
-      if (cachedData && cachedData.timestamp && (now - cachedData.timestamp < 30000)) {
+      if (cachedData && userDataCache.timestamp && (now - userDataCache.timestamp < 30000)) {
         console.info('Using cached user data (less than 30s old)');
-        return Promise.resolve(cachedData.data);
+        return Promise.resolve(cachedData);
       }
       
       // If there's an active request for this route, reuse it
@@ -541,7 +535,21 @@ const userDataManager = {
       }
       
       // Otherwise, make a new request and register it
-      const request = requestFn();
+      const request = requestFn().then(response => {
+        // Store the response in our cache
+        userDataCache.data = response;
+        userDataCache.timestamp = Date.now();
+        
+        // Also update localStorage
+        try {
+          localStorage.setItem('user', JSON.stringify(response));
+        } catch (e) {
+          console.warn('Error storing user data in localStorage:', e);
+        }
+        
+        return response;
+      });
+      
       this.requestRegistry.registerActiveRequest(route, request);
       return request;
     }
