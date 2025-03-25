@@ -168,7 +168,7 @@ const MenuBurger = memo(() => {
   
 
   const menuItems = [
-    // --- STUDENT ROLE SECTION ---
+    // --- SECTION NAVIGATION PRINCIPALE (pour tous les rôles) ---
     {
       key: 'dashboard',
       label: 'Tableau de bord',
@@ -191,6 +191,31 @@ const MenuBurger = memo(() => {
       to: '/messagerie',
     },
     {
+      key: 'trombinoscope',
+      label: 'Trombinoscope',
+      icon: <Camera className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.STUDENT, ROLES.RECRUITER],
+      to: '/Trombinoscope',
+    },
+    
+    // --- SECTION ÉTUDES ET FORMATIONS ---
+    {
+      key: 'etudiants',
+      label: 'Étudiants',
+      icon: <GraduationCap className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.HR, ROLES.RECRUITER],
+      links: [
+        { name: 'Liste des étudiants', to: '/admin/users?filter=ROLE_STUDENT', roles: [ROLES.SUPERADMIN, ROLES.ADMIN] },
+        { name: 'Gestion des étudiants', to: '/eleves', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.HR] },
+        { name: 'Résultats', to: '/eleves/resultats', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER] },
+        { name: 'Dossiers', to: '/eleves/dossiers', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR, ROLES.TEACHER] },
+        { name: 'Certificats et Diplômes', to: '/eleves/certificats', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER] },
+        { name: 'Historique des Absences', to: '/eleves/absences', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.HR] },
+        { name: 'Profils & CV', to: '/recruiter/student-profiles', roles: [ROLES.RECRUITER] },
+        { name: 'Stages & Alternances', to: '/recruiter/internships', roles: [ROLES.RECRUITER] },
+      ],
+    },
+    {
       key: 'cours',
       label: 'Mes Cours',
       icon: <Clipboard className="w-5 h-5 mr-2 text-[#528eb2]" />,
@@ -205,12 +230,21 @@ const MenuBurger = memo(() => {
       to: '/projet',
     },
     {
+      key: 'formations_management',
+      label: 'Gestion des formations',
+      icon: <BookOpen className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.RECRUITER],
+      to: '/formations',
+    },
+    {
       key: 'justification_absence',
       label: 'Justifier une absence',
       icon: <Clipboard className="w-5 h-5 mr-2 text-[#528eb2]" />,
       roles: [ROLES.STUDENT],
       to: '/justification-absence',
     },
+    
+    // --- SECTION PLANIFICATION ---
     {
       key: 'plannings',
       label: 'Plannings',
@@ -223,135 +257,8 @@ const MenuBurger = memo(() => {
         { name: 'Réservation de matériel', to: '/plannings/reservation-materiel', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER] },
       ],
     },
-    {
-      key: 'cagnottes',
-      label: 'Cagnottes',
-      icon: <PiggyBank className="w-5 h-5 mr-2 text-[#528eb2]" />,
-      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.STUDENT],
-      to: '/cagnottes',
-    },
-    {
-      key: 'sponsors',
-      label: 'Sponsors',
-      icon: <Handshake className="w-5 h-5 mr-2 text-[#528eb2]" />,
-      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.STUDENT],
-      to: '/sponsors',
-    },
-    {
-      key: 'trombinoscope',
-      label: 'Trombinoscope',
-      icon: <Camera className="w-5 h-5 mr-2 text-[#528eb2]" />,
-      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.STUDENT, ROLES.RECRUITER],
-      to: '/Trombinoscope',
-    },
     
-    // --- TEACHER ROLE SECTION ---
-    {
-      key: 'eleves',
-      label: 'Élèves',
-      icon: <GraduationCap className="w-5 h-5 mr-2 text-[#528eb2]" />,
-      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.HR],
-      links: [
-        { name: 'Gestion des élèves', to: '/eleves', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER] },
-        { name: 'Résultats', to: '/eleves/resultats', roles: [ROLES.SUPERADMIN, ROLES.TEACHER] },
-        { name: 'Dossiers', to: '/eleves/dossiers', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR, ROLES.TEACHER] },
-        { name: 'Certificats et Diplômes', to: '/eleves/certificats', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER] },
-        { name: 'Historique des Absences', to: '/eleves/absences', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.HR] },
-      ],
-    },
-    {
-      key: 'formations_management',
-      label: 'Gestion des formations',
-      icon: <BookOpen className="w-5 h-5 mr-2 text-white" />,
-      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.RECRUITER],
-      to: '/formations',
-    },
-    {
-      key: 'teacher_user_management',
-      label: 'Gestion des étudiants',
-      icon: <GraduationCap className="w-5 h-5 mr-2 text-[#528eb2]" />,
-      roles: [ROLES.TEACHER],
-      to: '/admin/users?filter=ROLE_STUDENT',
-    },
-    
-    // --- ADMIN ROLE SECTION ---
-    {
-      key: 'user_management',
-      label: 'Gestion des utilisateurs',
-      icon: <Users className="w-5 h-5 mr-2 text-[#528eb2]" />,
-      roles: [ROLES.ADMIN, ROLES.SUPERADMIN],
-      links: [
-        { name: 'Tous les utilisateurs', to: '/admin/users', roles: [ROLES.ADMIN, ROLES.SUPERADMIN] },
-        { name: 'Étudiants', to: '/admin/users?filter=ROLE_STUDENT', roles: [ROLES.ADMIN, ROLES.SUPERADMIN] },
-        { name: 'Formateurs', to: '/admin/users?filter=ROLE_TEACHER', roles: [ROLES.ADMIN, ROLES.SUPERADMIN] },
-        { name: 'Personnel RH', to: '/admin/users?filter=ROLE_HR', roles: [ROLES.ADMIN, ROLES.SUPERADMIN] },
-        { name: 'Administrateurs', to: '/admin/users?filter=ROLE_ADMIN', roles: [ROLES.ADMIN, ROLES.SUPERADMIN] },
-        { name: 'Invités', to: '/admin/users?filter=ROLE_GUEST', roles: [ROLES.ADMIN, ROLES.SUPERADMIN] },
-        { name: 'Recruteurs', to: '/admin/users?filter=ROLE_RECRUITER', roles: [ROLES.ADMIN, ROLES.SUPERADMIN] },
-      ],
-    },
-    {
-      key: 'roles_management',
-      label: 'Gestion des rôles',
-      icon: <UserPlus className="w-5 h-5 mr-2 text-white" />,
-      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.RECRUITER],
-      to: '/recruiter/guest-student-roles',
-    },
-    {
-      key: 'invites',
-      label: 'Invités',
-      icon: <UserPlus className="w-5 h-5 mr-2 text-[#528eb2]" />,
-      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
-      links: [
-        { name: 'Liste des invités', to: '/invites', roles: [ROLES.ADMIN, ROLES.SUPERADMIN] },
-        { name: 'Gestion des invités', to: '/invites/', roles: [ROLES.ADMIN, ROLES.SUPERADMIN] },
-        { name: 'Test d\'admission', to: '/invites/test_admission', roles: [ROLES.ADMIN, ROLES.HR, ROLES.SUPERADMIN] },
-        { name: 'Statistiques des Invités', to: '/admin/invite/statistiques', roles: [ROLES.ADMIN, ROLES.SUPERADMIN] },
-      ],
-    },
-    {
-      key: 'rh',
-      label: 'Ressources Humaines',
-      icon: <Users className="w-5 h-5 mr-2 text-[#528eb2]" />,
-      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
-      links: [
-        { name: 'Gestion des Formateurs', to: '/rh/formateurs', roles: [ROLES.SUPERADMIN, ROLES.HR] },
-        { name: 'Gestion des Candidatures', to: '/rh/candidatures', roles: [ROLES.SUPERADMIN, ROLES.HR] },
-        { name: 'Suivi des Absences et Congés', to: '/rh/absences', roles: [ROLES.SUPERADMIN, ROLES.HR] },
-        { name: 'Planning des Formateurs', to: '/rh/planning', roles: [ROLES.SUPERADMIN, ROLES.HR] },
-        { name: 'Archivage des Dossiers', to: '/rh/archivage', roles: [ROLES.SUPERADMIN, ROLES.HR] },
-        { name: 'Suivi des Recrutements', to: '/rh/recrutement', roles: [ROLES.SUPERADMIN, ROLES.HR] },
-        { name: 'Gestion des étudiants', to: '/admin/users?filter=ROLE_STUDENT', roles: [ROLES.HR] },
-        { name: 'Gestion des formateurs', to: '/admin/users?filter=ROLE_TEACHER', roles: [ROLES.HR] },
-      ],
-    },
-    {
-      key: 'admins',
-      label: 'Administration',
-      icon: <Shield className="w-5 h-5 mr-2 text-[#528eb2]" />,
-      roles: [ROLES.SUPERADMIN, ROLES.ADMIN],
-      links: [
-        { name: 'Gestion des utilisateurs', to: '/admin/users', roles: [ROLES.SUPERADMIN, ROLES.ADMIN] },
-        { name: 'Gestion des Formations', to: '/admin/formations', roles: [ROLES.SUPERADMIN] },
-        { name: 'Suivi des Inscriptions', to: '/admin/inscriptions', roles: [ROLES.SUPERADMIN] },
-        { name: 'Gestion des Paiements', to: '/admin/paiements', roles: [ROLES.SUPERADMIN] },
-        { name: 'Suivi des Absences', to: '/admin/absences', roles: [ROLES.SUPERADMIN] },
-        { name: 'Statistiques Administratives', to: '/admin/statistiques', roles: [ROLES.SUPERADMIN] },
-        { name: 'Les logs', to: '/admin/logs', roles: [ROLES.SUPERADMIN] },
-        { name: 'Gestion des partenaires', to: '/admin/partenariats', roles: [ROLES.SUPERADMIN] },
-      ],
-    },
-    
-    // --- SUPERADMIN ROLE SECTION ---
-    {
-      key: 'centres_formations',
-      label: 'Centres de formations',
-      icon: <School className="w-5 h-5 mr-2 text-[#528eb2]" />,
-      roles: [ROLES.SUPERADMIN],
-      to: '/centres_formations',
-    },
-
-    // --- RECRUITER ROLE SECTION ---
+    // --- SECTION RECRUTEMENT & CARRIÈRE ---
     {
       key: 'candidatures',
       label: 'Candidatures',
@@ -374,17 +281,6 @@ const MenuBurger = memo(() => {
       ],
     },
     {
-      key: 'etudiants',
-      label: 'Étudiants',
-      icon: <GraduationCap className="w-5 h-5 mr-2 text-[#528eb2]" />,
-      roles: [ROLES.RECRUITER],
-      links: [
-        { name: 'Liste des étudiants', to: '/recruiter/students', roles: [ROLES.RECRUITER] },
-        { name: 'Profils & CV', to: '/recruiter/student-profiles', roles: [ROLES.RECRUITER] },
-        { name: 'Stages & Alternances', to: '/recruiter/internships', roles: [ROLES.RECRUITER] },
-      ],
-    },
-    {
       key: 'evenements',
       label: 'Événements',
       icon: <Calendar className="w-5 h-5 mr-2 text-[#528eb2]" />,
@@ -396,7 +292,130 @@ const MenuBurger = memo(() => {
       ],
     },
     
-    // --- GUEST ROLE SECTION ---
+    // --- SECTION PARTENARIATS ET FINANCEMENT ---
+    {
+      key: 'cagnottes',
+      label: 'Cagnottes',
+      icon: <PiggyBank className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.STUDENT],
+      to: '/cagnottes',
+    },
+    {
+      key: 'sponsors',
+      label: 'Sponsors',
+      icon: <Handshake className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.STUDENT],
+      to: '/sponsors',
+    },
+    
+    // --- SECTION ADMINISTRATION ET GESTION (Regroupé par type d'utilisateur) ---
+    {
+      key: 'admin_all_users',
+      label: 'Tous les utilisateurs',
+      icon: <Users className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.ADMIN, ROLES.SUPERADMIN],
+      to: '/admin/users',
+    },
+    {
+      key: 'admin_teachers',
+      label: 'Formateurs',
+      icon: <Clipboard className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.ADMIN, ROLES.SUPERADMIN],
+      links: [
+        { name: 'Liste des formateurs', to: '/admin/users?filter=ROLE_TEACHER', roles: [ROLES.ADMIN, ROLES.SUPERADMIN] },
+        { name: 'Planning des Formateurs', to: '/rh/planning', roles: [ROLES.ADMIN, ROLES.SUPERADMIN] },
+        { name: 'Évaluation des formateurs', to: '/admin/teacher-evaluation', roles: [ROLES.ADMIN, ROLES.SUPERADMIN] },
+      ],
+    },
+    {
+      key: 'admin_hr',
+      label: 'Personnel RH',
+      icon: <Users className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.ADMIN, ROLES.SUPERADMIN],
+      links: [
+        { name: 'Liste du personnel RH', to: '/admin/users?filter=ROLE_HR', roles: [ROLES.ADMIN, ROLES.SUPERADMIN] },
+        { name: 'Attributions', to: '/admin/hr-assignments', roles: [ROLES.ADMIN, ROLES.SUPERADMIN] },
+      ],
+    },
+    {
+      key: 'admin_admins',
+      label: 'Administrateurs',
+      icon: <Shield className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.ADMIN, ROLES.SUPERADMIN],
+      links: [
+        { name: 'Liste des administrateurs', to: '/admin/users?filter=ROLE_ADMIN', roles: [ROLES.ADMIN, ROLES.SUPERADMIN] },
+        { name: 'Droits d\'accès', to: '/admin/access-rights', roles: [ROLES.SUPERADMIN] },
+      ],
+    },
+    {
+      key: 'admin_guests',
+      label: 'Invités',
+      icon: <UserPlus className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.ADMIN, ROLES.SUPERADMIN],
+      links: [
+        { name: 'Liste des invités', to: '/admin/users?filter=ROLE_GUEST', roles: [ROLES.ADMIN, ROLES.SUPERADMIN] },
+        { name: 'Gestion des invités', to: '/invites/', roles: [ROLES.ADMIN, ROLES.SUPERADMIN] },
+        { name: 'Test d\'admission', to: '/invites/test_admission', roles: [ROLES.ADMIN, ROLES.SUPERADMIN] },
+        { name: 'Statistiques des Invités', to: '/admin/invite/statistiques', roles: [ROLES.ADMIN, ROLES.SUPERADMIN] },
+      ],
+    },
+    {
+      key: 'admin_recruiters',
+      label: 'Recruteurs',
+      icon: <Briefcase className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.ADMIN, ROLES.SUPERADMIN],
+      links: [
+        { name: 'Liste des recruteurs', to: '/admin/users?filter=ROLE_RECRUITER', roles: [ROLES.ADMIN, ROLES.SUPERADMIN] },
+        { name: 'Entreprises partenaires', to: '/admin/partner-companies', roles: [ROLES.ADMIN, ROLES.SUPERADMIN] },
+        { name: 'Offres d\'emploi', to: '/admin/job-offers', roles: [ROLES.ADMIN, ROLES.SUPERADMIN] },
+      ],
+    },
+    {
+      key: 'roles_management',
+      label: 'Gestion des rôles',
+      icon: <UserPlus className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.RECRUITER],
+      to: '/recruiter/guest-student-roles',
+    },
+    {
+      key: 'rh',
+      label: 'Ressources Humaines',
+      icon: <Users className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
+      links: [
+        { name: 'Gestion des Formateurs', to: '/rh/formateurs', roles: [ROLES.SUPERADMIN, ROLES.HR] },
+        { name: 'Gestion des Candidatures', to: '/rh/candidatures', roles: [ROLES.SUPERADMIN, ROLES.HR] },
+        { name: 'Suivi des Absences et Congés', to: '/rh/absences', roles: [ROLES.SUPERADMIN, ROLES.HR] },
+        { name: 'Planning des Formateurs', to: '/rh/planning', roles: [ROLES.SUPERADMIN, ROLES.HR] },
+        { name: 'Archivage des Dossiers', to: '/rh/archivage', roles: [ROLES.SUPERADMIN, ROLES.HR] },
+        { name: 'Suivi des Recrutements', to: '/rh/recrutement', roles: [ROLES.SUPERADMIN, ROLES.HR] },
+        { name: 'Gestion des formateurs', to: '/admin/users?filter=ROLE_TEACHER', roles: [ROLES.HR] },
+      ],
+    },
+    {
+      key: 'admins',
+      label: 'Administration',
+      icon: <Shield className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.SUPERADMIN, ROLES.ADMIN],
+      links: [
+        { name: 'Gestion des Formations', to: '/admin/formations', roles: [ROLES.SUPERADMIN] },
+        { name: 'Suivi des Inscriptions', to: '/admin/inscriptions', roles: [ROLES.SUPERADMIN] },
+        { name: 'Gestion des Paiements', to: '/admin/paiements', roles: [ROLES.SUPERADMIN] },
+        { name: 'Suivi des Absences', to: '/admin/absences', roles: [ROLES.SUPERADMIN] },
+        { name: 'Statistiques Administratives', to: '/admin/statistiques', roles: [ROLES.SUPERADMIN] },
+        { name: 'Les logs', to: '/admin/logs', roles: [ROLES.SUPERADMIN] },
+        { name: 'Gestion des partenaires', to: '/admin/partenariats', roles: [ROLES.SUPERADMIN] },
+      ],
+    },
+    {
+      key: 'centres_formations',
+      label: 'Centres de formations',
+      icon: <School className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.SUPERADMIN],
+      to: '/centres_formations',
+    },
+    
+    // --- SECTION INVITÉ ---
     {
       key: 'candidature',
       label: 'Ma Candidature',
@@ -422,18 +441,6 @@ const MenuBurger = memo(() => {
       ],
     },
     {
-      key: 'contact',
-      label: 'Contact & Support',
-      icon: <MessageCircle className="w-5 h-5 mr-2 text-[#528eb2]" />,
-      roles: [ROLES.GUEST],
-      links: [
-        { name: 'Contacter un recruteur', to: '/guest/contact-recruiter', roles: [ROLES.GUEST] },
-        { name: 'Questions fréquentes', to: '/guest/faq', roles: [ROLES.GUEST] },
-        { name: 'Support technique', to: '/guest/technical-support', roles: [ROLES.GUEST] },
-        { name: 'Prendre rendez-vous', to: '/guest/schedule-meeting', roles: [ROLES.GUEST] },
-      ],
-    },
-    {
       key: 'ecole',
       label: 'Notre École',
       icon: <School className="w-5 h-5 mr-2 text-[#528eb2]" />,
@@ -445,17 +452,16 @@ const MenuBurger = memo(() => {
         { name: 'Actualités', to: '/guest/news', roles: [ROLES.GUEST] },
       ],
     },
-    
-    // --- GENERAL ITEMS ---
     {
-      key: 'aide',
-      label: "Besoin d'aide ?",
-      icon: <Calendar className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      key: 'contact',
+      label: 'Contact & Support',
+      icon: <MessageCircle className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.GUEST],
       links: [
-        { name: 'FAQ', to: '/aide/faq' },
-        { name: 'Forum', to: '/aide/forum' },
-        { name: 'Supports', to: '/aide/supports' },
-        { name: 'Contact', to: '/aide/contact' },
+        { name: 'Contacter un recruteur', to: '/guest/contact-recruiter', roles: [ROLES.GUEST] },
+        { name: 'Questions fréquentes', to: '/guest/faq', roles: [ROLES.GUEST] },
+        { name: 'Support technique', to: '/guest/technical-support', roles: [ROLES.GUEST] },
+        { name: 'Prendre rendez-vous', to: '/guest/schedule-meeting', roles: [ROLES.GUEST] },
       ],
     },
     {
@@ -469,6 +475,19 @@ const MenuBurger = memo(() => {
         { name: "Offres d'emploi", to: '/nous-rejoindre/offres' },
         { name: 'Devenir partenaire', to: '/nous-rejoindre/partenaire' },
         { name: 'Devenir sponsor', to: '/nous-rejoindre/sponsor' },
+      ],
+    },
+    
+    // --- SECTION AIDE (pour tous) ---
+    {
+      key: 'aide',
+      label: "Besoin d'aide ?",
+      icon: <Calendar className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      links: [
+        { name: 'FAQ', to: '/aide/faq' },
+        { name: 'Forum', to: '/aide/forum' },
+        { name: 'Supports', to: '/aide/supports' },
+        { name: 'Contact', to: '/aide/contact' },
       ],
     },
   ];
