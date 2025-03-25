@@ -9,7 +9,7 @@ const AdministrativeInformation = ({ userData, userRole }) => {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 sm:p-6">
+    <div className="bg-white dark:bg-gray-800/80 dark:border dark:border-gray-700 rounded-lg shadow p-4 sm:p-6">
       <h2 className="text-lg font-semibold mb-4 flex items-center text-gray-900 dark:text-white">
         <Shield className="h-5 w-5 mr-2 text-blue-600 dark:text-blue-400" />
         Informations administratives

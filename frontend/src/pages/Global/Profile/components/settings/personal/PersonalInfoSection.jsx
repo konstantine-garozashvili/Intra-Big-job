@@ -67,14 +67,14 @@ export const PersonalInfoSection = ({
       {/* Birth Date - Toujours afficher en mode statique pour éviter les problèmes */}
       <StaticField 
         label="Date de naissance"
-        icon={<Calendar className="h-4 w-4 mr-2 text-blue-500" />}
+        icon={<Calendar className="h-4 w-4 mr-2 text-blue-500 dark:text-blue-400" />}
         value={`${formatDate(userData.birthDate)}${userData.age ? ` (${userData.age} ans)` : ''}`}
       />
 
       {/* Nationality */}
       <StaticField 
         label="Nationalité"
-        icon={<Globe className="h-4 w-4 mr-2 text-blue-500" />}
+        icon={<Globe className="h-4 w-4 mr-2 text-blue-500 dark:text-blue-400" />}
         value={userData.nationality?.name || 'Non renseignée'}
       />
 
@@ -82,33 +82,33 @@ export const PersonalInfoSection = ({
       <div className="col-span-1 sm:col-span-2 mt-2">
         <div className="flex flex-col space-y-2">
           <div className="flex items-center">
-            <FileBox className="h-4 w-4 mr-2 text-blue-500" />
-            <span className="text-sm font-medium">Pièces d'identité</span>
+            <FileBox className="h-4 w-4 mr-2 text-blue-500 dark:text-blue-400" />
+            <span className="text-sm font-medium text-gray-800 dark:text-gray-200">Pièces d'identité</span>
           </div>
           
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 mt-1 bg-gray-50 p-3 rounded-md">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 mt-1 bg-gray-50 dark:bg-gray-800/50 dark:border dark:border-gray-700 p-3 rounded-md">
             <div className="flex-1">
               {userData.identityDocuments && userData.identityDocuments.length > 0 ? (
                 <div className="flex flex-col space-y-2">
                   {userData.identityDocuments.map((doc, index) => (
-                    <div key={index} className="flex items-center justify-between bg-white p-2 rounded border">
-                      <span className="text-sm truncate">{doc.name || `Document ${index + 1}`}</span>
+                    <div key={index} className="flex items-center justify-between bg-white dark:bg-gray-700 p-2 rounded border dark:border-gray-600">
+                      <span className="text-sm truncate text-gray-900 dark:text-gray-100">{doc.name || `Document ${index + 1}`}</span>
                       <div className="flex space-x-2">
-                        <Button variant="outline" size="sm" className="h-7 px-2 text-xs">Voir</Button>
+                        <Button variant="outline" size="sm" className="h-7 px-2 text-xs dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600">Voir</Button>
                         <Button variant="destructive" size="sm" className="h-7 px-2 text-xs">Supprimer</Button>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500">Aucune pièce d'identité n'a été téléchargée.</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Aucune pièce d'identité n'a été téléchargée.</p>
               )}
             </div>
             
             <Button 
               variant="outline" 
               size="sm"
-              className="whitespace-nowrap"
+              className="whitespace-nowrap dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
               onClick={() => onUploadIdentity && onUploadIdentity()}
             >
               Ajouter un document

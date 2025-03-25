@@ -7,10 +7,10 @@ export const StaticField = ({ label, icon, value, fieldType = 'text' }) => {
   const formattedValue = formatValue(value, fieldType);
       
   return (
-    <div className="bg-gray-50 rounded-lg p-4 sm:p-5">
-      <Label className="text-sm font-medium text-gray-700">{label}</Label>
+    <div className="bg-gray-50 dark:bg-gray-800/50 dark:border dark:border-gray-700 rounded-lg p-4 sm:p-5">
+      <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">{label}</Label>
       <div className="mt-2">
-        <div className="flex items-center text-sm text-gray-900">
+        <div className="flex items-center text-sm text-gray-900 dark:text-gray-100">
           {icon}
           <span className="font-medium break-words">{formattedValue}</span>
         </div>

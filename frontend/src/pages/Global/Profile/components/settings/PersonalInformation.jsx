@@ -90,8 +90,8 @@ const PersonalInformation = ({
     <div className="space-y-6 sm:space-y-8 w-full px-1 sm:px-2 md:px-4">
       {/* Personal Information Section */}
       <div>
-        <h3 className="text-base sm:text-lg font-semibold flex items-center mb-3 sm:mb-5">
-          <User className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2 text-blue-600" />
+        <h3 className="text-base sm:text-lg font-semibold flex items-center mb-3 sm:mb-5 text-gray-800 dark:text-gray-100">
+          <User className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2 text-blue-600 dark:text-blue-400" />
           Informations personnelles
         </h3>
         <PersonalInfoSection 
@@ -107,12 +107,12 @@ const PersonalInformation = ({
         />
       </div>
 
-      <Separator className="my-6 sm:my-8" />
+      <Separator className="my-6 sm:my-8 bg-gray-200 dark:bg-gray-700" />
 
       {/* Contact Information Section */}
       <div>
-        <h3 className="text-base sm:text-lg font-semibold flex items-center mb-3 sm:mb-5">
-          <Phone className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2 text-blue-600" />
+        <h3 className="text-base sm:text-lg font-semibold flex items-center mb-3 sm:mb-5 text-gray-800 dark:text-gray-100">
+          <Phone className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2 text-blue-600 dark:text-blue-400" />
           Coordonnées
         </h3>
         <ContactInfoSection 
@@ -130,12 +130,12 @@ const PersonalInformation = ({
         />
       </div>
 
-      <Separator className="my-6 sm:my-8" />
+      <Separator className="my-6 sm:my-8 bg-gray-200 dark:bg-gray-700" />
 
       {/* Professional Information Section */}
       <div>
-        <h3 className="text-base sm:text-lg font-semibold flex items-center mb-3 sm:mb-5">
-          <Briefcase className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2 text-blue-600" />
+        <h3 className="text-base sm:text-lg font-semibold flex items-center mb-3 sm:mb-5 text-gray-800 dark:text-gray-100">
+          <Briefcase className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2 text-blue-600 dark:text-blue-400" />
           Ma carrière
         </h3>
         <ProfessionalInfoSection 

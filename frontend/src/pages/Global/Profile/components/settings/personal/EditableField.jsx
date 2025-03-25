@@ -75,20 +75,20 @@ const EditableField = memo(({
     <div 
       className={`
         rounded-lg transition-all duration-200 
-        ${isEditing ? 'bg-white border-2 border-blue-200 shadow-sm' : 'bg-gray-50'} 
-        ${!isEditing ? 'hover:bg-gray-100' : ''} 
+        ${isEditing ? 'bg-white dark:bg-gray-800 border-2 border-blue-200 dark:border-blue-700 shadow-sm dark:shadow-blue-900/20' : 'bg-gray-50 dark:bg-gray-800/50 dark:border dark:border-gray-700'} 
+        ${!isEditing ? 'hover:bg-gray-100 dark:hover:bg-gray-700/60' : ''} 
         p-3 sm:p-4 md:p-5 
         ${className}
       `}
     >
-      <Label className="text-xs sm:text-sm font-medium text-gray-700 flex items-center justify-between">
+      <Label className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center justify-between">
         <span>{label}</span>
         {isEditable && !isEditing && (
           <Button
             variant="ghost"
             size="sm"
             onClick={onEdit}
-            className="h-7 w-7 p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-colors"
+            className="h-7 w-7 p-1 text-blue-600 dark:text-blue-400 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/30 dark:hover:text-blue-300 transition-colors"
           >
             <Pencil className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           </Button>
@@ -147,15 +147,15 @@ const EditableField = memo(({
                 href={displayValue}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-600 hover:text-blue-800 break-all"
+                className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 break-all"
               >
                 {displayValue}
               </a>
             ) : (
-              <span className="text-gray-900">{getFormattedDisplayValue()}</span>
+              <span className="text-gray-900 dark:text-gray-100">{getFormattedDisplayValue()}</span>
             )
           ) : (
-            <span className="text-gray-500">Non renseigné</span>
+            <span className="text-gray-500 dark:text-gray-400">Non renseigné</span>
           )}
         </div>
       )}
