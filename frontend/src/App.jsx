@@ -78,6 +78,9 @@ const GuestStudentRoleManager = lazy(() => import('./pages/Recruiter/GuestStuden
 // Import du composant HomePage 
 const HomePage = lazy(() => import('./components/HomePage'))
 
+// Visual Concept standalone page
+const VisualConcept = lazy(() => import('./pages/VisualConcept'))
+
 // Fonction optimisée pour le préchargement intelligent des pages
 // Ne charge que les pages pertinentes en fonction du contexte et du chemin actuel
 const useIntelligentPreload = () => {
@@ -402,6 +405,9 @@ const AppContent = () => {
                     <Route path="/reset-password/confirmation" element={<ResetPasswordConfirmation />} />
                     <Route path="/reset-password/:token" element={<ResetPassword />} />
                   </Route>
+                  
+                  {/* Standalone Visual Concept page - No authentication required */}
+                  <Route path="/visual-concept" element={<VisualConcept />} />
                   
                   <Route element={<ProtectedRoute />}>
                     {/* Regular protected routes */}
