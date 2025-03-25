@@ -62,11 +62,12 @@ class ResetPasswordController extends AbstractController
             // Traiter la demande via le service
             $result = $this->resetPasswordService->requestReset($data['email']);
             
-            // Toujours retourner un succès pour ne pas révéler si l'email existe
+            // Renvoyer le token au frontend pour l'envoi d'email via EmailJS
             $this->logger->info('Demande traitée avec succès');
             return new JsonResponse([
                 'success' => true,
-                'message' => 'Si votre email est enregistré dans notre système, vous recevrez un lien de réinitialisation'
+                'message' => 'Token généré avec succès',
+                'token' => $result['token'] ?? null
             ]);
         } catch (\Exception $e) {
             // Log l'erreur pour débogage

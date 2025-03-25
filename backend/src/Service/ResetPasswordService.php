@@ -43,10 +43,10 @@ class ResetPasswordService
      * Génère un token de réinitialisation pour l'utilisateur et envoie un email
      * 
      * @param string $email Adresse email de l'utilisateur
-     * @return bool Succès ou échec de l'opération
+     * @return array Tableau contenant le résultat de l'opération et le token généré
      * @throws \Exception si une erreur se produit
      */
-    public function requestReset(string $email): bool
+    public function requestReset(string $email): array
     {
         // Chercher l'utilisateur par son email (insensible à la casse)
         $repository = $this->entityManager->getRepository(User::class);
@@ -61,8 +61,8 @@ class ResetPasswordService
         if (!$user) {
             // Journaliser pour le débogage (à retirer en production)
             error_log("Aucun utilisateur trouvé avec l'email: " . $email);
-            // On retourne true pour ne pas indiquer si l'email existe ou non
-            return true;
+            // On retourne un tableau sans token pour ne pas indiquer si l'email existe ou non
+            return ['success' => true, 'token' => null];
         }
         
         try {
@@ -79,10 +79,8 @@ class ResetPasswordService
             // Persister les changements
             $this->entityManager->flush();
             
-            // Envoyer l'email avec le lien de réinitialisation
-            $this->sendResetEmail($user, $resetToken);
-            
-            return true;
+            // Au lieu d'envoyer l'email, on retourne le token
+            return ['success' => true, 'token' => $resetToken];
         } catch (\Exception $e) {
             // Journaliser l'erreur
             error_log('Erreur lors de la réinitialisation de mot de passe: ' . $e->getMessage());
