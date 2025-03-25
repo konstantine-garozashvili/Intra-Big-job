@@ -133,7 +133,7 @@ const SecuritySettings = () => {
   // Show skeleton while loading
   if (pageLoading) {
     return (
-      <div className="space-y-6 bg-white p-6 rounded-lg shadow">
+      <div className="space-y-6 bg-white dark:bg-gray-800 p-6 rounded-lg shadow dark:shadow-blue-900/10">
         <ProfileSettingsSkeleton type="security" />
       </div>
     );
@@ -142,34 +142,34 @@ const SecuritySettings = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2">
-        <Shield className="h-6 w-6" />
-        <h1 className="text-2xl font-bold">Sécurité</h1>
+        <Shield className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Sécurité</h1>
       </div>
 
-      <Alert>
-        <Shield className="h-4 w-4" />
-        <AlertTitle>Sécurité du compte</AlertTitle>
-        <AlertDescription>
+      <Alert className="border dark:border-blue-800 dark:bg-blue-900/20">
+        <Shield className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+        <AlertTitle className="dark:text-white">Sécurité du compte</AlertTitle>
+        <AlertDescription className="dark:text-gray-300">
           Protégez votre compte en utilisant un mot de passe fort et en activant l'authentification à deux facteurs.
         </AlertDescription>
       </Alert>
 
       <div className="grid gap-6">
         {/* Password Change Card */}
-        <Card>
-          <CardHeader>
+        <Card className="border dark:border-gray-700">
+          <CardHeader className="dark:border-b dark:border-gray-700">
             <div className="flex items-center gap-2">
-              <KeyRound className="h-5 w-5" />
-              <CardTitle>Changer le mot de passe</CardTitle>
+              <KeyRound className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              <CardTitle className="dark:text-white">Changer le mot de passe</CardTitle>
             </div>
-            <CardDescription>
+            <CardDescription className="dark:text-gray-400">
               Choisissez un mot de passe fort et unique que vous n'utilisez pour aucun autre compte.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handlePasswordChange} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="current-password">Mot de passe actuel</Label>
+                <Label htmlFor="current-password" className="text-gray-700 dark:text-gray-300">Mot de passe actuel</Label>
                 <div className="relative">
                   <Input
                     id="current-password"
@@ -177,25 +177,25 @@ const SecuritySettings = () => {
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
                     required
-                    className="pr-10"
+                    className="pr-10 dark:bg-gray-700/50 dark:border-gray-600"
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="absolute right-0 top-0 h-full px-3"
+                    className="absolute right-0 top-0 h-full px-3 dark:text-gray-300 dark:hover:bg-gray-700/50"
                     onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                     tabIndex="-1"
                   >
                     {showCurrentPassword ? 
-                      <EyeOff className="h-4 w-4 text-gray-500" /> : 
-                      <Eye className="h-4 w-4 text-gray-500" />
+                      <EyeOff className="h-4 w-4 text-gray-500 dark:text-gray-400" /> : 
+                      <Eye className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                     }
                   </Button>
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="new-password">Nouveau mot de passe</Label>
+                <Label htmlFor="new-password" className="text-gray-700 dark:text-gray-300">Nouveau mot de passe</Label>
                 <div className="relative">
                   <Input
                     id="new-password"
@@ -203,25 +203,25 @@ const SecuritySettings = () => {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     required
-                    className="pr-10"
+                    className="pr-10 dark:bg-gray-700/50 dark:border-gray-600"
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="absolute right-0 top-0 h-full px-3"
+                    className="absolute right-0 top-0 h-full px-3 dark:text-gray-300 dark:hover:bg-gray-700/50"
                     onClick={() => setShowNewPassword(!showNewPassword)}
                     tabIndex="-1"
                   >
                     {showNewPassword ? 
-                      <EyeOff className="h-4 w-4 text-gray-500" /> : 
-                      <Eye className="h-4 w-4 text-gray-500" />
+                      <EyeOff className="h-4 w-4 text-gray-500 dark:text-gray-400" /> : 
+                      <Eye className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                     }
                   </Button>
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="confirm-password">Confirmer le nouveau mot de passe</Label>
+                <Label htmlFor="confirm-password" className="text-gray-700 dark:text-gray-300">Confirmer le nouveau mot de passe</Label>
                 <div className="relative">
                   <Input
                     id="confirm-password"
@@ -229,19 +229,19 @@ const SecuritySettings = () => {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
-                    className="pr-10"
+                    className="pr-10 dark:bg-gray-700/50 dark:border-gray-600"
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="absolute right-0 top-0 h-full px-3"
+                    className="absolute right-0 top-0 h-full px-3 dark:text-gray-300 dark:hover:bg-gray-700/50"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     tabIndex="-1"
                   >
                     {showConfirmPassword ? 
-                      <EyeOff className="h-4 w-4 text-gray-500" /> : 
-                      <Eye className="h-4 w-4 text-gray-500" />
+                      <EyeOff className="h-4 w-4 text-gray-500 dark:text-gray-400" /> : 
+                      <Eye className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                     }
                   </Button>
                 </div>
@@ -254,26 +254,29 @@ const SecuritySettings = () => {
         </Card>
 
         {/* 2FA Card */}
-        <Card>
-          <CardHeader>
+        <Card className="border dark:border-gray-700">
+          <CardHeader className="dark:border-b dark:border-gray-700">
             <div className="flex items-center gap-2">
-              <Smartphone className="h-5 w-5" />
-              <CardTitle>Authentification à deux facteurs</CardTitle>
+              <Smartphone className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              <CardTitle className="dark:text-white">Authentification à deux facteurs</CardTitle>
             </div>
-            <CardDescription>
+            <CardDescription className="dark:text-gray-400">
               Ajoutez une couche de sécurité supplémentaire à votre compte en activant l'authentification à deux facteurs.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
               L'authentification à deux facteurs ajoute une couche de sécurité supplémentaire à votre compte en demandant un code en plus de votre mot de passe.
             </p>
-            <Button variant="outline">
+            <Button 
+              variant="outline"
+              className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+            >
               Configurer l'authentification à deux facteurs
             </Button>
           </CardContent>
-          <CardFooter className="bg-muted/50">
-            <p className="text-sm text-muted-foreground">
+          <CardFooter className="bg-gray-50 dark:bg-gray-800/60 dark:border-t dark:border-gray-700">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               Vous devrez entrer un code à chaque connexion une fois l'authentification à deux facteurs activée.
             </p>
           </CardFooter>
@@ -281,18 +284,18 @@ const SecuritySettings = () => {
         
         {/* Deactivate Account Card - Only shown for Guest users */}
         {isGuest && (
-          <Card className="border-destructive">
-            <CardHeader>
+          <Card className="border-destructive dark:border-red-800">
+            <CardHeader className="dark:border-b dark:border-red-800/70">
               <div className="flex items-center gap-2">
-                <Power className="h-5 w-5 text-destructive" />
-                <CardTitle className="text-destructive">Désactiver mon compte</CardTitle>
+                <Power className="h-5 w-5 text-destructive dark:text-red-500" />
+                <CardTitle className="text-destructive dark:text-red-500">Désactiver mon compte</CardTitle>
               </div>
-              <CardDescription>
+              <CardDescription className="dark:text-gray-400">
                 Désactivez temporairement votre compte. Vous pourrez le réactiver ultérieurement en contactant l'administration.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                 La désactivation de votre compte conservera toutes vos données, mais vous n'aurez plus accès à l'application jusqu'à sa réactivation.
               </p>
               <Dialog open={confirmDeactivate} onOpenChange={setConfirmDeactivate}>
@@ -301,20 +304,24 @@ const SecuritySettings = () => {
                     Désactiver mon compte
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
                   <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                      <AlertCircle className="h-5 w-5 text-destructive" />
+                    <DialogTitle className="flex items-center gap-2 dark:text-white">
+                      <AlertCircle className="h-5 w-5 text-destructive dark:text-red-500" />
                       <span>Désactiver votre compte ?</span>
                     </DialogTitle>
-                    <DialogDescription>
+                    <DialogDescription className="dark:text-gray-300">
                       Cette action va désactiver votre compte. Vous n'aurez plus accès à l'application jusqu'à ce qu'un administrateur réactive votre compte.
                       <br /><br />
                       Toutes vos données seront conservées mais inaccessibles jusqu'à la réactivation.
                     </DialogDescription>
                   </DialogHeader>
                   <DialogFooter>
-                    <Button variant="outline" onClick={() => setConfirmDeactivate(false)}>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setConfirmDeactivate(false)}
+                      className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                    >
                       Annuler
                     </Button>
                     <Button 
@@ -328,8 +335,8 @@ const SecuritySettings = () => {
                 </DialogContent>
               </Dialog>
             </CardContent>
-            <CardFooter className="bg-destructive/10">
-              <p className="text-sm text-destructive">
+            <CardFooter className="bg-destructive/10 dark:bg-red-900/20 dark:border-t dark:border-red-800/50">
+              <p className="text-sm text-destructive dark:text-red-400">
                 Attention : Un administrateur devra réactiver votre compte si vous souhaitez y accéder à nouveau.
               </p>
             </CardFooter>
