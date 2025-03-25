@@ -182,9 +182,9 @@ const RegisterForm = () => {
   }, [contextHandleSubmit]);
   
   return (
-    <div className="w-full bg-white rounded-lg shadow-lg mx-auto overflow-hidden">
+    <div className="w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg mx-auto overflow-hidden">
       {/* Bandeau supérieur bleu avec titre et progression - SANS animation */}
-      <div className="bg-[#02284f] text-white p-6">
+      <div className="bg-[#02284f] dark:bg-[#01111e] text-white p-6">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-bold">
             Créez votre compte
@@ -204,9 +204,9 @@ const RegisterForm = () => {
               {progressPercentage}%
             </span>
           </div>
-          <div className="w-full bg-[#1a3c61] rounded-full h-2">
+          <div className="w-full bg-[#1a3c61] dark:bg-[#011627] rounded-full h-2">
             <div 
-              className="bg-[#528eb2] h-2 rounded-full transition-all duration-300 ease-in-out" 
+              className="bg-[#528eb2] dark:bg-[#78b9dd] h-2 rounded-full transition-all duration-300 ease-in-out" 
               style={{ width: `${progressPercentage}%` }}
             ></div>
           </div>
@@ -215,7 +215,7 @@ const RegisterForm = () => {
       
       {/* Corps du formulaire sur fond blanc - AVEC animation */}
       <FormTransition>
-        <div className="p-6">
+        <div className="p-6 dark:bg-gray-800">
           {/* Afficher le composant approprié selon l'étape actuelle */}
           {currentStep === 1 && (
             <Step1Form goToNextStep={goToNextStep} />
@@ -236,8 +236,8 @@ const RegisterForm = () => {
           )}
           
           <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Déjà inscrit ? <Link to="/login" className="text-[#528eb2] font-medium hover:underline">Se connecter</Link>
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              Déjà inscrit ? <Link to="/login" className="text-[#528eb2] font-medium hover:underline hover:text-[#3a6a8a] transition-colors dark:text-[#78b9dd] dark:font-semibold dark:hover:text-white dark:hover:underline dark:hover:shadow-[0_0_8px_rgba(120,185,221,0.3)] px-1 py-0.5 dark:rounded-sm dark:hover:bg-[#78b9dd]/20">Se connecter</Link>
             </p>
           </div>
         </div>

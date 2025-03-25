@@ -192,7 +192,9 @@ const AuthButtons = () => (
   <>
     <Link
       to="/login"
-      className="px-4 py-2 text-gray-200 transition-colors rounded-md hover:text-white dark:text-[#78b9dd] dark:hover:text-white dark:hover:bg-[#78b9dd]/10"
+      className="px-4 py-2 text-gray-200 transition-all duration-200 rounded-md hover:text-white hover:bg-[#02284f]/50
+      dark:text-white dark:bg-[#004080]/80 dark:border dark:border-[#78b9dd]/50 dark:font-medium 
+      dark:hover:bg-[#005db3] dark:hover:border-[#78b9dd] dark:hover:shadow-[0_0_8px_rgba(120,185,221,0.25)]"
     >
       Connexion
     </Link>

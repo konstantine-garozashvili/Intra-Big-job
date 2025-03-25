@@ -23,7 +23,7 @@ const FormInput = React.memo(({
 
   return (
     <div>
-      <label htmlFor={id} className="block text-sm font-medium text-gray-700 mb-1">
+      <label htmlFor={id} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
         {label}
       </label>
       <div className="mt-1 relative">
@@ -34,13 +34,13 @@ const FormInput = React.memo(({
           value={value}
           onChange={onChange}
           onBlur={onBlur}
-          className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#528eb2] focus:border-[#528eb2] sm:text-sm"
+          className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-[#528eb2] focus:border-[#528eb2] dark:focus:ring-[#78b9dd] dark:focus:border-[#78b9dd] dark:bg-gray-700 dark:text-white sm:text-sm"
           {...props}
         />
         {type === "password" && (
           <button
             type="button"
-            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-500"
+            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-500 dark:text-gray-400 dark:hover:text-gray-300"
             onClick={() => setShowPassword(!showPassword)}
           >
             {showPassword ? (
@@ -55,7 +55,7 @@ const FormInput = React.memo(({
             )}
           </button>
         )}
-        {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+        {error && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{error}</p>}
       </div>
     </div>
   )
@@ -265,13 +265,13 @@ export function AuthForm() {
   }, [])
 
   return (
-    <div className="w-full bg-white p-8 rounded-lg shadow-lg mx-auto">
+    <div className="w-full bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg mx-auto">
       <div className="text-center mb-8">
-        <h2 className="text-3xl font-extrabold text-gray-900 mb-2">
+        <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-2">
           Connexion
         </h2>
-        <p className="text-sm text-gray-600">
-          Accédez à votre espace <span className="font-bold text-[#02284f]">Big<span className="text-[#528eb2]">Project</span></span>
+        <p className="text-sm text-gray-600 dark:text-gray-300">
+          Accédez à votre espace <span className="font-bold text-[#02284f] dark:text-white">Big<span className="text-[#528eb2] dark:text-[#78b9dd]">Project</span></span>
         </p>
       </div>
 
@@ -279,7 +279,7 @@ export function AuthForm() {
       <QuickLoginButtons onQuickLogin={quickLogin} />
 
       {errors.auth && (
-        <div className="p-3 mb-5 text-red-700 bg-red-100 border border-red-400 rounded">
+        <div className="p-3 mb-5 text-red-700 bg-red-100 dark:text-red-400 dark:bg-red-900/30 dark:border-red-800 border border-red-400 rounded">
           {errors.auth}
         </div>
       )}
@@ -317,15 +317,15 @@ export function AuthForm() {
               type="checkbox"
               checked={formState.rememberMe}
               onChange={handleInputChange}
-              className="h-4 w-4 text-[#528eb2] focus:ring-[#528eb2] border-gray-300 rounded"
+              className="h-4 w-4 text-[#528eb2] dark:text-[#78b9dd] focus:ring-[#528eb2] dark:focus:ring-[#78b9dd] border-gray-300 dark:border-gray-600 rounded"
             />
-            <label htmlFor="rememberMe" className="block ml-2 text-sm text-gray-700">
+            <label htmlFor="rememberMe" className="block ml-2 text-sm text-gray-700 dark:text-gray-300">
               Se souvenir de moi
             </label>
           </div>
 
           <div className="text-sm">
-            <Link to="/reset-password" className="font-medium text-[#528eb2] hover:text-[#02284f]">
+            <Link to="/reset-password" className="font-medium text-[#528eb2] hover:text-[#02284f] dark:text-[#78b9dd] dark:hover:text-white">
               Mot de passe oublié?
             </Link>
           </div>
@@ -335,7 +335,7 @@ export function AuthForm() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#528eb2] hover:bg-[#528eb2]/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#528eb2] transition-all transform hover:scale-105 disabled:opacity-70 disabled:cursor-not-allowed"
+            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#528eb2] hover:bg-[#528eb2]/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#528eb2] transition-all transform hover:scale-105 disabled:opacity-70 disabled:cursor-not-allowed dark:bg-[#004080] dark:hover:bg-[#004d99] dark:hover:shadow-[0_0_10px_rgba(120,185,221,0.3)]"
           >
             {isLoading ? (
               <>
@@ -352,10 +352,10 @@ export function AuthForm() {
       <div className="mt-8">
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-300"></div>
+            <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
           </div>
           <div className="relative flex justify-center text-sm">
-            <span className="px-2 text-gray-500 bg-white">
+            <span className="px-2 text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800">
               Vous n'avez pas encore de compte?
             </span>
           </div>
@@ -364,7 +364,7 @@ export function AuthForm() {
         <div className="mt-6">
           <Link
             to="/register"
-            className="w-full flex justify-center py-3 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#528eb2]"
+            className="w-full flex justify-center py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-white bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#528eb2] dark:focus:ring-[#78b9dd] dark:focus:ring-offset-gray-800 transition-all dark:hover:shadow-[0_0_8px_rgba(120,185,221,0.2)]"
           >
             S'inscrire
           </Link>
