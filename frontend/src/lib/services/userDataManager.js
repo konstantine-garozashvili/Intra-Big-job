@@ -98,9 +98,47 @@ const requestRegistry = {
     
     const now = Date.now();
     
-    // Skip throttling for other critical user data routes
+    // Skip throttling for most critical user data routes, but apply special throttling for /profile/consolidated
     if (route.includes('/profile') || route.includes('/user-roles') || route.includes('/user')) {
-      // Still track the request but don't throttle
+      // Special handling for /profile/consolidated which can cause excessive requests
+      if (route === '/profile/consolidated') {
+        // Check if we've made too many requests to this endpoint
+        if (!this.requestCountPerRoute.has(route)) {
+          this.requestCountPerRoute.set(route, { count: 1, timestamp: now });
+        } else {
+          const routeInfo = this.requestCountPerRoute.get(route);
+          
+          // Reset counter if needed
+          if (now - routeInfo.timestamp > this.requestCountResetTime) {
+            this.requestCountPerRoute.set(route, { count: 1, timestamp: now });
+          } else {
+            routeInfo.count++;
+            
+            // Apply throttling if more than 3 requests in the time period
+            if (routeInfo.count > 3) {
+              console.warn(`Too many requests (${routeInfo.count}) for /profile/consolidated in a short period. Throttling.`);
+              return true;
+            }
+          }
+        }
+        
+        // Check time since last request for this specific endpoint
+        if (this.lastRequestTime.has(route)) {
+          const lastTime = this.lastRequestTime.get(route);
+          const timeSinceLastRequest = now - lastTime;
+          
+          // Throttle if less than 2 seconds since last request
+          if (timeSinceLastRequest < 2000) {
+            console.warn(`Request to /profile/consolidated too soon after previous request (${timeSinceLastRequest}ms). Throttling.`);
+            return true;
+          }
+        }
+        
+        this.lastRequestTime.set(route, now);
+        return false;
+      }
+      
+      // For other profile/user routes, still track but don't throttle
       if (!this.requestCountPerRoute.has(route)) {
         this.requestCountPerRoute.set(route, { count: 1, timestamp: now });
       } else {

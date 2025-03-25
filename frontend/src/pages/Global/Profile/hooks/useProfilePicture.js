@@ -286,7 +286,7 @@ export function useProfilePicture() {
           // Ne déclencher l'invalidation que si ce composant est le seul utilisateur de la route
           // ou si c'est une première requête (pas dans le cadre d'une mise à jour)
           if (!userDataManager.requestRegistry.isRouteShared('/api/profile/picture')) {
-            userDataManager.invalidateCache('profile_picture');
+            userDataManager.invalidateCache('profile_picture'); // Passer un type spécifique
           }
         } catch (e) {
           // Ignorer les erreurs silencieusement
@@ -307,18 +307,21 @@ export function useProfilePicture() {
 
   // Ajouter un état pour contrôler la fréquence des actualisations
   const [lastRefreshTime, setLastRefreshTime] = useState(0);
-  const REFRESH_THROTTLE_MS = 2000; // 2 secondes minimum entre les rafraîchissements
+  const REFRESH_THROTTLE_MS = 5000; // Increased from 2s to 5s to reduce refresh frequency
 
   // Modifier la fonction forceRefresh pour limiter la fréquence des actualisations
   const forceRefresh = useCallback(async (skipThrottle = false) => {
     // Vérifier si nous devons respecter la limite de fréquence et si le temps minimum est écoulé
     const now = Date.now();
     if (!skipThrottle && now - lastRefreshTime < REFRESH_THROTTLE_MS) {
+      console.log("Profile picture refresh throttled - too soon since last refresh");
       return null; // Ne pas rafraîchir si trop récent
     }
     
     // Mettre à jour l'horodatage du dernier rafraîchissement
     setLastRefreshTime(now);
+    
+    console.log("Refreshing profile picture data");
     
     // Invalider les requêtes pertinentes
     await Promise.all([
@@ -326,14 +329,19 @@ export function useProfilePicture() {
         queryKey: PROFILE_QUERY_KEYS.profilePicture,
         refetchType: 'all'
       }),
-      queryClient.invalidateQueries({ 
-        queryKey: PROFILE_QUERY_KEYS.currentProfile,
-        refetchType: 'all'
-      }),
-      queryClient.invalidateQueries({ 
-        queryKey: PROFILE_QUERY_KEYS.publicProfile,
-        refetchType: 'all'
-      })
+      // Only invalidate these if they're stale (older than 5 minutes)
+      queryClient.getQueryState(PROFILE_QUERY_KEYS.currentProfile)?.dataUpdatedAt < Date.now() - 300000 
+        ? queryClient.invalidateQueries({ 
+            queryKey: PROFILE_QUERY_KEYS.currentProfile,
+            refetchType: 'all'
+          })
+        : Promise.resolve(),
+      queryClient.getQueryState(PROFILE_QUERY_KEYS.publicProfile)?.dataUpdatedAt < Date.now() - 300000
+        ? queryClient.invalidateQueries({ 
+            queryKey: PROFILE_QUERY_KEYS.publicProfile,
+            refetchType: 'all'
+          })
+        : Promise.resolve()
     ]);
     
     // Forcer un rafraîchissement immédiat
@@ -473,13 +481,14 @@ export function useProfilePicture() {
   useEffect(() => {
     // Variables pour suivre les événements récents
     let recentUpdateTimestamp = 0;
-    const UPDATE_THROTTLE_MS = 1000; // 1 seconde minimum entre les mises à jour
+    const UPDATE_THROTTLE_MS = 3000; // Increased from 1s to 3s to reduce update frequency
     
     // Fonction de rappel pour rafraîchir la photo de profil si les données utilisateur sont mises à jour
     const handleUserDataUpdate = (updateType) => {
       // Ne déclencher le forceRefresh que si la mise à jour n'est pas liée à la photo de profil
       // Cela empêche la boucle infinie où la mise à jour de la photo déclenche une mise à jour des données
       if (updateType === 'profile_picture') {
+        console.log("Ignoring profile_picture update event to prevent infinite loop");
         return;
       }
       
@@ -488,6 +497,7 @@ export function useProfilePicture() {
       if (userDataManager.requestRegistry.isRouteShared('/api/profile/picture')) {
         // Si un autre composant est en train de faire une requête, ne pas en lancer une nouvelle
         if (userDataManager.requestRegistry.getActiveRequest('/api/profile/picture')) {
+          console.log("Skipping profile picture refresh - another component is already making a request");
           return;
         }
       }
@@ -495,10 +505,12 @@ export function useProfilePicture() {
       // Vérifier la fréquence des mises à jour
       const now = Date.now();
       if (now - recentUpdateTimestamp < UPDATE_THROTTLE_MS) {
+        console.log("Skipping profile picture update - too soon since last update");
         return;
       }
       
       recentUpdateTimestamp = now;
+      console.log("Triggering profile picture refresh due to user data update:", updateType);
       
       // Utiliser la version throttled de forceRefresh
       forceRefresh(false);

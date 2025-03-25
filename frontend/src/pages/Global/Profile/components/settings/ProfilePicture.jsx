@@ -29,9 +29,9 @@ const ProfilePictureSkeleton = () => {
 
 const ProfilePicture = ({ userData, onProfilePictureChange, isLoading: externalLoading = false }) => {
   const fileInputRef = useRef(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [previousUrl, setPreviousUrl] = useState(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [isDeleting, setIsDeleting] = React.useState(false);
+  const [previousUrl, setPreviousUrl] = React.useState();
   
   // Use the custom hook for profile picture operations
   const {
@@ -47,10 +47,12 @@ const ProfilePicture = ({ userData, onProfilePictureChange, isLoading: externalL
 
   // Notify parent component when profile picture changes
   React.useEffect(() => {
-    if (onProfilePictureChange && profilePictureUrl !== undefined) {
+    if (onProfilePictureChange && profilePictureUrl !== undefined && profilePictureUrl !== previousUrl) {
+      console.log("ProfilePicture - Profile picture URL changed, notifying parent");
+      setPreviousUrl(profilePictureUrl);
       onProfilePictureChange(profilePictureUrl);
     }
-  }, [profilePictureUrl, onProfilePictureChange]);
+  }, [profilePictureUrl, onProfilePictureChange, previousUrl]);
 
   const handleProfilePictureClick = () => {
     if (uploadStatus.isPending || deleteStatus.isPending) return; // Prevent clicks during operations

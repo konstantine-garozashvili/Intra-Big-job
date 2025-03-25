@@ -58,8 +58,8 @@ const RecruiterDashboard = () => {
       return;
     }
     
-    // Si une tentative a déjà été faite, ne pas réessayer
-    if (refreshAttemptedRef.current) {
+    // Si une tentative a déjà été faite ou si le chargement est en cours, ne pas réessayer
+    if (refreshAttemptedRef.current || isLoading) {
       return;
     }
     
@@ -67,6 +67,7 @@ const RecruiterDashboard = () => {
     const refreshUserData = async () => {
       try {
         refreshAttemptedRef.current = true;
+        console.log("RecruiterDashboard: Refreshing user data once");
         // Utiliser le refetch du hook useUserData plutôt que d'appeler directement l'API
         await refetch();
       } catch (error) {
@@ -76,13 +77,13 @@ const RecruiterDashboard = () => {
     
     // Attendre un court instant pour permettre aux données initiales de se charger
     const timeoutId = setTimeout(() => {
-      if (!user?.firstName) {
+      if (!user?.firstName && !refreshAttemptedRef.current) {
         refreshUserData();
       }
-    }, 100);
+    }, 500); // Augmenter le délai pour réduire les chances de conflit
     
     return () => clearTimeout(timeoutId);
-  }, [user, refetch]);
+  }, [user, refetch, isLoading]);
   
   // Définir les cartes d'accès rapide
   const quickAccessCards = [

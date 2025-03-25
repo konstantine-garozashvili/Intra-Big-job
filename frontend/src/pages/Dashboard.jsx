@@ -14,17 +14,22 @@ const Dashboard = () => {
   // Utiliser le hook optimisé pour récupérer les données utilisateur
   const { data: user, error, isLoading, refetch } = useUserData();
   
-  // Forcer un refetch au montage du composant
+  // Forcer un refetch au montage du composant, mais seulement si nécessaire
   useEffect(() => {
-    console.log("Dashboard mounted, forcing data refresh");
-    const timer = setTimeout(() => {
-      refetch().catch(err => {
-        console.error("Error refreshing dashboard data:", err);
-      });
-    }, 50); // Court délai pour s'assurer que le composant est monté
-    
-    return () => clearTimeout(timer);
-  }, [refetch]);
+    // Check if we already have user data before forcing a refetch
+    if (!user && !isLoading) {
+      console.log("Dashboard mounted, no user data available, forcing data refresh");
+      const timer = setTimeout(() => {
+        refetch().catch(err => {
+          console.error("Error refreshing dashboard data:", err);
+        });
+      }, 50); // Court délai pour s'assurer que le composant est monté
+      
+      return () => clearTimeout(timer);
+    } else {
+      console.log("Dashboard mounted, user data already available, skipping refetch");
+    }
+  }, [refetch, user, isLoading]);
   
   // Marquer quand nous avons affiché les données de secours
   useEffect(() => {

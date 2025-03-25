@@ -59,7 +59,8 @@ const UserProfileSettings = () => {
   } = useUserDataCentralized({
     preferComprehensiveData: true, // Utiliser la route '/profile/consolidated'
     refetchOnWindowFocus: false,
-    staleTime: 0, // Ensure we always get fresh data
+    staleTime: 5 * 60 * 1000, // 5 minutes - only refetch after 5 minutes
+    cacheTime: 10 * 60 * 1000, // 10 minutes - keep in cache for 10 minutes
     onError: (error) => {
       toast.error('Failed to load profile data: ' + (error.message || 'Unknown error'));
     }
@@ -499,7 +500,13 @@ const UserProfileSettings = () => {
         <div className="flex flex-col xs:flex-row items-center p-2 xs:p-3">
           <ProfilePicture 
             userData={userData} 
-            onProfilePictureChange={() => refetchProfile()}
+            onProfilePictureChange={(newUrl) => {
+              console.log("UserProfileSettings - Profile picture changed, conditionally refetching");
+              // Only refetch if we have a valid URL and it's different from the current one
+              if (newUrl && (!userData?.profilePictureUrl || newUrl !== userData.profilePictureUrl)) {
+                refetchProfile();
+              }
+            }}
             isLoading={isProfileLoading}
           />
 
