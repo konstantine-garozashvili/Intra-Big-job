@@ -182,6 +182,8 @@ export const authService = {
       
       // Trigger the login success event immediately
       window.dispatchEvent(new Event('login-success'));
+      // Also dispatch auth-state-change event
+      window.dispatchEvent(new Event('auth-state-change'));
       
       // Initiate user data loading in the background without blocking navigation
       this.lazyLoadUserData(true).catch(() => {
@@ -417,6 +419,8 @@ export const authService = {
       window.dispatchEvent(new CustomEvent('logout-success', {
         detail: { redirectTo }
       }));
+      // Also dispatch auth-state-change event
+      window.dispatchEvent(new Event('auth-state-change'));
       
       // Use the window.location.replace method for a cleaner page transition
       // This replaces the current history entry instead of adding a new one
@@ -460,7 +464,7 @@ export const authService = {
   },
   
   /**
-   * Récupérer la liste des appareils connectés
+   * Récupère la liste des appareils connectés
    */
   async getDevices() {
     try {
@@ -621,7 +625,8 @@ export const authService = {
       const userData = await userDataManager.getUserData({
         forceRefresh,
         routeKey: '/api/me',
-        requestId: callerId
+        requestId: callerId,
+        preventRecursion: options?.preventRecursion || false
       });
       
       // Stocker le rôle principal pour référence (maintenir la compatibilité)

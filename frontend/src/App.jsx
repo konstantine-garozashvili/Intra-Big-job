@@ -212,53 +212,62 @@ const PrefetchHandler = () => {
   
   // Ajouter un écouteur d'événement pour forcer l'actualisation des données utilisateur lors d'un changement d'utilisateur
   useEffect(() => {
+    // Tracking variable to prevent duplicate calls
+    let isHandlingUserChange = false;
+    
     const handleUserChange = () => {
+      // Prevent duplicate calls
+      if (isHandlingUserChange) {
+        console.log("Already handling user change, ignoring duplicate event");
+        return;
+      }
+      
+      isHandlingUserChange = true;
+      
       // Importer dynamiquement le module userDataManager
       import('./lib/services/userDataManager')
         .then(({ default: userDataManager }) => {
-          // Invalider le cache pour forcer un rechargement des données
-          userDataManager.invalidateCache();
-          
-          // Ensuite précharger les nouvelles données
-          userDataManager.getUserData({
-            forceRefresh: true,
-            useCache: false
-          }).catch(error => {
-            console.warn('Erreur lors du rechargement des données utilisateur:', error);
-          });
-          
-          // Importer React Query pour invalider les requêtes spécifiques
-          import('./lib/services/queryClient').then(({ getQueryClient }) => {
-            const qc = getQueryClient();
-            if (qc) {
-              // Invalider également les requêtes de dashboard
-              qc.invalidateQueries({ queryKey: ['teacher-dashboard'] });
-              qc.invalidateQueries({ queryKey: ['admin-users'] });
-              qc.invalidateQueries({ queryKey: ['admin-dashboard'] });
-              qc.invalidateQueries({ queryKey: ['student-dashboard'] });
-              qc.invalidateQueries({ queryKey: ['hr-dashboard'] });
+          try {
+            // Before invalidating, check if we really need to
+            const userData = userDataManager.getCachedUserData();
+            const now = Date.now();
+            const cacheAge = userData && userDataManager.cache && userDataManager.cache.timestamp ? 
+              now - userDataManager.cache.timestamp : Infinity;
+              
+            // Only invalidate if cache is old (more than 10 seconds)
+            if (cacheAge > 10000) {
+              console.log("Cache is stale, invalidating...");
+              
+              // Invalider le cache pour forcer un rechargement des données
+              userDataManager.invalidateCache();
+              
+              // Ensuite précharger les nouvelles données
+              userDataManager.getUserData({
+                forceRefresh: true,
+                useCache: false
+              }).catch(error => {
+                console.warn('Erreur lors du rechargement des données utilisateur:', error);
+              });
+            } else {
+              console.log("Cache is fresh, skipping invalidation");
             }
-          });
+          } catch (error) {
+            console.warn('Error during user data refresh:', error);
+          } finally {
+            // Reset the flag after a delay to prevent rapid successive calls
+            setTimeout(() => {
+              isHandlingUserChange = false;
+            }, 1000);
+          }
         });
     };
     
-    // Fonction pour gérer le nettoyage complet du cache
-    const handleCacheCleared = () => {
-      // Forcer un rafraîchissement complet des données
-      // Cette approche est plus radicale mais garantit que les anciennes données ne persistent pas
-      window.location.reload();
-    };
-    
-    // Ajouter les écouteurs d'événements
     window.addEventListener('login-success', handleUserChange);
     window.addEventListener('role-change', handleUserChange);
-    window.addEventListener('query-cache-cleared', handleCacheCleared);
     
-    // Nettoyer les écouteurs d'événements
     return () => {
       window.removeEventListener('login-success', handleUserChange);
       window.removeEventListener('role-change', handleUserChange);
-      window.removeEventListener('query-cache-cleared', handleCacheCleared);
     };
   }, []);
   

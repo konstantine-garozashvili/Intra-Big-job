@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import userDataManager, { USER_DATA_EVENTS } from '@/lib/services/userDataManager';
 import { getSessionId } from '@/lib/services/authService';
+import { authService } from '@/lib/services/authService';
 import apiService from '@/lib/services/apiService';
 
 /**
@@ -26,6 +27,8 @@ export function useUserData(options = {}) {
   const queryClient = useQueryClient();
   const [isInitialLoading, setIsInitialLoading] = useState(false);
   const sessionId = getSessionId();
+  // Add isAuthenticated state
+  const [isAuthenticated, setIsAuthenticated] = useState(() => authService.isLoggedIn());
   
   const [componentId] = useState(() => 
     `user_data_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
@@ -42,6 +45,9 @@ export function useUserData(options = {}) {
   });
 
   const routeKey = preferComprehensiveData ? '/profile/consolidated' : '/api/me';
+  
+  // Add a ref to track the last time we fetched data to prevent too frequent refreshes
+  const [lastFetchTime, setLastFetchTime] = useState(0);
   
   useEffect(() => {
     userDataManager.requestRegistry.registerRouteUser(routeKey, componentId);
@@ -65,12 +71,23 @@ export function useUserData(options = {}) {
     const hasToken = !!localStorage.getItem('token');
     if (!hasToken) return;
     
+    // Only fetch if we haven't fetched in the last 10 seconds
+    const now = Date.now();
+    if (now - lastFetchTime < 10000) {
+      return;
+    }
+    
     const fetchData = async () => {
+      setIsInitialLoading(true);
       try {
+        // Use a timestamp-based requestId to help with debugging
+        const requestId = `useUserData_${componentId}_${now}`;
+        
         const freshData = await userDataManager.getUserData({
           routeKey,
-          forceRefresh: true,
-          useCache: false,
+          forceRefresh: false, // Change to false to allow using cache
+          useCache: true,      // Allow using cache
+          requestId           // Add requestId for tracing
         });
         
         if (freshData) {
@@ -83,8 +100,14 @@ export function useUserData(options = {}) {
             // Error saving to localStorage
           }
         }
+        
+        // Update the last fetch time
+        setLastFetchTime(now);
       } catch (error) {
         // Error in initial data fetch
+        console.warn("Error fetching user data:", error);
+      } finally {
+        setIsInitialLoading(false);
       }
     };
     
@@ -92,17 +115,22 @@ export function useUserData(options = {}) {
   }, [enabled, sessionId, routeKey, queryClient]);
 
   const getCachedData = useCallback(() => {
-    const cached = userDataManager.getCachedUserData();
-    if (cached) {
-      return cached;
-    }
-    
-    if (localStorageUser) {
+    // Add debouncing/memoization to prevent excessive cache reads
+    try {
+      // First try to get from query cache which is faster
+      const queryCached = queryClient.getQueryData(['unified-user-data', routeKey, sessionId]);
+      if (queryCached) return queryCached;
+      
+      // Then try userDataManager cache
+      const cached = userDataManager.getCachedUserData();
+      if (cached) return cached;
+      
+      // Finally try localStorage
+      return localStorageUser;
+    } catch (e) {
       return localStorageUser;
     }
-    
-    return null;
-  }, [localStorageUser]);
+  }, [routeKey, sessionId, localStorageUser, queryClient]);
 
   const fetchUserData = useCallback(async () => {
     setIsInitialLoading(true);
@@ -192,10 +220,10 @@ export function useUserData(options = {}) {
     error,
     refetch
   } = useQuery({
-    queryKey: ['unified-user-data', routeKey, sessionId],
+    queryKey: ['unified-user-data', routeKey, sessionId, isAuthenticated],
     queryFn: fetchUserData,
     initialData: getCachedData,
-    enabled: enabled && !!sessionId,
+    enabled: enabled && !!sessionId && isAuthenticated,
     staleTime: 1 * 60 * 1000,
     cacheTime: 20 * 60 * 1000,
     refetchOnWindowFocus: true,
@@ -275,6 +303,32 @@ export function useUserData(options = {}) {
       (typeof r === 'object' && r.name === role)
     );
   }, [userData, localStorageUser]);
+
+  // Add listener for auth state changes
+  useEffect(() => {
+    const handleAuthChange = () => {
+      const newAuthState = authService.isLoggedIn();
+      
+      if (newAuthState !== isAuthenticated) {
+        setIsAuthenticated(newAuthState);
+        
+        // We'll let the React Query hook handle the refetch based on auth state
+        // No direct refetch call here to avoid infinite loops
+      }
+    };
+    
+    // Check auth state immediately
+    handleAuthChange();
+    
+    // Listen for auth state changes
+    window.addEventListener('auth-state-change', handleAuthChange);
+    window.addEventListener('login-success', handleAuthChange);
+    
+    return () => {
+      window.removeEventListener('auth-state-change', handleAuthChange);
+      window.removeEventListener('login-success', handleAuthChange);
+    };
+  }, []); // Empty dependency array to ensure this only runs once
 
   // Améliorer la gestion des événements de mise à jour
   useEffect(() => {
