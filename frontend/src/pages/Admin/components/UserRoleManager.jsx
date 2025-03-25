@@ -203,7 +203,7 @@ export default function UserRoleManager() {
                                     <CardTitle className="text-gradient bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
                                         {currentRoleConfig.title}
                                     </CardTitle>
-                                    <CardDescription className="max-w-2xl mt-2">
+                                    <div className="text-sm text-muted-foreground max-w-2xl mt-2">
                                         {currentRoleConfig.description}
                                         {!isSuperAdmin && (
                                             <div className="text-amber-600 mt-2 text-sm flex items-center">
@@ -211,7 +211,7 @@ export default function UserRoleManager() {
                                                 Seuls les SuperAdmin peuvent modifier ou supprimer d'autres utilisateurs SuperAdmin.
                                             </div>
                                         )}
-                                    </CardDescription>
+                                    </div>
                                 </div>
                                 <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 px-3 py-1">
                                     {filteredUsers.length} utilisateur{filteredUsers.length !== 1 ? 's' : ''}
