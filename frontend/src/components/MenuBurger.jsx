@@ -371,7 +371,7 @@ const MenuBurger = memo(() => {
       ],
     },
     {
-      key: 'roles_management',
+      key: 'roles_management_admin',
       label: 'Gestion des rôles',
       icon: <UserPlus className="w-5 h-5 mr-2 text-[#528eb2]" />,
       roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.RECRUITER],
@@ -393,7 +393,7 @@ const MenuBurger = memo(() => {
       ],
     },
     {
-      key: 'admins',
+      key: 'admin_system',
       label: 'Administration',
       icon: <Shield className="w-5 h-5 mr-2 text-[#528eb2]" />,
       roles: [ROLES.SUPERADMIN, ROLES.ADMIN],
