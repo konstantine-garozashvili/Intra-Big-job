@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { toast } from "sonner";
+import { useMemo, useState, useEffect, useRef } from "react";
+import { Filter, Loader2, Users, Sparkles, Search, GraduationCap, BookOpen, Briefcase, Shield } from "lucide-react";
 import {
     Card,
     CardContent,
@@ -7,559 +7,333 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
-import {
-    Table,
-    TableHeader,
-    TableBody,
-    TableRow,
-    TableHead,
-    TableCell,
-} from "@/components/ui/table";
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-    DialogFooter,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { 
-    ArrowUp, 
-    ArrowDown, 
-    ChevronLeft, 
-    ChevronRight, 
-    Loader2,
-    Filter,
-    MoreVertical
-} from "lucide-react";
-import { 
-    Select, 
-    SelectContent, 
-    SelectGroup, 
-    SelectItem, 
-    SelectLabel, 
-    SelectTrigger, 
-    SelectValue 
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Pagination } from "@/components/ui/pagination";
-import apiService from "@/lib/services/apiService";
-import { 
-    DropdownMenu, 
-    DropdownMenuContent, 
-    DropdownMenuItem, 
-    DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
-import { getFrenchRoleDisplayName, getRoleColor } from "@/lib/utils/roleDisplay.jsx";
+import { useAuth } from "@/contexts/AuthContext";
+import { useUserManagement } from "@/lib/hooks/useUserManagement";
+import { UserFilters } from "./UserFilters";
+import { UserTable } from "./UserTable";
+import { UserPagination } from "./UserPagination";
+import { RoleDialog } from "./RoleDialog";
+import { DeleteDialog } from "./DeleteDialog";
+import EditUserDialog from "./EditUserDialog";
+import { motion } from "framer-motion";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { useSearchParams } from "react-router-dom";
+
+// Mapping des rôles vers des icônes et des titres
+const roleConfig = {
+    "ALL": { 
+        icon: Users, 
+        title: "Gestion des utilisateurs",
+        description: "Visualisez et modifiez les rôles des utilisateurs dans la plateforme."
+    },
+    "ROLE_STUDENT": { 
+        icon: GraduationCap, 
+        title: "Gestion des étudiants",
+        description: "Visualisez et modifiez les informations des étudiants."
+    },
+    "STUDENT": { 
+        icon: GraduationCap, 
+        title: "Gestion des étudiants",
+        description: "Visualisez et modifiez les informations des étudiants."
+    },
+    "ROLE_TEACHER": { 
+        icon: BookOpen, 
+        title: "Gestion des formateurs",
+        description: "Visualisez et modifiez les informations des formateurs."
+    },
+    "TEACHER": { 
+        icon: BookOpen, 
+        title: "Gestion des formateurs",
+        description: "Visualisez et modifiez les informations des formateurs."
+    },
+    "ROLE_HR": { 
+        icon: Briefcase, 
+        title: "Gestion des ressources humaines",
+        description: "Visualisez et modifiez les informations du personnel RH."
+    },
+    "HR": { 
+        icon: Briefcase, 
+        title: "Gestion des ressources humaines",
+        description: "Visualisez et modifiez les informations du personnel RH."
+    },
+    "ROLE_ADMIN": { 
+        icon: Shield, 
+        title: "Gestion des administrateurs",
+        description: "Visualisez et modifiez les informations des administrateurs."
+    },
+    "ADMIN": { 
+        icon: Shield, 
+        title: "Gestion des administrateurs",
+        description: "Visualisez et modifiez les informations des administrateurs."
+    }
+};
 
 export default function UserRoleManager() {
-    // États pour les données
-    const [users, setUsers] = useState([]);
-    const [roles, setRoles] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [selectedUser, setSelectedUser] = useState(null);
-    const [selectedRoleId, setSelectedRoleId] = useState(null);
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const [isProcessing, setIsProcessing] = useState(false);
-    const [filterRole, setFilterRole] = useState("ALL");
-    const [searchTerm, setSearchTerm] = useState("");
+    // Récupérer le paramètre de filtre de l'URL si présent
+    const [searchParams] = useSearchParams();
+    const urlFilter = searchParams.get('filter');
     
-    // État pour le tri
-    const [sortConfig, setSortConfig] = useState({
-        key: 'lastName',
-        direction: 'ascending'
-    });
+    // S'assurer que le filtre initial est au bon format (avec ou sans le préfixe ROLE_)
+    const initialFilter = useMemo(() => {
+        if (!urlFilter) return "ALL";
+        return urlFilter;
+    }, [urlFilter]);
     
-    // État pour la pagination
-    const [pagination, setPagination] = useState({
-        currentPage: 1,
-        itemsPerPage: 10
-    });
+    // Utiliser useRef pour mémoriser la dernière valeur de filterRole traitée
+    const lastFilterRoleRef = useRef(initialFilter);
     
-    // Récupérer tous les rôles disponibles
-    const fetchRoles = async () => {
-        try {
-            const response = await apiService.getAllRoles();
-            if (response.success && response.data) {
-                setRoles(response.data);
-            } else {
-                toast.error("Impossible de récupérer les rôles");
-            }
-        } catch (error) {
-            console.error("Erreur lors de la récupération des rôles:", error);
-            toast.error("Erreur lors du chargement des rôles");
-        }
-    };
+    // État pour le dialogue d'édition
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+    const [animateCard, setAnimateCard] = useState(false);
+    const [showWelcomeMessage, setShowWelcomeMessage] = useState(initialFilter === "ALL");
     
-    // Récupérer les utilisateurs en fonction du rôle sélectionné
-    const fetchUsers = async (roleName = "ALL") => {
-        setIsLoading(true);
-        try {
-            if (roleName === "ALL") {
-                // Si "ALL", récupérer tous les utilisateurs
-                const response = await apiService.get("/users");
-                if (response.success && response.data) {
-                    setUsers(response.data);
-                } else {
-                    toast.error("Impossible de récupérer les utilisateurs");
-                }
-            } else {
-                // Sinon, récupérer les utilisateurs par rôle spécifique
-                const response = await apiService.getUsersByRole(roleName);
-                if (response.success && response.data) {
-                    setUsers(response.data);
-                } else {
-                    toast.error(`Impossible de récupérer les utilisateurs avec le rôle ${roleName}`);
-                }
-            }
-        } catch (error) {
-            console.error("Erreur lors de la récupération des utilisateurs:", error);
-            toast.error("Erreur lors du chargement des utilisateurs");
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    // Authentication state
+    const { user: currentUser } = useAuth();
+    const isSuperAdmin = useMemo(() => currentUser?.roles?.some(role => 
+        role.name === 'SUPERADMIN' || role.name === 'ROLE_SUPERADMIN'
+    ), [currentUser]);
     
-    // Changer le rôle d'un utilisateur
-    const changeUserRole = async (userId, oldRoleName, newRoleName) => {
-        setIsProcessing(true);
-        try {
-            const response = await apiService.changeUserRole(userId, oldRoleName, newRoleName);
-            if (response.success) {
-                toast.success("Rôle modifié avec succès");
-                fetchUsers(filterRole); // Rafraîchir la liste
-            } else {
-                toast.error("Impossible de modifier le rôle: " + (response.message || "Erreur inconnue"));
-            }
-        } catch (error) {
-            console.error("Erreur lors de la modification du rôle:", error);
-            toast.error("Erreur lors de la modification du rôle");
-        } finally {
-            setIsProcessing(false);
-            setIsDialogOpen(false);
-        }
-    };
+    // Hook personnalisé pour la gestion des utilisateurs avec filtre initial
+    const {
+        roles,
+        isLoading,
+        selectedUser,
+        selectedRoleId,
+        isDialogOpen,
+        isDeleteDialogOpen,
+        isProcessing,
+        filterRole,
+        searchTerm,
+        sortConfig,
+        pagination,
+        paginatedUsers,
+        filteredUsers,
+        fetchUsers,
+        changeUserRole,
+        deleteUser,
+        updateUser,
+        userHasSuperAdminRole,
+        handleSort,
+        setSearchTerm,
+        setFilterRole,
+        handlePageChange,
+        openChangeRoleDialog,
+        openDeleteDialog,
+        setSelectedUser,
+        setSelectedRoleId,
+        setIsDialogOpen,
+        setIsDeleteDialogOpen
+    } = useUserManagement(initialFilter);
     
-    // Charger les données au montage du composant
+    // Effet pour mettre à jour le filtre lorsque l'URL change - Approche simplifiée
     useEffect(() => {
-        const loadData = async () => {
-            await fetchRoles();
-            await fetchUsers(filterRole);
-        };
+        console.log("[UserRoleManager] URL changée:", initialFilter);
         
-        loadData();
-    }, []);
-    
-    // Rafraîchir les utilisateurs lorsque le filtre change
-    useEffect(() => {
-        fetchUsers(filterRole);
-    }, [filterRole]);
-    
-    // Gérer le tri des utilisateurs
-    const handleSort = (key) => {
-        let direction = 'ascending';
-        if (sortConfig.key === key && sortConfig.direction === 'ascending') {
-            direction = 'descending';
-        }
-        setSortConfig({ key, direction });
-    };
-    
-    // Trier les utilisateurs
-    const sortedUsers = useMemo(() => {
-        const sortableUsers = [...users];
-        if (sortConfig.key) {
-            sortableUsers.sort((a, b) => {
-                // Gestion des valeurs null ou undefined
-                if (a[sortConfig.key] === null) return 1;
-                if (b[sortConfig.key] === null) return -1;
-                if (a[sortConfig.key] === undefined) return 1;
-                if (b[sortConfig.key] === undefined) return -1;
-                
-                // Tri des chaînes de caractères (insensible à la casse)
-                if (typeof a[sortConfig.key] === 'string') {
-                    if (sortConfig.direction === 'ascending') {
-                        return a[sortConfig.key].localeCompare(b[sortConfig.key], 'fr', { sensitivity: 'base' });
-                    }
-                    return b[sortConfig.key].localeCompare(a[sortConfig.key], 'fr', { sensitivity: 'base' });
-                }
-                
-                // Tri des dates
-                if (a[sortConfig.key] instanceof Date && b[sortConfig.key] instanceof Date) {
-                    if (sortConfig.direction === 'ascending') {
-                        return a[sortConfig.key] - b[sortConfig.key];
-                    }
-                    return b[sortConfig.key] - a[sortConfig.key];
-                }
-                
-                // Tri par défaut
-                if (sortConfig.direction === 'ascending') {
-                    return a[sortConfig.key] > b[sortConfig.key] ? 1 : -1;
-                }
-                return a[sortConfig.key] < b[sortConfig.key] ? 1 : -1;
-            });
-        }
-        return sortableUsers;
-    }, [users, sortConfig]);
-    
-    // Filtrer les utilisateurs par terme de recherche
-    const filteredUsers = useMemo(() => {
-        if (!searchTerm.trim()) return sortedUsers;
-        
-        return sortedUsers.filter(user => {
-            const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
-            const email = user.email.toLowerCase();
-            const term = searchTerm.toLowerCase();
+        // Mise à jour directe du lastFilterRoleRef et du filtre
+        if (initialFilter !== lastFilterRoleRef.current) {
+            lastFilterRoleRef.current = initialFilter;
             
-            return fullName.includes(term) || email.includes(term);
-        });
-    }, [sortedUsers, searchTerm]);
-    
-    // Calculer les utilisateurs à afficher (pagination)
-    const paginatedUsers = useMemo(() => {
-        const startIndex = (pagination.currentPage - 1) * pagination.itemsPerPage;
-        return filteredUsers.slice(startIndex, startIndex + pagination.itemsPerPage);
-    }, [filteredUsers, pagination]);
-    
-    // Obtenir une icône de tri en fonction de la configuration
-    const getSortIcon = (key) => {
-        if (sortConfig.key === key) {
-            if (sortConfig.direction === 'ascending') {
-                return <ArrowUp className="w-4 h-4 ml-1" />;
-            }
-            return <ArrowDown className="w-4 h-4 ml-1" />;
+            // Mise à jour synchrone du filtre sans setTimeout
+            setFilterRole(initialFilter);
         }
-        return null;
-    };
+    }, [initialFilter, setFilterRole]);
     
-    // Gérer le changement de page
-    const handlePageChange = (newPage) => {
-        setPagination(prev => ({
-            ...prev,
-            currentPage: newPage
-        }));
-    };
+    // Récupérer la configuration pour le rôle filtré actuel
+    const currentRoleConfig = roleConfig[filterRole] || roleConfig["ALL"];
+    const HeaderIcon = currentRoleConfig.icon;
     
-    // Afficher la boîte de dialogue de changement de rôle
-    const openChangeRoleDialog = (user) => {
+    // Ouvrir le dialogue d'édition
+    const openEditDialog = (user) => {
         setSelectedUser(user);
-        setIsDialogOpen(true);
+        setIsEditDialogOpen(true);
     };
     
-    // Rendre le composant de pagination
-    const renderPagination = () => {
-        const totalPages = Math.ceil(filteredUsers.length / pagination.itemsPerPage);
-        if (totalPages <= 1) return null;
-        
-        const currentPage = pagination.currentPage;
-        
-        // Limiter le nombre de boutons de page affichés
-        let startPage = Math.max(1, currentPage - 2);
-        let endPage = Math.min(totalPages, startPage + 4);
-        
-        if (endPage - startPage < 4) {
-            startPage = Math.max(1, endPage - 4);
-        }
-        
-        const pageButtons = [];
-        for (let i = startPage; i <= endPage; i++) {
-            pageButtons.push(
-                <Button
-                    key={i}
-                    variant={i === currentPage ? "default" : "outline"}
-                    size="icon"
-                    onClick={() => handlePageChange(i)}
-                    className="w-9 h-9"
-                >
-                    {i}
-                </Button>
-            );
-        }
-        
-        return (
-            <Pagination className="mt-4 flex justify-center">
-                <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-                    disabled={currentPage === 1}
-                    className="mr-1"
-                >
-                    <ChevronLeft className="h-4 w-4" />
-                </Button>
-                
-                {startPage > 1 && (
-                    <>
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => handlePageChange(1)}
-                            className="w-9 h-9"
-                        >
-                            1
-                        </Button>
-                        {startPage > 2 && <span className="mx-1 self-center">...</span>}
-                    </>
-                )}
-                
-                {pageButtons}
-                
-                {endPage < totalPages && (
-                    <>
-                        {endPage < totalPages - 1 && <span className="mx-1 self-center">...</span>}
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => handlePageChange(totalPages)}
-                            className="w-9 h-9"
-                        >
-                            {totalPages}
-                        </Button>
-                    </>
-                )}
-                
-                <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-                    disabled={currentPage === totalPages}
-                    className="ml-1"
-                >
-                    <ChevronRight className="h-4 w-4" />
-                </Button>
-            </Pagination>
+    // Fermer le dialogue d'édition
+    const closeEditDialog = () => {
+        setIsEditDialogOpen(false);
+    };
+
+    // Animation effect on mount
+    useEffect(() => {
+        setAnimateCard(true);
+        const timer = setTimeout(() => {
+            setShowWelcomeMessage(false);
+        }, 3000);
+        return () => clearTimeout(timer);
+    }, []);
+
+    // Success message when role is changed
+    const handleSuccessfulRoleChange = (user, roleName) => {
+        toast.success(
+            <div className="flex flex-col">
+                <span className="font-medium">Rôle modifié avec succès</span>
+                <span className="text-sm opacity-90">{user.firstName} {user.lastName} est maintenant {roleName}</span>
+            </div>
         );
+        fetchUsers(filterRole);
     };
     
     return (
         <DashboardLayout 
-            headerTitle="Gestion des rôles utilisateurs"
-            headerIcon={Filter}
+            headerTitle={currentRoleConfig.title}
+            headerIcon={HeaderIcon}
         >
-            <div className="container mx-auto py-6">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Gestion des rôles utilisateurs</CardTitle>
-                        <CardDescription>
-                            Visualisez et modifiez les rôles des utilisateurs dans la plateforme.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="flex flex-col sm:flex-row justify-between mb-4 gap-3">
-                            <div className="flex items-center gap-3">
-                                <Select
-                                    value={filterRole}
-                                    onValueChange={setFilterRole}
-                                >
-                                    <SelectTrigger className="w-[200px]">
-                                        <SelectValue placeholder="Filtrer par rôle" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="ALL">Tous les rôles</SelectItem>
-                                        {roles.map(role => (
-                                            <SelectItem key={role.id} value={role.name}>
-                                                {getFrenchRoleDisplayName(role.name)}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                
-                                <Button 
-                                    variant="outline" 
-                                    onClick={() => fetchUsers(filterRole)}
-                                    disabled={isLoading}
-                                >
-                                    {isLoading ? (
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    ) : (
-                                        "Actualiser"
-                                    )}
-                                </Button>
-                            </div>
-                            
-                            <div className="w-full sm:w-auto">
-                                <Input
-                                    placeholder="Rechercher un utilisateur..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full"
-                                />
-                            </div>
-                        </div>
-                        
-                        {isLoading ? (
-                            <div className="flex justify-center items-center h-64">
-                                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                                <span className="ml-2 text-sm text-muted-foreground">
-                                    Chargement des utilisateurs...
-                                </span>
-                            </div>
-                        ) : (
-                            <>
-                                <div className="rounded-md border">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead 
-                                                    className="cursor-pointer"
-                                                    onClick={() => handleSort('lastName')}
-                                                >
-                                                    <div className="flex items-center">
-                                                        Nom
-                                                        {getSortIcon('lastName')}
-                                                    </div>
-                                                </TableHead>
-                                                <TableHead 
-                                                    className="cursor-pointer"
-                                                    onClick={() => handleSort('email')}
-                                                >
-                                                    <div className="flex items-center">
-                                                        Email
-                                                        {getSortIcon('email')}
-                                                    </div>
-                                                </TableHead>
-                                                <TableHead>Rôles</TableHead>
-                                                <TableHead className="text-right">Actions</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {paginatedUsers.length > 0 ? (
-                                                paginatedUsers.map((user) => (
-                                                    <TableRow key={user.id}>
-                                                        <TableCell className="font-medium">
-                                                            {user.firstName} {user.lastName}
-                                                        </TableCell>
-                                                        <TableCell>{user.email}</TableCell>
-                                                        <TableCell>
-                                                            {user.roles && user.roles.length > 0 ? (
-                                                                <div className="flex flex-wrap gap-1">
-                                                                    {user.roles.map((role) => (
-                                                                        <Badge 
-                                                                            key={role.id} 
-                                                                            className={getRoleColor(role.name)}
-                                                                        >
-                                                                            {getFrenchRoleDisplayName(role.name)}
-                                                                        </Badge>
-                                                                    ))}
-                                                                </div>
-                                                            ) : (
-                                                                <span className="text-sm text-gray-500">
-                                                                    Aucun rôle
-                                                                </span>
-                                                            )}
-                                                        </TableCell>
-                                                        <TableCell className="text-right">
-                                                            <DropdownMenu>
-                                                                <DropdownMenuTrigger asChild>
-                                                                    <Button variant="ghost" size="icon">
-                                                                        <MoreVertical className="h-4 w-4" />
-                                                                    </Button>
-                                                                </DropdownMenuTrigger>
-                                                                <DropdownMenuContent align="end">
-                                                                    <DropdownMenuItem 
-                                                                        onClick={() => openChangeRoleDialog(user)}
-                                                                    >
-                                                                        Gérer les rôles
-                                                                    </DropdownMenuItem>
-                                                                </DropdownMenuContent>
-                                                            </DropdownMenu>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))
-                                            ) : (
-                                                <TableRow>
-                                                    <TableCell colSpan={4} className="text-center py-6 text-gray-500">
-                                                        Aucun utilisateur trouvé
-                                                    </TableCell>
-                                                </TableRow>
-                                            )}
-                                        </TableBody>
-                                    </Table>
+            <div className="container mx-auto py-6 px-4 sm:px-6">
+                {showWelcomeMessage && initialFilter === "ALL" && (
+                    <motion.div 
+                        className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-100 shadow-sm"
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        transition={{ duration: 0.3 }}
+                    >
+                        <p className="text-blue-600 text-sm mt-1 ml-7">Vous pouvez gérer tous les utilisateurs et leurs rôles ici</p>
+                    </motion.div>
+                )}
+
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: animateCard ? 1 : 0, y: animateCard ? 0 : 20 }}
+                    transition={{ duration: 0.5, delay: 0.1 }}
+                >
+                    <Card className="border-0 bg-white shadow-md hover:shadow-lg transition-shadow duration-300">
+                        <CardHeader className="bg-gradient-to-r from-slate-50 to-gray-50 border-b rounded-t-lg">
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <CardTitle className="text-gradient bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
+                                        {currentRoleConfig.title}
+                                    </CardTitle>
+                                    <CardDescription className="max-w-2xl mt-2">
+                                        {currentRoleConfig.description}
+                                        {!isSuperAdmin && (
+                                            <div className="text-amber-600 mt-2 text-sm flex items-center">
+                                                <Badge variant="outline" className="mr-2 bg-amber-50 text-amber-700 border-amber-200">Note</Badge>
+                                                Seuls les SuperAdmin peuvent modifier ou supprimer d'autres utilisateurs SuperAdmin.
+                                            </div>
+                                        )}
+                                    </CardDescription>
                                 </div>
-                                
-                                {renderPagination()}
-                            </>
-                        )}
-                    </CardContent>
-                </Card>
+                                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 px-3 py-1">
+                                    {filteredUsers.length} utilisateur{filteredUsers.length !== 1 ? 's' : ''}
+                                </Badge>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="p-6">
+                            {/* Composant des filtres */}
+                            <UserFilters 
+                                roles={roles}
+                                filterRole={filterRole}
+                                setFilterRole={setFilterRole}
+                                searchTerm={searchTerm}
+                                setSearchTerm={setSearchTerm}
+                                fetchUsers={fetchUsers}
+                                isLoading={isLoading}
+                            />
+                            
+                            {isLoading ? (
+                                <motion.div 
+                                    className="flex flex-col justify-center items-center h-64 my-8"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    transition={{ duration: 0.3 }}
+                                >
+                                    <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
+                                    <span className="text-sm text-muted-foreground">
+                                        Chargement des utilisateurs...
+                                    </span>
+                                </motion.div>
+                            ) : (
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    transition={{ duration: 0.3 }}
+                                >
+                                    {/* Tableau des utilisateurs */}
+                                    <div className="mt-6 mb-6">
+                                        <UserTable 
+                                            paginatedUsers={paginatedUsers}
+                                            handleSort={handleSort}
+                                            sortConfig={sortConfig}
+                                            openChangeRoleDialog={openChangeRoleDialog}
+                                            openDeleteDialog={openDeleteDialog}
+                                            openEditDialog={openEditDialog}
+                                            userHasSuperAdminRole={userHasSuperAdminRole}
+                                            isSuperAdmin={isSuperAdmin}
+                                        />
+                                    </div>
+                                    
+                                    {/* Pagination */}
+                                    <div className="mt-6">
+                                        <UserPagination 
+                                            filteredUsers={filteredUsers}
+                                            pagination={pagination}
+                                            handlePageChange={handlePageChange}
+                                        />
+                                    </div>
+                                </motion.div>
+                            )}
+
+                            {!isLoading && filteredUsers.length === 0 && searchTerm && (
+                                <motion.div 
+                                    className="flex flex-col items-center justify-center py-12 text-center"
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 0.3 }}
+                                >
+                                    <Search className="h-12 w-12 text-gray-300 mb-4" />
+                                    <h3 className="text-lg font-medium text-gray-700">Aucun résultat trouvé</h3>
+                                    <p className="text-sm text-gray-500 mt-1 max-w-sm">
+                                        Aucun utilisateur ne correspond à votre recherche "{searchTerm}".
+                                    </p>
+                                    <button 
+                                        onClick={() => setSearchTerm('')}
+                                        className="mt-4 text-sm text-blue-600 hover:text-blue-800 font-medium"
+                                    >
+                                        Effacer la recherche
+                                    </button>
+                                </motion.div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </motion.div>
                 
-                {/* Dialog for changing roles */}
-                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Modifier le rôle</DialogTitle>
-                            <DialogDescription>
-                                Choisissez un nouveau rôle pour {selectedUser?.firstName} {selectedUser?.lastName}
-                            </DialogDescription>
-                        </DialogHeader>
-                        
-                        <div className="py-4">
-                            <Label htmlFor="role-select" className="mb-2 block">
-                                Choisir un nouveau rôle
-                            </Label>
-                            <Select
-                                onValueChange={(value) => setSelectedRoleId(Number(value))}
-                                value={selectedRoleId?.toString() || ""}
-                            >
-                                <SelectTrigger className="w-full" id="role-select">
-                                    <SelectValue placeholder="Sélectionner un rôle" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectGroup>
-                                        <SelectLabel>Rôles disponibles</SelectLabel>
-                                        {roles.map(role => (
-                                            <SelectItem 
-                                                key={role.id} 
-                                                value={role.id.toString()}
-                                            >
-                                                {getFrenchRoleDisplayName(role.name)}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectGroup>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        
-                        <DialogFooter>
-                            <Button
-                                variant="outline"
-                                onClick={() => setIsDialogOpen(false)}
-                                disabled={isProcessing}
-                            >
-                                Annuler
-                            </Button>
-                            <Button
-                                variant="default"
-                                onClick={() => {
-                                    if (selectedUser && selectedRoleId) {
-                                        const role = roles.find(r => r.id === selectedRoleId);
-                                        if (role) {
-                                            // Trouver le premier rôle actuel de l'utilisateur
-                                            const currentRole = selectedUser.roles && selectedUser.roles.length > 0
-                                                ? selectedUser.roles[0].name
-                                                : 'ROLE_GUEST';
-                                                
-                                            changeUserRole(selectedUser.id, currentRole, role.name);
-                                        }
-                                    }
-                                }}
-                                disabled={isProcessing || !selectedRoleId}
-                            >
-                                {isProcessing ? (
-                                    <>
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        Chargement...
-                                    </>
-                                ) : (
-                                    "Modifier le rôle"
-                                )}
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
+                {/* Boîte de dialogue pour modifier les rôles */}
+                <RoleDialog 
+                    isDialogOpen={isDialogOpen}
+                    setIsDialogOpen={setIsDialogOpen}
+                    selectedUser={selectedUser}
+                    selectedRoleId={selectedRoleId}
+                    setSelectedRoleId={setSelectedRoleId}
+                    roles={roles}
+                    userHasSuperAdminRole={userHasSuperAdminRole}
+                    isSuperAdmin={isSuperAdmin}
+                    isProcessing={isProcessing}
+                    changeUserRole={changeUserRole}
+                    onSuccess={handleSuccessfulRoleChange}
+                />
+                
+                {/* Boîte de dialogue pour supprimer un utilisateur */}
+                <DeleteDialog 
+                    isDeleteDialogOpen={isDeleteDialogOpen}
+                    setIsDeleteDialogOpen={setIsDeleteDialogOpen}
+                    selectedUser={selectedUser}
+                    userHasSuperAdminRole={userHasSuperAdminRole}
+                    isSuperAdmin={isSuperAdmin}
+                    isProcessing={isProcessing}
+                    deleteUser={deleteUser}
+                />
+                
+                {/* Boîte de dialogue pour éditer un utilisateur */}
+                <EditUserDialog
+                    isOpen={isEditDialogOpen}
+                    onClose={closeEditDialog}
+                    user={selectedUser}
+                    onUpdateUser={updateUser}
+                    isProcessing={isProcessing}
+                    currentUserIsSuperAdmin={isSuperAdmin}
+                />
             </div>
         </DashboardLayout>
     );
