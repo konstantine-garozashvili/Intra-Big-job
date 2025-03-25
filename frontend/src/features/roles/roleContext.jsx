@@ -23,6 +23,14 @@ export const RoleProvider = ({ children }) => {
   const queryClient = useQueryClient();
   const refreshInProgressRef = useRef(false);
   const lastRefreshTimestampRef = useRef(0);
+  const refreshThrottleTimeRef = useRef(3000); // Minimum time between refreshes: 3 seconds
+  
+  // Référence pour le timer de debounce
+  const refreshRolesTimerRef = useRef(null);
+  // Timestamp du dernier rafraîchissement effectif
+  const lastActualRefreshTimestampRef = useRef(0);
+  // Intervalle minimum entre rafraîchissements (3 secondes)
+  const minRefreshIntervalRef = useRef(3000);
   
   // Function to fetch user data with deduplication logic
   const fetchUser = useCallback(async (forceRefresh = false) => {
@@ -34,10 +42,18 @@ export const RoleProvider = ({ children }) => {
     }
     
     try {
-      // Prevent multiple fetches in a short time window (50ms)
+      // Prevent multiple fetches in a short time window
       const now = Date.now();
-      if (refreshInProgressRef.current || (!forceRefresh && now - lastRefreshTimestampRef.current < 50)) {
+      if (refreshInProgressRef.current) {
         // Use cached user data instead of making a new request
+        const cachedUser = userDataManager.getCachedUserData();
+        if (cachedUser) {
+          return cachedUser;
+        }
+      }
+      
+      // Anti-rebond (debounce) - si un refresh a été fait récemment, utiliser le cache
+      if (!forceRefresh && now - lastRefreshTimestampRef.current < refreshThrottleTimeRef.current) {
         const cachedUser = userDataManager.getCachedUserData();
         if (cachedUser) {
           return cachedUser;
@@ -196,8 +212,30 @@ export const RoleProvider = ({ children }) => {
         const result = roles.every(role => userRoles?.some(r => r === role));
         return result;
       },
-      // Add a function to refresh roles
+      // Add a function to refresh roles with debounce
       refreshRoles: () => {
+        // Annuler tout timer existant
+        if (refreshRolesTimerRef.current) {
+          clearTimeout(refreshRolesTimerRef.current);
+        }
+        
+        const now = Date.now();
+        
+        // Si un rafraîchissement a été fait récemment, programmer un nouveau après l'intervalle
+        if (now - lastActualRefreshTimestampRef.current < minRefreshIntervalRef.current) {
+          refreshRolesTimerRef.current = setTimeout(() => {
+            lastActualRefreshTimestampRef.current = Date.now();
+            fetchUser(true).then(() => {
+              queryClient.invalidateQueries(['userRoles']);
+            });
+            refreshRolesTimerRef.current = null;
+          }, minRefreshIntervalRef.current - (now - lastActualRefreshTimestampRef.current));
+          
+          return;
+        }
+        
+        // Exécuter immédiatement si l'intervalle minimum est passé
+        lastActualRefreshTimestampRef.current = now;
         fetchUser(true).then(() => {
           queryClient.invalidateQueries(['userRoles']);
         });

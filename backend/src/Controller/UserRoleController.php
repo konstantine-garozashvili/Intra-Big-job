@@ -2,7 +2,10 @@
 
 namespace App\Controller;
 
+use App\Entity\Role;
+use App\Entity\User;
 use App\Service\UserRoleService;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -14,10 +17,14 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 class UserRoleController extends AbstractController
 {
     private UserRoleService $userRoleService;
+    private EntityManagerInterface $entityManager;
     
-    public function __construct(UserRoleService $userRoleService)
-    {
+    public function __construct(
+        UserRoleService $userRoleService,
+        EntityManagerInterface $entityManager
+    ) {
         $this->userRoleService = $userRoleService;
+        $this->entityManager = $entityManager;
     }
     
     /**
@@ -26,32 +33,8 @@ class UserRoleController extends AbstractController
     #[Route('/users/{roleName}', name: 'api_users_by_role', methods: ['GET'])]
     public function getUsersByRole(string $roleName): JsonResponse
     {
-        // Vérification que l'utilisateur est connecté
-        $user = $this->getUser();
-        if (!$user) {
-            return $this->json([
-                'success' => false,
-                'message' => 'Utilisateur non authentifié'
-            ], 401);
-        }
-        
-        // Vérification manuelle des rôles (ADMIN, SUPERADMIN ou RECRUITER)
-        $userRoles = $user->getRoles();
-        $hasAccess = false;
-        
-        foreach ($userRoles as $role) {
-            $role = strtoupper($role); // Normaliser en majuscules
-            if (
-                $role === 'ROLE_ADMIN' || $role === 'ADMIN' ||
-                $role === 'ROLE_SUPERADMIN' || $role === 'SUPERADMIN' ||
-                $role === 'ROLE_RECRUITER' || $role === 'RECRUITER'
-            ) {
-                $hasAccess = true;
-                break;
-            }
-        }
-        
-        if (!$hasAccess) {
+        // Vérification des permissions
+        if (!$this->hasRequiredRole(['ROLE_ADMIN', 'ROLE_SUPERADMIN', 'ROLE_RECRUITER'])) {
             return $this->json([
                 'success' => false,
                 'message' => 'Accès refusé'
@@ -80,36 +63,14 @@ class UserRoleController extends AbstractController
     
     /**
      * Change le rôle d'un utilisateur
+     * Les Admin peuvent modifier tous les rôles sauf attribuer/modifier SUPERADMIN
+     * Les SuperAdmin peuvent modifier tous les rôles sans restriction
      */
     #[Route('/change-role', name: 'api_change_user_role', methods: ['POST'])]
     public function changeUserRole(Request $request): JsonResponse
     {
-        // Vérification que l'utilisateur est connecté
-        $user = $this->getUser();
-        if (!$user) {
-            return $this->json([
-                'success' => false,
-                'message' => 'Utilisateur non authentifié'
-            ], 401);
-        }
-        
-        // Vérification manuelle des rôles (ADMIN, SUPERADMIN ou RECRUITER)
-        $userRoles = $user->getRoles();
-        $hasAccess = false;
-        
-        foreach ($userRoles as $role) {
-            $role = strtoupper($role); // Normaliser en majuscules
-            if (
-                $role === 'ROLE_ADMIN' || $role === 'ADMIN' ||
-                $role === 'ROLE_SUPERADMIN' || $role === 'SUPERADMIN' ||
-                $role === 'ROLE_RECRUITER' || $role === 'RECRUITER'
-            ) {
-                $hasAccess = true;
-                break;
-            }
-        }
-        
-        if (!$hasAccess) {
+        // Vérification des permissions
+        if (!$this->hasRequiredRole(['ROLE_ADMIN', 'ROLE_SUPERADMIN', 'ROLE_RECRUITER'])) {
             return $this->json([
                 'success' => false,
                 'message' => 'Accès refusé'
@@ -125,6 +86,40 @@ class UserRoleController extends AbstractController
                     'success' => false,
                     'message' => 'Données incomplètes. userId, oldRoleName et newRoleName sont requis.'
                 ], 400);
+            }
+            
+            // Vérification spéciale pour le rôle SUPERADMIN
+            $newRoleName = strtoupper($data['newRoleName']);
+            $oldRoleName = strtoupper($data['oldRoleName']);
+            
+            $newRoleIsSuperAdmin = ($newRoleName === 'SUPERADMIN' || $newRoleName === 'ROLE_SUPERADMIN');
+            $oldRoleIsSuperAdmin = ($oldRoleName === 'SUPERADMIN' || $oldRoleName === 'ROLE_SUPERADMIN');
+            
+            // Vérifier si l'utilisateur cible est un SuperAdmin
+            $user = $this->entityManager->getRepository(User::class)->find($data['userId']);
+            if (!$user) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Utilisateur non trouvé'
+                ], 404);
+            }
+            
+            $isSuperAdmin = $this->hasRoleInternal($user, 'SUPERADMIN');
+            
+            // Seul un SuperAdmin peut modifier un utilisateur qui est SuperAdmin
+            if ($isSuperAdmin && !$this->hasRequiredRole(['ROLE_SUPERADMIN'])) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Seul un Super Admin peut modifier un utilisateur qui a le rôle Super Admin'
+                ], 403);
+            }
+            
+            // Seul un SuperAdmin peut attribuer le rôle SuperAdmin
+            if ($newRoleIsSuperAdmin && !$this->hasRequiredRole(['ROLE_SUPERADMIN'])) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Seul un Super Admin peut attribuer le rôle Super Admin'
+                ], 403);
             }
             
             $this->userRoleService->changeUserRole(
@@ -156,32 +151,8 @@ class UserRoleController extends AbstractController
     #[Route('/roles', name: 'api_all_roles', methods: ['GET'])]
     public function getAllRoles(): JsonResponse
     {
-        // Vérification que l'utilisateur est connecté
-        $user = $this->getUser();
-        if (!$user) {
-            return $this->json([
-                'success' => false,
-                'message' => 'Utilisateur non authentifié'
-            ], 401);
-        }
-        
-        // Vérification manuelle des rôles (ADMIN, SUPERADMIN ou RECRUITER)
-        $userRoles = $user->getRoles();
-        $hasAccess = false;
-        
-        foreach ($userRoles as $role) {
-            $role = strtoupper($role); // Normaliser en majuscules
-            if (
-                $role === 'ROLE_ADMIN' || $role === 'ADMIN' ||
-                $role === 'ROLE_SUPERADMIN' || $role === 'SUPERADMIN' ||
-                $role === 'ROLE_RECRUITER' || $role === 'RECRUITER'
-            ) {
-                $hasAccess = true;
-                break;
-            }
-        }
-        
-        if (!$hasAccess) {
+        // Vérification des permissions
+        if (!$this->hasRequiredRole(['ROLE_ADMIN', 'ROLE_SUPERADMIN', 'ROLE_RECRUITER'])) {
             return $this->json([
                 'success' => false,
                 'message' => 'Accès refusé'
@@ -201,5 +172,56 @@ class UserRoleController extends AbstractController
                 'message' => 'Une erreur est survenue: ' . $e->getMessage()
             ], 500);
         }
+    }
+    
+    /**
+     * Vérifie si l'utilisateur courant a au moins un des rôles requis
+     */
+    private function hasRequiredRole(array $requiredRoles): bool
+    {
+        $user = $this->getUser();
+        if (!$user) {
+            return false;
+        }
+        
+        $userRoles = $user->getRoles();
+        
+        foreach ($requiredRoles as $requiredRole) {
+            // Normaliser le rôle requis
+            $requiredRole = strtoupper($requiredRole);
+            $simpleRequiredRole = str_replace('ROLE_', '', $requiredRole);
+            $prefixedRequiredRole = 'ROLE_' . $simpleRequiredRole;
+            
+            foreach ($userRoles as $userRole) {
+                $userRole = strtoupper($userRole);
+                
+                if ($userRole === $requiredRole || $userRole === $simpleRequiredRole || $userRole === $prefixedRequiredRole) {
+                    return true;
+                }
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Vérifie si un utilisateur spécifique a le rôle indiqué
+     */
+    private function hasRoleInternal(User $user, string $roleName): bool
+    {
+        $roleName = strtoupper($roleName);
+        $simpleName = str_replace('ROLE_', '', $roleName);
+        $prefixedName = 'ROLE_' . $simpleName;
+        
+        foreach ($user->getUserRoles() as $userRole) {
+            $role = $userRole->getRole()->getName();
+            $roleUpper = strtoupper($role);
+            
+            if ($roleUpper === $roleName || $roleUpper === $simpleName || $roleUpper === $prefixedName) {
+                return true;
+            }
+        }
+        
+        return false;
     }
 }

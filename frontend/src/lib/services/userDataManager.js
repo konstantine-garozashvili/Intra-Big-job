@@ -56,9 +56,15 @@ const requestRegistry = {
   // Map pour stocker les composants qui utilisent chaque route
   routeUsers: new Map(),
   // Délai de contrôle des requêtes
-  requestDebounceTime: 2000, // 2 secondes
+  requestDebounceTime: 3000, // 3 secondes (augmenté de 2 à 3 secondes)
   // Dernières requêtes par route
   lastRequestTime: new Map(),
+  // Compteur pour éviter les boucles infinies
+  requestCountPerRoute: new Map(),
+  // Limite du nombre de requêtes par intervalle
+  requestThreshold: 5,
+  // Période pour considérer le compteur de requêtes (10 secondes)
+  requestCountResetTime: 10000,
   
   // Enregistrer un composant utilisateur d'une route
   registerRouteUser(route, componentId) {
@@ -86,6 +92,29 @@ const requestRegistry = {
   // Vérifier si une requête peut être exécutée ou s'il faut attendre
   shouldThrottleRequest(route) {
     const now = Date.now();
+    
+    // Incrémenter le compteur de requêtes pour cette route
+    if (!this.requestCountPerRoute.has(route)) {
+      this.requestCountPerRoute.set(route, { count: 1, timestamp: now });
+    } else {
+      const routeInfo = this.requestCountPerRoute.get(route);
+      
+      // Réinitialiser le compteur si la période est écoulée
+      if (now - routeInfo.timestamp > this.requestCountResetTime) {
+        this.requestCountPerRoute.set(route, { count: 1, timestamp: now });
+      } else {
+        // Incrémenter le compteur
+        routeInfo.count++;
+        
+        // Bloquer si le seuil est dépassé
+        if (routeInfo.count > this.requestThreshold) {
+          console.warn(`Too many requests (${routeInfo.count}) for route ${route} in a short period. Throttling.`);
+          return true;
+        }
+      }
+    }
+    
+    // Vérifier le délai depuis la dernière requête
     if (!this.lastRequestTime.has(route)) {
       this.lastRequestTime.set(route, now);
       return false;
@@ -122,6 +151,27 @@ const requestRegistry = {
     // Si la route a une requête active, réutiliser cette requête
     if (this.activeRequests.has(route)) {
       return this.activeRequests.get(route);
+    }
+    
+    // Vérifier si on doit limiter la fréquence des requêtes
+    if (this.shouldThrottleRequest(route)) {
+      // Si nous avons des données en cache, les retourner
+      const cachedData = route.includes('/api/me') 
+        ? userDataManager.getCachedUserData()
+        : null;
+        
+      if (cachedData) {
+        return Promise.resolve(cachedData);
+      }
+      
+      // Sinon, attendre un peu avant d'exécuter la requête
+      return new Promise(resolve => {
+        setTimeout(() => {
+          // Exécuter la fonction de requête et enregistrer la promesse
+          const promise = requestFn();
+          resolve(this.registerActiveRequest(route, promise));
+        }, this.requestDebounceTime);
+      });
     }
     
     // Exécuter la fonction de requête et enregistrer la promesse
