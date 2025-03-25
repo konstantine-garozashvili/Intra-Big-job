@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import { useRoles } from '@/features/roles/roleContext';
 
 function Trombinoscope() {
+  const { roles } = useRoles();
+  console.log("Rôles de l'utilisateur :", roles);
   const [users, setUsers] = useState([]);
   const [filters, setFilters] = useState({
     role: '',
