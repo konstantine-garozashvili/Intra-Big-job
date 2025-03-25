@@ -28,6 +28,7 @@ const RoleGuard = ({
   const { hasRole, hasAnyRole, hasAllRoles, isLoading, roles: userRoles, refreshRoles } = useRoles();
   const toastShownRef = useRef(false);
   const timeoutRef = useRef(null);
+  const refreshAttemptedRef = useRef(false); // Référence pour suivre si refreshRoles a été appelé
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [gracePeriod, setGracePeriod] = useState(true);
   
@@ -45,8 +46,11 @@ const RoleGuard = ({
   
   // Rafraîchir les rôles à chaque montage du composant
   useEffect(() => {
-    // Tenter de rafraîchir les rôles au montage
-    refreshRoles();
+    // Ne rafraîchir les rôles qu'une seule fois par montage du composant
+    if (!refreshAttemptedRef.current) {
+      refreshAttemptedRef.current = true;
+      refreshRoles();
+    }
     
     // Ajouter un délai de grâce pour s'assurer que les rôles sont bien chargés
     const timer = setTimeout(() => {
