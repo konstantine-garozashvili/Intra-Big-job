@@ -11,8 +11,6 @@ import ProfileLayout from '@/layouts/ProfileLayout'
 import StudentRoute from './components/StudentRoute'
 import { Toaster } from './components/ui/sonner'
 import { ErrorBoundary } from "react-error-boundary"
-import Regulation from "./components/Regulation";
-
 
 // Create a shared query client for the entire application
 const queryClient = new QueryClient({
@@ -55,6 +53,8 @@ const NotificationSettings = lazy(() => import('./pages/Global/Profile/views/Not
 const CareerSettings = lazy(() => import('./pages/Global/Profile/views/CareerSettings'))
 const ProfileView = lazy(() => import('./pages/Global/Profile/views/ProfileView'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
+
+const Regulations = lazy(() => import('./pages/Regulation'))
 
 // Dashboards spécifiques par rôle
 const AdminDashboard = lazy(() => import('./pages/Admin/Dashboard'))
@@ -392,9 +392,11 @@ const AppContent = () => {
                 <Route element={<MainLayout />}>
                   {/* Route racine avec redirection automatique */}
                   <Route path="/" element={<HomePage />} />
+                  <Route path="/regulation" element={<Regulations />} />
                   
                   {/* Routes publiques - Accès interdit aux utilisateurs authentifiés */}
                   <Route element={<PublicRoute />}>
+
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
                     <Route path="/registration-success" element={<RegistrationSuccess />} />
@@ -404,6 +406,7 @@ const AppContent = () => {
                     <Route path="/reset-password" element={<ResetPasswordRequest />} />
                     <Route path="/reset-password/confirmation" element={<ResetPasswordConfirmation />} />
                     <Route path="/reset-password/:token" element={<ResetPassword />} />
+
                   </Route>
                   
                   <Route element={<ProtectedRoute />}>
@@ -583,13 +586,7 @@ const App = () => {
               {/* Gestionnaire de préchargement */}
               <PrefetchHandler />
               
-              {/* Routes de l'application */}
               <Suspense>
-                <Routes>
-                  {/* Autres routes de ton application */}
-                  <Route path="/regulation" element={<Regulation />} />
-                  {/* Ajoute ici d'autres routes si nécessaire */}
-                </Routes>
                 <AppContent />
               </Suspense>
             </Router>
