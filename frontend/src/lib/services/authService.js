@@ -499,6 +499,14 @@ export const authService = {
   },
 
   /**
+   * Alias for isLoggedIn to maintain compatibility with components expecting isAuthenticated
+   * @returns {boolean} - True if user is authenticated
+   */
+  isAuthenticated() {
+    return this.isLoggedIn();
+  },
+
+  /**
    * Vérifie si l'utilisateur a un rôle spécifique
    * @param {string} role - Le rôle à vérifier
    * @returns {boolean} - True si l'utilisateur a le rôle
