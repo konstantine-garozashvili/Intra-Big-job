@@ -24,16 +24,34 @@ class UserRoleController extends AbstractController
      * Récupère tous les utilisateurs ayant un rôle spécifique
      */
     #[Route('/users/{roleName}', name: 'api_users_by_role', methods: ['GET'])]
-    #[IsGranted('IS_AUTHENTICATED_FULLY')]
     public function getUsersByRole(string $roleName): JsonResponse
     {
-        // Vérifier si l'utilisateur a l'un des rôles requis
+        // Vérification que l'utilisateur est connecté
         $user = $this->getUser();
-        $userRoles = $user->getRoles();
+        if (!$user) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Utilisateur non authentifié'
+            ], 401);
+        }
         
-        if (!in_array('ROLE_RECRUITER', $userRoles) && 
-            !in_array('ROLE_ADMIN', $userRoles) && 
-            !in_array('ROLE_SUPERADMIN', $userRoles)) {
+        // Vérification manuelle des rôles (ADMIN, SUPERADMIN ou RECRUITER)
+        $userRoles = $user->getRoles();
+        $hasAccess = false;
+        
+        foreach ($userRoles as $role) {
+            $role = strtoupper($role); // Normaliser en majuscules
+            if (
+                $role === 'ROLE_ADMIN' || $role === 'ADMIN' ||
+                $role === 'ROLE_SUPERADMIN' || $role === 'SUPERADMIN' ||
+                $role === 'ROLE_RECRUITER' || $role === 'RECRUITER'
+            ) {
+                $hasAccess = true;
+                break;
+            }
+        }
+        
+        if (!$hasAccess) {
             return $this->json([
                 'success' => false,
                 'message' => 'Accès refusé'
@@ -64,16 +82,34 @@ class UserRoleController extends AbstractController
      * Change le rôle d'un utilisateur
      */
     #[Route('/change-role', name: 'api_change_user_role', methods: ['POST'])]
-    #[IsGranted('IS_AUTHENTICATED_FULLY')]
     public function changeUserRole(Request $request): JsonResponse
     {
-        // Vérifier si l'utilisateur a l'un des rôles requis
+        // Vérification que l'utilisateur est connecté
         $user = $this->getUser();
-        $userRoles = $user->getRoles();
+        if (!$user) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Utilisateur non authentifié'
+            ], 401);
+        }
         
-        if (!in_array('ROLE_RECRUITER', $userRoles) && 
-            !in_array('ROLE_ADMIN', $userRoles) && 
-            !in_array('ROLE_SUPERADMIN', $userRoles)) {
+        // Vérification manuelle des rôles (ADMIN, SUPERADMIN ou RECRUITER)
+        $userRoles = $user->getRoles();
+        $hasAccess = false;
+        
+        foreach ($userRoles as $role) {
+            $role = strtoupper($role); // Normaliser en majuscules
+            if (
+                $role === 'ROLE_ADMIN' || $role === 'ADMIN' ||
+                $role === 'ROLE_SUPERADMIN' || $role === 'SUPERADMIN' ||
+                $role === 'ROLE_RECRUITER' || $role === 'RECRUITER'
+            ) {
+                $hasAccess = true;
+                break;
+            }
+        }
+        
+        if (!$hasAccess) {
             return $this->json([
                 'success' => false,
                 'message' => 'Accès refusé'
@@ -118,16 +154,34 @@ class UserRoleController extends AbstractController
      * Récupère tous les rôles disponibles
      */
     #[Route('/roles', name: 'api_all_roles', methods: ['GET'])]
-    #[IsGranted('IS_AUTHENTICATED_FULLY')]
     public function getAllRoles(): JsonResponse
     {
-        // Vérifier si l'utilisateur a l'un des rôles requis
+        // Vérification que l'utilisateur est connecté
         $user = $this->getUser();
-        $userRoles = $user->getRoles();
+        if (!$user) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Utilisateur non authentifié'
+            ], 401);
+        }
         
-        if (!in_array('ROLE_RECRUITER', $userRoles) && 
-            !in_array('ROLE_ADMIN', $userRoles) && 
-            !in_array('ROLE_SUPERADMIN', $userRoles)) {
+        // Vérification manuelle des rôles (ADMIN, SUPERADMIN ou RECRUITER)
+        $userRoles = $user->getRoles();
+        $hasAccess = false;
+        
+        foreach ($userRoles as $role) {
+            $role = strtoupper($role); // Normaliser en majuscules
+            if (
+                $role === 'ROLE_ADMIN' || $role === 'ADMIN' ||
+                $role === 'ROLE_SUPERADMIN' || $role === 'SUPERADMIN' ||
+                $role === 'ROLE_RECRUITER' || $role === 'RECRUITER'
+            ) {
+                $hasAccess = true;
+                break;
+            }
+        }
+        
+        if (!$hasAccess) {
             return $this->json([
                 'success' => false,
                 'message' => 'Accès refusé'

@@ -68,13 +68,38 @@ class AuthService
      */
     public function getUserInfo(User $user): array
     {
-        return [
-            'id' => $user->getId(),
-            'firstName' => $user->getFirstName(),
-            'lastName' => $user->getLastName(),
-            'email' => $user->getEmail(),
-            'roles' => $user->getRoles(),
-            'isEmailVerified' => $user->isEmailVerified(),
-        ];
+        try {
+            return [
+                'id' => $user->getId(),
+                'firstName' => $user->getFirstName(),
+                'lastName' => $user->getLastName(),
+                'email' => $user->getEmail(),
+                'roles' => $user->getRoles(),
+                'isEmailVerified' => $user->isEmailVerified(),
+                'theme' => $user->getTheme() ? [
+                    'id' => $user->getTheme()->getId(),
+                    'name' => $user->getTheme()->getName()
+                ] : null,
+                'specialization' => $user->getSpecialization() ? [
+                    'id' => $user->getSpecialization()->getId(),
+                    'name' => $user->getSpecialization()->getName()
+                ] : null,
+                'nationality' => $user->getNationality() ? [
+                    'id' => $user->getNationality()->getId(),
+                    'name' => $user->getNationality()->getName()
+                ] : null,
+            ];
+        } catch (\Exception $e) {
+            // Log the error but return a minimal set of user info
+            error_log('Error in getUserInfo: ' . $e->getMessage());
+            
+            return [
+                'id' => $user->getId(),
+                'firstName' => $user->getFirstName(),
+                'lastName' => $user->getLastName(),
+                'email' => $user->getEmail(),
+                'roles' => ['ROLE_USER'], // Fallback role
+            ];
+        }
     }
 } 

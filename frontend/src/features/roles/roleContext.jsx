@@ -40,7 +40,6 @@ export const RoleProvider = ({ children }) => {
         // Use cached user data instead of making a new request
         const cachedUser = userDataManager.getCachedUserData();
         if (cachedUser) {
-          console.log('🔵 RoleContext: Using cached user data to avoid duplicate request');
           return cachedUser;
         }
       }
@@ -97,10 +96,10 @@ export const RoleProvider = ({ children }) => {
       
       const now = Date.now();
       if (now - cachedTimestamp > 2 * 60 * 1000) { // 2 minutes
-        fetchUser(false).catch(console.error);
+        fetchUser(false).catch(() => {});
       }
     } else {
-      fetchUser(false).catch(console.error);
+      fetchUser(false).catch(() => {});
     }
     
     // Listen for authentication events
@@ -123,7 +122,6 @@ export const RoleProvider = ({ children }) => {
     const handleRoleChange = () => {
       // Check if a refresh is already in progress
       if (refreshInProgressRef.current) {
-        console.log('🔵 RoleContext: Refresh already in progress, skipping');
         return;
       }
       
@@ -248,11 +246,10 @@ export const useRoles = () => {
       
       // Special case for STUDENT role if no roles are found
       if (userRoles.length === 0 && (role === 'ROLE_STUDENT' || role === 'STUDENT')) {
-        console.log('No roles found, assuming student role for testing');
         return true;
       }
     } catch (error) {
-      console.error('Error checking roles in localStorage:', error);
+      // Ignorer l'erreur silencieusement
     }
     
     return false;

@@ -11,6 +11,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route('/api')]
 class UserAdminController extends AbstractController
@@ -28,6 +29,7 @@ class UserAdminController extends AbstractController
      * Endpoint utilisé par le tableau de bord administrateur
      */
     #[Route('/users', name: 'api_get_all_users', methods: ['GET'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function getAllUsers(): JsonResponse
     {
         try {
@@ -49,6 +51,7 @@ class UserAdminController extends AbstractController
      * Update a specific user by ID
      */
     #[Route('/users/{id}', name: 'api_update_user', methods: ['PUT'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function updateUser(
         int $id,
         Request $request,
@@ -167,6 +170,7 @@ class UserAdminController extends AbstractController
      * Delete a specific user by ID
      */
     #[Route('/users/{id}', name: 'api_delete_user', methods: ['DELETE'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function deleteUser(
         int $id,
         EntityManagerInterface $entityManager
