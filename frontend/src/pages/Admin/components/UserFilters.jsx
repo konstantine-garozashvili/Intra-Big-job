@@ -29,6 +29,9 @@ export function UserFilters({
     fetchUsers, 
     isLoading 
 }) {
+    // Garder un log basique au rendu pour s'assurer que les props sont correctes
+    console.log("[UserFilters] Rendu, filterRole:", filterRole, "roles:", roles?.length);
+    
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const urlFilter = searchParams.get('filter');
@@ -73,33 +76,58 @@ export function UserFilters({
         return urlFilter;
     }, [urlFilter, roles]);
     
-    // Mettre à jour le filtre local quand selectedRoleValue change
+    // Ne garder que l'effet pour initialiser localFilterValue depuis selectedRoleValue au besoin
     useEffect(() => {
-        if (selectedRoleValue && selectedRoleValue !== localFilterValue) {
+        // Ne mettre à jour que si selectedRoleValue change réellement et si c'est la première initialisation
+        if (selectedRoleValue && localFilterValue !== selectedRoleValue) {
+            console.log("[UserFilters] Initialisation de localFilterValue:", selectedRoleValue);
             setLocalFilterValue(selectedRoleValue);
-            // Synchroniser avec le filtre parent si nécessaire
-            if (selectedRoleValue !== filterRole) {
-                setFilterRole(selectedRoleValue);
-            }
         }
-    }, [selectedRoleValue, setFilterRole, filterRole, localFilterValue]);
-    
-    // Mettre à jour l'URL quand le filtre change
-    useEffect(() => {
-        if (filterRole === "ALL") {
-            navigate(`/admin/users`, { replace: true });
-        } else {
-            // S'assurer que le rôle est au bon format pour l'URL
-            const urlRole = filterRole.startsWith('ROLE_') ? filterRole : `ROLE_${filterRole}`;
-            navigate(`/admin/users?filter=${urlRole}`, { replace: true });
-        }
-    }, [filterRole, navigate]);
+    }, [selectedRoleValue, localFilterValue]);
     
     // Gérer le changement de valeur du select
     const handleSelectChange = (value) => {
+        console.log("[UserFilters] handleSelectChange:", value);
+        
+        // Ajouter une vérification pour voir si la valeur est définie
+        if (!value) {
+            console.error("[UserFilters] ERREUR: Valeur du select vide");
+            return;
+        }
+        
+        // Mise à jour synchrone de l'état local
         setLocalFilterValue(value);
+        
+        // Mise à jour du filtre parent
         setFilterRole(value);
+        
+        // Mise à jour directe de l'URL sans passer par un effet
+        if (value === "ALL") {
+            navigate(`/admin/users`, { replace: true });
+        } else {
+            const urlRole = value.startsWith('ROLE_') ? value : `ROLE_${value}`;
+            navigate(`/admin/users?filter=${urlRole}`, { replace: true });
+        }
     };
+
+    // Version alternative du Select avec un select HTML standard pour tester
+    const renderStandardSelect = () => (
+        <select 
+            value={localFilterValue}
+            onChange={(e) => {
+                console.log("[UserFilters] select HTML standard onChange avec:", e.target.value);
+                handleSelectChange(e.target.value);
+            }}
+            className="w-full p-2 border rounded bg-white"
+        >
+            <option value="ALL">Tous les rôles</option>
+            {roles.map(role => (
+                <option key={role.id} value={role.name}>
+                    {getFrenchRoleDisplayName(role.name)}
+                </option>
+            ))}
+        </select>
+    );
 
     return (
         <motion.div 
@@ -130,6 +158,7 @@ export function UserFilters({
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <div className="min-w-[200px]">
+                                    {/* Restaurer le composant Select de Radix UI */}
                                     <Select
                                         value={localFilterValue}
                                         onValueChange={handleSelectChange}
@@ -150,6 +179,9 @@ export function UserFilters({
                                             ))}
                                         </SelectContent>
                                     </Select>
+                                    
+                                    {/* Commenter le select HTML standard */}
+                                    {/* {renderStandardSelect()} */}
                                 </div>
                             </TooltipTrigger>
                             <TooltipContent>

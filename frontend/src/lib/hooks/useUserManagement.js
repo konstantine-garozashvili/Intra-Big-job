@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { toast } from "sonner";
 import apiService from "@/lib/services/apiService";
 
@@ -86,6 +86,38 @@ export function useUserManagement(initialFilter = "ALL") {
         currentPage: 1,
         itemsPerPage: 10
     });
+    
+    // Version simplifiée sans debounce pour éviter les problèmes de synchronisation
+    const updateFilterRole = useCallback((newRole) => {
+        console.log("[useUserManagement] Mise à jour du filtre:", newRole);
+        // Mise à jour synchrone du filtre
+        setFilterRole(newRole);
+    }, []);
+    
+    // Charger les données au montage du composant
+    useEffect(() => {
+        const loadData = async () => {
+            await fetchRoles();
+            await fetchUsers(filterRole);
+        };
+        
+        loadData();
+    }, []);
+    
+    // Rafraîchir les utilisateurs lorsque le filtre change
+    useEffect(() => {
+        console.log("[useUserManagement] filterRole changé:", filterRole);
+        fetchUsers(filterRole);
+    }, [filterRole]);
+    
+    // Gérer le tri des utilisateurs
+    const handleSort = (key) => {
+        let direction = 'ascending';
+        if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+            direction = 'descending';
+        }
+        setSortConfig({ key, direction });
+    };
     
     // Récupérer tous les rôles disponibles
     const fetchRoles = async () => {
@@ -249,30 +281,6 @@ export function useUserManagement(initialFilter = "ALL") {
         );
     };
     
-    // Charger les données au montage du composant
-    useEffect(() => {
-        const loadData = async () => {
-            await fetchRoles();
-            await fetchUsers(filterRole);
-        };
-        
-        loadData();
-    }, []);
-    
-    // Rafraîchir les utilisateurs lorsque le filtre change
-    useEffect(() => {
-        fetchUsers(filterRole);
-    }, [filterRole]);
-    
-    // Gérer le tri des utilisateurs
-    const handleSort = (key) => {
-        let direction = 'ascending';
-        if (sortConfig.key === key && sortConfig.direction === 'ascending') {
-            direction = 'descending';
-        }
-        setSortConfig({ key, direction });
-    };
-    
     // Trier les utilisateurs
     const sortedUsers = useMemo(() => {
         const sortableUsers = [...users];
@@ -372,7 +380,7 @@ export function useUserManagement(initialFilter = "ALL") {
         userHasSuperAdminRole,
         handleSort,
         setSearchTerm,
-        setFilterRole,
+        setFilterRole: updateFilterRole,
         handlePageChange,
         openChangeRoleDialog,
         openDeleteDialog,

@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { Filter, Loader2, Users, Sparkles, Search, GraduationCap, BookOpen, Briefcase, Shield } from "lucide-react";
 import {
     Card,
@@ -81,6 +81,9 @@ export default function UserRoleManager() {
         return urlFilter;
     }, [urlFilter]);
     
+    // Utiliser useRef pour mémoriser la dernière valeur de filterRole traitée
+    const lastFilterRoleRef = useRef(initialFilter);
+    
     // État pour le dialogue d'édition
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [animateCard, setAnimateCard] = useState(false);
@@ -124,12 +127,19 @@ export default function UserRoleManager() {
         setIsDeleteDialogOpen
     } = useUserManagement(initialFilter);
     
-    // Effet pour mettre à jour le filtre lorsque l'URL change
+    // Effet pour mettre à jour le filtre lorsque l'URL change - Approche simplifiée
     useEffect(() => {
-        if (initialFilter !== filterRole) {
+        console.log("[UserRoleManager] URL changée, initialFilter:", initialFilter);
+        
+        // Mise à jour directe du lastFilterRoleRef et du filtre
+        if (initialFilter !== lastFilterRoleRef.current) {
+            console.log("[UserRoleManager] Mise à jour immédiate du filtre:", initialFilter);
+            lastFilterRoleRef.current = initialFilter;
+            
+            // Mise à jour synchrone du filtre sans setTimeout
             setFilterRole(initialFilter);
         }
-    }, [initialFilter, filterRole, setFilterRole]);
+    }, [initialFilter, setFilterRole]);
     
     // Récupérer la configuration pour le rôle filtré actuel
     const currentRoleConfig = roleConfig[filterRole] || roleConfig["ALL"];
