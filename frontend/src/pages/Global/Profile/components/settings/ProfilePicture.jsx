@@ -137,12 +137,10 @@ const ProfilePicture = ({ userData, onProfilePictureChange, isLoading: externalL
           refetch();
           
           toast.error('Erreur lors de la suppression de la photo de profil');
-          // console.error('Error deleting profile picture:', error);
         }
       });
     } catch (error) {
       toast.error('Erreur lors de la suppression de la photo de profil');
-      // console.error('Error deleting profile picture:', error);
     } finally {
       setIsDeleting(false);
     }
