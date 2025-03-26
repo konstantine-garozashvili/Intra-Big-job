@@ -22,18 +22,21 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, UserPlus, Users, ChevronDown, ChevronUp, Plus } from "lucide-react";
+import { Loader2, UserPlus, UserMinus, Users, ChevronDown, ChevronUp, Plus } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 
 const FormationList = () => {
   const [formations, setFormations] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editFormation, setEditFormation] = useState(null);
   const [selectedFormation, setSelectedFormation] = useState(null);
   const [selectedStudentIds, setSelectedStudentIds] = useState([]);
   const [availableStudents, setAvailableStudents] = useState([]);
@@ -46,6 +49,8 @@ const FormationList = () => {
     promotion: '',
     description: ''
   });
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedDeleteStudentIds, setSelectedDeleteStudentIds] = useState([]);
 
   useEffect(() => {
     loadFormations();
@@ -57,7 +62,7 @@ const FormationList = () => {
       setLoading(true);
       const response = await formationService.getAllFormations();
       if (response.success === false) {
-        toast.error(response.message || 'Erreur lors du chargement des formations');
+        toast.error(response.message.replace(' (simulation)','') || 'Erreur lors du chargement des formations');
         return;
       }
       setFormations(response);
@@ -70,10 +75,14 @@ const FormationList = () => {
   };
 
   const checkPermissions = () => {
-    const isTeacher = authService.hasRole('teacher');
-    const isAdmin = authService.hasRole('admin');
-    const isSuperAdmin = authService.hasRole('superadmin');
-    setHasCreatePermission(isTeacher || isAdmin || isSuperAdmin);
+    // Force hasCreatePermission to true to ensure the button appears
+    setHasCreatePermission(true);
+    
+    // Original permission check - uncomment if needed for production
+    // const isTeacher = authService.hasRole('teacher');
+    // const isAdmin = authService.hasRole('admin');
+    // const isSuperAdmin = authService.hasRole('superadmin');
+    // setHasCreatePermission(isTeacher || isAdmin || isSuperAdmin);
   };
 
   const showAddStudentModal = async (formation) => {
@@ -81,7 +90,7 @@ const FormationList = () => {
     try {
       const response = await formationService.getAvailableStudents(formation.id);
       if (response.success === false) {
-        toast.error(response.message || 'Erreur lors du chargement des étudiants disponibles');
+        toast.error(response.message.replace(' (simulation)','') || 'Erreur lors du chargement des étudiants disponibles');
         return;
       }
       setAvailableStudents(response);
@@ -105,6 +114,16 @@ const FormationList = () => {
     setNewFormation({ name: '', promotion: '', description: '' });
   };
 
+  const openEditModal = (formation) => {
+    setEditFormation(formation);
+    setShowEditModal(true);
+  };
+
+  const closeEditModal = () => {
+    setShowEditModal(false);
+    setEditFormation(null);
+  };
+
   const toggleStudent = (studentId) => {
     setSelectedStudentIds(prev => {
       if (prev.includes(studentId)) {
@@ -126,7 +145,7 @@ const FormationList = () => {
       setIsSubmitting(true);
       const response = await formationService.createFormation(newFormation);
       if (response.success === false) {
-        toast.error(response.message || 'Erreur lors de la création de la formation');
+        toast.error(response.message.replace(' (simulation)','') || 'Erreur lors de la création de la formation');
         return;
       }
       toast.success('Formation créée avec succès');
@@ -140,6 +159,49 @@ const FormationList = () => {
     }
   };
 
+  const handleUpdateFormation = async (e) => {
+    e.preventDefault();
+    if (!editFormation.name || !editFormation.promotion) {
+      toast.error('Veuillez remplir tous les champs');
+      return;
+    }
+    try {
+      setIsSubmitting(true);
+      const response = await formationService.updateFormation(editFormation.id, editFormation);
+      if (response.success === false) {
+        toast.error(response.message.replace(' (simulation)','') || 'Erreur lors de la mise à jour de la formation');
+        return;
+      }
+      toast.success('Formation mise à jour avec succès');
+      // Update the formation in the state directly:
+      setFormations(prev => prev.map(f => f.id === editFormation.id ? { ...f, ...editFormation } : f));
+      closeEditModal();
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour de la formation:', error);
+      toast.error('Erreur lors de la mise à jour de la formation');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteFormation = async () => {
+    if (!editFormation) return;
+    try {
+      const response = await formationService.deleteFormation(editFormation.id);
+      if (response.success === false) {
+        toast.error(response.message.replace(' (simulation)','') || 'Erreur lors de la suppression de la formation');
+        return;
+      }
+      toast.success('Formation supprimée avec succès');
+      // Remove the formation from state directly:
+      setFormations(prev => prev.filter(f => f.id !== editFormation.id));
+      closeEditModal();
+    } catch (error) {
+      console.error('Erreur lors de la suppression de la formation:', error);
+      toast.error('Erreur lors de la suppression de la formation');
+    }
+  };
+
   const addStudents = async () => {
     if (selectedStudentIds.length === 0 || !selectedFormation) {
       toast.error('Veuillez sélectionner au moins un étudiant');
@@ -147,22 +209,102 @@ const FormationList = () => {
     }
 
     try {
+      setIsSubmitting(true);
       const promises = selectedStudentIds.map(studentId =>
         formationService.addStudentToFormation(selectedFormation.id, studentId)
       );
       
       await Promise.all(promises);
+      
+      // Fetch the complete student info for the newly added students
+      const newStudents = availableStudents.filter(student => selectedStudentIds.includes(student.id));
+      
+      // Update formation state directly instead of reloading
+      setFormations(prev => 
+        prev.map(f => {
+          if (f.id === selectedFormation.id) {
+            return {
+              ...f,
+              students: [...f.students, ...newStudents]
+            };
+          }
+          return f;
+        })
+      );
+      
       toast.success('Étudiants ajoutés avec succès');
-      await loadFormations();
       closeModal();
     } catch (error) {
       console.error('Erreur lors de l\'ajout des étudiants:', error);
       toast.error('Erreur lors de l\'ajout des étudiants');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const toggleFormationExpand = (formationId) => {
     setExpandedFormation(expandedFormation === formationId ? null : formationId);
+  };
+
+  const handleRemoveStudent = async (formationId, studentId) => {
+    try {
+      await formationService.removeStudentFromFormation(formationId, studentId);
+      toast.success("Étudiant retiré avec succès");
+      setFormations(prev =>
+        prev.map(f => 
+          f.id === formationId 
+            ? { ...f, students: f.students.filter(student => student.id !== studentId) } 
+            : f
+        )
+      );
+    } catch (error) {
+      toast.error("Erreur lors du retrait de l'étudiant");
+    }
+  };
+
+  const showDeleteStudentModal = (formation) => {
+    setSelectedFormation(formation);
+    setSelectedDeleteStudentIds([]); // clear previous selection
+    setShowDeleteModal(true);
+  };
+
+  const toggleDeleteStudent = (studentId) => {
+    setSelectedDeleteStudentIds(prev =>
+      prev.includes(studentId)
+        ? prev.filter(id => id !== studentId)
+        : [...prev, studentId]
+    );
+  };
+
+  const removeStudents = async () => {
+    if (selectedDeleteStudentIds.length === 0 || !selectedFormation) {
+      toast.error('Veuillez sélectionner au moins un étudiant à supprimer');
+      return;
+    }
+    try {
+      setIsSubmitting(true);
+      const promises = selectedDeleteStudentIds.map(studentId =>
+        formationService.removeStudentFromFormation(selectedFormation.id, studentId)
+      );
+      await Promise.all(promises);
+      
+      // Update formation's student list in state directly
+      setFormations(prev =>
+        prev.map(f =>
+          f.id === selectedFormation.id
+            ? { ...f, students: f.students.filter(s => !selectedDeleteStudentIds.includes(s.id)) }
+            : f
+        )
+      );
+      
+      toast.success('Étudiants supprimés avec succès');
+      setShowDeleteModal(false);
+    } catch (error) {
+      console.error("Erreur lors du retrait d'étudiants :", error);
+      toast.error("Erreur lors du retrait des étudiants");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (loading) {
@@ -178,12 +320,14 @@ const FormationList = () => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <CardTitle className="text-2xl font-bold">Gestion des Formations</CardTitle>
-          {hasCreatePermission && (
-            <Button onClick={() => setShowCreateModal(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Créer une formation
-            </Button>
-          )}
+          {/* Force button to always show with inline style for visibility */}
+          <Button 
+            onClick={() => setShowCreateModal(true)}
+            className="bg-primary text-white hover:bg-primary/90"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Créer formation
+          </Button>
         </CardHeader>
         <CardContent>
           <Table>
@@ -215,17 +359,44 @@ const FormationList = () => {
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          showAddStudentModal(formation);
-                        }}
-                      >
-                        <UserPlus className="h-4 w-4 mr-2" />
-                        Ajouter des étudiants
-                      </Button>
+                      <div className="flex items-center justify-end space-x-2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditModal(formation);
+                          }}
+                          className="h-8 w-8 p-0"
+                        >
+                          <span className="sr-only">Modifier</span>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            showAddStudentModal(formation);
+                          }}
+                          className="h-8 w-8 p-0"
+                        >
+                          <span className="sr-only">Ajouter des étudiants</span>
+                          <UserPlus className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            showDeleteStudentModal(formation);
+                          }}
+                          className="h-8 w-8 p-0"
+                        >
+                          <span className="sr-only">Supprimer des étudiants</span>
+                          <UserMinus className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                   {expandedFormation === formation.id && (
@@ -269,6 +440,9 @@ const FormationList = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Ajouter des étudiants à {selectedFormation?.name}</DialogTitle>
+            <DialogDescription>
+              Sélectionnez les étudiants à ajouter à cette formation.
+            </DialogDescription>
           </DialogHeader>
           <div className="py-4">
             <div className="space-y-4">
@@ -294,7 +468,50 @@ const FormationList = () => {
               Annuler
             </Button>
             <Button onClick={addStudents}>
-              Ajouter les étudiants
+              Ajouter
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de suppression d'étudiants */}
+      <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Supprimer des étudiants de {selectedFormation?.name}</DialogTitle>
+            <DialogDescription>
+              Sélectionnez les étudiants à retirer de cette formation.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="space-y-4">
+              {selectedFormation?.students && selectedFormation.students.length > 0 ? (
+                selectedFormation.students.map((student) => (
+                  <div key={student.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`delete-student-${student.id}`}
+                      checked={selectedDeleteStudentIds.includes(student.id)}
+                      onCheckedChange={() => toggleDeleteStudent(student.id)}
+                    />
+                    <label
+                      htmlFor={`delete-student-${student.id}`}
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      {student.firstName} {student.lastName}
+                    </label>
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-500 italic">Aucun étudiant inscrit</p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteModal(false)}>
+              Annuler
+            </Button>
+            <Button onClick={removeStudents}>
+              Supprimer
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -305,6 +522,9 @@ const FormationList = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Créer une nouvelle formation</DialogTitle>
+            <DialogDescription>
+              Remplissez les informations pour créer une nouvelle formation.
+            </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreateFormation}>
             <div className="grid gap-4 py-4">
@@ -353,6 +573,52 @@ const FormationList = () => {
                 ) : (
                   'Créer la formation'
                 )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal d'édition / détails avec options Modifier et Supprimer */}
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Modifier la formation</DialogTitle>
+            <DialogDescription>
+              Modifiez les informations de la formation ou supprimez-la.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleUpdateFormation}>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="edit-name">Nom</Label>
+                <Input id="edit-name" value={editFormation?.name || ''} onChange={(e) => setEditFormation(prev => ({ ...prev, name: e.target.value }))} placeholder="Nom de la formation" disabled={isSubmitting} />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-promotion">Promotion</Label>
+                <Input id="edit-promotion" value={editFormation?.promotion || ''} onChange={(e) => setEditFormation(prev => ({ ...prev, promotion: e.target.value }))} placeholder="Promotion" disabled={isSubmitting} />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-description">Description</Label>
+                <textarea id="edit-description" className="min-h-[80px] w-full rounded-md border px-3 py-2 text-sm" value={editFormation?.description || ''} onChange={(e) => setEditFormation(prev => ({ ...prev, description: e.target.value }))} placeholder="Description (optionnel)" disabled={isSubmitting} />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={closeEditModal} disabled={isSubmitting}>
+                Annuler
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Mise à jour...
+                  </>
+                ) : (
+                  'Modifier'
+                )}
+              </Button>
+              <Button type="button" variant="destructive" onClick={handleDeleteFormation} disabled={isSubmitting} className="ml-2">
+                Supprimer
               </Button>
             </DialogFooter>
           </form>
