@@ -100,17 +100,15 @@ const UserModal = ({ user, onClose }) => {
                   </span>
                 ))}
               </div>
-            </div>
-          </div>
 
-          <div className="mt-12 flex justify-start gap-3 pl-8">
-            <Link
-              to={`/profile/${user.id}`}
-              className="flex items-center px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-            >
-              <User className="w-4 h-4 mr-2" />
-              Voir le profil complet
-            </Link>
+              <Link
+                to={`/profile/${user.id}`}
+                className="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+              >
+                <User className="w-4 h-4 mr-2" />
+                Voir le profil complet
+              </Link>
+            </div>
           </div>
         </div>
       </div>
@@ -264,43 +262,47 @@ const UsersList = () => {
               Trombinoscope
             </h1>
           </div>
-          <div className="relative">
+        </div>
+
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
               type="text"
               placeholder="Rechercher un utilisateur..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
             />
           </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setSelectedRole(null)}
-            className={`px-3 py-1.5 rounded-lg flex items-center space-x-2 transition-colors ${
-              selectedRole === null 
-                ? 'bg-blue-500 text-white hover:bg-blue-600' 
-                : 'bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700'
-            }`}
-          >
-            <Shield className="w-4 h-4" />
-            <span>Tous</span>
-          </button>
-          {uniqueRoles.map((role) => (
+
+          <div className="flex flex-wrap gap-2">
             <button
-              key={role}
-              onClick={() => setSelectedRole(role)}
+              onClick={() => setSelectedRole(null)}
               className={`px-3 py-1.5 rounded-lg flex items-center space-x-2 transition-colors ${
-                selectedRole === role 
+                selectedRole === null 
                   ? 'bg-blue-500 text-white hover:bg-blue-600' 
-                  : getRoleColor(role)
+                  : 'bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700'
               }`}
             >
-              <Shield className={`w-4 h-4 ${selectedRole === role ? 'text-white' : getRoleIconColor(role)}`} />
-              <span>{getRoleLabel(role)}</span>
+              <Shield className="w-4 h-4" />
+              <span>Tous</span>
             </button>
-          ))}
+            {uniqueRoles.map((role) => (
+              <button
+                key={role}
+                onClick={() => setSelectedRole(role)}
+                className={`px-3 py-1.5 rounded-lg flex items-center space-x-2 transition-colors ${
+                  selectedRole === role
+                    ? 'bg-blue-500 text-white hover:bg-blue-600' 
+                    : getRoleColor(role)
+                }`}
+              >
+                <Shield className={`w-4 h-4 ${selectedRole === role ? 'text-white' : getRoleIconColor(role)}`} />
+                <span>{getRoleLabel(role)}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
