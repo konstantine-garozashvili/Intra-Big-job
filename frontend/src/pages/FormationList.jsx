@@ -22,6 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -208,17 +209,36 @@ const FormationList = () => {
     }
 
     try {
+      setIsSubmitting(true);
       const promises = selectedStudentIds.map(studentId =>
         formationService.addStudentToFormation(selectedFormation.id, studentId)
       );
       
       await Promise.all(promises);
+      
+      // Fetch the complete student info for the newly added students
+      const newStudents = availableStudents.filter(student => selectedStudentIds.includes(student.id));
+      
+      // Update formation state directly instead of reloading
+      setFormations(prev => 
+        prev.map(f => {
+          if (f.id === selectedFormation.id) {
+            return {
+              ...f,
+              students: [...f.students, ...newStudents]
+            };
+          }
+          return f;
+        })
+      );
+      
       toast.success('Étudiants ajoutés avec succès');
-      await loadFormations();
       closeModal();
     } catch (error) {
       console.error('Erreur lors de l\'ajout des étudiants:', error);
       toast.error('Erreur lors de l\'ajout des étudiants');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -262,12 +282,13 @@ const FormationList = () => {
       return;
     }
     try {
+      setIsSubmitting(true);
       const promises = selectedDeleteStudentIds.map(studentId =>
         formationService.removeStudentFromFormation(selectedFormation.id, studentId)
       );
       await Promise.all(promises);
-      toast.success('Étudiants supprimés avec succès');
-      // Update formation's student list in state
+      
+      // Update formation's student list in state directly
       setFormations(prev =>
         prev.map(f =>
           f.id === selectedFormation.id
@@ -275,10 +296,14 @@ const FormationList = () => {
             : f
         )
       );
+      
+      toast.success('Étudiants supprimés avec succès');
       setShowDeleteModal(false);
     } catch (error) {
       console.error("Erreur lors du retrait d'étudiants :", error);
       toast.error("Erreur lors du retrait des étudiants");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -415,6 +440,9 @@ const FormationList = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Ajouter des étudiants à {selectedFormation?.name}</DialogTitle>
+            <DialogDescription>
+              Sélectionnez les étudiants à ajouter à cette formation.
+            </DialogDescription>
           </DialogHeader>
           <div className="py-4">
             <div className="space-y-4">
@@ -451,6 +479,9 @@ const FormationList = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Supprimer des étudiants de {selectedFormation?.name}</DialogTitle>
+            <DialogDescription>
+              Sélectionnez les étudiants à retirer de cette formation.
+            </DialogDescription>
           </DialogHeader>
           <div className="py-4">
             <div className="space-y-4">
@@ -491,6 +522,9 @@ const FormationList = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Créer une nouvelle formation</DialogTitle>
+            <DialogDescription>
+              Remplissez les informations pour créer une nouvelle formation.
+            </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreateFormation}>
             <div className="grid gap-4 py-4">
@@ -550,6 +584,9 @@ const FormationList = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Modifier la formation</DialogTitle>
+            <DialogDescription>
+              Modifiez les informations de la formation ou supprimez-la.
+            </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleUpdateFormation}>
             <div className="grid gap-4 py-4">
