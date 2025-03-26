@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useRoles } from './roleContext';
 import { ROLES } from './roleContext';
 
@@ -7,109 +7,146 @@ import { ROLES } from './roleContext';
  * @returns {Object} Object containing permission check functions
  */
 export const useRolePermissions = () => {
-  const { roles, hasRole } = useRoles();
+  const { roles, hasRole, isLoading } = useRoles();
+  const [rolesAvailable, setRolesAvailable] = useState(false);
+  
+  // Detect when roles become available
+  useEffect(() => {
+    if (roles && roles.length > 0) {
+      setRolesAvailable(true);
+    }
+  }, [roles]);
 
-  const permissions = useMemo(() => ({
-    // Role check functions
-    isAdmin: () => hasRole(ROLES.ADMIN) || hasRole(ROLES.SUPERADMIN),
-    isRecruiter: () => hasRole(ROLES.RECRUITER),
-    isHR: () => hasRole(ROLES.HR),
-    isTeacher: () => hasRole(ROLES.TEACHER),
-    isStudent: () => hasRole(ROLES.STUDENT),
-    isGuest: () => hasRole(ROLES.GUEST),
+  const permissions = useMemo(() => {
+    // Helper function to handle role checks with loading state
+    const safeRoleCheck = (roleCheckFn) => {
+      // During loading, return null (indeterminate) instead of false
+      if (isLoading || !rolesAvailable) return null;
+      return roleCheckFn();
+    };
     
-    // Permission check functions
-    canEditPersonalInfo: () => {
-      return permissions.isAdmin() || 
-             permissions.isRecruiter() || 
-             permissions.isHR() || 
-             permissions.isTeacher() || 
-             permissions.isStudent() || 
-             permissions.isGuest();
-    },
-    
-    isFieldEditable: (fieldName) => {
-      // Admin et SuperAdmin peuvent éditer l'email
-      if (fieldName === 'email') return hasRole(ROLES.ADMIN) || hasRole(ROLES.SUPERADMIN);
+    return {
+      // Role check functions with loading state handling
+      isAdmin: () => safeRoleCheck(() => hasRole(ROLES.ADMIN) || hasRole(ROLES.SUPERADMIN)),
+      isSuperAdmin: () => safeRoleCheck(() => hasRole(ROLES.SUPERADMIN)),
+      isRecruiter: () => safeRoleCheck(() => hasRole(ROLES.RECRUITER)),
+      isHR: () => safeRoleCheck(() => hasRole(ROLES.HR)),
+      isTeacher: () => safeRoleCheck(() => hasRole(ROLES.TEACHER)),
+      isStudent: () => safeRoleCheck(() => hasRole(ROLES.STUDENT)),
+      isGuest: () => safeRoleCheck(() => hasRole(ROLES.GUEST)),
       
-      // Portfolio URL can be edited by students and admins
-      if (fieldName === 'portfolioUrl') {
-        return permissions.isStudent() || permissions.isAdmin();
-      }
-      
-      // Other fields follow regular permissions
-      if (permissions.isAdmin()) return true;
-      
-      if (permissions.isRecruiter() || 
+      // Permission check functions
+      canEditPersonalInfo: () => {
+        return safeRoleCheck(() => 
+          permissions.isAdmin() || 
+          permissions.isRecruiter() || 
           permissions.isHR() || 
           permissions.isTeacher() || 
           permissions.isStudent() || 
-          permissions.isGuest()) {
-        return ['phoneNumber', 'linkedinUrl'].includes(fieldName);
-      }
+          permissions.isGuest()
+        );
+      },
       
-      return false;
-    },
-    
-    canEditAddress: () => hasRole(ROLES.ADMIN) || hasRole(ROLES.SUPERADMIN),
-    
-    showLinkedIn: () => {
-      return permissions.isAdmin() || 
-             permissions.isRecruiter() || 
-             permissions.isHR() || 
-             permissions.isTeacher() || 
-             permissions.isStudent() || 
-             permissions.isGuest();
-    },
-    
-    canEditAcademic: () => {
-      return permissions.isAdmin() || 
-             permissions.isStudent() || 
-             permissions.isGuest();
-    },
-    
-    canEditPortfolioUrl: () => {
-      return permissions.isStudent() || permissions.isAdmin();
-    },
-    
-    showPortfolioUrl: () => {
-      return permissions.isStudent() || 
-             permissions.isAdmin() || 
-             permissions.isTeacher() || 
-             permissions.isHR();
-    },
-    
-    /**
-     * Get the dashboard path based on the user's role
-     * @returns {string} The path to the appropriate dashboard
-     */
-    getRoleDashboardPath: () => {
-      if (hasRole(ROLES.SUPERADMIN)) {
-        return '/superadmin/dashboard';
-      }
-      if (hasRole(ROLES.ADMIN)) {
-        return '/admin/dashboard';
-      }
-      if (hasRole(ROLES.HR)) {
-        return '/hr/dashboard';
-      }
-      if (hasRole(ROLES.TEACHER)) {
-        return '/teacher/dashboard';
-      }
-      if (hasRole(ROLES.STUDENT)) {
-        return '/student/dashboard';
-      }
-      if (hasRole(ROLES.RECRUITER)) {
-        return '/recruiter/dashboard';
-      }
-      if (hasRole(ROLES.GUEST)) {
-        return '/guest/dashboard';
-      }
+      isFieldEditable: (fieldName) => {
+        // During loading, allow temporarily
+        if (isLoading || !rolesAvailable) return true;
+        
+        // Admin et SuperAdmin peuvent éditer l'email
+        if (fieldName === 'email') return hasRole(ROLES.ADMIN) || hasRole(ROLES.SUPERADMIN);
+        
+        // Portfolio URL can be edited by students and admins
+        if (fieldName === 'portfolioUrl') {
+          return permissions.isStudent() || permissions.isAdmin();
+        }
+        
+        // Other fields follow regular permissions
+        if (permissions.isAdmin()) return true;
+        
+        if (permissions.isRecruiter() || 
+            permissions.isHR() || 
+            permissions.isTeacher() || 
+            permissions.isStudent() || 
+            permissions.isGuest()) {
+          return ['phoneNumber', 'linkedinUrl'].includes(fieldName);
+        }
+        
+        return false;
+      },
       
-      // Default fallback
-      return '/dashboard';
-    },
-  }), [hasRole]);
+      canEditAddress: () => safeRoleCheck(() => hasRole(ROLES.ADMIN) || hasRole(ROLES.SUPERADMIN)),
+      
+      showLinkedIn: () => {
+        return safeRoleCheck(() => 
+          permissions.isAdmin() || 
+          permissions.isRecruiter() || 
+          permissions.isHR() || 
+          permissions.isTeacher() || 
+          permissions.isStudent() || 
+          permissions.isGuest()
+        );
+      },
+      
+      canEditAcademic: () => {
+        return safeRoleCheck(() => 
+          permissions.isAdmin() || 
+          permissions.isStudent() || 
+          permissions.isGuest()
+        );
+      },
+      
+      canEditPortfolioUrl: () => {
+        return safeRoleCheck(() => 
+          permissions.isStudent() || permissions.isAdmin()
+        );
+      },
+      
+      showPortfolioUrl: () => {
+        return safeRoleCheck(() => 
+          permissions.isStudent() || 
+          permissions.isAdmin() || 
+          permissions.isTeacher() || 
+          permissions.isHR()
+        );
+      },
+      
+      /**
+       * Get the dashboard path based on the user's role
+       * @returns {string} The path to the appropriate dashboard
+       */
+      getRoleDashboardPath: () => {
+        // During loading, return null
+        if (isLoading || !rolesAvailable) return null;
+        
+        if (hasRole(ROLES.SUPERADMIN)) {
+          return '/superadmin/dashboard';
+        }
+        if (hasRole(ROLES.ADMIN)) {
+          return '/admin/dashboard';
+        }
+        if (hasRole(ROLES.HR)) {
+          return '/hr/dashboard';
+        }
+        if (hasRole(ROLES.TEACHER)) {
+          return '/teacher/dashboard';
+        }
+        if (hasRole(ROLES.STUDENT)) {
+          return '/student/dashboard';
+        }
+        if (hasRole(ROLES.RECRUITER)) {
+          return '/recruiter/dashboard';
+        }
+        if (hasRole(ROLES.GUEST)) {
+          return '/guest/dashboard';
+        }
+        
+        // Default fallback
+        return '/login';
+      },
+      
+      // Loading state
+      isRolesLoading: () => isLoading || !rolesAvailable
+    };
+  }, [hasRole, isLoading, rolesAvailable, roles]);
 
   return permissions;
 };
@@ -119,45 +156,40 @@ export const useRolePermissions = () => {
  * @returns {Object} Object containing role-based UI components and utilities
  */
 export const useRoleUI = () => {
-  const { roles } = useRoles();
+  const { isAdmin, isRecruiter, isHR, isTeacher, isStudent, isGuest } = useRolePermissions();
   
   return useMemo(() => ({
-    // Get the main role (first role in the array)
-    getMainRole: () => {
-      if (roles && roles.length > 0) {
-        return roles[0];
-      }
-      return 'ROLE_GUEST';
+    // Get the appropriate dashboard icon based on role
+    getDashboardIcon: () => {
+      if (isAdmin()) return 'admin-dashboard';
+      if (isRecruiter()) return 'recruiter-dashboard';
+      if (isHR()) return 'hr-dashboard';
+      if (isTeacher()) return 'teacher-dashboard';
+      if (isStudent()) return 'student-dashboard';
+      if (isGuest()) return 'guest-dashboard';
+      return 'default-dashboard';
     },
     
-    // Get color for role badge
-    getRoleBadgeColor: (roleName) => {
-      switch(roleName) {
-        case ROLES.STUDENT: return "from-blue-500/90 to-blue-700/90";
-        case ROLES.TEACHER: return "from-emerald-500/90 to-emerald-700/90";
-        case ROLES.HR: return "from-purple-500/90 to-purple-700/90";
-        case ROLES.ADMIN: return "from-amber-500/90 to-amber-700/90";
-        case ROLES.SUPER_ADMIN: 
-        case 'ROLE_SUPERADMIN': return "from-red-500/90 to-red-700/90";
-        case ROLES.RECRUITER: return "from-pink-500/90 to-pink-700/90";
-        case ROLES.GUEST: return "from-teal-500/90 to-teal-700/90";
-        default: return "from-gray-500/90 to-gray-700/90";
-      }
+    // Get the role title for display
+    getRoleTitle: () => {
+      if (isAdmin()) return 'Administrateur';
+      if (isRecruiter()) return 'Recruteur';
+      if (isHR()) return 'Ressources Humaines';
+      if (isTeacher()) return 'Formateur';
+      if (isStudent()) return 'Étudiant';
+      if (isGuest()) return 'Invité';
+      return 'Utilisateur';
     },
     
-    // Translate role name to French
-    translateRoleName: (roleName) => {
-      switch(roleName) {
-        case ROLES.STUDENT: return "Étudiant";
-        case ROLES.TEACHER: return "Formateur";
-        case ROLES.HR: return "Ressources Humaines";
-        case ROLES.ADMIN: return "Administrateur";
-        case ROLES.SUPER_ADMIN: 
-        case 'ROLE_SUPERADMIN': return "Super Administrateur";
-        case ROLES.RECRUITER: return "Recruteur";
-        case ROLES.GUEST: return "Invité";
-        default: return roleName;
-      }
-    },
-  }), [roles]);
-}; 
+    // Get role-specific CSS classes
+    getRoleClasses: () => {
+      if (isAdmin()) return 'role-admin';
+      if (isRecruiter()) return 'role-recruiter';
+      if (isHR()) return 'role-hr';
+      if (isTeacher()) return 'role-teacher';
+      if (isStudent()) return 'role-student';
+      if (isGuest()) return 'role-guest';
+      return 'role-default';
+    }
+  }), [isAdmin, isRecruiter, isHR, isTeacher, isStudent, isGuest]);
+};
