@@ -11,6 +11,7 @@ import ProfileLayout from '@/layouts/ProfileLayout'
 import StudentRoute from './components/StudentRoute'
 import { Toaster } from './components/ui/sonner'
 import { ErrorBoundary } from "react-error-boundary"
+import AdminTicketList from './components/admin/AdminTicketList'
 
 // Create a shared query client for the entire application
 const queryClient = new QueryClient({
@@ -78,6 +79,14 @@ const UserRoleManager = lazy(() => import('./pages/Admin/components/UserRoleMana
 
 // Import du composant HomePage 
 const HomePage = lazy(() => import('./components/HomePage'))
+
+// Ticket system components
+const TicketList = lazy(() => import('./components/TicketList'))
+const TicketForm = lazy(() => import('./components/TicketForm'))
+const TicketDetail = lazy(() => import('./components/TicketDetail'))
+
+// Import the TicketServiceList component
+const TicketServiceList = lazy(() => import('./components/admin/TicketServiceList'))
 
 // Fonction optimisée pour le préchargement intelligent des pages
 // Ne charge que les pages pertinentes en fonction du contexte et du chemin actuel
@@ -462,6 +471,20 @@ const AppContent = () => {
                       </RoleGuard>
                     } />
                     
+                    {/* Ticket Service Management - Admin Only */}
+                    <Route path="/admin/ticket-services" element={
+                      <RoleGuard roles={[ROLES.ADMIN, ROLES.SUPERADMIN]} fallback={<Navigate to="/dashboard" replace />}>
+                        <TicketServiceList />
+                      </RoleGuard>
+                    } />
+                    
+                    {/* Admin Ticket Management */}
+                    <Route path="/admin/tickets" element={
+                      <RoleGuard roles={[ROLES.ADMIN, ROLES.SUPERADMIN]} fallback={<Navigate to="/dashboard" replace />}>
+                        <AdminTicketList />
+                      </RoleGuard>
+                    } />
+                    
                     {/* Routes étudiantes */}
                     <Route path="/student">
                       <Route path="dashboard" element={
@@ -544,6 +567,11 @@ const AppContent = () => {
                       </RoleGuard>
                     } />
                   </Route>
+                  
+                  {/* Ticket routes - fix double MainLayout issue */}
+                  <Route path="/tickets" element={<TicketList />} />
+                  <Route path="/tickets/new" element={<TicketForm />} />
+                  <Route path="/tickets/:id" element={<TicketDetail />} />
                   
                   {/* Redirection des routes inconnues vers la page d'accueil */}
                   <Route path="*" element={<Navigate to="/" replace />} />
