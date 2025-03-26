@@ -54,7 +54,7 @@ const CareerSettings = lazy(() => import('./pages/Global/Profile/views/CareerSet
 const ProfileView = lazy(() => import('./pages/Global/Profile/views/ProfileView'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 
-const Regulations = lazy(() => import('./pages/Regulation'))
+const Mentionslegales = lazy(() => import('./pages/Mentionslegales'))
 
 // Dashboards spécifiques par rôle
 const AdminDashboard = lazy(() => import('./pages/Admin/Dashboard'))
@@ -392,7 +392,7 @@ const AppContent = () => {
                 <Route element={<MainLayout />}>
                   {/* Route racine avec redirection automatique */}
                   <Route path="/" element={<HomePage />} />
-                  <Route path="/regulation" element={<Regulations />} />
+                  <Route path="/mentionlegales" element={<Mentionslegales />} />
                   
                   {/* Routes publiques - Accès interdit aux utilisateurs authentifiés */}
                   <Route element={<PublicRoute />}>
