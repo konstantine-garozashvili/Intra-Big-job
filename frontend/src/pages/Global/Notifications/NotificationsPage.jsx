@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, FileCheck, FileX, File, Info, Calendar, Check, Undo, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -18,6 +18,8 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import NotificationBadge from '@/components/NotificationBadge';
+import { toast } from 'sonner';
+import MockModeBanner from '@/components/MockModeBanner';
 
 // Composant pour afficher une icône en fonction du type de notification
 const NotificationIcon = ({ type, className }) => {
@@ -38,38 +40,21 @@ const NotificationIcon = ({ type, className }) => {
 };
 
 // Composant pour une notification individuelle
-const NotificationItem = ({ notification, onRead }) => {
-  const navigate = useNavigate();
+const NotificationItem = ({ notification, onRead, onClick }) => {
   const [isHovering, setIsHovering] = useState(false);
   
   const formattedDate = format(new Date(notification.createdAt), 'dd MMM yyyy, HH:mm', { locale: fr });
   const relativeTime = formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true, locale: fr });
   
-  const handleClick = async () => {
-    try {
-      if (!notification.isRead) {
-        await notificationService.markAsRead(notification.id);
-      }
-      if (notification.targetUrl) {
-        navigate(notification.targetUrl);
-      }
-      if (onRead) {
-        onRead(notification);
-      }
-    } catch (error) {
-      console.error('Error handling notification click:', error);
-    }
-  };
-  
   return (
     <Card 
       className={cn(
         "cursor-pointer mb-3 transition-shadow hover:shadow-md",
-        !notification.isRead ? "border-l-4 border-l-blue-500 dark:border-l-blue-400" : ""
+        !notification.readAt ? "border-l-4 border-l-blue-500 dark:border-l-blue-400" : ""
       )}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
-      onClick={handleClick}
+      onClick={() => onClick(notification)}
     >
       <CardContent className="p-4">
         <div className="flex items-start">
@@ -80,7 +65,7 @@ const NotificationItem = ({ notification, onRead }) => {
             <div className="flex justify-between items-start">
               <h3 className={cn(
                 "text-base font-medium",
-                !notification.isRead ? "text-gray-900 dark:text-white" : "text-gray-700 dark:text-gray-300"
+                !notification.readAt ? "text-gray-900 dark:text-white" : "text-gray-700 dark:text-gray-300"
               )}>
                 {notification.title}
               </h3>
@@ -154,28 +139,76 @@ const NotificationsPage = () => {
     pages: 1
   });
   const [activeTab, setActiveTab] = useState('all');
+  const hasFetchedRef = useRef(false);
+  const navigate = useNavigate();
+  
+  // État pour suivre si nous sommes en mode simulé
+  const [isSimulatedMode, setIsSimulatedMode] = useState(false);
   
   // Fonction pour charger les notifications
   const loadNotifications = async (page = 1, includeRead = true) => {
+    // Si nous sommes déjà en train de charger, ne pas relancer
+    if (loading && hasFetchedRef.current) return;
+    
     setLoading(true);
     try {
+      // Essayer de récupérer d'abord depuis le cache pour avoir une réponse immédiate
+      const cachedData = notificationService.cache.notifications;
+      if (cachedData && cachedData.notifications && cachedData.notifications.length > 0) {
+        console.log("Using cached data for immediate display");
+        
+        // Afficher d'abord les données du cache
+        setNotifications(cachedData.notifications || []);
+        setPagination({
+          page: cachedData.pagination?.page || page,
+          limit: cachedData.pagination?.limit || 10,
+          total: cachedData.pagination?.total || 0,
+          pages: cachedData.pagination?.pages || 1
+        });
+        setError(null);
+        
+        // Mettre à jour le mode simulé
+        setIsSimulatedMode(notificationService.useMockBackend);
+        
+        // Réduire le temps de chargement affiché
+        setTimeout(() => setLoading(false), 100);
+      }
+      
+      // Ensuite, faire l'appel API réel
+      console.log("Fetching fresh notifications data");
       const result = await notificationService.getNotifications(
         page, 
         pagination.limit, 
         includeRead,
-        true
+        !hasFetchedRef.current // Forcer le rafraîchissement seulement au premier chargement
       );
-      setNotifications(result.notifications || []);
-      setPagination({
-        page: page,
-        limit: pagination.limit,
-        total: result.pagination?.total || 0,
-        pages: result.pagination?.pages || 1
-      });
+      
+      // Ne mettre à jour que si les données sont différentes
+      if (JSON.stringify(result.notifications) !== JSON.stringify(notifications)) {
+        setNotifications(result.notifications || []);
+        setPagination({
+          page: page,
+          limit: pagination.limit,
+          total: result.pagination?.total || 0,
+          pages: result.pagination?.pages || 1
+        });
+      }
+      
+      // Mettre à jour le mode simulé
+      setIsSimulatedMode(notificationService.useMockBackend);
+      
       setError(null);
+      hasFetchedRef.current = true;
     } catch (error) {
       console.error('Error loading notifications:', error);
-      setError('Erreur lors du chargement des notifications. Veuillez réessayer.');
+      
+      // Ne pas montrer d'erreur si nous avons déjà des données à afficher
+      if (notifications.length === 0) {
+        setError('Erreur lors du chargement des notifications. Veuillez réessayer.');
+      }
+      
+      // Mettre à jour le mode simulé
+      setIsSimulatedMode(notificationService.useMockBackend);
     } finally {
       setLoading(false);
     }
@@ -203,7 +236,6 @@ const NotificationsPage = () => {
       // Mise à jour de l'UI sans recharger
       setNotifications(notifications.map(notification => ({
         ...notification,
-        isRead: true,
         readAt: new Date().toISOString()
       })));
       
@@ -220,6 +252,61 @@ const NotificationsPage = () => {
   // Gestion des onglets
   const handleTabChange = (value) => {
     setActiveTab(value);
+  };
+  
+  // Fonction pour créer une notification de test
+  const createTestNotification = async (type = 'document', targetUrl = '/dashboard') => {
+    try {
+      await notificationService.createTestNotification(type, targetUrl);
+      toast.success(`Notification de test (${type}) créée avec succès`);
+      
+      // Forcer un rafraîchissement complet du cache
+      notificationService.resetCache();
+      hasFetchedRef.current = false;
+      
+      // Recharger les notifications avec une légère pause pour laisser le temps au service de se réinitialiser
+      setTimeout(() => {
+        loadNotifications(1, activeTab === 'all');
+      }, 100);
+    } catch (error) {
+      console.error('Error creating test notification:', error);
+      toast.error(`Erreur lors de la création de la notification: ${error.message || 'Erreur inconnue'}`);
+    }
+  };
+  
+  // Fonction pour marquer une notification comme lue et naviguer vers sa cible
+  const handleClick = async (notification) => {
+    try {
+      if (!notification.readAt) {
+        // Mettre à jour l'interface immédiatement pour un retour visuel instantané
+        const updatedNotifications = notifications.map(n => 
+          n.id === notification.id ? { ...n, readAt: new Date().toISOString() } : n
+        );
+        setNotifications(updatedNotifications);
+        
+        // Effectuer la requête API en arrière-plan
+        await notificationService.markAsRead(notification.id);
+        console.log('Notification marked as read:', notification.id);
+        
+        // Forcer la mise à jour du compteur de notifications non lues
+        notificationService.getUnreadCount(true);
+      }
+      
+      // Vérifier si l'URL cible est valide avant de rediriger
+      if (notification.targetUrl && notification.targetUrl.startsWith('/')) {
+        navigate(notification.targetUrl);
+      } else {
+        // Si l'URL n'est pas valide, rester sur la page des notifications
+        console.warn('Invalid targetUrl in notification:', notification.targetUrl);
+      }
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      // Ne pas afficher de message d'erreur à l'utilisateur pour ne pas perturber l'expérience
+      // La navigation doit quand même se faire même si le marquage échoue
+      if (notification.targetUrl && notification.targetUrl.startsWith('/')) {
+        navigate(notification.targetUrl);
+      }
+    }
   };
   
   // Rendu des notifications ou des états alternatifs
@@ -239,15 +326,33 @@ const NotificationsPage = () => {
     if (error) {
       return (
         <div className="text-center p-8">
-          <p className="text-red-500 dark:text-red-400">{error}</p>
-          <Button 
-            onClick={() => loadNotifications(pagination.page, activeTab === 'all')}
-            variant="outline"
-            className="mt-4"
-          >
-            <Undo className="h-4 w-4 mr-2" />
-            Réessayer
-          </Button>
+          <p className={isSimulatedMode ? "text-blue-500" : "text-red-500"}>
+            {isSimulatedMode 
+              ? "Le serveur n'est pas disponible. Les données sont simulées localement." 
+              : error}
+          </p>
+          
+          {!isSimulatedMode && (
+            <Button 
+              onClick={() => loadNotifications(pagination.page, activeTab === 'all')}
+              variant="outline"
+              className="mt-4"
+            >
+              <Undo className="h-4 w-4 mr-2" />
+              Réessayer
+            </Button>
+          )}
+          
+          {isSimulatedMode && (
+            <Button 
+              onClick={() => createTestNotification()}
+              variant="outline"
+              className="mt-4"
+            >
+              <Bell className="h-4 w-4 mr-2" />
+              Créer une notification de test
+            </Button>
+          )}
         </div>
       );
     }
@@ -265,9 +370,13 @@ const NotificationsPage = () => {
             onRead={() => {
               // Rafraîchir la liste si on est dans l'onglet non lues
               if (activeTab === 'unread') {
-                loadNotifications(pagination.page, false);
+                // Ajouter un petit délai pour que l'effet visuel soit visible
+                setTimeout(() => {
+                  loadNotifications(pagination.page, false);
+                }, 300);
               }
             }} 
+            onClick={handleClick}
           />
         ))}
       </div>
@@ -289,18 +398,50 @@ const NotificationsPage = () => {
           )}
         </div>
         
-        {pagination.total > 0 && (
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={handleMarkAllAsRead}
-            className="flex items-center"
-          >
-            <Check className="h-4 w-4 mr-2" />
-            <span>Tout marquer comme lu</span>
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {pagination.total > 0 && (
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={handleMarkAllAsRead}
+              className="flex items-center"
+            >
+              <Check className="h-4 w-4 mr-2" />
+              <span>Tout marquer comme lu</span>
+            </Button>
+          )}
+          
+          {isSimulatedMode && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <span>Créer notification test</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => createTestNotification('document_uploaded', '/documents')}>
+                  Document déposé
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => createTestNotification('document_approved', '/documents')}>
+                  Document approuvé
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => createTestNotification('document_rejected', '/documents')}>
+                  Document rejeté
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => createTestNotification('system', '/dashboard')}>
+                  Message système
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => createTestNotification('announcement', '/events')}>
+                  Annonce
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
       </div>
+      
+      {isSimulatedMode && <MockModeBanner />}
       
       <Tabs defaultValue="all" value={activeTab} onValueChange={handleTabChange}>
         <TabsList className="mb-4">
