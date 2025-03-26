@@ -12,7 +12,7 @@ import {
   User,
   Bell,
   Search,
-  Clipboard,
+  Clipboard
 } from "lucide-react";
 import {
   DropdownMenu,
