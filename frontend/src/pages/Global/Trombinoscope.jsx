@@ -73,7 +73,7 @@ const UserModal = ({ user, onClose }) => {
               <img
                 src={getProfilePictureUrl(user.profilePicturePath)}
                 alt={`${user.firstName} ${user.lastName}`}
-                className="w-36 h-36 rounded-full object-cover shadow-lg shadow-blue-100 dark:shadow-blue-900"
+                className="w-36 h-36 rounded-full object-cover shadow-lg shadow-blue-100 dark:shadow-blue-900 transition-transform duration-300 hover:scale-110"
                 onError={(e) => {
                   e.target.onerror = null;
                   e.target.src = '/default-avatar.png';
@@ -81,8 +81,9 @@ const UserModal = ({ user, onClose }) => {
               />
             </div>
             <div className="flex-1">
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                {user.firstName} {user.lastName}
+              <h3 className="text-xl font-semibold text-white relative inline-block mb-4">
+                <span className="relative z-10 px-4">{user.firstName} {user.lastName}</span>
+                <span className="absolute inset-0 bg-gradient-to-r from-blue-400 to-blue-600 rounded-lg px-4"></span>
               </h3>
               <p className="text-base text-gray-500 dark:text-gray-400 mb-2 flex items-center">
                 <Mail className="w-4 h-4 mr-2 text-blue-500" />
@@ -105,9 +106,25 @@ const UserModal = ({ user, onClose }) => {
                 {roles.map((role, index) => (
                   <span
                     key={index}
-                    className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 flex items-center"
+                    className={`px-2 py-1 text-xs font-medium rounded-full flex items-center ${
+                      role === 'STUDENT' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                      role === 'TEACHER' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200' :
+                      role === 'HR' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
+                      role === 'ADMIN' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' :
+                      role === 'SUPER_ADMIN' || role === 'SUPERADMIN' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                      role === 'RECRUITER' ? 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200' :
+                      'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+                    }`}
                   >
-                    <Shield className="w-3 h-3 mr-1 text-blue-500" />
+                    <Shield className={`w-3 h-3 mr-1 ${
+                      role === 'STUDENT' ? 'text-blue-500' :
+                      role === 'TEACHER' ? 'text-emerald-500' :
+                      role === 'HR' ? 'text-purple-500' :
+                      role === 'ADMIN' ? 'text-amber-500' :
+                      role === 'SUPER_ADMIN' || role === 'SUPERADMIN' ? 'text-red-500' :
+                      role === 'RECRUITER' ? 'text-pink-500' :
+                      'text-gray-500'
+                    }`} />
                     {role}
                   </span>
                 ))}
@@ -115,25 +132,23 @@ const UserModal = ({ user, onClose }) => {
             </div>
           </div>
 
-          <div className="mt-8 pt-3 border-t border-gray-200 dark:border-gray-700">
-            <div className="flex justify-start gap-3 pl-8">
-              <Link
-                to={`/profile/${user.id}`}
-                className="flex items-center px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-              >
-                <User className="w-4 h-4 mr-2" />
-                Voir le profil complet
-              </Link>
-              
-              <button
-                onClick={handleDownloadCV}
-                disabled={isDownloading || !user.cvDocument}
-                className="flex items-center px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 text-sm"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                {isDownloading ? 'Téléchargement...' : 'Télécharger le CV'}
-              </button>
-            </div>
+          <div className="mt-12 flex justify-start gap-3 pl-8">
+            <Link
+              to={`/profile/${user.id}`}
+              className="flex items-center px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+            >
+              <User className="w-4 h-4 mr-2" />
+              Voir le profil complet
+            </Link>
+            
+            <button
+              onClick={handleDownloadCV}
+              disabled={isDownloading || !user.cvDocument}
+              className="flex items-center px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 text-sm"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              {isDownloading ? 'Téléchargement...' : 'Télécharger le CV'}
+            </button>
           </div>
         </div>
       </div>
@@ -144,22 +159,12 @@ const UserModal = ({ user, onClose }) => {
 const UserCard = ({ user, onClick }) => {
   const roles = user.userRoles?.map(ur => ur.role.name) || [];
   
-  // Récupérer l'adresse principale de manière sécurisée
-  const mainAddress = user.addresses?.[0];
-  
-  // Récupérer la ville de manière sécurisée (plusieurs formats possibles)
-  const cityName = 
-    user.city || // Format direct dans user
-    (mainAddress?.city?.name) || // Format objet imbriqué
-    (mainAddress?.city) || // Format chaîne directe
-    "Non renseignée";
-  
   return (
     <div 
-      className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 hover:shadow-lg shadow-blue-100 transition-shadow duration-200 cursor-pointer"
+      className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 hover:shadow-lg shadow-blue-100 transition-all duration-300 cursor-pointer hover:scale-105 aspect-square flex flex-col items-center justify-between"
       onClick={() => onClick(user)}
     >
-      <div className="flex items-center space-x-4">
+      <div className="w-full flex flex-col items-center space-y-6">
         <div className="relative">
           <img
             src={getProfilePictureUrl(user.profilePicturePath)}
@@ -171,34 +176,34 @@ const UserCard = ({ user, onClick }) => {
             }}
           />
         </div>
-        <div className="flex-1">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            {user.firstName} {user.lastName}
+        <div className="text-center">
+          <h3 className="text-base font-semibold text-white relative inline-block mb-2">
+            <span className="relative z-10 px-3">{user.firstName} {user.lastName}</span>
+            <span className="absolute inset-0 bg-gradient-to-r from-blue-400 to-blue-600 rounded-lg px-3"></span>
           </h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center">
-            <Mail className="w-3 h-3 mr-1 text-blue-500" />
-            {user.email}
-          </p>
-          <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center">
-            <MapPin className="w-3 h-3 mr-1 text-blue-500" />
-            {cityName}
-          </p>
-
-          {user.specialization && (
-            <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center">
-              <GraduationCap className="w-3 h-3 mr-1 text-blue-500" />
-              {user.specialization.domain?.name && `${user.specialization.domain.name} • `}
-              {user.specialization.name}
-            </p>
-          )}
-
-          <div className="flex flex-wrap gap-2 mt-2">
+          <div className="flex flex-wrap justify-center gap-2">
             {roles.map((role, index) => (
               <span
                 key={index}
-                className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 flex items-center"
+                className={`px-2 py-1 text-xs font-medium rounded-full flex items-center ${
+                  role === 'STUDENT' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                  role === 'TEACHER' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200' :
+                  role === 'HR' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
+                  role === 'ADMIN' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' :
+                  role === 'SUPER_ADMIN' || role === 'SUPERADMIN' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                  role === 'RECRUITER' ? 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200' :
+                  'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+                }`}
               >
-                <Shield className="w-3 h-3 mr-1 text-blue-500" />
+                <Shield className={`w-3 h-3 mr-1 ${
+                  role === 'STUDENT' ? 'text-blue-500' :
+                  role === 'TEACHER' ? 'text-emerald-500' :
+                  role === 'HR' ? 'text-purple-500' :
+                  role === 'ADMIN' ? 'text-amber-500' :
+                  role === 'SUPER_ADMIN' || role === 'SUPERADMIN' ? 'text-red-500' :
+                  role === 'RECRUITER' ? 'text-pink-500' :
+                  'text-gray-500'
+                }`} />
                 {role}
               </span>
             ))}
@@ -276,7 +281,7 @@ const UsersList = () => {
           Aucun utilisateur trouvé
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
           {filteredUsers?.map((user) => (
             <UserCard 
               key={user.id} 
