@@ -25,7 +25,9 @@ import {
   ChevronDown,
   ChevronRight,
   X,
-  Menu
+  Menu,
+  ClipboardCheck,
+  Ticket
 } from 'lucide-react';
 import { useRolePermissions } from '@/features/roles/useRolePermissions';
 
@@ -398,6 +400,8 @@ const MenuBurger = memo(() => {
       roles: [ROLES.SUPERADMIN, ROLES.ADMIN],
       links: [
         { name: 'Gestion des Formations', to: '/admin/formations', roles: [ROLES.SUPERADMIN] },
+        { name: 'Gestion des Services de Support', to: '/admin/ticket-services', roles: [ROLES.SUPERADMIN, ROLES.ADMIN] },
+        { name: 'Gestion des Tickets', to: '/admin/tickets', roles: [ROLES.SUPERADMIN, ROLES.ADMIN] },
         { name: 'Suivi des Inscriptions', to: '/admin/inscriptions', roles: [ROLES.SUPERADMIN] },
         { name: 'Gestion des Paiements', to: '/admin/paiements', roles: [ROLES.SUPERADMIN] },
         { name: 'Suivi des Absences', to: '/admin/absences', roles: [ROLES.SUPERADMIN] },
@@ -477,16 +481,15 @@ const MenuBurger = memo(() => {
       ],
     },
     
-    // --- SECTION AIDE (pour tous) ---
+    // Move "Besoin d'aide" to the end
     {
       key: 'aide',
-      label: "Besoin d'aide ?",
-      icon: <Calendar className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      label: "Besoin d'aide",
+      icon: <Ticket className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.TEACHER, ROLES.STUDENT, ROLES.HR, ROLES.RECRUITER, ROLES.GUEST],
       links: [
-        { name: 'FAQ', to: '/aide/faq' },
-        { name: 'Forum', to: '/aide/forum' },
-        { name: 'Supports', to: '/aide/supports' },
-        { name: 'Contact', to: '/aide/contact' },
+        { name: 'Créer un ticket', to: '/tickets/new', roles: [ROLES.TEACHER, ROLES.STUDENT, ROLES.HR, ROLES.RECRUITER, ROLES.GUEST] },
+        { name: 'Mes tickets', to: '/tickets', roles: [ROLES.TEACHER, ROLES.STUDENT, ROLES.HR, ROLES.RECRUITER, ROLES.GUEST] },
       ],
     },
   ];
@@ -587,7 +590,7 @@ const MenuBurger = memo(() => {
 
                 <div className="scrollable-div overflow-y-auto flex-grow">
                   <ul className="py-2">
-                    {menuItems.map(({ key, icon, label, roles: itemRoles, links, to }) => {
+                    {menuItems.map(({ key, icon, label, roles: itemRoles, links, to, onClick }) => {
                       // Si l'élément n'a pas de rôles définis ou si l'utilisateur a les rôles requis
                       if (!itemRoles || hasAnyRole(itemRoles)) {
                         return (
@@ -595,10 +598,28 @@ const MenuBurger = memo(() => {
                             {to ? (
                               // Élément de menu simple avec lien direct
                               <li className="menu-item">
-                                <Link to={to} className="flex items-center px-4 py-2.5 w-full" onClick={() => setMenuOpen(false)}>
-                                  {icon}
-                                  <span>{label}</span>
-                                </Link>
+                                {key === 'support' ? (
+                                  // Special handler for support item
+                                  <div 
+                                    className="flex items-center px-4 py-2.5 w-full cursor-pointer" 
+                                    onClick={() => {
+                                      setMenuOpen(false);
+                                      navigate('/tickets');
+                                    }}
+                                  >
+                                    {icon}
+                                    <span>{label}</span>
+                                  </div>
+                                ) : (
+                                  <Link 
+                                    to={to} 
+                                    className="flex items-center px-4 py-2.5 w-full" 
+                                    onClick={() => setMenuOpen(false)}
+                                  >
+                                    {icon}
+                                    <span>{label}</span>
+                                  </Link>
+                                )}
                               </li>
                             ) : (
                               // Élément de menu avec sous-menu
