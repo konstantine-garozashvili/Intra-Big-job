@@ -12,14 +12,32 @@ export const queryClient = new QueryClient({
       cacheTime: 5 * 60 * 1000, // 5 minutes
       refetchOnWindowFocus: false,
       retry: 1,
-      logging: false, // Disable query logging in console
+      logging: true, // Enable query logging in development
+      refetchOnMount: true,
+      gcTime: 10 * 60 * 1000, // 10 minutes before garbage collection
     },
   },
-  logger: {
-    log: () => {},
-    warn: () => {},
-    error: () => {}
-  }
+  // Only log in development
+  logger: import.meta.env.DEV 
+    ? {
+        log: (...args) => console.log(...args),
+        warn: (...args) => console.warn(...args),
+        error: (...args) => console.error(...args)
+      }
+    : {
+        log: () => {},
+        warn: () => {},
+        error: () => {}
+      }
+});
+
+// Create a test query to ensure devtools has data
+queryClient.prefetchQuery({
+  queryKey: ['queryClient-test-query'],
+  queryFn: async () => {
+    console.log('QueryClient test query executed');
+    return { message: 'QueryClient test query', timestamp: new Date().toISOString() };
+  },
 });
 
 /**

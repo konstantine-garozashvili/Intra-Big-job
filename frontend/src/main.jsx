@@ -26,6 +26,15 @@ queryDevToolsStyle.innerHTML = `
 `
 document.head.appendChild(queryDevToolsStyle)
 
+// Create a test query to ensure devtools has data
+queryClient.prefetchQuery({
+  queryKey: ['main-test-query'],
+  queryFn: async () => {
+    console.log('Main test query executed');
+    return { message: 'Main test query', timestamp: new Date().toISOString() };
+  },
+});
+
 // StrictMode est activé pour assurer une meilleure qualité du code
 // Note: Si des problèmes d'interface surviennent pendant le développement (double montage/démontage),
 // vous pouvez temporairement désactiver StrictMode en supprimant les balises <StrictMode>
@@ -34,7 +43,7 @@ createRoot(document.getElementById('root')).render(
     <QueryClientProvider client={queryClient}>
       <App />
       {/* Les DevTools ne sont affichés qu'en développement */}
-      {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={true} />} 
+      {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />} 
     </QueryClientProvider>
   </StrictMode>
 )
