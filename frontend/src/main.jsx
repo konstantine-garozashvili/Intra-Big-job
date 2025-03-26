@@ -7,7 +7,7 @@ import './index.css'
 import { queryClient } from './lib/services/queryClient'
 
 // Expose queryClient globally for debugging
-window.queryClient = queryClient;
+// window.queryClient = queryClient;
 
 // Create a style element for ReactQueryDevtools
 const queryDevToolsStyle = document.createElement('style')
@@ -17,23 +17,27 @@ queryDevToolsStyle.innerHTML = `
     background: rgba(255, 255, 255, 0.95) !important;
     border-radius: 8px !important;
     box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2) !important;
+    max-height: 70vh !important;
+    overflow: auto !important;
+    width: 400px !important;
+    left: 12px !important;
+    position: fixed !important;
+    bottom: 12px !important;
   }
   .__react-query-devtools-button__ {
     z-index: 99999 !important;
     bottom: 12px !important;
     left: 12px !important;
+    position: fixed !important;
+  }
+  .__react-query-devtools-panel__ .react-query-devtools__content {
+    padding: 16px !important;
+  }
+  .__react-query-devtools-panel__ .react-query-devtools__header {
+    cursor: move !important;
   }
 `
 document.head.appendChild(queryDevToolsStyle)
-
-// Create a test query to ensure devtools has data
-queryClient.prefetchQuery({
-  queryKey: ['main-test-query'],
-  queryFn: async () => {
-    console.log('Main test query executed');
-    return { message: 'Main test query', timestamp: new Date().toISOString() };
-  },
-});
 
 // StrictMode est activé pour assurer une meilleure qualité du code
 // Note: Si des problèmes d'interface surviennent pendant le développement (double montage/démontage),
@@ -43,7 +47,30 @@ createRoot(document.getElementById('root')).render(
     <QueryClientProvider client={queryClient}>
       <App />
       {/* Les DevTools ne sont affichés qu'en développement */}
-      {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />} 
+      {import.meta.env.DEV && (
+        <ReactQueryDevtools
+          initialIsOpen={true}
+          position="bottom-left"
+          buttonPosition="bottom-left"
+          layout="horizontal"
+          panelProps={{
+            style: {
+              position: 'fixed',
+              bottom: '12px',
+              left: '12px',
+              zIndex: 99999,
+              width: '400px',
+              height: '70vh',
+              overflow: 'auto'
+            }
+          }}
+          devtoolsProps={{
+            initialIsOpen: true,
+            position: 'bottom-left',
+            layout: 'horizontal'
+          }}
+        />
+      )}
     </QueryClientProvider>
   </StrictMode>
 )

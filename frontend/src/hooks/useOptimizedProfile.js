@@ -53,38 +53,39 @@ export const useOptimizedProfile = (options = {}) => {
             return parsedData;
           }
         }
-      } catch (e) {
-        console.warn("useOptimizedProfile - Error accessing cached data:", e);
-      }
-      
-      // Use the optimized getUserProfile method from apiService
-      console.log("useOptimizedProfile - Fetching profile data");
-      try {
-        // Set a shorter timeout to fail fast and use cache
+        
+        // If we don't have fresh cache or skipCache is true, fetch from API
+        console.log("useOptimizedProfile - Fetching fresh data from API");
         const userData = await apiService.getUserProfile({
-          timeout: 2000, // Short timeout for faster fallback to cache
-          retries: 0,    // No retries to speed up response
-          minimal: !options.fullData // Request minimal data by default to save memory
+          timeout: 2000,
+          retries: 0,
+          minimal: !options.fullData
         });
         
         return userData;
       } catch (error) {
-        console.error("useOptimizedProfile - Error fetching profile data:", error);
+        console.error("Error in useOptimizedProfile:", error);
         
-        // Try to use cached data as fallback
+        // Try to use cached data as fallback even if it's older
         try {
           const cachedData = localStorage.getItem('user');
           if (cachedData) {
             console.log("useOptimizedProfile - Using cached data as fallback after error");
             return JSON.parse(cachedData);
           }
-        } catch (e) {
-          // Error parsing cache
+        } catch (cacheError) {
+          // If we can't even use the cache, rethrow the original error
         }
         
-        // Rethrow the error if we couldn't get fallback data
         throw error;
       }
+    },
+    // Track this query in devtools with detailed information
+    meta: {
+      tracked: true,
+      source: 'useOptimizedProfile',
+      type: 'profile',
+      userId: sessionId
     },
     // Optimized parameters for stability and performance with memory efficiency
     staleTime: 30000, // 30 seconds (reduced from minutes to ensure freshness)
@@ -96,6 +97,7 @@ export const useOptimizedProfile = (options = {}) => {
     retryDelay: 1000, // Fast retry delay
     // Memory optimization: limit cache size in React Query
     gcTime: 10 * 60 * 1000, // 10 minutes before garbage collection
+    // Apply any additional options passed to the hook
     ...options,
   });
 };

@@ -12,33 +12,50 @@ export const queryClient = new QueryClient({
       cacheTime: 5 * 60 * 1000, // 5 minutes
       refetchOnWindowFocus: false,
       retry: 1,
-      logging: true, // Enable query logging in development
-      refetchOnMount: true,
       gcTime: 10 * 60 * 1000, // 10 minutes before garbage collection
+      // Enable detailed logging in development mode
+      logging: import.meta.env.DEV,
+      // Track queries in devtools
+      meta: {
+        tracked: true,
+        devtools: {
+          enabled: import.meta.env.DEV,
+          position: 'bottom',
+          initialIsOpen: true,
+          layout: 'horizontal'
+        }
+      }
     },
   },
-  // Only log in development
+  // Enable detailed logging in development mode only
   logger: import.meta.env.DEV 
     ? {
-        log: (...args) => console.log(...args),
-        warn: (...args) => console.warn(...args),
-        error: (...args) => console.error(...args)
+        log: (...args) => console.log('[ReactQuery]', ...args),
+        warn: (...args) => console.warn('[ReactQuery]', ...args),
+        error: (...args) => console.error('[ReactQuery]', ...args)
       }
     : {
         log: () => {},
         warn: () => {},
-        error: () => {}
+        error: (...args) => console.error(...args)
       }
 });
 
-// Create a test query to ensure devtools has data
-queryClient.prefetchQuery({
-  queryKey: ['queryClient-test-query'],
-  queryFn: async () => {
-    console.log('QueryClient test query executed');
-    return { message: 'QueryClient test query', timestamp: new Date().toISOString() };
-  },
-});
+// Initialize the queryClient with some test data for debugging
+if (import.meta.env.DEV) {
+  // Add a test query that stays active
+  queryClient.setQueryData(['persistent-test-query'], {
+    message: 'React Query is working!',
+    timestamp: new Date().toISOString(),
+    status: 'active'
+  });
+
+  // Add a test mutation
+  queryClient.setQueryData(['persistent-mutation'], {
+    message: 'Mutation example',
+    status: 'idle'
+  });
+}
 
 /**
  * Définit l'instance du queryClient
