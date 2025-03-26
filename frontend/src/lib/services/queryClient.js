@@ -55,6 +55,12 @@ if (import.meta.env.DEV) {
     message: 'Mutation example',
     status: 'idle'
   });
+
+  // Add a test error state
+  queryClient.setQueryData(['error-test-query'], {
+    message: 'Error state example',
+    status: 'error'
+  });
 }
 
 /**

@@ -84,8 +84,14 @@ function useIntelligentPreload() {
   // Initialize queryClient with test data for debugging
   useEffect(() => {
     if (import.meta.env.DEV) {
-      queryClient.setQueryData(['test-query'], {
-        message: 'React Query is working!'
+      queryClient.setQueryData(['persistent-test-query'], {
+        message: 'React Query is working!',
+        timestamp: new Date().toISOString(),
+        status: 'active'
+      });
+      queryClient.setQueryData(['persistent-mutation'], {
+        message: 'Mutation example',
+        status: 'idle'
       });
     }
   }, []);
