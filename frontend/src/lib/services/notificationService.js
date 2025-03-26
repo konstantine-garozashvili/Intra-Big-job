@@ -188,6 +188,20 @@ class NotificationService {
    */
   async getUnreadCount(refresh = false) {
     try {
+      // Si nous forçons un rafraîchissement, notifions immédiatement les abonnés
+      // avec le compteur actuel pour une interface réactive
+      if (refresh) {
+        // Calculer le compteur actuel basé sur les notifications en cache
+        let currentCount = 0;
+        if (this.cache.notifications && this.cache.notifications.notifications) {
+          currentCount = this.cache.notifications.notifications.filter(n => !n.readAt).length;
+          // Mettre à jour le cache immédiatement
+          this.cache.unreadCount = currentCount;
+          // Notifier les abonnés immédiatement avec le compteur à jour
+          this.notifySubscribers();
+        }
+      }
+      
       // Return from cache if available and not refreshing
       if (!refresh && this.cache.lastFetch) {
         const now = new Date();
@@ -390,18 +404,24 @@ class NotificationService {
         // Essayez d'utiliser l'API réelle
         const response = await apiService.post(`/api/notifications/${notificationId}/mark-read`);
         
-        // Update cache
+        // Update cache unread count immediately
         this.cache.unreadCount = response.data.unread_count || 0;
         
         // Update notification in cache if available
         if (this.cache.notifications && this.cache.notifications.notifications) {
+          // Mettre à jour la notification spécifique
           const notification = this.cache.notifications.notifications.find(n => n.id === notificationId);
-          if (notification) {
+          if (notification && !notification.readAt) {
             // Marquer comme lu de manière cohérente - utiliser readAt
             notification.readAt = new Date().toISOString();
             
             // Pour maintenir la compatibilité avec le code existant
             notification.isRead = true;
+            
+            // Mettre à jour le compteur dans l'objet de réponse
+            if (this.cache.notifications.unread_count !== undefined) {
+              this.cache.notifications.unread_count = Math.max(0, this.cache.notifications.unread_count - 1);
+            }
           }
         }
         
@@ -444,7 +464,7 @@ class NotificationService {
         // Essayez d'utiliser l'API réelle
         const response = await apiService.post('/api/notifications/mark-read');
         
-        // Update cache
+        // Update cache - Set unread count to zero immediately
         this.cache.unreadCount = 0;
         
         // Update notifications in cache if available
@@ -456,6 +476,11 @@ class NotificationService {
             // Pour maintenir la compatibilité avec le code existant
             notification.isRead = true;
           });
+          
+          // Mettre à jour le compteur dans l'objet de réponse
+          if (this.cache.notifications.unread_count !== undefined) {
+            this.cache.notifications.unread_count = 0;
+          }
         }
         
         // Notify subscribers

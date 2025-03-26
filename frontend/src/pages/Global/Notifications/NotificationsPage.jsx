@@ -220,6 +220,22 @@ const NotificationsPage = () => {
     loadNotifications(1, includeRead);
   }, [activeTab]);
   
+  // Surveiller les modifications du compteur de notifications non lues
+  useEffect(() => {
+    // S'abonner aux mises à jour des notifications
+    const unsubscribe = notificationService.subscribe(data => {
+      // Mettre à jour le compteur de pagination dans l'onglet des non lues
+      if (activeTab === 'unread' || data.unreadCount === 0) {
+        setPagination(prev => ({
+          ...prev,
+          total: data.unreadCount
+        }));
+      }
+    });
+    
+    return () => unsubscribe();
+  }, [activeTab]);
+  
   // Gérer le changement de page
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= pagination.pages) {
@@ -238,6 +254,12 @@ const NotificationsPage = () => {
         ...notification,
         readAt: new Date().toISOString()
       })));
+      
+      // Réinitialiser le compteur de notifications non lues
+      setPagination(prev => ({
+        ...prev,
+        total: 0
+      }));
       
       // Si on est sur l'onglet "non lues", recharger pour les retirer
       if (activeTab === 'unread') {
@@ -284,12 +306,20 @@ const NotificationsPage = () => {
         );
         setNotifications(updatedNotifications);
         
+        // Mettre à jour le compteur de pagination si nous sommes dans l'onglet de toutes les notifications
+        if (activeTab === 'all') {
+          setPagination(prev => ({
+            ...prev,
+            total: prev.total > 0 ? prev.total - 1 : 0
+          }));
+        }
+        
         // Effectuer la requête API en arrière-plan
         await notificationService.markAsRead(notification.id);
         console.log('Notification marked as read:', notification.id);
         
         // Forcer la mise à jour du compteur de notifications non lues
-        notificationService.getUnreadCount(true);
+        await notificationService.getUnreadCount(true);
       }
       
       // Vérifier si l'URL cible est valide avant de rediriger
