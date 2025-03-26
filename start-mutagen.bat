@@ -32,12 +32,12 @@ docker-compose -f infra/docker-compose.yml -f docker-compose.mutagen.yml up -d
 
 REM Wait for containers to be ready
 echo Waiting for containers to be ready...
-timeout /t 10 /nobreak
+timeout /t 50 /nobreak
 
 REM Start Mutagen sync
 echo Starting Mutagen file synchronization...
 "%MUTAGEN_PATH%" project start
-timeout /t 20 /nobreak
+timeout /t 40 /nobreak
 
 echo Project started successfully with Mutagen!
 echo Access your application at:
