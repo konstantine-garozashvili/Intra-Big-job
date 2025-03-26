@@ -73,7 +73,7 @@ const UserModal = ({ user, onClose }) => {
                 </p>
               )}
 
-              <div className="flex flex-wrap gap-2 mb-4">
+              <div className="flex flex-wrap gap-2 mb-8">
                 {roles.map((role, index) => (
                   <span
                     key={index}
@@ -129,7 +129,7 @@ const UserCard = ({ user, onClick }) => {
           <img
             src={getProfilePictureUrl(user.profilePicturePath)}
             alt={`${user.firstName} ${user.lastName}`}
-            className="w-16 h-16 rounded-full object-cover shadow-md shadow-blue-100 dark:shadow-blue-900"
+            className="w-24 h-24 rounded-full object-cover shadow-md shadow-blue-100 dark:shadow-blue-900"
             onError={(e) => {
               e.target.onerror = null;
               e.target.src = '/default-avatar.png';
@@ -311,14 +311,16 @@ const UsersList = () => {
           Aucun utilisateur trouvé
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {filteredUsers?.map((user) => (
-            <UserCard 
-              key={user.id} 
-              user={user} 
-              onClick={setSelectedUser}
-            />
-          ))}
+        <div className="bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900 dark:to-blue-800 p-8 rounded-xl">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {filteredUsers?.map((user) => (
+              <UserCard 
+                key={user.id} 
+                user={user} 
+                onClick={setSelectedUser}
+              />
+            ))}
+          </div>
         </div>
       )}
 
