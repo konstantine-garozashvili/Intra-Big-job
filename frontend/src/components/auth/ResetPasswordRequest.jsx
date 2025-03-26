@@ -35,12 +35,12 @@ const ResetPasswordRequest = () => {
             if (response.success && response.token) {
                 console.log('Token reçu, préparation de l\'envoi d\'email');
                 
-                // Préparer les données pour EmailJS
+                // Préparer les données pour EmailJS selon le nouveau template
                 const templateParams = {
-                    username: email.split('@')[0],
-                    reset_link: `${window.location.origin}/reset-password/${response.token}`,
-                    expiry_time: "30", // Durée de validité en minutes
-                    email: email
+                    to_name: email.split('@')[0], // Nom d'utilisateur extrait de l'email
+                    reset_url: `${window.location.origin}/reset-password/${response.token}`, // Lien de réinitialisation
+                    expires_in: "30", // Durée de validité en minutes
+                    email: email // Email complet
                 };
                 
                 console.log('Paramètres du template:', templateParams);
