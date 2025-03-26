@@ -3,6 +3,7 @@ import DashboardLayout from '../components/DashboardLayout';
 import { useOptimizedProfile } from '../hooks/useOptimizedProfile';
 import { motion } from 'framer-motion';
 import apiService from '@/lib/services/apiService';
+import { useAdaptiveTimeout } from '../hooks/useAdaptiveTimeout';
 
 /**
  * Composant Tableau de bord affiché comme page d'accueil pour les utilisateurs connectés
@@ -13,6 +14,8 @@ const Dashboard = () => {
   const [hasShownFallback, setHasShownFallback] = useState(false);
   // Track if we need full data or minimal data
   const [needsFullData, setNeedsFullData] = useState(false);
+  // Use adaptive timeouts
+  const { setTimeout, delay, getMetrics } = useAdaptiveTimeout();
   
   // Preload profile data when dashboard mounts
   useEffect(() => {
@@ -49,25 +52,25 @@ const Dashboard = () => {
     // Check if we already have user data before forcing a refetch
     if (!user && !isLoading) {
       console.log("Dashboard mounted, no user data available, forcing data refresh");
-      // Use a shorter timeout to improve perceived performance
-      const timer = setTimeout(() => {
+      // Use adaptive timeout for better performance across devices
+      const clearTimer = setTimeout(() => {
         refetch().catch(err => {
           console.error("Error refreshing dashboard data:", err);
         });
-      }, 20); // Reduced from 50ms to 20ms for faster response
+      }, 20); // Adaptive timeout based on 20ms base duration
       
-      return () => clearTimeout(timer);
+      return () => clearTimeout(clearTimer);
     } else {
       console.log("Dashboard mounted, user data already available, skipping refetch");
     }
-  }, [refetch, user, isLoading]);
+  }, [refetch, user, isLoading, setTimeout]);
   
   // Only load full data when needed (e.g., when user interacts with profile)
   const loadFullProfileData = () => {
     if (!needsFullData) {
       setNeedsFullData(true);
-      // Refetch with full data
-      setTimeout(() => refetch(), 0);
+      // Refetch with full data using adaptive delay
+      delay(0).then(() => refetch());
     }
   };
   
@@ -79,13 +82,16 @@ const Dashboard = () => {
         clearTimeout(window._dashboardCleanupTimeout);
       }
       
-      window._dashboardCleanupTimeout = setTimeout(() => {
+      // Use adaptive timeout for cleanup
+      const clearTimer = setTimeout(() => {
         // Clear any unnecessary caches after 5 minutes of inactivity
         if (!document.hasFocus()) {
           console.log("Dashboard inactive, cleaning up resources");
           apiService.clearMemoryCache();
         }
-      }, 5 * 60 * 1000); // 5 minutes
+      }, 5 * 60 * 1000); // 5 minutes with adaptive adjustment
+      
+      window._dashboardCleanupTimeout = clearTimer;
     };
     
     // Set up initial timer
@@ -106,7 +112,7 @@ const Dashboard = () => {
         clearTimeout(window._dashboardCleanupTimeout);
       }
     };
-  }, []);
+  }, [setTimeout]);
   
   // Marquer quand nous avons affiché les données de secours
   useEffect(() => {
@@ -139,7 +145,8 @@ const Dashboard = () => {
       fallbackUser: fallbackUser ? { id: fallbackUser.id, firstName: fallbackUser.firstName, roles: fallbackUser.roles } : null,
       displayUser: displayUser ? { id: displayUser.id, firstName: displayUser.firstName, roles: displayUser.roles } : null,
       isLoading,
-      error: error?.message
+      error: error?.message,
+      performanceMetrics: getMetrics()
     });
     
     if (displayUser) {
@@ -150,7 +157,7 @@ const Dashboard = () => {
         console.error("Error updating localStorage user:", e);
       }
     }
-  }, [user, fallbackUser, displayUser, isLoading, error]);
+  }, [user, fallbackUser, displayUser, isLoading, error, getMetrics]);
   
   // Utiliser useMemo pour éviter les re-rendus inutiles
   const welcomeMessage = useMemo(() => {
@@ -173,13 +180,14 @@ const Dashboard = () => {
   useEffect(() => {
     if (!displayUser && !isLoading) {
       console.log("No display user data, forcing reload");
+      // Use adaptive timeout for reload
       const reloadTimer = setTimeout(() => {
         window.location.reload();
       }, 2000);
       
       return () => clearTimeout(reloadTimer);
     }
-  }, [displayUser, isLoading]);
+  }, [displayUser, isLoading, setTimeout]);
 
   return (
     <DashboardLayout error={error?.message} isLoading={isLoading && !displayUser}>

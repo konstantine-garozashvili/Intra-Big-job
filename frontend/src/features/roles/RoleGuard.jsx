@@ -4,6 +4,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { authService } from '../../lib/services/authService';
 import { toast } from 'sonner';
+import { useAdaptiveTimeout } from '../../hooks/useAdaptiveTimeout';
 
 /**
  * Component that conditionally renders content based on user roles
@@ -31,6 +32,7 @@ const RoleGuard = ({
   const refreshAttemptedRef = useRef(false); // Référence pour suivre si refreshRoles a été appelé
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [gracePeriod, setGracePeriod] = useState(true);
+  const { setTimeout, delay } = useAdaptiveTimeout();
   
   // Use allowedRoles if provided, fall back to roles for backward compatibility
   const effectiveRoles = allowedRoles || roles;
@@ -53,24 +55,24 @@ const RoleGuard = ({
     }
     
     // Ajouter un délai de grâce pour s'assurer que les rôles sont bien chargés
-    const timer = setTimeout(() => {
+    const clearTimer = setTimeout(() => {
       setGracePeriod(false);
-    }, 500); // 500ms de délai de grâce
+    }, 500); // 500ms de délai de grâce adaptatif
     
-    return () => clearTimeout(timer);
-  }, [refreshRoles]);
+    return clearTimer;
+  }, [refreshRoles, setTimeout]);
   
   // Handle initial load completion with delay
   useEffect(() => {
     if (!isLoading) {
       // N'activer la vérification des rôles qu'après un court délai
-      const timer = setTimeout(() => {
+      const clearTimer = setTimeout(() => {
         setInitialLoadComplete(true);
-      }, 300); // Petit délai supplémentaire
+      }, 300); // Petit délai supplémentaire adaptatif
       
-      return () => clearTimeout(timer);
+      return clearTimer;
     }
-  }, [isLoading]);
+  }, [isLoading, setTimeout]);
   
   // Fonction normalisée pour vérifier les rôles (gère les formats avec/sans préfixe ROLE_)
   const hasRoleNormalized = useMemo(() => {
@@ -143,12 +145,15 @@ const RoleGuard = ({
         clearTimeout(timeoutRef.current);
       }
       
-      timeoutRef.current = setTimeout(() => {
+      // Use adaptive timeout for resetting toast flag
+      const clearToastFlag = setTimeout(() => {
         toastShownRef.current = false;
         timeoutRef.current = null;
       }, 10000);
+      
+      timeoutRef.current = clearToastFlag;
     }
-  }, [roleCheckResult, effectiveRoles, requireAll, initialLoadComplete, gracePeriod, userRoles, hasRole, hasAnyRole, hasAllRoles, hasRoleNormalized, hasAnyRoleNormalized, isLoading]);
+  }, [roleCheckResult, effectiveRoles, requireAll, initialLoadComplete, gracePeriod, userRoles, hasRole, hasAnyRole, hasAllRoles, hasRoleNormalized, hasAnyRoleNormalized, isLoading, setTimeout]);
   
   if (isLoading || gracePeriod) {
     return null;
@@ -172,6 +177,7 @@ export const RoleDashboardRedirect = () => {
   const permissions = useRolePermissions();
   const navigate = useNavigate();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const { delay } = useAdaptiveTimeout();
   
   useEffect(() => {
     let mounted = true;
@@ -182,6 +188,8 @@ export const RoleDashboardRedirect = () => {
       setIsRefreshing(true);
       try {
         await authService.getCurrentUser(true);
+        // Add a small adaptive delay to ensure the server has time to process
+        await delay(50);
         if (mounted) {
           refreshRoles();
         }
@@ -199,7 +207,7 @@ export const RoleDashboardRedirect = () => {
     return () => {
       mounted = false;
     };
-  }, [refreshRoles, isRefreshing]);
+  }, [refreshRoles, delay]);
   
   if (isLoading || isRefreshing) {
     return null;
@@ -213,4 +221,4 @@ export const RoleDashboardRedirect = () => {
   return <Navigate to={dashboardPath} replace />;
 };
 
-export default RoleGuard; 
+export default RoleGuard;
