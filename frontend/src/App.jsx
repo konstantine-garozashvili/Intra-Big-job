@@ -75,8 +75,8 @@ const RecruiterDashboard = lazy(() => import('./pages/Recruiter/Dashboard'))
 const FormationList = lazy(() => import('./pages/FormationList'))
 const GuestStudentRoleManager = lazy(() => import('./pages/Recruiter/GuestStudentRoleManager'))
 
-// Import du composant HomePage 
-const HomePage = lazy(() => import('./components/HomePage'))
+// Import du composant Home à la place de HomePage 
+const Home = lazy(() => import('./pages/Home'))
 
 // Visual Concept standalone page
 const VisualConcept = lazy(() => import('./pages/VisualConcept'))
@@ -388,11 +388,11 @@ const AppContent = () => {
           <RoleProvider>
             <div>
               <Routes>
+                {/* Route racine avec Home rendu indépendamment sans MainLayout */}
+                <Route path="/" element={<Home />} />
+                
                 {/* Structure révisée: MainLayout englobe toutes les routes pour préserver la navbar */}
                 <Route element={<MainLayout />}>
-                  {/* Route racine avec redirection automatique */}
-                  <Route path="/" element={<HomePage />} />
-                  
                   {/* Routes publiques - Accès interdit aux utilisateurs authentifiés */}
                   <Route element={<PublicRoute />}>
                     <Route path="/login" element={<Login />} />
