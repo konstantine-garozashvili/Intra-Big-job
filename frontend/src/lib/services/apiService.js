@@ -129,26 +129,95 @@ axios.interceptors.response.use(response => {
 axios.defaults.withCredentials = true;
 axios.defaults.timeout = 15000; // Augmenter le délai d'attente global à 15 secondes
 
-// Create a simple in-memory request cache with expiration
+// Enhanced cache configuration with specific TTLs for different data types
+const DEFAULT_CACHE_TTL = 60000; // 1 minute default
+const PROFILE_CACHE_TTL = 300000; // 5 minutes for profile data
+const STATIC_CACHE_TTL = 600000; // 10 minutes for static data
+
+// Memory optimization settings
+const MEMORY_CONFIG = {
+  // Smaller cache size to reduce memory footprint
+  MAX_CACHE_SIZE: 30, // Reduced from 50
+  // Maximum size of cached response in bytes (approximately 100KB)
+  MAX_ITEM_SIZE: 100 * 1024,
+  // Profile data size limit (smaller since we also use localStorage)
+  PROFILE_SIZE_LIMIT: 50 * 1024,
+  // Cleanup interval more frequent to release memory faster
+  CLEANUP_INTERVAL: 2 * 60 * 1000 // 2 minutes (reduced from 5)
+};
+
+// Cache in-memory pour les réponses API
 const apiCache = new Map();
-const DEFAULT_CACHE_TTL = isLowPerformanceMode() ? 120000 : 60000; // 2 minutes for low-perf, 1 minute otherwise
 
-// Add cache size limits for memory management
-const MAX_CACHE_SIZE = isLowPerformanceMode() ? 50 : 100; // Fewer items for low-perf devices
+// Tracking for prefetched requests to avoid duplicate prefetching
+const prefetchedRequests = new Set();
 
-// Add cache cleanup function
+// Preload flag to track if we've already preloaded profile data
+let profilePreloaded = false;
+
+// Last cleanup timestamp
+let lastCacheCleanup = Date.now();
+
+/**
+ * Estimate the size of an object in bytes (approximate)
+ * @param {Object} object - Object to measure
+ * @returns {number} - Approximate size in bytes
+ */
+const estimateObjectSize = (object) => {
+  const jsonString = JSON.stringify(object);
+  return jsonString ? jsonString.length * 2 : 0; // Unicode chars can be 2 bytes
+};
+
+/**
+ * Nettoie le cache en supprimant les entrées expirées et limitant la taille
+ * Optimized for memory usage
+ */
 const cleanupCache = () => {
-  if (apiCache.size <= MAX_CACHE_SIZE) return;
+  const now = Date.now();
   
-  // Convert to array for sorting
-  const entries = Array.from(apiCache.entries());
+  // Only run cleanup periodically to avoid performance impact
+  if (now - lastCacheCleanup < MEMORY_CONFIG.CLEANUP_INTERVAL) {
+    return;
+  }
   
-  // Sort by expiry (oldest first)
-  entries.sort((a, b) => a[1].expiry - b[1].expiry);
+  lastCacheCleanup = now;
   
-  // Remove oldest entries until we're under the limit
-  const toRemove = entries.slice(0, entries.length - MAX_CACHE_SIZE);
-  toRemove.forEach(([key]) => apiCache.delete(key));
+  // Remove expired entries first
+  for (const [key, value] of apiCache.entries()) {
+    if (value.expiry < now) {
+      apiCache.delete(key);
+    }
+  }
+  
+  // If cache is still too large, remove entries based on size and age
+  if (apiCache.size > MEMORY_CONFIG.MAX_CACHE_SIZE) {
+    const entries = Array.from(apiCache.entries());
+    
+    // Calculate score for each entry (lower is better to keep)
+    // Score = age * size factor
+    entries.forEach(([key, value]) => {
+      const age = now - value.timestamp;
+      const size = estimateObjectSize(value.data);
+      value._score = age * (size / 1024); // Normalize size to KB
+    });
+    
+    // Sort by score (highest first to remove)
+    entries.sort((a, b) => b[1]._score - a[1]._score);
+    
+    // Remove highest scored entries until we're under the limit
+    for (let i = 0; i < entries.length && apiCache.size > MEMORY_CONFIG.MAX_CACHE_SIZE; i++) {
+      apiCache.delete(entries[i][0]);
+    }
+  }
+  
+  // Force garbage collection hint (not guaranteed but can help)
+  if (window.gc) {
+    try {
+      window.gc();
+    } catch (e) {
+      // Ignore if not available
+    }
+  }
 };
 
 /**
@@ -210,6 +279,44 @@ const apiService = {
       // Générer une clé unique pour cette requête
       const requestKey = `${path}${JSON.stringify(options.params || {})}`;
       
+      // Identify if this is a profile request for special handling
+      const isProfileRequest = path.includes('/profile') || path.includes('/me');
+      const isStaticRequest = path.includes('/static') || path.includes('/config');
+      
+      // For profile requests, use more aggressive caching
+      if (isProfileRequest && !options.noCache && !options.background) {
+        // Check localStorage first for fastest possible response
+        try {
+          const cachedUser = localStorage.getItem('user');
+          if (cachedUser) {
+            const userData = JSON.parse(cachedUser);
+            const cacheTime = userData._extractedAt || 0;
+            const cacheAge = Date.now() - cacheTime;
+            
+            // Use very fresh cache immediately (under 30 seconds old)
+            if (cacheAge < 30000) {
+              console.log('Using very fresh localStorage cache for /me');
+              
+              // Schedule background refresh if needed but don't wait for it
+              if (cacheAge > 10000 && !prefetchedRequests.has(requestKey)) {
+                prefetchedRequests.add(requestKey);
+                setTimeout(() => {
+                  this.get(path, { ...options, noCache: true, background: true })
+                    .catch(() => {})
+                    .finally(() => {
+                      prefetchedRequests.delete(requestKey);
+                    });
+                }, 50);
+              }
+              
+              return Promise.resolve(userData);
+            }
+          }
+        } catch (e) {
+          // Error with localStorage, continue with normal flow
+        }
+      }
+      
       // Vérifier si une requête identique est déjà en cours
       if (pendingRequests.has(requestKey)) {
         return pendingRequests.get(requestKey);
@@ -221,17 +328,33 @@ const apiService = {
         const cached = apiCache.get(cacheKey);
         
         if (cached && cached.expiry > Date.now()) {
+          // For profile requests, we want to refresh in background if cache is getting stale
+          const cacheAge = Date.now() - cached.timestamp;
+          const refreshThreshold = isProfileRequest ? PROFILE_CACHE_TTL * 0.5 : STATIC_CACHE_TTL * 0.7;
+          
+          if (isProfileRequest && cacheAge > refreshThreshold && !prefetchedRequests.has(requestKey)) {
+            // Schedule background refresh without blocking the response
+            prefetchedRequests.add(requestKey);
+            setTimeout(() => {
+              this.get(path, { ...options, noCache: true, background: true })
+                .catch(() => {})
+                .finally(() => {
+                  prefetchedRequests.delete(requestKey);
+                });
+            }, 10);
+          }
+          
           return cached.data;
         }
       }
-      
+
       // Identifier le type de requête pour optimiser les timeouts
-      const isProfileRequest = path.includes('/profile') || path.includes('/me');
       const isMessagesRequest = path.includes('/messages');
       const isCriticalRequest = path.includes('/auth') || options.critical === true;
       
       // Définir les timeouts de base selon le type de requête
-      const baseTimeout = isProfileRequest ? 3000 : 
+      // Reduced timeout for profile requests to fail faster and use cache
+      const baseTimeout = isProfileRequest ? 2000 : 
                           isMessagesRequest ? 5000 : 
                           isCriticalRequest ? 8000 : 10000;
       
@@ -241,37 +364,114 @@ const apiService = {
       // Configure axios request with appropriate timeouts
       const requestConfig = {
         ...options,
-        timeout: adaptiveTimeout
+        timeout: adaptiveTimeout,
+        headers: {
+          ...options.headers,
+          // Add cache optimization headers
+          'X-Request-Type': isProfileRequest ? 'profile' : 
+                           isStaticRequest ? 'static' : 'standard',
+          'X-Cache-Priority': isProfileRequest ? 'high' : 'normal',
+          // Add cache control headers for browser caching
+          'Cache-Control': isProfileRequest ? 'no-cache' : 'max-age=300'
+        }
       };
       
       // Implement retries for profile and messages requests
+      // Reduced retries for profile to speed up fallback to cache
       const maxRetries = options.retries !== undefined ? Math.min(options.retries, 2) : 
-                         (isProfileRequest || isMessagesRequest) ? 1 : 0;
+                         isProfileRequest ? 0 : // No retries for profile to speed up response
+                         (isMessagesRequest) ? 1 : 0;
       
       // Créer une promesse pour cette requête
       const requestPromise = (async () => {
         let retries = 0;
         let lastError = null;
         
+        // Start timer for performance tracking
+        const startTime = Date.now();
+        
         // Utiliser une boucle while au lieu d'une récursion pour éviter des problèmes de pile
         while (retries <= maxRetries) {
           try {
             const response = await axios.get(url, requestConfig);
             
+            // Log performance for profile requests
+            if (isProfileRequest) {
+              const duration = Date.now() - startTime;
+              console.log(`Profile request completed in ${duration}ms`);
+            }
+            
             // Si success, mettre en cache si le caching n'est pas désactivé
             if (!options.noCache) {
               const cacheKey = generateCacheKey('GET', url, options.params);
-              const ttl = options.cacheDuration || DEFAULT_CACHE_TTL;
-              apiCache.set(cacheKey, {
-                data: response.data,
-                expiry: Date.now() + ttl
-              });
+              
+              // Use appropriate TTL based on request type
+              let ttl = options.cacheDuration || DEFAULT_CACHE_TTL;
+              if (isProfileRequest) {
+                ttl = PROFILE_CACHE_TTL;
+              } else if (isStaticRequest) {
+                ttl = STATIC_CACHE_TTL;
+              }
+              
+              // Check data size before storing in memory cache
+              const responseSize = estimateObjectSize(response.data);
+              const sizeLimit = isProfileRequest ? 
+                MEMORY_CONFIG.PROFILE_SIZE_LIMIT : 
+                MEMORY_CONFIG.MAX_ITEM_SIZE;
+              
+              // Only store in memory if size is reasonable
+              if (responseSize <= sizeLimit) {
+                // Store in apiCache
+                apiCache.set(cacheKey, {
+                  data: response.data,
+                  timestamp: Date.now(),
+                  expiry: Date.now() + ttl,
+                  size: responseSize // Store size for future reference
+                });
+              } else {
+                console.log(`Response too large for memory cache: ${responseSize} bytes`);
+              }
+              
+              // For profile data, also store in localStorage for faster access
+              if (isProfileRequest && response.data) {
+                try {
+                  // Create a minimal version for localStorage to save space
+                  const userData = this._createMinimalUserData(response.data);
+                  userData._extractedAt = Date.now();
+                  localStorage.setItem('user', JSON.stringify(userData));
+                } catch (e) {
+                  // Ignore localStorage errors
+                }
+              }
+              
               cleanupCache();
             }
             
             return response.data;
           } catch (error) {
             lastError = error;
+            
+            // For profile requests, try to use cached data immediately on error
+            if (isProfileRequest) {
+              try {
+                // Try memory cache first
+                const cacheKey = generateCacheKey('GET', url, options.params);
+                const cached = apiCache.get(cacheKey);
+                if (cached) {
+                  console.log('Using memory cache for profile after error');
+                  return cached.data;
+                }
+                
+                // Try localStorage next
+                const cachedUser = localStorage.getItem('user');
+                if (cachedUser) {
+                  console.log('Using localStorage cache for profile after error');
+                  return JSON.parse(cachedUser);
+                }
+              } catch (e) {
+                // Continue with normal error handling
+              }
+            }
             
             // Ne pas retenter si c'est une erreur 4xx (sauf timeout)
             if (error.response && error.response.status >= 400 && error.response.status < 500) {
@@ -557,7 +757,116 @@ const apiService = {
     const url = normalizeApiUrl(path);
     const cacheKey = generateCacheKey(method, url, params);
     apiCache.delete(cacheKey);
-  }
+  },
+  
+  /**
+   * Optimized method specifically for fetching user profile data
+   * @param {Object} options - Additional options for the request
+   * @returns {Promise<Object>} - User profile data
+   */
+  async getUserProfile(options = {}) {
+    // Try to use localStorage cache first for immediate response
+    if (!options.noCache) {
+      try {
+        const cachedUser = localStorage.getItem('user');
+        if (cachedUser) {
+          const userData = JSON.parse(cachedUser);
+          const cacheTime = userData._extractedAt || 0;
+          const cacheAge = Date.now() - cacheTime;
+          
+          // Use very fresh cache immediately (under 30 seconds old)
+          if (cacheAge < 30000) {
+            console.log('getUserProfile: Using very fresh localStorage cache');
+            
+            // Schedule background refresh if needed but don't wait for it
+            if (cacheAge > 10000) {
+              setTimeout(() => {
+                this.getUserProfile({ noCache: true, background: true })
+                  .catch(() => {});
+              }, 10);
+            }
+            
+            return userData;
+          }
+        }
+      } catch (e) {
+        // Error with localStorage, continue with API call
+      }
+    }
+    
+    // Use optimized get method with profile-specific settings
+    return this.get('/me', {
+      headers: {
+        'X-Request-Type': 'profile',
+        'X-Cache-Priority': 'high'
+      },
+      cacheDuration: PROFILE_CACHE_TTL,
+      timeout: getAdaptiveTimeout(2000, true), // Reduced timeout for faster fallback to cache
+      retries: 0, // No retries to speed up response
+      ...options
+    });
+  },
+
+  /**
+   * Preload profile data in the background
+   * This can be called on app initialization to warm up the cache
+   */
+  preloadProfileData() {
+    // Only preload once per session
+    if (profilePreloaded) return;
+    profilePreloaded = true;
+    
+    // Use setTimeout to not block the main thread
+    setTimeout(() => {
+      this.getUserProfile({ background: true })
+        .catch(() => {}); // Ignore errors in background preload
+    }, 100);
+  },
+
+  /**
+   * Create a minimal version of user data for storage
+   * Removes unnecessary fields to reduce memory usage
+   * @private
+   * @param {Object} userData - Full user data
+   * @returns {Object} - Minimal user data
+   */
+  _createMinimalUserData(userData) {
+    if (!userData) return null;
+    
+    // Create a copy with only essential fields
+    const minimalData = {
+      id: userData.id,
+      email: userData.email,
+      firstName: userData.firstName || userData.firstname,
+      lastName: userData.lastName || userData.lastname,
+      roles: userData.roles,
+      status: userData.status
+    };
+    
+    // Add other essential fields if they exist
+    if (userData.avatar) minimalData.avatar = userData.avatar;
+    if (userData.permissions) minimalData.permissions = userData.permissions;
+    
+    return minimalData;
+  },
+
+  /**
+   * Clear memory cache to free up RAM
+   * Can be called during low memory situations
+   */
+  clearMemoryCache() {
+    apiCache.clear();
+    console.log('API memory cache cleared');
+    
+    // Force garbage collection hint
+    if (window.gc) {
+      try {
+        window.gc();
+      } catch (e) {
+        // Ignore if not available
+      }
+    }
+  },
 };
 
 export default apiService; 
