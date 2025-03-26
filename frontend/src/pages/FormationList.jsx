@@ -27,7 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, UserPlus, Users, ChevronDown, ChevronUp, Plus } from "lucide-react";
+import { Loader2, UserPlus, UserMinus, Users, ChevronDown, ChevronUp, Plus } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 
 const FormationList = () => {
@@ -48,6 +48,8 @@ const FormationList = () => {
     promotion: '',
     description: ''
   });
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedDeleteStudentIds, setSelectedDeleteStudentIds] = useState([]);
 
   useEffect(() => {
     loadFormations();
@@ -220,6 +222,62 @@ const FormationList = () => {
     setExpandedFormation(expandedFormation === formationId ? null : formationId);
   };
 
+  const handleRemoveStudent = async (formationId, studentId) => {
+    try {
+      await formationService.removeStudentFromFormation(formationId, studentId);
+      toast.success("Étudiant retiré avec succès");
+      setFormations(prev =>
+        prev.map(f => 
+          f.id === formationId 
+            ? { ...f, students: f.students.filter(student => student.id !== studentId) } 
+            : f
+        )
+      );
+    } catch (error) {
+      toast.error("Erreur lors du retrait de l'étudiant");
+    }
+  };
+
+  const showDeleteStudentModal = (formation) => {
+    setSelectedFormation(formation);
+    setSelectedDeleteStudentIds([]); // clear previous selection
+    setShowDeleteModal(true);
+  };
+
+  const toggleDeleteStudent = (studentId) => {
+    setSelectedDeleteStudentIds(prev =>
+      prev.includes(studentId)
+        ? prev.filter(id => id !== studentId)
+        : [...prev, studentId]
+    );
+  };
+
+  const removeStudents = async () => {
+    if (selectedDeleteStudentIds.length === 0 || !selectedFormation) {
+      toast.error('Veuillez sélectionner au moins un étudiant à supprimer');
+      return;
+    }
+    try {
+      const promises = selectedDeleteStudentIds.map(studentId =>
+        formationService.removeStudentFromFormation(selectedFormation.id, studentId)
+      );
+      await Promise.all(promises);
+      toast.success('Étudiants supprimés avec succès');
+      // Update formation's student list in state
+      setFormations(prev =>
+        prev.map(f =>
+          f.id === selectedFormation.id
+            ? { ...f, students: f.students.filter(s => !selectedDeleteStudentIds.includes(s.id)) }
+            : f
+        )
+      );
+      setShowDeleteModal(false);
+    } catch (error) {
+      console.error("Erreur lors du retrait d'étudiants :", error);
+      toast.error("Erreur lors du retrait des étudiants");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -236,7 +294,7 @@ const FormationList = () => {
           {hasCreatePermission && (
             <Button onClick={() => setShowCreateModal(true)}>
               <Plus className="h-4 w-4 mr-2" />
-              Créer une formation
+              Créer formation
             </Button>
           )}
         </CardHeader>
@@ -289,7 +347,18 @@ const FormationList = () => {
                         }}
                         className="ml-2"
                       >
-                        <UserPlus className="h-4 w-4 mr-2" />Ajouter
+                        <UserPlus className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          showDeleteStudentModal(formation);
+                        }}
+                        className="ml-2"
+                      >
+                        <UserMinus className="h-4 w-4" />
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -359,7 +428,47 @@ const FormationList = () => {
               Annuler
             </Button>
             <Button onClick={addStudents}>
-              Ajouter les étudiants
+              Ajouter
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de suppression d'étudiants */}
+      <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Supprimer des étudiants de {selectedFormation?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="space-y-4">
+              {selectedFormation?.students && selectedFormation.students.length > 0 ? (
+                selectedFormation.students.map((student) => (
+                  <div key={student.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`delete-student-${student.id}`}
+                      checked={selectedDeleteStudentIds.includes(student.id)}
+                      onCheckedChange={() => toggleDeleteStudent(student.id)}
+                    />
+                    <label
+                      htmlFor={`delete-student-${student.id}`}
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      {student.firstName} {student.lastName}
+                    </label>
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-500 italic">Aucun étudiant inscrit</p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteModal(false)}>
+              Annuler
+            </Button>
+            <Button onClick={removeStudents}>
+              Supprimer
             </Button>
           </DialogFooter>
         </DialogContent>

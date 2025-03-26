@@ -239,4 +239,37 @@ class FormationApiController extends AbstractController
 
         return new JsonResponse(['message' => 'Student added successfully']);
     }
+
+    #[Route('/{formationId}/students/{studentId}', name: 'api_formations_remove_student', methods: ['DELETE'])]
+    #[IsGranted('IS_AUTHENTICATED_FULLY')]
+    public function removeStudent($formationId, $studentId): Response
+    {
+        // Vérifier si l'utilisateur a l'un des rôles requis
+        $user = $this->getUser();
+        $userRoles = $user->getRoles();
+        if (!in_array('ROLE_TEACHER', $userRoles) &&
+            !in_array('ROLE_ADMIN', $userRoles) &&
+            !in_array('ROLE_SUPERADMIN', $userRoles) &&
+            !in_array('ROLE_RECRUITER', $userRoles)) {
+            return new JsonResponse(['error' => 'Accès refusé'], Response::HTTP_FORBIDDEN);
+        }
+        
+        $formation = $this->formationRepository->find($formationId);
+        if (!$formation) {
+            return new JsonResponse(['error' => 'Formation non trouvée'], Response::HTTP_NOT_FOUND);
+        }
+        
+        $student = $this->userRepository->find($studentId);
+        if (!$student) {
+            return new JsonResponse(['error' => 'Étudiant non trouvé'], Response::HTTP_NOT_FOUND);
+        }
+        
+        if (!$formation->getStudents()->contains($student)) {
+            return new JsonResponse(['error' => 'Étudiant pas inscrit dans la formation'], Response::HTTP_BAD_REQUEST);
+        }
+        
+        $formation->removeStudent($student);
+        $this->entityManager->flush();
+        return new JsonResponse(['message' => 'Étudiant retiré avec succès']);
+    }
 }

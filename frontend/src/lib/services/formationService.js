@@ -35,5 +35,10 @@ export const formationService = {
         return await apiService.get(`/formations/available-students`, {
             params: { formationId }
         });
+    },
+
+    // New method for removing a student from a formation
+    async removeStudentFromFormation(formationId, studentId) {
+        return await apiService.delete(`/formations/${formationId}/students/${studentId}`);
     }
 };
