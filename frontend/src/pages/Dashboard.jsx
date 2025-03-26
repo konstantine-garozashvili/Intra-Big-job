@@ -1,7 +1,8 @@
 import React, { useMemo, useEffect, useState } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
-import { useUserData } from '../hooks/useDashboardQueries';
+import { useOptimizedProfile } from '../hooks/useOptimizedProfile';
 import { motion } from 'framer-motion';
+import apiService from '@/lib/services/apiService';
 
 /**
  * Composant Tableau de bord affiché comme page d'accueil pour les utilisateurs connectés
@@ -10,26 +11,102 @@ import { motion } from 'framer-motion';
 const Dashboard = () => {
   // État local pour suivre si nous avons affiché les données de secours
   const [hasShownFallback, setHasShownFallback] = useState(false);
+  // Track if we need full data or minimal data
+  const [needsFullData, setNeedsFullData] = useState(false);
+  
+  // Preload profile data when dashboard mounts
+  useEffect(() => {
+    // Preload profile data in the background to warm up the cache
+    // Use minimal data by default to save memory
+    apiService.preloadProfileData({ minimal: true });
+    
+    // Clean up function to help with memory management
+    return () => {
+      // Clear any unnecessary data when unmounting
+      if (window._dashboardCleanupTimeout) {
+        clearTimeout(window._dashboardCleanupTimeout);
+      }
+    };
+  }, []);
   
   // Utiliser le hook optimisé pour récupérer les données utilisateur
-  const { data: user, error, isLoading, refetch } = useUserData();
+  const { 
+    data: user, 
+    error, 
+    isLoading, 
+    refetch 
+  } = useOptimizedProfile({
+    // Use shorter staleTime for dashboard to ensure fresh data
+    staleTime: 20000, // 20 seconds
+    // Enable refetch on mount for dashboard to ensure fresh data
+    refetchOnMount: true,
+    // Use minimal data by default to save memory
+    fullData: needsFullData
+  });
   
   // Forcer un refetch au montage du composant, mais seulement si nécessaire
   useEffect(() => {
     // Check if we already have user data before forcing a refetch
     if (!user && !isLoading) {
       console.log("Dashboard mounted, no user data available, forcing data refresh");
+      // Use a shorter timeout to improve perceived performance
       const timer = setTimeout(() => {
         refetch().catch(err => {
           console.error("Error refreshing dashboard data:", err);
         });
-      }, 50); // Court délai pour s'assurer que le composant est monté
+      }, 20); // Reduced from 50ms to 20ms for faster response
       
       return () => clearTimeout(timer);
     } else {
       console.log("Dashboard mounted, user data already available, skipping refetch");
     }
   }, [refetch, user, isLoading]);
+  
+  // Only load full data when needed (e.g., when user interacts with profile)
+  const loadFullProfileData = () => {
+    if (!needsFullData) {
+      setNeedsFullData(true);
+      // Refetch with full data
+      setTimeout(() => refetch(), 0);
+    }
+  };
+  
+  // Memory optimization: clean up unused resources when idle
+  useEffect(() => {
+    // Set up a timer to clean up resources after inactivity
+    const setupCleanupTimer = () => {
+      if (window._dashboardCleanupTimeout) {
+        clearTimeout(window._dashboardCleanupTimeout);
+      }
+      
+      window._dashboardCleanupTimeout = setTimeout(() => {
+        // Clear any unnecessary caches after 5 minutes of inactivity
+        if (!document.hasFocus()) {
+          console.log("Dashboard inactive, cleaning up resources");
+          apiService.clearMemoryCache();
+        }
+      }, 5 * 60 * 1000); // 5 minutes
+    };
+    
+    // Set up initial timer
+    setupCleanupTimer();
+    
+    // Reset timer on user interaction
+    const resetTimer = () => setupCleanupTimer();
+    window.addEventListener('click', resetTimer);
+    window.addEventListener('keydown', resetTimer);
+    window.addEventListener('mousemove', resetTimer);
+    
+    // Clean up event listeners
+    return () => {
+      window.removeEventListener('click', resetTimer);
+      window.removeEventListener('keydown', resetTimer);
+      window.removeEventListener('mousemove', resetTimer);
+      if (window._dashboardCleanupTimeout) {
+        clearTimeout(window._dashboardCleanupTimeout);
+      }
+    };
+  }, []);
   
   // Marquer quand nous avons affiché les données de secours
   useEffect(() => {

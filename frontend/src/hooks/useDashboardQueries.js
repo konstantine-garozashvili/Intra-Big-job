@@ -5,6 +5,7 @@ import apiService from '@/lib/services/apiService';
 import { getQueryClient } from '@/lib/services/queryClient';
 import useUserDataHook from './useUserData';
 import { useQuery } from '@tanstack/react-query';
+import { useOptimizedProfile } from './useOptimizedProfile';
 
 /**
  * Hook pour récupérer et gérer les données de l'utilisateur
@@ -97,6 +98,20 @@ export const useUserData = () => {
 };
 
 /**
+ * Version optimisée du hook useUserData avec des performances améliorées
+ * Utilise le service API optimisé pour les requêtes de profil
+ */
+export const useOptimizedUserData = () => {
+  // Utiliser directement le hook optimisé pour le profil
+  return useOptimizedProfile({
+    // Paramètres spécifiques pour le dashboard
+    queryKey: ['dashboard-optimized-user'],
+    staleTime: 3 * 60 * 1000, // 3 minutes (plus court que l'original)
+    retry: 1, // Moins de tentatives pour une meilleure réactivité
+  });
+};
+
+/**
  * Hook pour récupérer les statistiques du tableau de bord
  */
 export const useDashboardStats = () => {
@@ -149,6 +164,67 @@ export const useRecentActivities = () => {
     },
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
+};
+
+/**
+ * Custom hook for fetching dashboard data with optimized memory usage
+ * @param {Object} options - Query options
+ * @returns {Object} Query result
+ */
+export const useDashboardData = (options = {}) => {
+  return useQuery({
+    queryKey: ['dashboard-data'],
+    queryFn: async () => {
+      // Use minimal data by default to save memory
+      return apiService.get('/dashboard', { 
+        minimal: !options.fullData,
+        timeout: 3000 // Shorter timeout for dashboard data
+      });
+    },
+    staleTime: 60000, // 1 minute
+    cacheTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1,
+    retryDelay: 1000,
+    ...options,
+  });
+};
+
+/**
+ * Custom hook for fetching user data with memory optimization
+ * This is the original implementation, kept for backward compatibility
+ * @param {Object} options - Query options
+ * @returns {Object} Query result
+ */
+export const useDashboardUserData = (options = {}) => {
+  return useQuery({
+    queryKey: ['user-data'],
+    queryFn: async () => {
+      return apiService.getUserProfile();
+    },
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    cacheTime: 10 * 60 * 1000, // 10 minutes
+    retry: 1,
+    ...options,
+  });
+};
+
+/**
+ * Optimized version of useUserData that leverages the useOptimizedProfile hook
+ * This version is more memory-efficient and has better performance
+ * @param {Object} options - Query options
+ * @returns {Object} Query result with the same interface as useUserData
+ */
+export const useOptimizedDashboardUserData = (options = {}) => {
+  // Use the optimized profile hook with memory efficiency settings
+  const result = useOptimizedProfile({
+    // Pass memory optimization options
+    minimal: !options.fullData,
+    // Keep backward compatibility with useUserData
+    staleTime: options.staleTime || 2 * 60 * 1000,
+    ...options
+  });
+  
+  return result;
 };
 
 /**
