@@ -8,8 +8,6 @@ import documentService from './Profile/services/documentService';
 import { toast } from 'sonner';
 
 const UserModal = ({ user, onClose }) => {
-  const [isDownloading, setIsDownloading] = useState(false);
-  
   // Récupérer l'adresse principale de manière sécurisée
   const mainAddress = user.addresses?.[0];
   
@@ -24,33 +22,6 @@ const UserModal = ({ user, onClose }) => {
   const isStudent = roles.some(role => 
     typeof role === 'object' ? role.name === "STUDENT" : role === "STUDENT"
   );
-
-  const handleDownloadCV = async () => {
-    if (!user.cvDocument) {
-      toast.error('CV non disponible');
-      return;
-    }
-    
-    setIsDownloading(true);
-    try {
-      const blob = await documentService.downloadDocument(user.cvDocument.id);
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = url;
-      a.download = user.cvDocument.name || 'cv.pdf';
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      toast.success('CV téléchargé avec succès');
-    } catch (error) {
-      console.error('Erreur lors du téléchargement du CV:', error);
-      toast.error('Échec du téléchargement du CV');
-    } finally {
-      setIsDownloading(false);
-    }
-  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -140,15 +111,6 @@ const UserModal = ({ user, onClose }) => {
               <User className="w-4 h-4 mr-2" />
               Voir le profil complet
             </Link>
-            
-            <button
-              onClick={handleDownloadCV}
-              disabled={isDownloading || !user.cvDocument}
-              className="flex items-center px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 text-sm"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              {isDownloading ? 'Téléchargement...' : 'Télécharger le CV'}
-            </button>
           </div>
         </div>
       </div>
@@ -217,26 +179,63 @@ const UserCard = ({ user, onClick }) => {
 const UsersList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
+  const [selectedRole, setSelectedRole] = useState(null);
   
   const { data: users, isLoading, error } = useQuery({
     queryKey: ['users', 'all'],
     queryFn: usersListService.getAllUsers
   });
 
+  const getRoleLabel = (role) => {
+    const labels = {
+      'STUDENT': 'Étudiant',
+      'TEACHER': 'Professeur',
+      'HR': 'RH',
+      'ADMIN': 'Administrateur',
+      'SUPER_ADMIN': 'Super Admin',
+      'RECRUITER': 'Recruteur'
+    };
+    return labels[role] || role;
+  };
+
+  const getRoleColor = (role) => {
+    const colors = {
+      'STUDENT': 'bg-blue-100 text-blue-800 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-200 dark:hover:bg-blue-800',
+      'TEACHER': 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-900 dark:text-emerald-200 dark:hover:bg-emerald-800',
+      'HR': 'bg-purple-100 text-purple-800 hover:bg-purple-200 dark:bg-purple-900 dark:text-purple-200 dark:hover:bg-purple-800',
+      'ADMIN': 'bg-amber-100 text-amber-800 hover:bg-amber-200 dark:bg-amber-900 dark:text-amber-200 dark:hover:bg-amber-800',
+      'SUPER_ADMIN': 'bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-900 dark:text-red-200 dark:hover:bg-red-800',
+      'RECRUITER': 'bg-pink-100 text-pink-800 hover:bg-pink-200 dark:bg-pink-900 dark:text-pink-200 dark:hover:bg-pink-800'
+    };
+    return colors[role] || 'bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800';
+  };
+
+  const getRoleIconColor = (role) => {
+    const colors = {
+      'STUDENT': 'text-blue-500',
+      'TEACHER': 'text-emerald-500',
+      'HR': 'text-purple-500',
+      'ADMIN': 'text-amber-500',
+      'SUPER_ADMIN': 'text-red-500',
+      'RECRUITER': 'text-pink-500'
+    };
+    return colors[role] || 'text-gray-500';
+  };
+
   const filteredUsers = users?.filter(user => {
-    if (!searchTerm) return true;
+    const matchesSearch = !searchTerm || 
+      `${user.firstName} ${user.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const searchLower = searchTerm.toLowerCase();
-    const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
-    const email = user.email?.toLowerCase() || '';
-    const roles = user.userRoles?.map(ur => ur.role.name.toLowerCase()) || [];
-    
-    return (
-      fullName.includes(searchLower) ||
-      email.includes(searchLower) ||
-      roles.some(role => role.includes(searchLower))
-    );
+    const matchesRole = !selectedRole || 
+      user.userRoles?.some(ur => ur.role.name === selectedRole);
+
+    return matchesSearch && matchesRole;
   });
+
+  const uniqueRoles = [...new Set(users?.flatMap(user => 
+    user.userRoles?.map(ur => ur.role.name).filter(role => role !== 'GUEST')
+  ) || [])];
 
   if (isLoading) {
     return (
@@ -257,22 +256,51 @@ const UsersList = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center space-x-2">
-          <Users className="w-6 h-6 text-blue-500" />
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Trombinoscope
-          </h1>
+      <div className="flex flex-col space-y-4 mb-8">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Users className="w-6 h-6 text-blue-500" />
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              Trombinoscope
+            </h1>
+          </div>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <input
+              type="text"
+              placeholder="Rechercher un utilisateur..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+            />
+          </div>
         </div>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-          <input
-            type="text"
-            placeholder="Rechercher un utilisateur..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-          />
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setSelectedRole(null)}
+            className={`px-3 py-1.5 rounded-lg flex items-center space-x-2 transition-colors ${
+              selectedRole === null 
+                ? 'bg-blue-500 text-white hover:bg-blue-600' 
+                : 'bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700'
+            }`}
+          >
+            <Shield className="w-4 h-4" />
+            <span>Tous</span>
+          </button>
+          {uniqueRoles.map((role) => (
+            <button
+              key={role}
+              onClick={() => setSelectedRole(role)}
+              className={`px-3 py-1.5 rounded-lg flex items-center space-x-2 transition-colors ${
+                selectedRole === role 
+                  ? 'bg-blue-500 text-white hover:bg-blue-600' 
+                  : getRoleColor(role)
+              }`}
+            >
+              <Shield className={`w-4 h-4 ${selectedRole === role ? 'text-white' : getRoleIconColor(role)}`} />
+              <span>{getRoleLabel(role)}</span>
+            </button>
+          ))}
         </div>
       </div>
 
