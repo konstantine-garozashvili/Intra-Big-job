@@ -4,12 +4,14 @@ import { useOptimizedProfile } from '../hooks/useOptimizedProfile';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import apiService from '@/lib/services/apiService';
+import { queryClient } from '@/lib/services/queryClient';
 
 // Simple test query to help populate React Query devtools
 const useTestQuery = () => {
   return useQuery({
     queryKey: ['test-query'],
     queryFn: async () => {
+      console.log('Test query executed');
       // Simulate an API call
       await new Promise(resolve => setTimeout(resolve, 500));
       return { message: 'Test query successful', timestamp: new Date().toISOString() };
@@ -17,6 +19,16 @@ const useTestQuery = () => {
     staleTime: 10000,
   });
 };
+
+// Force a test query to populate the devtools
+// This ensures there's always data in the devtools
+queryClient.prefetchQuery({
+  queryKey: ['forced-test-query'],
+  queryFn: async () => {
+    console.log('Forced test query executed');
+    return { message: 'Forced test query', timestamp: new Date().toISOString() };
+  },
+});
 
 /**
  * Composant Tableau de bord affiché comme page d'accueil pour les utilisateurs connectés
@@ -29,13 +41,23 @@ const Dashboard = () => {
   const [needsFullData, setNeedsFullData] = useState(false);
   
   // Execute test query to populate React Query devtools
-  useTestQuery();
+  const testQuery = useTestQuery();
+  console.log('Test query result:', testQuery.data);
   
   // Preload profile data when dashboard mounts
   useEffect(() => {
     // Preload profile data in the background to warm up the cache
     // Use minimal data by default to save memory
     apiService.preloadProfileData({ minimal: true });
+    
+    // Force a query to ensure React Query devtools shows data
+    queryClient.prefetchQuery({
+      queryKey: ['dashboard-mount-test'],
+      queryFn: async () => {
+        console.log('Dashboard mount test query executed');
+        return { mounted: true, timestamp: new Date().toISOString() };
+      },
+    });
     
     // Clean up function to help with memory management
     return () => {
