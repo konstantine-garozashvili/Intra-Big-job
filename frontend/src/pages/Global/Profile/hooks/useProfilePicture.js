@@ -126,183 +126,81 @@ function getProfilePictureUrl(data) {
  * @returns {Object} Profile picture data and operations
  */
 export function useProfilePicture() {
-  // Use the shared queryClient instead of creating a new one
-  const isMountedRef = useRef(true);
   const queryClient = useQueryClient();
-  
-  // Générer un ID unique pour ce composant
-  const [componentId] = useState(() => 
-    `profile_picture_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-  );
-  
   const [cachedUrl, setCachedUrl] = useState(() => {
-    const url = profilePictureCache.getFromCache();
-    return url;
+    // Initialiser avec le cache existant au montage du composant
+    return profilePictureCache.getFromCache();
   });
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState(Date.now());
   
-  // Reset isMountedRef on component mount/unmount
-  useEffect(() => {
-    isMountedRef.current = true;
-    
-    // Enregistrer ce composant comme utilisateur de la route au montage
-    userDataManager.requestRegistry.registerRouteUser('/api/profile/picture', componentId);
-    
-    // Check if we have a valid cached URL on mount
-    const url = profilePictureCache.getFromCache();
-    if (url) {
-      setCachedUrl(url);
-    }
-    
-    return () => {
-      isMountedRef.current = false;
-      // Désenregistrer ce composant comme utilisateur de la route au démontage
-      userDataManager.requestRegistry.unregisterRouteUser('/api/profile/picture', componentId);
-    };
-  }, [componentId]);
+  // Get current user data
+  const { data: userData } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => userDataManager.getCurrentUser(),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 
-  // Fonction pour récupérer la photo de profil en utilisant la coordination
-  const fetchProfilePicture = useCallback(async () => {
-    // Utiliser le système de coordination des requêtes
-    try {
-      const response = await userDataManager.coordinateRequest(
-        '/api/profile/picture',
-        componentId,
-        async () => {
-          const result = await apiService.get('/api/profile/picture', { 
-            params: { _t: Date.now() }, // Ajouter un timestamp pour éviter le cache du navigateur
-            timeout: 15000, // Timeout court pour les images
-            retries: 1 // Limiter les retries
-          });
-          
-          // Normaliser les données pour assurer un format cohérent
-          // Le format attendu par getProfilePictureUrl est { data: { has_profile_picture: bool, profile_picture_url: string } }
-          if (result) {
-            // Si le résultat est une string, c'est probablement une URL directe
-            if (typeof result === 'string') {
-              return { 
-                success: true,
-                data: { 
-                  has_profile_picture: true, 
-                  profile_picture_url: result 
-                } 
-              };
-            }
-            
-            // Si on a direct la propriété url ou profile_picture_url
-            if (result.url || result.profile_picture_url) {
-              const url = result.url || result.profile_picture_url;
-              return { 
-                success: true, 
-                data: { 
-                  has_profile_picture: true, 
-                  profile_picture_url: url 
-                } 
-              };
-            }
-            
-            // Si on a data.profile_picture_url
-            if (result.data && (result.data.profile_picture_url || result.data.url)) {
-              // Le format est déjà correct, assurer juste qu'on a bien has_profile_picture
-              const profileData = { ...result.data };
-              if (profileData.profile_picture_url || profileData.url) {
-                profileData.has_profile_picture = true;
-                profileData.profile_picture_url = profileData.profile_picture_url || profileData.url;
-              }
-              return { success: true, data: profileData };
-            }
-            
-            // Si on a un autre format (mais toujours un objet), essayer de normaliser
-            if (typeof result === 'object' && result !== null) {
-              if (result.success === true && result.data) {
-                // Le format est probablement déjà correct
-                return result;
-              }
-              
-              // Dernier recours: chercher une URL à n'importe quel niveau
-              const findUrlInObject = (obj) => {
-                for (const key in obj) {
-                  if (typeof obj[key] === 'string' && 
-                      (key.includes('url') || key.includes('picture')) && 
-                      (obj[key].startsWith('http') || obj[key].startsWith('/'))) {
-                    return obj[key];
-                  } else if (typeof obj[key] === 'object' && obj[key] !== null) {
-                    const nestedUrl = findUrlInObject(obj[key]);
-                    if (nestedUrl) return nestedUrl;
-                  }
-                }
-                return null;
-              };
-              
-              const url = findUrlInObject(result);
-              if (url) {
-                return { 
-                  success: true, 
-                  data: { 
-                    has_profile_picture: true, 
-                    profile_picture_url: url 
-                  } 
-                };
-              }
-            }
-          }
-          
-          // Si aucune normalisation n'a fonctionné, retourner le résultat tel quel
-          // en s'assurant qu'il a la structure minimale attendue
-          return result && typeof result === 'object' 
-            ? result 
-            : { success: false, data: { has_profile_picture: false } };
-        }
-      );
-      
-      return response;
-    } catch (error) {
-      // En cas d'erreur, retourner un objet avec le format attendu
-      return { 
-        success: false, 
-        data: { has_profile_picture: false },
-        error: error.message
-      };
-    }
-  }, [componentId]);
+  const userId = userData?.id;
 
-  // Query for profile picture with enhanced debugging - Utiliser notre fonction de fetch coordonnée
-  const profilePictureQuery = useQuery({
+  // Query for profile picture data
+  const { data: profilePictureData, isLoading, isFetching } = useQuery({
     queryKey: PROFILE_QUERY_KEYS.profilePicture,
-    queryFn: fetchProfilePicture,
-    staleTime: 5 * 60 * 1000,
-    cacheTime: 10 * 60 * 1000,
-    retry: 1,
-    refetchOnWindowFocus: false,
-    refetchOnMount: profilePictureCache.isCacheValid() ? false : true,
-    refetchInterval: null,
-    onSuccess: (data) => {
-      const url = getProfilePictureUrl(data);
-      if (url) {
-        queryClient.setQueryData(PROFILE_QUERY_KEYS.profilePicture, data);
-        profilePictureCache.saveToCache(url);
-        
-        // Notifier avec le type approprié mais limiter la propagation
-        try {
-          // Ne déclencher l'invalidation que si ce composant est le seul utilisateur de la route
-          // ou si c'est une première requête (pas dans le cadre d'une mise à jour)
-          if (!userDataManager.requestRegistry.isRouteShared('/api/profile/picture')) {
-            userDataManager.invalidateCache('profile_picture');
+    queryFn: async () => {
+      try {
+        const response = await apiService.get('/api/profile/picture');
+        if (response.data.success) {
+          const pictureUrl = response.data.data.profile_picture_url;
+          // Mettre à jour le cache local
+          if (pictureUrl) {
+            setCachedUrl(pictureUrl);
+            profilePictureCache.saveToCache(pictureUrl);
           }
-        } catch (e) {
-          // Ignorer les erreurs silencieusement
+          return {
+            success: true,
+            data: {
+              has_profile_picture: true,
+              profile_picture_url: pictureUrl,
+              is_temp_url: false
+            }
+          };
         }
+        return {
+          success: false,
+          data: {
+            has_profile_picture: false,
+            profile_picture_url: null,
+            is_temp_url: false
+          }
+        };
+      } catch (error) {
+        console.error('Error fetching profile picture:', error);
+        // En cas d'erreur, utiliser le cache si disponible
+        const cachedUrl = profilePictureCache.getFromCache();
+        if (cachedUrl) {
+          return {
+            success: true,
+            data: {
+              has_profile_picture: true,
+              profile_picture_url: cachedUrl,
+              is_temp_url: false
+            }
+          };
+        }
+        return {
+          success: false,
+          data: {
+            has_profile_picture: false,
+            profile_picture_url: null,
+            is_temp_url: false
+          }
+        };
       }
     },
-    onError: (error) => {
-      // Query error
-    },
-    placeholderData: cachedUrl ? {
-      success: true,
-      data: {
-        has_profile_picture: true,
-        profile_picture_url: cachedUrl
-      }
-    } : undefined
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    enabled: !!userId, // Only run query if we have a userId
+    retry: 3, // Réessayer 3 fois en cas d'échec
+    retryDelay: 1000, // Attendre 1 seconde entre chaque tentative
   });
 
   // Ajouter un état pour contrôler la fréquence des actualisations
@@ -333,12 +231,16 @@ export function useProfilePicture() {
       queryClient.invalidateQueries({ 
         queryKey: PROFILE_QUERY_KEYS.publicProfile,
         refetchType: 'all'
+      }),
+      queryClient.invalidateQueries({ 
+        queryKey: ['currentUser'],
+        refetchType: 'all'
       })
     ]);
     
     // Forcer un rafraîchissement immédiat
-    return await profilePictureQuery.refetch();
-  }, [queryClient, profilePictureQuery, lastRefreshTime]);
+    return await profilePictureData.refetch();
+  }, [queryClient, profilePictureData, lastRefreshTime]);
 
   // Upload profile picture mutation
   const uploadProfilePictureMutation = useApiMutation(
@@ -347,18 +249,14 @@ export function useProfilePicture() {
     PROFILE_QUERY_KEYS.profilePicture,
     {
       onMutate: async (formData) => {
-        // Cancel any outgoing refetches
         await queryClient.cancelQueries({ queryKey: PROFILE_QUERY_KEYS.profilePicture });
         
-        // Save previous state
         const previousData = queryClient.getQueryData(PROFILE_QUERY_KEYS.profilePicture);
         
-        // Create temporary URL for optimistic update
         const file = formData.get('profile_picture');
         if (file instanceof File) {
           const tempUrl = URL.createObjectURL(file);
           
-          // Update cache immediately with optimistic data
           queryClient.setQueryData(PROFILE_QUERY_KEYS.profilePicture, {
             success: true,
             data: {
@@ -368,43 +266,32 @@ export function useProfilePicture() {
             }
           });
           
-          // Also update our local state with the temporary URL
           setCachedUrl(tempUrl);
         }
         
         return { previousData };
       },
       onSuccess: async (data) => {
-        // Notifier le gestionnaire de données utilisateur de l'invalidation
-        userDataManager.invalidateCache('profile_picture'); // Passer un type spécifique
+        // Mettre à jour le cache local avec la nouvelle URL
+        if (data.data?.profile_picture_url) {
+          setCachedUrl(data.data.profile_picture_url);
+          profilePictureCache.saveToCache(data.data.profile_picture_url);
+        }
         
-        // Notify all subscribers
+        // Invalider tous les caches pertinents
+        userDataManager.invalidateCache('profile_picture');
         profilePictureEvents.notify();
-        
-        // Show success message
         toast.success('Photo de profil mise à jour avec succès');
         
-        // Force refresh to get latest picture
-        forceRefresh();
+        // Forcer le rafraîchissement
+        await forceRefresh(true);
       },
       onError: (error, variables, context) => {
-        // Restore previous state on error
+        // Restore previous data on error
         if (context?.previousData) {
           queryClient.setQueryData(PROFILE_QUERY_KEYS.profilePicture, context.previousData);
-          
-          // Restore cached URL from previous data
-          const prevUrl = getProfilePictureUrl(context.previousData);
-          if (prevUrl) {
-            setCachedUrl(prevUrl);
-          }
         }
-      },
-      onSettled: () => {
-        // Clean up temporary URLs
-        const data = queryClient.getQueryData(PROFILE_QUERY_KEYS.profilePicture);
-        if (data?.data?.is_temp_url && data?.data?.profile_picture_url) {
-          URL.revokeObjectURL(data.data.profile_picture_url);
-        }
+        toast.error('Erreur lors de la mise à jour de la photo de profil');
       }
     }
   );
@@ -416,13 +303,10 @@ export function useProfilePicture() {
     PROFILE_QUERY_KEYS.profilePicture,
     {
       onMutate: async () => {
-        // Cancel any outgoing refetches
         await queryClient.cancelQueries({ queryKey: PROFILE_QUERY_KEYS.profilePicture });
         
-        // Save previous state
         const previousData = queryClient.getQueryData(PROFILE_QUERY_KEYS.profilePicture);
         
-        // Update cache immediately with optimistic data
         queryClient.setQueryData(PROFILE_QUERY_KEYS.profilePicture, {
           success: true,
           data: {
@@ -431,98 +315,38 @@ export function useProfilePicture() {
           }
         });
         
-        // Clear the cached URL
         setCachedUrl(null);
         profilePictureCache.clearCache();
         
         return { previousData };
       },
       onSuccess: async () => {
-        // Notifier le gestionnaire de données utilisateur de l'invalidation
-        userDataManager.invalidateCache('profile_picture'); // Passer un type spécifique
-        
-        // Notify all subscribers
+        userDataManager.invalidateCache('profile_picture');
         profilePictureEvents.notify();
-        
-        // Clear local cache 
         profilePictureCache.clearCache();
-        
-        // Show success message
         toast.success('Photo de profil supprimée avec succès');
-        
-        // Force refresh to get latest picture status
-        forceRefresh();
+        await forceRefresh(true);
       },
       onError: (error, variables, context) => {
-        // Restore previous state on error
         if (context?.previousData) {
           queryClient.setQueryData(PROFILE_QUERY_KEYS.profilePicture, context.previousData);
-          
-          // Restore cached URL from previous data
-          const prevUrl = getProfilePictureUrl(context.previousData);
-          if (prevUrl) {
-            setCachedUrl(prevUrl);
-            profilePictureCache.saveToCache(prevUrl);
-          }
         }
       }
     }
   );
 
-  // Modifier l'abonnement aux événements pour mieux gérer les mises à jour
-  useEffect(() => {
-    // Variables pour suivre les événements récents
-    let recentUpdateTimestamp = 0;
-    const UPDATE_THROTTLE_MS = 1000; // 1 seconde minimum entre les mises à jour
-    
-    // Fonction de rappel pour rafraîchir la photo de profil si les données utilisateur sont mises à jour
-    const handleUserDataUpdate = (updateType) => {
-      // Ne déclencher le forceRefresh que si la mise à jour n'est pas liée à la photo de profil
-      // Cela empêche la boucle infinie où la mise à jour de la photo déclenche une mise à jour des données
-      if (updateType === 'profile_picture') {
-        return;
-      }
-      
-      // Vérifier si la route est partagée entre plusieurs composants
-      // Si oui, être encore plus prudent pour éviter les cascades de mises à jour
-      if (userDataManager.requestRegistry.isRouteShared('/api/profile/picture')) {
-        // Si un autre composant est en train de faire une requête, ne pas en lancer une nouvelle
-        if (userDataManager.requestRegistry.getActiveRequest('/api/profile/picture')) {
-          return;
-        }
-      }
-      
-      // Vérifier la fréquence des mises à jour
-      const now = Date.now();
-      if (now - recentUpdateTimestamp < UPDATE_THROTTLE_MS) {
-        return;
-      }
-      
-      recentUpdateTimestamp = now;
-      
-      // Utiliser la version throttled de forceRefresh
-      forceRefresh(false);
-    };
-    
-    // S'abonner à l'événement UPDATED du gestionnaire de données utilisateur
-    const unsubscribe = userDataManager.subscribe(USER_DATA_EVENTS.UPDATED, handleUserDataUpdate);
-    
-    // Se désabonner lors du démontage du composant
-    return unsubscribe;
-  }, [forceRefresh]);
-
   // Determine the profile picture URL to return, prioritizing:
   // 1. API data if available
   // 2. Local cached URL otherwise
-  const finalProfilePictureUrl = getProfilePictureUrl(profilePictureQuery.data) || cachedUrl;
+  const finalProfilePictureUrl = profilePictureData?.data?.profile_picture_url || cachedUrl;
 
   return {
     // Profile picture data
     profilePictureUrl: finalProfilePictureUrl,
-    isLoading: profilePictureQuery.isLoading && !cachedUrl, // Not loading if we have a cached URL
-    isFetching: profilePictureQuery.isFetching,
-    isError: profilePictureQuery.isError,
-    error: profilePictureQuery.error,
+    isLoading: isLoading && !cachedUrl, // Not loading if we have a cached URL
+    isFetching: isFetching,
+    isError: false,
+    error: null,
     
     // Operations
     refetch: forceRefresh,
