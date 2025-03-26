@@ -5,6 +5,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../ui/card';
 import { toast } from 'sonner';
+import { send } from '@emailjs/browser';
 
 const ResetPasswordRequest = () => {
     const [email, setEmail] = useState('');
@@ -23,67 +24,92 @@ const ResetPasswordRequest = () => {
         setIsSubmitting(true);
         
         try {
-            // Utiliser le chemin correct avec le préfixe /api
             console.log('Envoi de la demande de réinitialisation pour:', email);
-            const response = await apiService.post('/api/reset-password/request', { email });
             
-            console.log('Réponse reçue:', response);
+            // Appel API pour demander la réinitialisation
+            const response = await apiService.post('/reset-password/request', { email });
             
-            // Si la réponse contient success=true
-            if (response.success) {
-                // Message de succès
-                toast.success(response.message || 'Si votre email est enregistré dans notre système, vous recevrez un lien de réinitialisation');
+            console.log('Réponse reçue du backend:', response);
+            
+            // Si la réponse contient success=true et un token
+            if (response.success && response.token) {
+                console.log('Token reçu, préparation de l\'envoi d\'email');
                 
-                // Rediriger vers la page de confirmation
+                // Préparer les données pour EmailJS selon le nouveau template
+                const templateParams = {
+                    to_name: email.split('@')[0], // Nom d'utilisateur extrait de l'email
+                    reset_url: `${window.location.origin}/reset-password/${response.token}`, // Lien de réinitialisation
+                    expires_in: "30", // Durée de validité en minutes
+                    email: email // Email complet
+                };
+                
+                console.log('Paramètres du template:', templateParams);
+                console.log('Service ID:', import.meta.env.VITE_EMAILJS_SERVICE_ID);
+                console.log('Template ID:', import.meta.env.VITE_EMAILJS_TEMPLATE_ID);
+                
+                try {
+                    // Envoyer l'email avec EmailJS
+                    const emailResponse = await send(
+                        import.meta.env.VITE_EMAILJS_SERVICE_ID,
+                        import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
+                        templateParams,
+                        import.meta.env.VITE_EMAILJS_PUBLIC_KEY
+                    );
+
+                    console.log('Email envoyé avec succès:', emailResponse);
+                    
+                    // Message de succès
+                    toast.success('Si votre email est enregistré dans notre système, vous recevrez un lien de réinitialisation');
+                
+                    // Rediriger vers la page de confirmation
+                    navigate('/reset-password/confirmation', { 
+                        state: { email } 
+                    });
+                } catch (emailError) {
+                    console.error('Erreur lors de l\'envoi de l\'email:', emailError);
+                    toast.error('Erreur lors de l\'envoi de l\'email. Veuillez réessayer.');
+                }
+            } else {
+                // En cas d'erreur côté serveur mais avec une réponse 200
+                console.log('Réponse sans token ou avec success=false');
+                toast.success('Si votre email est enregistré dans notre système, vous recevrez un lien de réinitialisation');
+                
+                // On redirige quand même pour ne pas révéler si l'email existe ou non
                 navigate('/reset-password/confirmation', { 
                     state: { email } 
                 });
-            } else {
-                // En cas d'erreur côté serveur mais avec une réponse 200
-                toast.error(response.message || 'Une erreur est survenue');
             }
         } catch (error) {
-            console.error('Erreur complète:', error);
-            const errorMessage = error.response?.data?.message || 
-                               'Impossible de traiter votre demande. Veuillez réessayer plus tard.';
-            toast.error(errorMessage);
+            console.error('Erreur lors de la demande de réinitialisation:', error);
+            toast.error('Une erreur est survenue lors de la demande de réinitialisation');
         } finally {
             setIsSubmitting(false);
         }
     };
 
     return (
-        <div className="flex justify-center items-center min-h-screen bg-gray-50">
+        <div className="flex justify-center items-center min-h-screen bg-gray-50 p-4">
             <Card className="w-full max-w-md">
                 <CardHeader>
                     <CardTitle>Réinitialisation de mot de passe</CardTitle>
                     <CardDescription>
-                        Entrez votre adresse email pour recevoir un lien de réinitialisation.
+                        Entrez votre adresse email pour recevoir un lien de réinitialisation
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <form onSubmit={handleSubmit}>
-                        <div className="mb-4">
-                            <label 
-                                htmlFor="email" 
-                                className="block text-sm font-medium text-gray-700 mb-1"
-                            >
-                                Adresse email
-                            </label>
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <div className="space-y-2">
                             <Input
-                                id="email"
                                 type="email"
+                                placeholder="Adresse email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                placeholder="exemple@email.com"
-                                autoComplete="email"
                                 required
-                                className="w-full"
                             />
                         </div>
-                        <Button
-                            type="submit"
-                            className="w-full"
+                        <Button 
+                            type="submit" 
+                            className="w-full" 
                             disabled={isSubmitting}
                         >
                             {isSubmitting ? 'Envoi en cours...' : 'Envoyer le lien'}
@@ -91,10 +117,7 @@ const ResetPasswordRequest = () => {
                     </form>
                 </CardContent>
                 <CardFooter className="flex justify-center">
-                    <Button 
-                        variant="link" 
-                        onClick={() => navigate('/login')}
-                    >
+                    <Button variant="link" onClick={() => navigate('/login')}>
                         Retour à la connexion
                     </Button>
                 </CardFooter>

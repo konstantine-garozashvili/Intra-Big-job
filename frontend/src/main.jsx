@@ -2,8 +2,12 @@ import { createRoot } from 'react-dom/client'
 import { StrictMode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+import { init as initEmailJS } from '@emailjs/browser'
 import App from './App.jsx'
 import './index.css'
+
+// Initialisation d'EmailJS
+initEmailJS('D-6tgxf8T9Wd1Cllj');
 
 // Configuration du QueryClient avec des options par défaut optimisées
 const queryClient = new QueryClient({
