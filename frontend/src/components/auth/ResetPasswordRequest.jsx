@@ -24,24 +24,36 @@ const ResetPasswordRequest = () => {
         setIsSubmitting(true);
         
         try {
+            console.log('Envoi de la demande de réinitialisation pour:', email);
+            
             // Appel API pour demander la réinitialisation
             const response = await apiService.post('/reset-password/request', { email });
             
-            console.log('Réponse reçue:', response);
+            console.log('Réponse reçue du backend:', response);
             
             // Si la réponse contient success=true et un token
             if (response.success && response.token) {
-                // Envoyer l'email avec EmailJS
+                console.log('Token reçu, préparation de l\'envoi d\'email');
+                
+                // Préparer les données pour EmailJS
+                const templateParams = {
+                    username: email.split('@')[0],
+                    reset_link: `${window.location.origin}/reset-password/${response.token}`,
+                    expiry_time: "30", // Durée de validité en minutes
+                    email: email
+                };
+                
+                console.log('Paramètres du template:', templateParams);
+                console.log('Service ID:', import.meta.env.VITE_EMAILJS_SERVICE_ID);
+                console.log('Template ID:', import.meta.env.VITE_EMAILJS_TEMPLATE_ID);
+                
                 try {
+                    // Envoyer l'email avec EmailJS
                     const emailResponse = await send(
                         import.meta.env.VITE_EMAILJS_SERVICE_ID,
                         import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
-                        {
-                            username: email.split('@')[0],
-                            reset_link: `${window.location.origin}/reset-password/${response.token}`,
-                            expiry_time: "30", // Durée de validité en minutes
-                            email: email
-                        }
+                        templateParams,
+                        import.meta.env.VITE_EMAILJS_PUBLIC_KEY
                     );
 
                     console.log('Email envoyé avec succès:', emailResponse);
@@ -59,7 +71,13 @@ const ResetPasswordRequest = () => {
                 }
             } else {
                 // En cas d'erreur côté serveur mais avec une réponse 200
-                toast.error(response.message || 'Une erreur est survenue');
+                console.log('Réponse sans token ou avec success=false');
+                toast.success('Si votre email est enregistré dans notre système, vous recevrez un lien de réinitialisation');
+                
+                // On redirige quand même pour ne pas révéler si l'email existe ou non
+                navigate('/reset-password/confirmation', { 
+                    state: { email } 
+                });
             }
         } catch (error) {
             console.error('Erreur lors de la demande de réinitialisation:', error);
@@ -99,10 +117,7 @@ const ResetPasswordRequest = () => {
                     </form>
                 </CardContent>
                 <CardFooter className="flex justify-center">
-                    <Button 
-                        variant="link" 
-                        onClick={() => navigate('/login')}
-                    >
+                    <Button variant="link" onClick={() => navigate('/login')}>
                         Retour à la connexion
                     </Button>
                 </CardFooter>

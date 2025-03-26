@@ -6,8 +6,8 @@ import { init as initEmailJS } from '@emailjs/browser'
 import App from './App.jsx'
 import './index.css'
 
-// Initialisation d'EmailJS avec la variable d'environnement
-initEmailJS(import.meta.env.VITE_EMAILJS_PUBLIC_KEY);
+// Initialisation d'EmailJS
+initEmailJS('D-6tgxf8T9Wd1Cllj');
 
 // Configuration du QueryClient avec des options par défaut optimisées
 const queryClient = new QueryClient({
