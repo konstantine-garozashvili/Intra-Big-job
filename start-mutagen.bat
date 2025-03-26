@@ -37,7 +37,7 @@ timeout /t 10 /nobreak
 REM Start Mutagen sync
 echo Starting Mutagen file synchronization...
 "%MUTAGEN_PATH%" project start
-timeout /t 20 /nobreak
+timeout /t 40 /nobreak
 
 echo Project started successfully with Mutagen!
 echo Access your application at:
