@@ -463,7 +463,7 @@ const Navbar = memo(() => {
                     }
                     className="text-2xl font-black tracking-tight text-white"
                   >
-                    BigGGGG<span className="text-[#528eb2]">Project</span>
+                    Big<span className="text-[#528eb2]">Project</span>
                   </Link>
                 </div>
               </div>
