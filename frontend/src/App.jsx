@@ -54,6 +54,8 @@ const CareerSettings = lazy(() => import('./pages/Global/Profile/views/CareerSet
 const ProfileView = lazy(() => import('./pages/Global/Profile/views/ProfileView'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 
+const CandidatureList = lazy(() => import('./pages/Admin/CandidatureList'))
+
 // Dashboards spécifiques par rôle
 const AdminDashboard = lazy(() => import('./pages/Admin/Dashboard'))
 const StudentDashboard = lazy(() => import('./pages/Student/Dashboard'))
@@ -535,7 +537,17 @@ const AppContent = () => {
                       </RoleGuard>
                     } />
                   </Route>
+                    
+                    {/* Routes Candidatures */}
+                    <Route path="/candidatures" element={
+                      <RoleGuard 
+                        roles={[ROLES.RECRUITER, ROLES.ADMIN, ROLES.SUPERADMIN]} 
+                        fallback={<Navigate to="/dashboard" replace />}>
+                        <CandidatureList />
+                      </RoleGuard>
+                    } />
                   
+
                   {/* Redirection des routes inconnues vers la page d'accueil */}
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Route>

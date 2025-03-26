@@ -344,7 +344,7 @@ const MenuBurger = memo(() => {
       key: 'candidatures',
       label: 'Candidatures',
       icon: <Share2 className="w-5 h-5 mr-2 text-[#528eb2]" />,
-      roles: [ROLES.HR, ROLES.RECRUITER],
+      roles: [ROLES.HR, ROLES.RECRUITER, ROLES.ADMIN, ROLES.TEACHER],
       to: '/candidatures',
     },
     {
