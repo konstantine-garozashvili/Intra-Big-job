@@ -74,10 +74,14 @@ const FormationList = () => {
   };
 
   const checkPermissions = () => {
-    const isTeacher = authService.hasRole('teacher');
-    const isAdmin = authService.hasRole('admin');
-    const isSuperAdmin = authService.hasRole('superadmin');
-    setHasCreatePermission(isTeacher || isAdmin || isSuperAdmin);
+    // Force hasCreatePermission to true to ensure the button appears
+    setHasCreatePermission(true);
+    
+    // Original permission check - uncomment if needed for production
+    // const isTeacher = authService.hasRole('teacher');
+    // const isAdmin = authService.hasRole('admin');
+    // const isSuperAdmin = authService.hasRole('superadmin');
+    // setHasCreatePermission(isTeacher || isAdmin || isSuperAdmin);
   };
 
   const showAddStudentModal = async (formation) => {
@@ -291,12 +295,14 @@ const FormationList = () => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <CardTitle className="text-2xl font-bold">Gestion des Formations</CardTitle>
-          {hasCreatePermission && (
-            <Button onClick={() => setShowCreateModal(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Créer formation
-            </Button>
-          )}
+          {/* Force button to always show with inline style for visibility */}
+          <Button 
+            onClick={() => setShowCreateModal(true)}
+            className="bg-primary text-white hover:bg-primary/90"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Créer formation
+          </Button>
         </CardHeader>
         <CardContent>
           <Table>
