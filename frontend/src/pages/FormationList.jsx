@@ -334,38 +334,44 @@ const FormationList = () => {
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openEditModal(formation);
-                        }}
-                      >
-                        Modifier
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          showAddStudentModal(formation);
-                        }}
-                        className="ml-2"
-                      >
-                        <UserPlus className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          showDeleteStudentModal(formation);
-                        }}
-                        className="ml-2"
-                      >
-                        <UserMinus className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center justify-end space-x-2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditModal(formation);
+                          }}
+                          className="h-8 w-8 p-0"
+                        >
+                          <span className="sr-only">Modifier</span>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            showAddStudentModal(formation);
+                          }}
+                          className="h-8 w-8 p-0"
+                        >
+                          <span className="sr-only">Ajouter des étudiants</span>
+                          <UserPlus className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            showDeleteStudentModal(formation);
+                          }}
+                          className="h-8 w-8 p-0"
+                        >
+                          <span className="sr-only">Supprimer des étudiants</span>
+                          <UserMinus className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                   {expandedFormation === formation.id && (
