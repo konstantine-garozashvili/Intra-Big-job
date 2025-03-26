@@ -35,6 +35,7 @@ import { SearchBar } from "./SearchBar";
 import { useRolePermissions } from "../features/roles/useRolePermissions";
 import { Skeleton } from './ui/skeleton';
 import { ThemeToggle } from './ui/theme-toggle';
+import NotificationDropdown from './NotificationDropdown';
 
 // Style personnalisé pour le menu dropdown et le bouton burger
 const customStyles = `
@@ -237,13 +238,8 @@ const UserMenu = ({ onLogout, userData, setLogoutDialogOpen }) => {
 
   return (
     <div className="flex items-center">
-      {/* Notification icon (placeholder) */}
-      <Button
-        variant="ghost"
-        className="rounded-full w-10 h-10 p-0 bg-transparent text-gray-200 hover:bg-[#02284f]/80 hover:text-white mr-2 dark:text-[#78b9dd] dark:hover:bg-[#78b9dd]/20"
-      >
-        <Bell className="h-5 w-5" />
-      </Button>
+      {/* Utiliser le composant NotificationDropdown à la place du bouton */}
+      <NotificationDropdown />
 
       {/* Dropdown menu */}
       <DropdownMenu modal={true}>
@@ -299,6 +295,14 @@ const UserMenu = ({ onLogout, userData, setLogoutDialogOpen }) => {
             >
               <Settings className="mr-2 h-4 w-4 text-[#528eb2] dark:text-[#78b9dd]" />
               <span>Paramètres</span>
+            </DropdownMenuItem>
+            
+            <DropdownMenuItem 
+              className="navbar-dropdown-item"
+              onClick={() => navigate('/notifications')}
+            >
+              <Bell className="mr-2 h-4 w-4 text-[#528eb2] dark:text-[#78b9dd]" />
+              <span>Notifications</span>
             </DropdownMenuItem>
             
             <DropdownMenuSeparator className="my-1 bg-gray-100 dark:bg-gray-700" />
