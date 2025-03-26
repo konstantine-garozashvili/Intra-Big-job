@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import apiService from '@/lib/services/apiService';
 import { getSessionId } from '@/lib/services/authService';
+import { queryClient } from '@/lib/services/queryClient';
 
 /**
  * Custom hook for optimized profile data fetching
@@ -119,14 +120,9 @@ function useMemoryMonitoring() {
         console.warn('Memory usage high, clearing caches');
         apiService.clearMemoryCache();
         
-        // Also clear React Query cache if available
-        try {
-          const queryClient = window.__REACT_QUERY_GLOBAL_CLIENT__;
-          if (queryClient && typeof queryClient.clear === 'function') {
-            queryClient.clear();
-          }
-        } catch (e) {
-          // Ignore errors
+        // Use our centralized queryClient instance
+        if (queryClient && typeof queryClient.clear === 'function') {
+          queryClient.clear();
         }
       }
     }, 30000); // Check every 30 seconds

@@ -1,27 +1,30 @@
 import { createRoot } from 'react-dom/client'
 import { StrictMode } from 'react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import App from './App.jsx'
 import './index.css'
+import { queryClient } from './lib/services/queryClient'
 
-// Configuration du QueryClient avec des options par défaut optimisées
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 60 * 1000, // 1 minute
-      cacheTime: 5 * 60 * 1000, // 5 minutes
-      refetchOnWindowFocus: false,
-      retry: 1,
-      logging: false, // Disable query logging in console
-    },
-  },
-  logger: {
-    log: () => {},
-    warn: () => {},
-    error: () => {}
+// Expose queryClient globally for debugging
+window.queryClient = queryClient;
+
+// Create a style element for ReactQueryDevtools
+const queryDevToolsStyle = document.createElement('style')
+queryDevToolsStyle.innerHTML = `
+  .__react-query-devtools-panel__ {
+    z-index: 99999 !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+    border-radius: 8px !important;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2) !important;
   }
-})
+  .__react-query-devtools-button__ {
+    z-index: 99999 !important;
+    bottom: 12px !important;
+    left: 12px !important;
+  }
+`
+document.head.appendChild(queryDevToolsStyle)
 
 // StrictMode est activé pour assurer une meilleure qualité du code
 // Note: Si des problèmes d'interface surviennent pendant le développement (double montage/démontage),
@@ -31,14 +34,7 @@ createRoot(document.getElementById('root')).render(
     <QueryClientProvider client={queryClient}>
       <App />
       {/* Les DevTools ne sont affichés qu'en développement */}
-      {import.meta.env.DEV && (
-        <ReactQueryDevtools 
-          initialIsOpen={false} 
-          position="bottom-right"
-          buttonPosition="bottom-right"
-          styleNonce="rq-devtools"
-        />
-      )}
+      {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={true} />} 
     </QueryClientProvider>
   </StrictMode>
 )

@@ -167,15 +167,6 @@ const AppInitializer = () => {
       .then(({ default: userDataManager }) => {
         window.userDataManager = userDataManager;
       });
-    
-
-      
-    // Set up QueryClient
-    import('./lib/services/queryClient')
-      .then(({ setQueryClient }) => {
-        setQueryClient(queryClient);
-      });
-      
   }, []);
   
   return null;

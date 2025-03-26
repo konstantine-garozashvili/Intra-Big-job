@@ -1,8 +1,22 @@
 import React, { useMemo, useEffect, useState } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
 import { useOptimizedProfile } from '../hooks/useOptimizedProfile';
+import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import apiService from '@/lib/services/apiService';
+
+// Simple test query to help populate React Query devtools
+const useTestQuery = () => {
+  return useQuery({
+    queryKey: ['test-query'],
+    queryFn: async () => {
+      // Simulate an API call
+      await new Promise(resolve => setTimeout(resolve, 500));
+      return { message: 'Test query successful', timestamp: new Date().toISOString() };
+    },
+    staleTime: 10000,
+  });
+};
 
 /**
  * Composant Tableau de bord affiché comme page d'accueil pour les utilisateurs connectés
@@ -13,6 +27,9 @@ const Dashboard = () => {
   const [hasShownFallback, setHasShownFallback] = useState(false);
   // Track if we need full data or minimal data
   const [needsFullData, setNeedsFullData] = useState(false);
+  
+  // Execute test query to populate React Query devtools
+  useTestQuery();
   
   // Preload profile data when dashboard mounts
   useEffect(() => {
