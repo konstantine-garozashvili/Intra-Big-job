@@ -55,6 +55,8 @@ import {
     DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { getFrenchRoleDisplayName, getRoleColor } from "@/lib/utils/roleDisplay.jsx";
+import ConvertCsv from "@/components/ConvertCsv"; // Importation sans accolades
+
 
 export default function UserRoleManager() {
     // États pour les données
@@ -123,7 +125,6 @@ export default function UserRoleManager() {
             setIsLoading(false);
         }
     };
-    
     // Changer le rôle d'un utilisateur
     const changeUserRole = async (userId, oldRoleName, newRoleName) => {
         setIsProcessing(true);
@@ -377,7 +378,10 @@ export default function UserRoleManager() {
                                     ) : (
                                         "Actualiser"
                                     )}
-                                </Button>
+                                </Button>                               
+                                <ConvertCsv />
+                                
+
                             </div>
                             
                             <div className="w-full sm:w-auto">
