@@ -307,23 +307,36 @@ const Navbar = memo(() => {
             }
             
             // Vérifier si une mise à jour est nécessaire (données plus vieilles que 2 min)
-            const stats = userDataManager.getStats();
-            const dataAge = stats.dataAge || Infinity;
-            
-            if (dataAge > 2 * 60 * 1000) {
-              // Récupérer les données en arrière-plan sans bloquer l'interface
-              userDataManager.getUserData({
-                routeKey: '/api/me',
-                forceRefresh: false,
-                background: true,
-                requestId: 'navbar_background_refresh'
-              }).then(freshData => {
-                if (freshData && JSON.stringify(freshData) !== JSON.stringify(cachedUserData)) {
-                  setUserData(freshData);
-                }
-              }).catch(e => {
-                console.warn('Erreur lors du rafraîchissement des données utilisateur:', e);
-              });
+            try {
+              const stats = userDataManager.getStats ? userDataManager.getStats() : { dataAge: Infinity };
+              const dataAge = stats.dataAge || Infinity;
+              
+              // Use a ref to track the last refresh time to prevent too frequent refreshes
+              const now = Date.now();
+              if (!window._lastNavbarRefreshTime) window._lastNavbarRefreshTime = 0;
+              const timeSinceLastRefresh = now - window._lastNavbarRefreshTime;
+              
+              // Only refresh if data is old AND we haven't refreshed in the last 30 seconds
+              if (dataAge > 2 * 60 * 1000 && timeSinceLastRefresh > 30000) {
+                console.log("Navbar: Data is stale, refreshing in background");
+                window._lastNavbarRefreshTime = now;
+                
+                // Récupérer les données en arrière-plan sans bloquer l'interface
+                userDataManager.getUserData({
+                  routeKey: '/api/me',
+                  forceRefresh: false,
+                  background: true,
+                  requestId: 'navbar_background_refresh'
+                }).then(freshData => {
+                  if (freshData && JSON.stringify(freshData) !== JSON.stringify(cachedUserData)) {
+                    setUserData(freshData);
+                  }
+                }).catch(e => {
+                  console.warn('Erreur lors du rafraîchissement des données utilisateur:', e);
+                });
+              }
+            } catch (statsError) {
+              console.warn('Error checking user data stats:', statsError);
             }
           } else {
             // Si le cache est vide, nettoyer le cache avant de recharger les données utilisateur
