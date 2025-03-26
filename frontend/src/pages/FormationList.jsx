@@ -34,6 +34,8 @@ const FormationList = () => {
   const [formations, setFormations] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editFormation, setEditFormation] = useState(null);
   const [selectedFormation, setSelectedFormation] = useState(null);
   const [selectedStudentIds, setSelectedStudentIds] = useState([]);
   const [availableStudents, setAvailableStudents] = useState([]);
@@ -57,7 +59,7 @@ const FormationList = () => {
       setLoading(true);
       const response = await formationService.getAllFormations();
       if (response.success === false) {
-        toast.error(response.message || 'Erreur lors du chargement des formations');
+        toast.error(response.message.replace(' (simulation)','') || 'Erreur lors du chargement des formations');
         return;
       }
       setFormations(response);
@@ -81,7 +83,7 @@ const FormationList = () => {
     try {
       const response = await formationService.getAvailableStudents(formation.id);
       if (response.success === false) {
-        toast.error(response.message || 'Erreur lors du chargement des étudiants disponibles');
+        toast.error(response.message.replace(' (simulation)','') || 'Erreur lors du chargement des étudiants disponibles');
         return;
       }
       setAvailableStudents(response);
@@ -105,6 +107,16 @@ const FormationList = () => {
     setNewFormation({ name: '', promotion: '', description: '' });
   };
 
+  const openEditModal = (formation) => {
+    setEditFormation(formation);
+    setShowEditModal(true);
+  };
+
+  const closeEditModal = () => {
+    setShowEditModal(false);
+    setEditFormation(null);
+  };
+
   const toggleStudent = (studentId) => {
     setSelectedStudentIds(prev => {
       if (prev.includes(studentId)) {
@@ -126,7 +138,7 @@ const FormationList = () => {
       setIsSubmitting(true);
       const response = await formationService.createFormation(newFormation);
       if (response.success === false) {
-        toast.error(response.message || 'Erreur lors de la création de la formation');
+        toast.error(response.message.replace(' (simulation)','') || 'Erreur lors de la création de la formation');
         return;
       }
       toast.success('Formation créée avec succès');
@@ -137,6 +149,49 @@ const FormationList = () => {
       toast.error('Erreur lors de la création de la formation');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleUpdateFormation = async (e) => {
+    e.preventDefault();
+    if (!editFormation.name || !editFormation.promotion) {
+      toast.error('Veuillez remplir tous les champs');
+      return;
+    }
+    try {
+      setIsSubmitting(true);
+      const response = await formationService.updateFormation(editFormation.id, editFormation);
+      if (response.success === false) {
+        toast.error(response.message.replace(' (simulation)','') || 'Erreur lors de la mise à jour de la formation');
+        return;
+      }
+      toast.success('Formation mise à jour avec succès');
+      // Update the formation in the state directly:
+      setFormations(prev => prev.map(f => f.id === editFormation.id ? { ...f, ...editFormation } : f));
+      closeEditModal();
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour de la formation:', error);
+      toast.error('Erreur lors de la mise à jour de la formation');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteFormation = async () => {
+    if (!editFormation) return;
+    try {
+      const response = await formationService.deleteFormation(editFormation.id);
+      if (response.success === false) {
+        toast.error(response.message.replace(' (simulation)','') || 'Erreur lors de la suppression de la formation');
+        return;
+      }
+      toast.success('Formation supprimée avec succès');
+      // Remove the formation from state directly:
+      setFormations(prev => prev.filter(f => f.id !== editFormation.id));
+      closeEditModal();
+    } catch (error) {
+      console.error('Erreur lors de la suppression de la formation:', error);
+      toast.error('Erreur lors de la suppression de la formation');
     }
   };
 
@@ -220,11 +275,21 @@ const FormationList = () => {
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation();
-                          showAddStudentModal(formation);
+                          openEditModal(formation);
                         }}
                       >
-                        <UserPlus className="h-4 w-4 mr-2" />
-                        Ajouter des étudiants
+                        Modifier
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          showAddStudentModal(formation);
+                        }}
+                        className="ml-2"
+                      >
+                        <UserPlus className="h-4 w-4 mr-2" />Ajouter
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -353,6 +418,49 @@ const FormationList = () => {
                 ) : (
                   'Créer la formation'
                 )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal d'édition / détails avec options Modifier et Supprimer */}
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Modifier la formation</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleUpdateFormation}>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="edit-name">Nom</Label>
+                <Input id="edit-name" value={editFormation?.name || ''} onChange={(e) => setEditFormation(prev => ({ ...prev, name: e.target.value }))} placeholder="Nom de la formation" disabled={isSubmitting} />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-promotion">Promotion</Label>
+                <Input id="edit-promotion" value={editFormation?.promotion || ''} onChange={(e) => setEditFormation(prev => ({ ...prev, promotion: e.target.value }))} placeholder="Promotion" disabled={isSubmitting} />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-description">Description</Label>
+                <textarea id="edit-description" className="min-h-[80px] w-full rounded-md border px-3 py-2 text-sm" value={editFormation?.description || ''} onChange={(e) => setEditFormation(prev => ({ ...prev, description: e.target.value }))} placeholder="Description (optionnel)" disabled={isSubmitting} />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={closeEditModal} disabled={isSubmitting}>
+                Annuler
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Mise à jour...
+                  </>
+                ) : (
+                  'Modifier'
+                )}
+              </Button>
+              <Button type="button" variant="destructive" onClick={handleDeleteFormation} disabled={isSubmitting} className="ml-2">
+                Supprimer
               </Button>
             </DialogFooter>
           </form>

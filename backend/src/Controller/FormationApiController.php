@@ -116,6 +116,42 @@ class FormationApiController extends AbstractController
         ], Response::HTTP_CREATED);
     }
 
+    #[Route('/{id}', name: 'api_formations_update', methods: ['PUT'])]
+    #[IsGranted('ROLE_TEACHER')]
+    public function update(Request $request, $id): Response
+    {
+        $formation = $this->formationRepository->find($id);
+        if (!$formation) {
+            return $this->json(['success' => false, 'message' => 'Formation non trouvée'], Response::HTTP_NOT_FOUND);
+        }
+        $data = json_decode($request->getContent(), true);
+        // Mettre à jour les champs (assurez-vous que FormationType et l'entité correspondent)
+        if(isset($data['name'])) {
+            $formation->setName($data['name']);
+        }
+        if(isset($data['promotion'])) {
+            $formation->setPromotion($data['promotion']);
+        }
+        if(isset($data['description'])) {
+            $formation->setDescription($data['description']);
+        }
+        $this->entityManager->flush();
+        return $this->json(['success' => true, 'message' => 'Formation mise à jour']);
+    }
+
+    #[Route('/{id}', name: 'api_formations_delete', methods: ['DELETE'])]
+    #[IsGranted('ROLE_TEACHER')]
+    public function delete($id): Response
+    {
+        $formation = $this->formationRepository->find($id);
+        if (!$formation) {
+            return $this->json(['success' => false, 'message' => 'Formation non trouvée'], Response::HTTP_NOT_FOUND);
+        }
+        $this->entityManager->remove($formation);
+        $this->entityManager->flush();
+        return $this->json(['success' => true, 'message' => 'Formation supprimée']);
+    }
+
     #[Route('/available-students', name: 'api_formations_available_students', methods: ['GET'])]
     #[IsGranted('IS_AUTHENTICATED_FULLY')]
     public function getAvailableStudents(Request $request): JsonResponse
