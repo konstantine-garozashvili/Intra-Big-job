@@ -31,6 +31,7 @@ const RoleGuard = ({
   const refreshAttemptedRef = useRef(false); // Référence pour suivre si refreshRoles a été appelé
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [gracePeriod, setGracePeriod] = useState(true);
+  const [rolesAvailable, setRolesAvailable] = useState(false);
   
   // Use allowedRoles if provided, fall back to roles for backward compatibility
   const effectiveRoles = allowedRoles || roles;
@@ -52,25 +53,33 @@ const RoleGuard = ({
       refreshRoles();
     }
     
-    // Ajouter un délai de grâce pour s'assurer que les rôles sont bien chargés
+    // Ajouter un délai de grâce plus long pour s'assurer que les rôles sont bien chargés
     const timer = setTimeout(() => {
       setGracePeriod(false);
-    }, 500); // 500ms de délai de grâce
+    }, 1500); // 1.5s de délai de grâce (augmenté de 500ms à 1500ms)
     
     return () => clearTimeout(timer);
   }, [refreshRoles]);
   
+  // Detect when roles become available
+  useEffect(() => {
+    if (userRoles && userRoles.length > 0) {
+      setRolesAvailable(true);
+    }
+  }, [userRoles]);
+  
   // Handle initial load completion with delay
   useEffect(() => {
-    if (!isLoading) {
+    if (!isLoading && rolesAvailable) {
       // N'activer la vérification des rôles qu'après un court délai
+      // et seulement quand les rôles sont disponibles
       const timer = setTimeout(() => {
         setInitialLoadComplete(true);
       }, 300); // Petit délai supplémentaire
       
       return () => clearTimeout(timer);
     }
-  }, [isLoading]);
+  }, [isLoading, rolesAvailable]);
   
   // Fonction normalisée pour vérifier les rôles (gère les formats avec/sans préfixe ROLE_)
   const hasRoleNormalized = useMemo(() => {
@@ -97,8 +106,9 @@ const RoleGuard = ({
   
   // Pure computation of role check result with normalization
   const roleCheckResult = useMemo(() => {
-    // Si toujours en chargement ou en période de grâce, autoriser temporairement
-    if (isLoading || !initialLoadComplete || gracePeriod) {
+    // Si toujours en chargement, en période de grâce, ou si les rôles ne sont pas encore disponibles,
+    // autoriser temporairement
+    if (isLoading || !initialLoadComplete || gracePeriod || !rolesAvailable) {
       return true;
     }
     
@@ -109,11 +119,11 @@ const RoleGuard = ({
     return requireAll 
       ? effectiveRoles.every(role => hasRoleNormalized(role)) 
       : hasAnyRoleNormalized(effectiveRoles);
-  }, [effectiveRoles, hasRoleNormalized, hasAnyRoleNormalized, isLoading, initialLoadComplete, requireAll, gracePeriod]);
+  }, [effectiveRoles, hasRoleNormalized, hasAnyRoleNormalized, isLoading, initialLoadComplete, requireAll, gracePeriod, rolesAvailable]);
   
   // Handle side effects (toast and logging) in useEffect
   useEffect(() => {
-    if (!roleCheckResult && !toastShownRef.current && initialLoadComplete && !gracePeriod) {
+    if (!roleCheckResult && !toastShownRef.current && initialLoadComplete && !gracePeriod && rolesAvailable) {
       // Development logging
       if (process.env.NODE_ENV === 'development') {
         if (typeof effectiveRoles === 'string') {
@@ -127,6 +137,7 @@ const RoleGuard = ({
         console.log('isLoading:', isLoading);
         console.log('initialLoadComplete:', initialLoadComplete);
         console.log('gracePeriod:', gracePeriod);
+        console.log('rolesAvailable:', rolesAvailable);
         console.log('hasRole functions:', { hasRole, hasAnyRole, hasAllRoles, hasRoleNormalized, hasAnyRoleNormalized });
       }
       
@@ -148,9 +159,10 @@ const RoleGuard = ({
         timeoutRef.current = null;
       }, 10000);
     }
-  }, [roleCheckResult, effectiveRoles, requireAll, initialLoadComplete, gracePeriod, userRoles, hasRole, hasAnyRole, hasAllRoles, hasRoleNormalized, hasAnyRoleNormalized, isLoading]);
+  }, [roleCheckResult, effectiveRoles, requireAll, initialLoadComplete, gracePeriod, userRoles, hasRole, hasAnyRole, hasAllRoles, hasRoleNormalized, hasAnyRoleNormalized, isLoading, rolesAvailable]);
   
-  if (isLoading || gracePeriod) {
+  // Show nothing during loading or grace period
+  if (isLoading || gracePeriod || !rolesAvailable) {
     return null;
   }
   
@@ -172,6 +184,30 @@ export const RoleDashboardRedirect = () => {
   const permissions = useRolePermissions();
   const navigate = useNavigate();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [rolesAvailable, setRolesAvailable] = useState(false);
+  const gracePeriodTimeoutRef = useRef(null);
+  const [gracePeriod, setGracePeriod] = useState(true);
+  
+  // Detect when roles become available
+  useEffect(() => {
+    if (roles && roles.length > 0) {
+      setRolesAvailable(true);
+    }
+  }, [roles]);
+  
+  // Set up grace period for role loading
+  useEffect(() => {
+    // Set a grace period to allow roles to load
+    gracePeriodTimeoutRef.current = setTimeout(() => {
+      setGracePeriod(false);
+    }, 1500); // 1.5 seconds grace period, matching RoleGuard
+    
+    return () => {
+      if (gracePeriodTimeoutRef.current) {
+        clearTimeout(gracePeriodTimeoutRef.current);
+      }
+    };
+  }, []);
   
   useEffect(() => {
     let mounted = true;
@@ -181,12 +217,7 @@ export const RoleDashboardRedirect = () => {
       
       setIsRefreshing(true);
       try {
-        await authService.getCurrentUser(true);
-        if (mounted) {
-          refreshRoles();
-        }
-      } catch (error) {
-        console.error('Error refreshing user roles:', error);
+        await refreshRoles();
       } finally {
         if (mounted) {
           setIsRefreshing(false);
@@ -201,16 +232,37 @@ export const RoleDashboardRedirect = () => {
     };
   }, [refreshRoles, isRefreshing]);
   
-  if (isLoading || isRefreshing) {
-    return null;
+  // Show loading state while roles are being loaded
+  if (isLoading || isRefreshing || (!rolesAvailable && gracePeriod)) {
+    // Return a loading indicator or null during the grace period
+    return null; // Or a loading spinner
   }
   
+  // Use the getRoleDashboardPath from permissions if available
   const dashboardPath = permissions.getRoleDashboardPath();
-  if (dashboardPath) {
-    localStorage.setItem('dashboard_path', dashboardPath);
+  if (dashboardPath && dashboardPath !== '/login') {
+    return <Navigate to={dashboardPath} replace />;
   }
   
-  return <Navigate to={dashboardPath} replace />;
+  // Fallback to direct role checks if getRoleDashboardPath returns null or '/login'
+  if (permissions.isSuperAdmin()) {
+    return <Navigate to="/superadmin/dashboard" replace />;
+  } else if (permissions.isAdmin()) {
+    return <Navigate to="/admin/dashboard" replace />;
+  } else if (permissions.isHR()) {
+    return <Navigate to="/hr/dashboard" replace />;
+  } else if (permissions.isTeacher()) {
+    return <Navigate to="/teacher/dashboard" replace />;
+  } else if (permissions.isStudent()) {
+    return <Navigate to="/student/dashboard" replace />;
+  } else if (permissions.isRecruiter()) {
+    return <Navigate to="/recruiter/dashboard" replace />;
+  } else if (permissions.isGuest()) {
+    return <Navigate to="/guest/dashboard" replace />;
+  }
+  
+  // Default fallback
+  return <Navigate to="/login" replace />;
 };
 
-export default RoleGuard; 
+export default RoleGuard;
