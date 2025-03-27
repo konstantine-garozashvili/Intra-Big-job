@@ -58,9 +58,10 @@ const UserProfileSettings = () => {
     forceRefresh: refetchProfile
   } = useUserDataCentralized({
     preferComprehensiveData: true, // Utiliser la route '/profile/consolidated'
-    refetchOnWindowFocus: false,
-    staleTime: 5 * 60 * 1000, // 5 minutes - only refetch after 5 minutes
-    cacheTime: 10 * 60 * 1000, // 10 minutes - keep in cache for 10 minutes
+    refetchOnWindowFocus: true,    // Enable refetching when window focus changes
+    refetchOnMount: true,          // Enable refetching when component mounts
+    staleTime: 0,                  // Consider data stale immediately
+    cacheTime: 5 * 60 * 1000,      // Keep in cache for 5 minutes
     onError: (error) => {
       toast.error('Failed to load profile data: ' + (error.message || 'Unknown error'));
     }
