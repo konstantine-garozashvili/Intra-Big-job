@@ -48,27 +48,40 @@ class RegistrationController extends AbstractController
             // Enregistrer l'utilisateur
             $user = $this->registrationService->registerUser($data);
             
+            // Journaliser l'inscription réussie
+            error_log('Inscription réussie pour l\'utilisateur: ' . $user->getEmail());
+            
+            // Retourner plus d'informations sur l'utilisateur pour faciliter l'envoi d'email
             return $this->json([
                 'success' => true,
                 'message' => 'Inscription réussie.',
-                'userId' => $user->getId()
+                'userId' => $user->getId(),
+                'userData' => [
+                    'email' => $user->getEmail(),
+                    'firstName' => $user->getFirstName(),
+                    'lastName' => $user->getLastName(),
+                    // Ne pas inclure de données sensibles comme le mot de passe
+                ]
             ]);
         } catch (UniqueConstraintViolationException $e) {
+            error_log('Erreur d\'inscription - Email déjà utilisé: ' . ($data['email'] ?? 'inconnu'));
             return $this->json([
                 'success' => false,
                 'message' => 'Cette adresse email est déjà utilisée.'
             ], 409);
         } catch (\InvalidArgumentException $e) {
+            error_log('Erreur d\'inscription - Données invalides: ' . $e->getMessage());
             return $this->json([
                 'success' => false,
                 'message' => 'Données invalides',
                 'errors' => json_decode($e->getMessage(), true)
             ], 400);
         } catch (\Exception $e) {
+            error_log('Erreur d\'inscription - Exception: ' . $e->getMessage());
             return $this->json([
                 'success' => false,
                 'message' => 'Une erreur est survenue lors de l\'inscription: ' . $e->getMessage()
             ], 500);
         }
     }
-} 
+}
