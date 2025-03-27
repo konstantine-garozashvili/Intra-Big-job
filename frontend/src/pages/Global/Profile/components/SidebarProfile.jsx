@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useMemo, memo, useCallback } from 'react';
+import { useMemo, memo, useCallback, useEffect } from 'react';
 import {
   User,
   Bell,
@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useUserDataCentralized } from '@/hooks';
 import { authService } from '@/lib/services/authService';
+import { useProfileLayout } from '@/contexts/ProfileLayoutContext';
 
 // Memoized navigation button component
 const NavButton = memo(({ item, isActive, onClick }) => (
@@ -38,9 +39,18 @@ NavButton.displayName = 'NavButton';
 const SidebarProfile = memo(({ onNavigate }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { setSidebarLoaded } = useProfileLayout();
 
   // Utiliser notre hook centralisé avec son nouveau nom
   const { user, isLoading, isStudent, isGuest } = useUserDataCentralized();
+
+  // Informer le contexte que la sidebar est chargée lorsque les données utilisateur sont prêtes
+  useEffect(() => {
+    if (!isLoading && user && setSidebarLoaded) {
+      console.log('SidebarProfile: Signaling sidebar loaded');
+      setSidebarLoaded(true);
+    }
+  }, [isLoading, user, setSidebarLoaded]);
 
   // Memoized navigation handler to prevent recreation on each render
   const handleNavigation = useCallback((href) => {

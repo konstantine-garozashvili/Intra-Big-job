@@ -1,4 +1,3 @@
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
     Table,
@@ -32,8 +31,9 @@ import {
     Mail,
     User
 } from "lucide-react";
-import { getFrenchRoleDisplayName, getRoleColor } from "@/lib/utils/roleDisplay";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import RoleBadge from "@/components/ui/RoleBadge";
+import { ROLE_SOLID_COLORS } from "@/lib/constants/roles";
 
 export function UserTable({ 
     paginatedUsers, 
@@ -65,25 +65,10 @@ export function UserTable({
         if (!user || !user.roles || user.roles.length === 0) return "bg-gray-200";
         
         const roleName = user.roles[0].name;
-        switch(roleName) {
-            case 'SUPERADMIN':
-            case 'ROLE_SUPERADMIN':
-                return "bg-red-100 text-red-700";
-            case 'ADMIN':
-            case 'ROLE_ADMIN':
-                return "bg-orange-100 text-orange-700";
-            case 'TEACHER':
-            case 'ROLE_TEACHER':
-                return "bg-green-100 text-green-700";
-            case 'STUDENT':
-            case 'ROLE_STUDENT':
-                return "bg-blue-100 text-blue-700";
-            case 'HR':
-            case 'ROLE_HR':
-                return "bg-purple-100 text-purple-700";
-            default:
-                return "bg-gray-100 text-gray-700";
-        }
+        // Utiliser les couleurs solides pour les avatars
+        const colorClass = ROLE_SOLID_COLORS[roleName] || ROLE_SOLID_COLORS['ROLE_USER'];
+        // Ne retourner que la classe bg- (pas le texte)
+        return colorClass.split(' ')[0] || "bg-gray-100";
     };
 
     return (
@@ -161,12 +146,13 @@ export function UserTable({
                                     {user.roles && user.roles.length > 0 ? (
                                         <div className="flex flex-wrap gap-1.5">
                                             {user.roles.map((role, roleIndex) => (
-                                                <Badge 
+                                                <RoleBadge 
                                                     key={`${user.id}-role-${roleIndex}`} 
-                                                    className={`${getRoleColor(role.name)} transition-all duration-200 hover:scale-105`}
-                                                >
-                                                    {getFrenchRoleDisplayName(role.name)}
-                                                </Badge>
+                                                    role={role.name}
+                                                    solid
+                                                    useVariant
+                                                    className="transition-all duration-200 hover:scale-105"
+                                                />
                                             ))}
                                         </div>
                                     ) : (

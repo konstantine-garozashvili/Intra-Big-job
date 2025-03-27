@@ -4,8 +4,8 @@ import {
   TableHeader, TableRow 
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { ArrowUp, ArrowDown, MoreHorizontal } from "lucide-react";
+import RoleBadge from '@/components/ui/RoleBadge';
 
 export function UserTable({ 
   users, 
@@ -80,14 +80,17 @@ export function UserTable({
             <TableCell>{user.email}</TableCell>
             <TableCell>
               {user.roles.map(role => {
-                // Replace technical names with colored badges in French
-                if (role.name === "ROLE_GUEST" || role.name === "GUEST") {
-                  return <Badge variant="guest" key={role.id || role.name}>Invité</Badge>;
-                }
-                if (role.name === "ROLE_STUDENT" || role.name === "STUDENT") {
-                  return <Badge variant="student" key={role.id || role.name}>Élève</Badge>;
-                }
-                return <Badge key={role.id || role.name}>{role.name}</Badge>;
+                const roleName = typeof role === 'object' && role !== null ? role.name : 
+                             typeof role === 'string' ? role : 'USER';
+                
+                return (
+                  <RoleBadge 
+                    key={typeof role === 'object' ? role.id || roleName : roleName} 
+                    role={roleName}
+                    solid={true}
+                    className="mr-1.5"
+                  />
+                );
               })}
             </TableCell>
             <TableCell className="text-right">

@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 import { useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { authService } from '@/lib/services/authService';
+import userDataManager from '@/lib/services/userDataManager';
 
 // Create context
 const ProfileLayoutContext = createContext({
@@ -9,6 +10,7 @@ const ProfileLayoutContext = createContext({
   setLayoutLoading: () => {},
   currentSection: null,
   isSidebarLoaded: false,
+  setSidebarLoaded: () => {},
   visitedSections: new Set()
 });
 
@@ -29,11 +31,11 @@ export const ProfileLayoutProvider = ({ children }) => {
       // Check if we have recent cached data first to avoid unnecessary API calls
       const cachedData = userDataManager.getCachedUserData();
       const now = Date.now();
-      const cacheAge = cachedData && userDataManager.cache && userDataManager.cache.timestamp ? 
-        now - userDataManager.cache.timestamp : Infinity;
+      // Accéder au timestamp de manière sécurisée pour éviter les erreurs
+      const cacheTimestamp = cachedData ? Date.now() - 60000 : 0; // Valeur par défaut si pas de timestamp
         
       // If we have fresh data (less than 30s old), use it directly without triggering more calls
-      if (cachedData && cacheAge < 30000) {
+      if (cachedData && now - cacheTimestamp < 30000) {
         console.log("ProfileLayoutContext: Using cached user data");
         return Promise.resolve(cachedData);
       }
@@ -138,6 +140,7 @@ export const ProfileLayoutProvider = ({ children }) => {
       setLayoutLoading: setIsLayoutLoading,
       currentSection,
       isSidebarLoaded,
+      setSidebarLoaded: setIsSidebarLoaded,
       isUserDataLoading,
       visitedSections
     }}>

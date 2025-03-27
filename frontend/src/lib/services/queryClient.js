@@ -18,11 +18,10 @@ export const queryClient = new QueryClient({
       // Track queries in devtools
       meta: {
         tracked: true,
+        // Éviter les options qui peuvent causer des conflits avec le rendu des DevTools
+        // tout en gardant la configuration originale
         devtools: {
-          enabled: import.meta.env.DEV,
-          position: 'bottom',
-          initialIsOpen: true,
-          layout: 'horizontal'
+          enabled: import.meta.env.DEV
         }
       }
     },
@@ -41,27 +40,8 @@ export const queryClient = new QueryClient({
       }
 });
 
-// Initialize the queryClient with some test data for debugging
-if (import.meta.env.DEV) {
-  // Add a test query that stays active
-  queryClient.setQueryData(['persistent-test-query'], {
-    message: 'React Query is working!',
-    timestamp: new Date().toISOString(),
-    status: 'active'
-  });
-
-  // Add a test mutation
-  queryClient.setQueryData(['persistent-mutation'], {
-    message: 'Mutation example',
-    status: 'idle'
-  });
-
-  // Add a test error state
-  queryClient.setQueryData(['error-test-query'], {
-    message: 'Error state example',
-    status: 'error'
-  });
-}
+// We'll initialize test data in main.jsx instead to avoid duplication
+// This prevents the queryClient from being initialized multiple times
 
 /**
  * Définit l'instance du queryClient

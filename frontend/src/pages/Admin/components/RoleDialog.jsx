@@ -22,12 +22,12 @@ import {
     AlertDescription,
     AlertTitle
 } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Loader2, ShieldAlert, UserCog, AlertTriangle } from "lucide-react";
 import { motion } from "framer-motion";
-import { getFrenchRoleDisplayName } from "@/lib/utils/roleDisplay";
+import { getRoleDisplayName } from "@/lib/constants/roles";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Toaster } from "@/components/ui/sonner";
+import RoleBadge from "@/components/ui/RoleBadge";
 
 export function RoleDialog({
     isDialogOpen,
@@ -78,7 +78,7 @@ export function RoleDialog({
         if (!selectedUser || !selectedUser.roles || selectedUser.roles.length === 0) {
             return 'Aucun rôle';
         }
-        return getFrenchRoleDisplayName(selectedUser.roles[0].name);
+        return getRoleDisplayName(selectedUser.roles[0].name);
     };
 
     // Handle role change
@@ -116,7 +116,7 @@ export function RoleDialog({
                 
                 // Call success callback with updated user if provided
                 if (onSuccess) {
-                    onSuccess(updatedUser, getFrenchRoleDisplayName(role.name));
+                    onSuccess(updatedUser, getRoleDisplayName(role.name));
                 }
                 
                 // Close dialog
@@ -140,30 +140,39 @@ export function RoleDialog({
                 
                 {selectedUser && (
                     <div className="px-6 pb-4">
-                        <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg mb-4 border border-gray-200">
+                        <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg border border-gray-100 mt-4">
                             <Avatar className="h-12 w-12 border-2 border-white shadow-sm">
-                                <AvatarFallback className="bg-blue-100 text-blue-700 font-medium">
+                                <AvatarFallback className="bg-blue-100 text-blue-800 font-medium">
                                     {getInitials(selectedUser.firstName, selectedUser.lastName)}
                                 </AvatarFallback>
                             </Avatar>
-                            <div>
-                                <h3 className="font-medium text-gray-900">{selectedUser.firstName} {selectedUser.lastName}</h3>
+                            
+                            <div className="flex-1">
+                                <h3 className="font-semibold">{selectedUser.firstName} {selectedUser.lastName}</h3>
                                 <p className="text-sm text-gray-500">{selectedUser.email}</p>
-                                <div className="flex items-center gap-2 mt-1">
-                                    <span className="text-xs text-gray-600">Rôle actuel:</span>
-                                    <Badge variant="outline" className="text-xs">
-                                        {getCurrentRoleName()}
-                                    </Badge>
+                                <div className="flex flex-wrap mt-2 gap-1">
+                                    {selectedUser.roles && selectedUser.roles.map((role, idx) => (
+                                        <RoleBadge 
+                                            key={`${role.id || idx}-${role.name}`}
+                                            role={role.name}
+                                            solid={true}
+                                            useVariant={true}
+                                            interactive={false}
+                                        />
+                                    ))}
                                 </div>
                             </div>
                         </div>
                         
-                        {selectedUser && userHasSuperAdminRole(selectedUser) && !isSuperAdmin && (
-                            <Alert variant="destructive" className="mb-4 bg-red-50 text-red-800 border-red-200">
-                                <AlertTriangle className="h-4 w-4" />
-                                <AlertTitle className="font-medium">Accès limité</AlertTitle>
-                                <AlertDescription className="text-sm">
-                                    Seul un SuperAdmin peut modifier un utilisateur SuperAdmin.
+                        {userHasSuperAdminRole(selectedUser) && !isSuperAdmin && (
+                            <Alert variant="destructive" className="mt-4">
+                                <AlertTitle className="flex items-center">
+                                    <AlertTriangle className="h-4 w-4 mr-2" />
+                                    Action restreinte
+                                </AlertTitle>
+                                <AlertDescription>
+                                    Vous n'avez pas l'autorisation de modifier le rôle d'un SuperAdmin. 
+                                    Seul un SuperAdmin peut modifier le rôle d'un autre SuperAdmin.
                                 </AlertDescription>
                             </Alert>
                         )}
@@ -205,7 +214,7 @@ export function RoleDialog({
                                         >
                                             <div className="flex items-center">
                                                 {roleProps.icon}
-                                                {getFrenchRoleDisplayName(role.name)}
+                                                {getRoleDisplayName(role.name)}
                                             </div>
                                         </SelectItem>
                                     );

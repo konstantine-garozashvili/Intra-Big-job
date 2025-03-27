@@ -3,27 +3,45 @@ import { queryClient } from '../../lib/services/queryClient'
 import { useEffect } from 'react'
 
 export function ReactQueryDevTools() {
-  // Initialize test data for debugging
+  // Initialize test data for debugging only once on mount
   useEffect(() => {
     if (import.meta.env.DEV) {
-      queryClient.setQueryData(['persistent-test-query'], {
-        message: 'React Query is working!',
-        timestamp: new Date().toISOString(),
-        status: 'active'
-      });
-      queryClient.setQueryData(['persistent-mutation'], {
-        message: 'Mutation example',
-        status: 'idle'
-      });
+      // Check if data already exists to prevent duplicate initialization
+      if (!queryClient.getQueryData(['persistent-test-query'])) {
+        queryClient.setQueryData(['persistent-test-query'], {
+          message: 'React Query is working!',
+          timestamp: new Date().toISOString(),
+          status: 'active'
+        });
+      }
+      
+      if (!queryClient.getQueryData(['persistent-mutation'])) {
+        queryClient.setQueryData(['persistent-mutation'], {
+          message: 'Mutation example',
+          status: 'idle'
+        });
+      }
     }
   }, []);
 
+  // Only render in development mode
+  if (!import.meta.env.DEV) {
+    return null;
+  }
+
   return (
     <ReactQueryDevtools
-      initialIsOpen={true}
-      position="bottom-left"
-      buttonPosition="bottom-left"
-      layout="horizontal"
+      initialIsOpen={false}
+      position="bottom"
+      buttonPosition="bottom-right"
+      toggleButtonProps={{
+        style: {
+          zIndex: 999999,
+          position: 'fixed',
+          bottom: '12px',
+          right: '12px'
+        }
+      }}
     />
   )
 }

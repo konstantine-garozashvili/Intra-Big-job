@@ -2,65 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { toast } from "sonner";
 import apiService from "@/lib/services/apiService";
 
-// Données fictives pour les utilisateurs en cas d'échec de l'API
-const mockUsers = [
-    {
-        id: 1,
-        firstName: "Pierre",
-        lastName: "Dupont",
-        email: "pierre.dupont@example.com",
-        roles: [{ id: 1, name: "ROLE_ADMIN" }],
-        createdAt: "2023-01-01 10:00:00"
-    },
-    {
-        id: 2,
-        firstName: "Marie",
-        lastName: "Martin",
-        email: "marie.martin@example.com",
-        roles: [{ id: 2, name: "ROLE_TEACHER" }],
-        createdAt: "2023-01-02 11:00:00"
-    },
-    {
-        id: 3,
-        firstName: "Jean",
-        lastName: "Dubois",
-        email: "jean.dubois@example.com",
-        roles: [{ id: 3, name: "ROLE_STUDENT" }],
-        createdAt: "2023-01-03 12:00:00"
-    },
-    {
-        id: 4,
-        firstName: "Sophie",
-        lastName: "Bernard",
-        email: "sophie.bernard@example.com",
-        roles: [{ id: 4, name: "ROLE_HR" }],
-        createdAt: "2023-01-04 13:00:00"
-    },
-    {
-        id: 5,
-        firstName: "Michel",
-        lastName: "Petit",
-        email: "michel.petit@example.com",
-        roles: [{ id: 5, name: "ROLE_RECRUITER" }],
-        createdAt: "2023-01-05 14:00:00"
-    },
-    {
-        id: 6,
-        firstName: "Claire",
-        lastName: "Robert",
-        email: "claire.robert@example.com",
-        roles: [{ id: 6, name: "ROLE_GUEST" }],
-        createdAt: "2023-01-06 15:00:00"
-    },
-    {
-        id: 7,
-        firstName: "Thomas",
-        lastName: "Richard",
-        email: "thomas.richard@example.com",
-        roles: [{ id: 7, name: "ROLE_SUPERADMIN" }],
-        createdAt: "2023-01-07 16:00:00"
-    }
-];
+
 
 export function useUserManagement(initialFilter = "ALL") {
     // États pour les données
@@ -157,9 +99,7 @@ export function useUserManagement(initialFilter = "ALL") {
             } else {
                 console.warn("Réponse de l'API sans succès, utilisation des données fictives");
                 // Utiliser les données fictives en cas d'échec
-                if (roleName === "ALL") {
-                    setUsers(mockUsers);
-                } else {
+
                     const formattedRoleName = roleName.startsWith('ROLE_') 
                         ? roleName 
                         : `ROLE_${roleName.replace('ROLE_', '')}`;
@@ -174,7 +114,7 @@ export function useUserManagement(initialFilter = "ALL") {
                     );
                     
                     setUsers(filteredMockUsers);
-                }
+                
                 
                 toast.error(`Impossible de récupérer les utilisateurs depuis l'API. Affichage des données de démonstration.`);
             }

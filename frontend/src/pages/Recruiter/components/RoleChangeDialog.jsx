@@ -8,6 +8,7 @@ import {
   DialogTitle
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import RoleBadge from '@/components/ui/RoleBadge';
 
 export function RoleChangeDialog({
   open,
@@ -24,12 +25,6 @@ export function RoleChangeDialog({
   const newRoleName = getNewRole(user);
   const isPromotion = currentRoleName.toLowerCase().includes('guest');
 
-  const formatRoleName = (roleName) => {
-    if (roleName === "ROLE_GUEST") return "Invité";
-    if (roleName === "ROLE_STUDENT") return "Élève";
-    return roleName;
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -44,12 +39,15 @@ export function RoleChangeDialog({
         </DialogHeader>
 
         <div className="py-4">
-          <p>
-            Rôle actuel : <strong>{formatRoleName(currentRoleName)}</strong>
-          </p>
-          <p className="mt-2">
-            Nouveau rôle : <strong>{formatRoleName(newRoleName)}</strong>
-          </p>
+          <div className="flex items-center gap-2 mb-3">
+            <p className="text-sm text-gray-600">Rôle actuel :</p>
+            <RoleBadge role={currentRoleName} solid useVariant />
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <p className="text-sm text-gray-600">Nouveau rôle :</p>
+            <RoleBadge role={newRoleName} solid useVariant />
+          </div>
         </div>
 
         <DialogFooter>

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import apiService, { normalizeApiUrl } from '@/lib/services/apiService';
 import { getSessionId } from '@/lib/services/authService';
+import deduplicationService from '@/lib/services/deduplicationService';
 
 /**
  * Configuration de base pour les requêtes API
@@ -28,7 +29,7 @@ const prefixQueryKey = (queryKey) => {
 };
 
 /**
- * Hook pour effectuer des requêtes GET avec mise en cache
+ * Hook pour effectuer des requêtes GET avec mise en cache et déduplication des requêtes
  * @param {string} endpoint - Endpoint de l'API
  * @param {Array|string} queryKey - Clé pour identifier la requête dans le cache
  * @param {Object} options - Options supplémentaires pour useQuery
@@ -72,12 +73,22 @@ export function useApiQuery(endpoint, queryKey, options = {}) {
                         isDocumentEndpoint ? 8000 : // 8s pour les documents
                         15000; // 15s par défaut
         
-        // Use the enhanced cache system from apiService
-        return await apiService.get(endpoint, { 
-          params: queryParams,
-          timeout, // Appliquer le timeout configuré
-          retries: isProfilePicture ? 1 : 2 // Limiter les retries pour les images de profil
-        }, true, options.staleTime || 5 * 60 * 1000);
+        // Utiliser le service de déduplication pour éviter les requêtes en doublon
+        return await deduplicationService.executeOrDeduplicateQuery(
+          endpoint,
+          queryKey,
+          async () => {
+            // Exécuter la requête API avec les options configurées
+            return await apiService.get(endpoint, { 
+              params: { ...queryParams, ...options.params },
+              timeout, // Appliquer le timeout configuré
+              retries: isProfilePicture ? 1 : 2, // Limiter les retries pour les images de profil
+              noCache: options.noCache,
+              staleTime: options.staleTime
+            }, true, options.staleTime || 5 * 60 * 1000);
+          },
+          options
+        );
       } catch (error) {
         // Si c'est une erreur de timeout pour une image de profil, retourner un avatar par défaut
         if (isProfilePicture && error.code === 'ECONNABORTED') {
@@ -141,32 +152,28 @@ export function useApiMutation(endpoint, method = 'post', invalidateQueryKey, op
           }
         }
         
-        // Handle different HTTP methods appropriately
-        let response;
-        
-        if (method.toLowerCase() === 'delete') {
-          // Pour les requêtes DELETE
-          response = await apiService.delete(finalEndpoint, {
-            data: typeof data === 'object' ? data : {}
-          });
-        } else if (method.toLowerCase() === 'get') {
-          // Pour les requêtes GET
-          response = await apiService.get(finalEndpoint, { params: data });
-        } else if (method.toLowerCase() === 'put') {
-          // Pour les requêtes PUT
-          response = await apiService.put(finalEndpoint, data);
-        } else {
-          // Pour les requêtes POST
-          response = await apiService.post(finalEndpoint, data);
-        }
-        
-        return response;
+        // Utiliser le service de déduplication pour éviter les requêtes en doublon
+        return await deduplicationService.executeRequest(
+          finalEndpoint,
+          method.toLowerCase(),
+          data,
+          {
+            timeout: options.timeout || (isDocumentUpload ? 30000 : 15000), // Augmenter le timeout pour les uploads
+            retries: options.retries || 2,
+            noCache: options.noCache || true, // Par défaut, ne pas cacher les mutations
+          }
+        );
       } catch (error) {
         console.error(`Erreur lors de la requête ${method.toUpperCase()} vers ${endpoint}:`, error);
         throw error;
       }
     },
     onSuccess: (data, variables, context) => {
+      // Invalider l'entrée dans le service de déduplication
+      if (typeof endpoint === 'string') {
+        deduplicationService.invalidateRequest(endpoint);
+      }
+      
       // Invalider les requêtes associées pour forcer un rafraîchissement
       if (finalInvalidateKey) {
         // For special operations, use a more aggressive invalidation strategy
@@ -232,12 +239,23 @@ export function useApiMutation(endpoint, method = 'post', invalidateQueryKey, op
         options.onSuccess(data, variables, context);
       }
     },
+    onError: (error, variables, context) => {
+      // Nettoyer l'entrée du service de déduplication en cas d'erreur
+      if (typeof endpoint === 'string') {
+        deduplicationService.invalidateRequest(endpoint);
+      }
+      
+      // Appeler onError des options si défini
+      if (options.onError) {
+        options.onError(error, variables, context);
+      }
+    },
     ...options
   });
 }
 
 /**
- * Hook pour la pagination infinie
+ * Hook pour la pagination infinie avec déduplication
  * @param {string} endpoint - Endpoint de l'API
  * @param {Array|string} queryKey - Clé pour identifier la requête dans le cache
  * @param {Function} getNextPageParam - Fonction pour obtenir le paramètre de la page suivante
@@ -256,7 +274,19 @@ export function useApiInfiniteQuery(endpoint, queryKey, getNextPageParam, option
         const separator = url.includes('?') ? '&' : '?';
         const paginatedUrl = pageParam ? `${endpoint}${separator}${pageParam}` : endpoint;
         
-        return await apiService.get(paginatedUrl);
+        // Utiliser le service de déduplication
+        return await deduplicationService.executeOrDeduplicateQuery(
+          paginatedUrl,
+          [...queryKey, pageParam], // Ajouter pageParam à la clé pour différencier les pages
+          async () => {
+            return await apiService.get(paginatedUrl, {
+              timeout: options.timeout || 15000,
+              retries: options.retries || 2,
+              noCache: options.noCache
+            });
+          },
+          options
+        );
       } catch (error) {
         throw error;
       }
@@ -267,27 +297,95 @@ export function useApiInfiniteQuery(endpoint, queryKey, getNextPageParam, option
 }
 
 /**
- * Hook pour précharger des données dans le cache
+ * Hook pour précharger des données dans le cache avec déduplication
  * @param {string} endpoint - Endpoint de l'API
  * @param {Array|string} queryKey - Clé pour identifier la requête dans le cache
+ * @param {Object} options - Options supplémentaires pour la précharge
  */
-export function usePrefetchQuery(endpoint, queryKey) {
+export function usePrefetchQuery(endpoint, queryKey, options = {}) {
   const queryClient = useQueryClient();
   // Préfixer la clé de requête avec l'ID de session
   const finalQueryKey = prefixQueryKey(queryKey);
   
   const prefetch = async () => {
     try {
+      // Vérifier si les données sont déjà en cache
+      if (deduplicationService.hasCache(queryKey) && !options.force) {
+        if (import.meta.env.DEV) {
+          console.info(`[PrefetchQuery] Using cached data for ${endpoint}`);
+        }
+        return;
+      }
+      
       await queryClient.prefetchQuery({
         queryKey: finalQueryKey,
         queryFn: async () => {
-          return await apiService.get(endpoint);
-        }
+          // Utiliser le service de déduplication
+          return await deduplicationService.executeOrDeduplicateQuery(
+            endpoint,
+            queryKey,
+            async () => {
+              return await apiService.get(endpoint, {
+                timeout: options.timeout || 15000,
+                retries: options.retries || 1,
+                noCache: options.noCache
+              });
+            },
+            options
+          );
+        },
+        staleTime: options.staleTime || 2 * 60 * 1000 // 2 minutes par défaut pour les préchargements
       });
     } catch (error) {
       // Silently handle error
+      if (import.meta.env.DEV) {
+        console.warn(`[PrefetchQuery] Error prefetching ${endpoint}:`, error);
+      }
     }
   };
   
   return { prefetch };
+}
+
+/**
+ * Hook pour gérer la mise à jour du cache optimiste
+ * @param {Function} updateFn - Fonction qui met à jour les données
+ * @returns {Function} - Fonction pour appliquer la mise à jour optimiste
+ */
+export function useOptimisticUpdate() {
+  const queryClient = useQueryClient();
+  
+  return (queryKey, updateFn) => {
+    // Préfixer la clé avec l'ID de session
+    const finalQueryKey = prefixQueryKey(queryKey);
+    
+    // Récupérer les données actuelles
+    const previousData = queryClient.getQueryData(finalQueryKey);
+    
+    // Appliquer la mise à jour optimiste
+    queryClient.setQueryData(finalQueryKey, updateFn(previousData));
+    
+    // Retourner une fonction pour restaurer les données précédentes en cas d'erreur
+    return () => {
+      queryClient.setQueryData(finalQueryKey, previousData);
+    };
+  };
+}
+
+/**
+ * Hook pour réutiliser une requête existante sans refetch
+ * @param {Array|string} queryKey - Clé de la requête à réutiliser
+ * @returns {Object} - Données et état de la requête
+ */
+export function useExistingQuery(queryKey) {
+  const finalQueryKey = prefixQueryKey(queryKey);
+  const queryClient = useQueryClient();
+  
+  const data = queryClient.getQueryData(finalQueryKey);
+  
+  return {
+    data,
+    exists: !!data,
+    queryKey: finalQueryKey
+  };
 } 

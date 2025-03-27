@@ -3,10 +3,11 @@ import { Link } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, XCircle, ChevronRightIcon } from "lucide-react";
+import { ChevronRightIcon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getProfilePictureUrl, getUserInitials } from "@/lib/utils/profileUtils";
 import apiService from "@/lib/services/apiService";
+import RoleBadge from "@/components/ui/RoleBadge";
 
 const ProfileHeader = ({ userData, isPublicProfile = false, profilePictureUrl }) => {
   const [imageError, setImageError] = useState(false);
@@ -70,40 +71,6 @@ const ProfileHeader = ({ userData, isPublicProfile = false, profilePictureUrl })
     const firstName = getUserProperty('firstName');
     const lastName = getUserProperty('lastName');
     return `${firstName} ${lastName}`.trim() || 'Utilisateur';
-  };
-
-  const getRoleBadgeColor = (roleName) => {
-    if (!roleName) return "from-gray-500/90 to-gray-700/90";
-    
-    switch(roleName) {
-      case "STUDENT": return "from-blue-500/90 to-blue-700/90";
-      case "TEACHER": return "from-emerald-500/90 to-emerald-700/90";
-      case "HR": return "from-purple-500/90 to-purple-700/90";
-      case "ADMIN": return "from-amber-500/90 to-amber-700/90";
-      case "SUPER_ADMIN": 
-      case "SUPERADMIN": return "from-red-500/90 to-red-700/90";
-      case "RECRUITER": return "from-pink-500/90 to-pink-700/90";
-      case "GUEST": return "from-teal-500/90 to-teal-700/90";
-      case "USER": return "from-gray-500/90 to-gray-700/90";
-      default: return "from-gray-500/90 to-gray-700/90";
-    }
-  };
-
-  const translateRoleName = (roleName) => {
-    if (!roleName) return "Utilisateur";
-    
-    switch(roleName) {
-      case "STUDENT": return "Étudiant";
-      case "TEACHER": return "Formateur";
-      case "HR": return "Ressources Humaines";
-      case "ADMIN": return "Administrateur";
-      case "SUPER_ADMIN": 
-      case "SUPERADMIN": return "Super Administrateur";
-      case "RECRUITER": return "Recruteur";
-      case "GUEST": return "Invité";
-      case "USER": return "Utilisateur";
-      default: return roleName;
-    }
   };
 
   const getMainRole = () => {
@@ -256,7 +223,7 @@ const ProfileHeader = ({ userData, isPublicProfile = false, profilePictureUrl })
               )}
             </motion.div>
             
-            {/* Badges de rôle */}
+            {/* Badges de rôle avec le nouveau composant RoleBadge */}
             <motion.div 
               variants={itemVariants} 
               className="flex flex-wrap justify-center sm:justify-start gap-1.5 mt-2"
@@ -278,32 +245,24 @@ const ProfileHeader = ({ userData, isPublicProfile = false, profilePictureUrl })
                                     typeof role === 'string' ? role : 'USER';
                                     
                       return (
-                        <motion.div
+                        <RoleBadge
                           key={`${roleName}-${index}`}
-                          initial={{ opacity: 0, scale: 0.8 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.8 }}
-                          transition={{ duration: 0.2, delay: index * 0.1 }}
+                          role={roleName}
+                          animated={true}
+                          index={index}
+                          hovered={hoveredBadge === roleName}
                           onHoverStart={() => setHoveredBadge(roleName)}
                           onHoverEnd={() => setHoveredBadge(null)}
-                        >
-                          <Badge 
-                            className={`bg-gradient-to-r ${getRoleBadgeColor(roleName)} text-white px-2.5 py-0.5 text-xs rounded-full transition-all duration-300 ${
-                              hoveredBadge === roleName ? 'shadow-lg scale-105' : ''
-                            }`}
-                          >
-                            {translateRoleName(roleName)}
-                          </Badge>
-                        </motion.div>
+                        />
                       );
                     });
                   } else {
                     return (
-                      <motion.div key="default-user">
-                        <Badge className={`bg-gradient-to-r ${getRoleBadgeColor("USER")} text-white px-2.5 py-0.5 text-xs rounded-full`}>
-                          {translateRoleName("USER")}
-                        </Badge>
-                      </motion.div>
+                      <RoleBadge 
+                        key="default-user" 
+                        role="USER" 
+                        animated={true} 
+                      />
                     );
                   }
                 })()}

@@ -346,17 +346,11 @@ export function useProfilePicture() {
         if (data?.profile_picture_url) {
           setCachedUrl(data.profile_picture_url);
           profilePictureCache.saveToCache(data.profile_picture_url);
-          if (showToast) {
-            toast.success('Photo de profil mise à jour');
-          }
         }
         return response;
       })
       .catch(error => {
         console.error("Error refreshing profile picture:", error);
-        if (showToast) {
-          toast.error('Erreur lors du rafraîchissement de la photo de profil');
-        }
         throw error;
       })
       .finally(() => {
@@ -436,18 +430,12 @@ export function useProfilePicture() {
         profilePictureEvents.notify();
         
         // Show success message
-        toast.success('Photo de profil mise à jour avec succès');
         
         // Force refresh to get latest picture
         forceRefresh();
       },
       onError: (error, variables, context) => {
         // Show error message based on the error type
-        if (error.response && error.response.status === 413) {
-          toast.error('La taille du fichier est trop grande. Veuillez utiliser une image plus petite (max 2MB).');
-        } else {
-          toast.error('Erreur lors de la mise à jour de la photo de profil');
-        }
         
         // Restore previous state on error
         if (context?.previousData) {
