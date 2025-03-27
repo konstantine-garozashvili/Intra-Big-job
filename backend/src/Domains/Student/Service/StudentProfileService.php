@@ -16,22 +16,6 @@ class StudentProfileService
     }
 
     /**
-     * Create a new student profile for a user
-     */
-    public function createProfile(User $user): StudentProfile
-    {
-        $profile = new StudentProfile();
-        $profile->setUser($user);
-        $profile->setIsSeekingInternship(false);
-        $profile->setIsSeekingApprenticeship(false);
-        
-        $this->entityManager->persist($profile);
-        $this->entityManager->flush();
-        
-        return $profile;
-    }
-
-    /**
      * Get a student profile by user ID
      */
     public function getProfileByUser(User $user): ?StudentProfile

@@ -141,12 +141,6 @@ class UserRoleService
             $userRole->setRole($newRole);
         }
         
-        // Si le rôle change de GUEST à STUDENT, créer un profil étudiant
-        if (strtoupper($oldRoleName) === 'ROLE_GUEST' && strtoupper($newRoleName) === 'ROLE_STUDENT') {
-            $studentProfileService = $this->entityManager->getContainer()->get('App\Domains\Student\Service\StudentProfileService');
-            $studentProfileService->createProfile($user);
-        }
-        
         $this->entityManager->flush();
     }
     
