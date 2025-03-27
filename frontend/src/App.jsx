@@ -65,8 +65,7 @@ const UserRoleManager = lazy(() => import('./pages/Admin/components/UserRoleMana
 // Import du composant HomePage 
 const HomePage = lazy(() => import('./components/HomePage'))
 
-// Test component for debugging ReactQuery DevTools
-const DevtoolsTest = lazy(() => import('./pages/DevtoolsTest'))
+
 
 // Ticket system components
 const TicketList = lazy(() => import('./components/TicketList'))
@@ -242,10 +241,7 @@ function AppContent() {
                   <Route path="/reset-password/confirmation" element={<ResetPasswordConfirmation />} />
                   <Route path="/reset-password/:token" element={<ResetPassword />} />
                   
-                  {/* DevTools test route - only in development mode */}
-                  {import.meta.env.DEV && (
-                    <Route path="/devtools-test" element={<DevtoolsTest />} />
-                  )}
+                  
                 </Route>
                 
                 <Route element={<ProtectedRoute />}>
