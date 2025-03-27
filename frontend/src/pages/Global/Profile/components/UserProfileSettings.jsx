@@ -130,6 +130,33 @@ const UserProfileSettings = () => {
     }
   }, [profileData]); // Only depend on profileData, not derived values
 
+  // Add event listener for portfolio URL updates from other components
+  useEffect(() => {
+    const handlePortfolioUrlUpdate = (event) => {
+      if (event.detail?.portfolioUrl !== undefined) {
+        const newPortfolioUrl = event.detail.portfolioUrl;
+        
+        // Update local state if different
+        if (editedData.personal.portfolioUrl !== newPortfolioUrl) {
+          setEditedData(prev => ({
+            ...prev,
+            personal: {
+              ...prev.personal,
+              portfolioUrl: newPortfolioUrl
+            }
+          }));
+        }
+      }
+    };
+    
+    // Listen for portfolio URL update events
+    window.addEventListener('portfolio-url-updated', handlePortfolioUrlUpdate);
+    
+    return () => {
+      window.removeEventListener('portfolio-url-updated', handlePortfolioUrlUpdate);
+    };
+  }, [editedData.personal.portfolioUrl]);
+
   // Helper function to calculate age from birthdate
   const calculateAge = (birthDateString) => {
     if (!birthDateString) return null;
@@ -164,8 +191,17 @@ const UserProfileSettings = () => {
         }
       }));
       // Update userData immediately for optimistic UI
-      if (userData.studentProfile) {
-        userData.studentProfile.portfolioUrl = value;
+      if (userData && userData.studentProfile) {
+        // Create a new reference for studentProfile to trigger proper React updates
+        userData.studentProfile = {
+          ...userData.studentProfile,
+          portfolioUrl: value
+        };
+        
+        // Dispatch a custom event for other components listening to portfolio changes
+        window.dispatchEvent(new CustomEvent('portfolio-update-local', {
+          detail: { portfolioUrl: value }
+        }));
       }
     } else {
       setEditedData(prev => ({
@@ -176,11 +212,13 @@ const UserProfileSettings = () => {
         }
       }));
       // Update userData immediately for optimistic UI
-      userData[field] = value;
-      
-      // If updating birthDate, also update the age
-      if (field === 'birthDate' && value) {
-        userData.age = calculateAge(value);
+      if (userData) {
+        userData[field] = value;
+        
+        // If updating birthDate, also update the age
+        if (field === 'birthDate' && value) {
+          userData.age = calculateAge(value);
+        }
       }
     }
   }, [userData]);
@@ -252,7 +290,10 @@ const UserProfileSettings = () => {
       // Make the API call in the background
       if (field === 'portfolioUrl' && isStudent) {
         await updatePortfolioUrl({ portfolioUrl: value });
-        toast.success('Mise à jour réussie');
+        
+        // Force a refresh after updating the portfolio URL
+        await queryClient.invalidateQueries({ queryKey: ['unified-user-data'] });
+        setTimeout(() => refetchProfile(), 300);
       } else {
         await updatePersonalInfo(dataToSave);
         toast.success('Mise à jour réussie');
@@ -267,6 +308,7 @@ const UserProfileSettings = () => {
       // Revert optimistic update on error
       if (field === 'portfolioUrl' && isStudent) {
         updateLocalState('portfolioUrl', profileData?.data?.studentProfile?.portfolioUrl || null);
+        toast.error("Erreur lors de la mise à jour de l'URL du portfolio");
       } else {
         updateLocalState(field, profileData?.data?.user?.[field] || null);
         toast.error(`Erreur lors de la mise à jour de ${field}`);
@@ -360,8 +402,17 @@ const UserProfileSettings = () => {
         
         return { previousData };
       },
-      onSuccess: (data, variables) => {
-        toast.success('Informations mises à jour avec succès');
+      onSuccess: async (data, variables) => {
+        toast.success('URL du portfolio mise à jour avec succès');
+        
+        // Explicitly trigger a complete refresh of the profile data
+        await queryClient.invalidateQueries({ queryKey: ['unified-user-data'] });
+        setTimeout(() => refetchProfile(), 300);
+        
+        // Dispatch a custom event to notify other components about the portfolio URL update
+        window.dispatchEvent(new CustomEvent('portfolio-url-updated', {
+          detail: { portfolioUrl: variables.portfolioUrl }
+        }));
       },
       onError: (err, variables, context) => {
         // Rollback on error
@@ -369,8 +420,10 @@ const UserProfileSettings = () => {
         toast.error(err.response?.data?.message || "L'URL du portfolio doit commencer par 'https://'");
       },
       onSettled: () => {
-        // Refetch in the background to ensure sync
+        // Invalidate all relevant queries to ensure data consistency
         queryClient.invalidateQueries({ queryKey: ['userProfileData'] });
+        queryClient.invalidateQueries({ queryKey: ['profile'] });
+        queryClient.invalidateQueries({ queryKey: ['unified-user-data'] });
       }
     }
   );
