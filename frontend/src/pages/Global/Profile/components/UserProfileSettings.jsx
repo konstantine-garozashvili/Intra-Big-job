@@ -7,7 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useQueryClient } from '@tanstack/react-query';
 import { profileService } from '../services/profileService';
 import ProfilePicture from './settings/ProfilePicture';
-import { isValidEmail, isValidPhone, isValidLinkedInUrl, isValidName, isValidUrl } from '@/lib/utils/validation';
+import { isValidEmail, isValidPhone, isValidLinkedInUrl, formatLinkedInUrl, isValidName, isValidUrl } from '@/lib/utils/validation';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Upload, FileText, Trash2, Send } from 'lucide-react';
@@ -226,12 +226,20 @@ const UserProfileSettings = () => {
         }
       }
 
-      // Validate LinkedIn URL
+      // Validate and format LinkedIn URL
       if (field === 'linkedinUrl' && value) {
-        if (!isValidLinkedInUrl(value)) {
-          toast.error("L'URL LinkedIn doit commencer par 'https://www.linkedin.com/in/'");
+        console.log('UserProfileSettings - Validation LinkedIn URL:', value);
+        const { isValid, formattedUrl } = formatLinkedInUrl(value);
+        console.log('UserProfileSettings - Résultat validation:', { isValid, formattedUrl });
+        
+        if (!isValid) {
+          console.log('UserProfileSettings - URL LinkedIn invalide');
+          toast.error("Format LinkedIn invalide. Entrez votre nom d'utilisateur ou une URL complète commençant par 'https://www.linkedin.com/in/'");
           return;
         }
+        // Mettre à jour la valeur avec l'URL formatée
+        console.log('UserProfileSettings - URL LinkedIn formatée:', formattedUrl);
+        value = formattedUrl;
       }
 
       // Validate portfolio URL
@@ -772,4 +780,4 @@ const ProfileSettingsSkeleton = () => {
   );
 };
 
-export default UserProfileSettings; 
+export default UserProfileSettings;

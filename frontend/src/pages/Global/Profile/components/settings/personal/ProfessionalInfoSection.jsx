@@ -35,7 +35,7 @@ export const ProfessionalInfoSection = ({
         icon={<Linkedin className="h-4 w-4 mr-2 text-gray-500" />}
         value={userData.linkedinUrl}
         editedValue={editedData.personal.linkedinUrl}
-        type="url"
+        type="linkedin"
         isEditing={editMode.linkedinUrl}
         isEditable={true}
         onEdit={() => toggleFieldEdit('linkedinUrl')}
@@ -51,7 +51,7 @@ export const ProfessionalInfoSection = ({
           icon={<Link className="h-4 w-4 mr-2 text-gray-500" />}
           value={studentProfile?.portfolioUrl}
           editedValue={editedData.personal.portfolioUrl}
-          type="url"
+          type="linkedin"
           isEditing={editMode.portfolioUrl}
           isEditable={true}
           onEdit={() => toggleFieldEdit('portfolioUrl')}
@@ -70,4 +70,4 @@ export const ProfessionalInfoSection = ({
       )}
     </div>
   );
-}; 
+};

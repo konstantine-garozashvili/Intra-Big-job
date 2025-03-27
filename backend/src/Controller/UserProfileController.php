@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\User;
 use App\Repository\UserRepository;
 use App\Service\UserProfileService;
+use App\Service\ValidationService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -113,7 +114,24 @@ class UserProfileController extends AbstractController
         }
         
         if (isset($data['linkedinUrl'])) {
+            // Log de l'URL LinkedIn reçue
+            error_log('UserProfileController - URL LinkedIn reçue: ' . $data['linkedinUrl']);
+            
+            // Vérification de la validité de l'URL LinkedIn
+            $validationService = $this->container->get(ValidationService::class);
+            $isValid = $validationService->isValidLinkedInUrl($data['linkedinUrl']);
+            error_log('UserProfileController - URL LinkedIn valide: ' . ($isValid ? 'oui' : 'non'));
+            
+            if (!$isValid) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'L\'URL LinkedIn n\'est pas valide',
+                    'errors' => ['linkedinUrl' => 'L\'URL LinkedIn doit commencer par https:// et être au format https://www.linkedin.com/in/username ou https://linkedin.com/in/username']
+                ], 400);
+            }
+            
             $user->setLinkedinUrl($data['linkedinUrl']);
+            error_log('UserProfileController - URL LinkedIn définie sur: ' . $data['linkedinUrl']);
         }
         
         // Mettre à jour la date de modification
@@ -147,4 +165,4 @@ class UserProfileController extends AbstractController
             'data' => $userData
         ]);
     }
-} 
+}

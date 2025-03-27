@@ -180,25 +180,185 @@ export const isValidBirthDate = (date) => {
 };
 
 /**
+ * Valide ou formate un URL LinkedIn
+ * @param {string} input - URL LinkedIn ou nom d'utilisateur à valider/formater
+ * @returns {object} - { isValid: boolean, formattedUrl: string }
+ */
+export const formatLinkedInUrl = (input) => {
+  console.log('formatLinkedInUrl - Input:', input);
+  
+  if (!input || typeof input !== 'string') {
+    console.log('formatLinkedInUrl - Input invalide (vide ou non-string)');
+    return { isValid: false, formattedUrl: null };
+  }
+  
+  // Nettoyer l'entrée
+  const trimmedInput = input.trim();
+  console.log('formatLinkedInUrl - Input nettoyé:', trimmedInput);
+  
+  // Cas 1: C'est déjà une URL complète
+  if (trimmedInput.startsWith('https://www.linkedin.com/in/')) {
+    console.log('formatLinkedInUrl - Cas 1: URL complète détectée');
+    try {
+      const urlObj = new URL(trimmedInput);
+      console.log('formatLinkedInUrl - URL object créé:', urlObj.toString());
+      console.log('formatLinkedInUrl - Protocole:', urlObj.protocol);
+      console.log('formatLinkedInUrl - Hostname:', urlObj.hostname);
+      console.log('formatLinkedInUrl - Pathname:', urlObj.pathname);
+      
+      if (urlObj.protocol === 'https:' && urlObj.hostname === 'www.linkedin.com' && urlObj.pathname.startsWith('/in/')) {
+        // Vérifier que le chemin après /in/ est valide
+        const username = urlObj.pathname.slice(4).replace(/\/$/, ''); // Enlever le /in/ et le slash final s'il existe
+        console.log('formatLinkedInUrl - Username extrait:', username);
+        
+        // Vérifier si le nom d'utilisateur contient des tirets
+        if (username.includes('-')) {
+          console.log('formatLinkedInUrl - Username contient des tirets, format valide pour LinkedIn');
+        }
+        
+        if (username.length > 0) {
+          // Accepter tous les formats d'URL LinkedIn valides, y compris ceux avec des tirets
+          console.log('formatLinkedInUrl - Cas 1: URL valide');
+          return { isValid: true, formattedUrl: trimmedInput };
+        }
+      }
+    } catch (e) {
+      console.log('formatLinkedInUrl - Erreur lors de la création de l\'URL (Cas 1):', e.message);
+      // URL mal formée, on continue avec les autres cas
+    }
+  }
+  
+  // Cas 2: C'est une URL LinkedIn sans le https://
+  if (trimmedInput.startsWith('www.linkedin.com/in/')) {
+    console.log('formatLinkedInUrl - Cas 2: URL sans https:// détectée');
+    const formattedUrl = `https://${trimmedInput}`;
+    try {
+      new URL(formattedUrl); // Vérifier que c'est une URL valide
+      console.log('formatLinkedInUrl - Cas 2: URL valide après ajout de https://');
+      return { isValid: true, formattedUrl };
+    } catch (e) {
+      console.log('formatLinkedInUrl - Erreur lors de la création de l\'URL (Cas 2):', e.message);
+      // URL mal formée, on continue avec les autres cas
+    }
+  }
+  
+  // Cas 3: C'est juste un nom d'utilisateur
+  // Vérifier que le nom d'utilisateur ne contient pas d'espaces ou de caractères spéciaux interdits dans une URL
+  // Accepter les lettres, chiffres, tirets, underscores et points dans le nom d'utilisateur
+  console.log('formatLinkedInUrl - Vérification si c\'est un nom d\'utilisateur simple');
+  
+  // Mise à jour du regex pour accepter plus de formats de noms d'utilisateur LinkedIn
+  // LinkedIn permet les tirets, points et underscores dans les noms d'utilisateur
+  const usernameRegex = /^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/;
+  
+  if (usernameRegex.test(trimmedInput)) {
+    console.log('formatLinkedInUrl - Cas 3: Nom d\'utilisateur valide détecté');
+    const formattedUrl = `https://www.linkedin.com/in/${trimmedInput}`;
+    console.log('formatLinkedInUrl - URL formatée:', formattedUrl);
+    
+    // Vérifier que l'URL formatée est valide
+    try {
+      new URL(formattedUrl);
+      return { isValid: true, formattedUrl };
+    } catch (e) {
+      console.log('formatLinkedInUrl - Erreur lors de la création de l\'URL formatée:', e.message);
+      // Si l'URL formatée n'est pas valide, on continue avec les autres cas
+    }
+  } else {
+    console.log('formatLinkedInUrl - Le nom d\'utilisateur ne correspond pas au regex:', trimmedInput);
+  }
+  
+  // Cas 4: C'est une URL LinkedIn complète avec des caractères spéciaux dans le nom d'utilisateur
+  // ou une URL partielle (comme linkedin.com/in/username)
+  console.log('formatLinkedInUrl - Tentative Cas 4: Vérification URL avec caractères spéciaux ou format alternatif');
+  
+  // Essayer différentes variantes d'URL LinkedIn
+  const possibleUrls = [
+    // Si l'entrée commence déjà par https:// ou http://, on la garde telle quelle
+    trimmedInput.startsWith('http') ? trimmedInput : null,
+    // Sinon, on essaie d'ajouter https://
+    !trimmedInput.startsWith('http') ? `https://${trimmedInput}` : null,
+    // Si l'entrée contient linkedin.com mais pas le préfixe www, on l'ajoute
+    trimmedInput.includes('linkedin.com') && !trimmedInput.includes('www.linkedin.com') ? 
+      `https://www.${trimmedInput.replace('linkedin.com', 'linkedin.com')}` : null,
+    // Si l'entrée est juste un nom d'utilisateur avec des caractères spéciaux
+    !trimmedInput.includes('linkedin.com') ? `https://www.linkedin.com/in/${trimmedInput}` : null
+  ].filter(Boolean); // Filtrer les valeurs null
+  
+  // Ajouter l'URL originale si elle contient des tirets et ressemble à une URL LinkedIn
+  if (trimmedInput.includes('-') && trimmedInput.includes('linkedin.com/in/')) {
+    console.log('formatLinkedInUrl - URL avec tirets détectée, ajout à la liste des URLs à tester');
+    possibleUrls.unshift(trimmedInput.startsWith('http') ? trimmedInput : `https://${trimmedInput}`);
+  }
+  
+  console.log('formatLinkedInUrl - URLs à tester:', possibleUrls);
+  
+  // Tester chaque URL possible
+  for (const testUrl of possibleUrls) {
+    console.log('formatLinkedInUrl - Test de l\'URL:', testUrl);
+    try {
+      const urlObj = new URL(testUrl);
+      console.log('formatLinkedInUrl - URL object créé:', urlObj.toString());
+      
+      // Vérifier si c'est une URL LinkedIn valide
+      if (urlObj.hostname.includes('linkedin.com') && urlObj.pathname.includes('/in/')) {
+        const username = urlObj.pathname.split('/in/')[1]?.replace(/\/$/, '') || '';
+        console.log('formatLinkedInUrl - Username extrait:', username);
+        
+        // Vérifier si le nom d'utilisateur contient des tirets
+        if (username.includes('-')) {
+          console.log('formatLinkedInUrl - Username contient des tirets dans le cas 4, format valide pour LinkedIn');
+        }
+        
+        if (username.length > 0) {
+          // Pour les URLs avec des tirets, conserver le format original si possible
+          if (username.includes('-') && testUrl.startsWith('https://www.linkedin.com/in/')) {
+            console.log('formatLinkedInUrl - Conservation du format original pour URL avec tirets:', testUrl);
+            return { isValid: true, formattedUrl: testUrl };
+          }
+          
+          // Normaliser l'URL pour s'assurer qu'elle a le format standard
+          const normalizedUrl = `https://www.linkedin.com/in/${username}`;
+          console.log('formatLinkedInUrl - URL normalisée:', normalizedUrl);
+          return { isValid: true, formattedUrl: normalizedUrl };
+        }
+      }
+    } catch (e) {
+      console.log(`formatLinkedInUrl - Erreur avec l'URL ${testUrl}:`, e.message);
+      // Continuer avec la prochaine URL
+    }
+  }
+  
+  // Dernier recours: si l'entrée ressemble à un nom d'utilisateur mais contient des caractères spéciaux
+  // qui ne sont pas autorisés par le regex standard, on essaie quand même de créer une URL LinkedIn
+  if (!trimmedInput.includes('/') && !trimmedInput.includes(':')) {
+    console.log('formatLinkedInUrl - Dernier recours: traitement comme nom d\'utilisateur spécial');
+    // Encoder les caractères spéciaux pour l'URL
+    const encodedUsername = encodeURIComponent(trimmedInput);
+    const lastResortUrl = `https://www.linkedin.com/in/${encodedUsername}`;
+    
+    try {
+      new URL(lastResortUrl);
+      console.log('formatLinkedInUrl - URL de dernier recours valide:', lastResortUrl);
+      return { isValid: true, formattedUrl: lastResortUrl };
+    } catch (e) {
+      console.log('formatLinkedInUrl - Échec de l\'URL de dernier recours:', e.message);
+    }
+  }
+  
+  // Aucun cas valide
+  console.log('formatLinkedInUrl - Aucun cas valide, URL invalide');
+  return { isValid: false, formattedUrl: null };
+};
+
+/**
  * Valide un URL LinkedIn
  * @param {string} url - URL LinkedIn à valider
  * @returns {boolean} - True si l'URL est valide et commence par https://www.linkedin.com/in/
  */
 export const isValidLinkedInUrl = (url) => {
-  if (!url) return false;
-  
-  try {
-    const urlObj = new URL(url);
-
-    // Vérifier que l'URL commence par https://www.linkedin.com/in/
-    if (urlObj.protocol === 'https:' && urlObj.hostname === 'www.linkedin.com' && urlObj.pathname.startsWith('/in/')) {
-      return true;
-    }
-    
-    return false;
-  } catch (e) {
-    return false;
-  }
+  const { isValid } = formatLinkedInUrl(url);
+  return isValid;
 };
 
 
@@ -237,4 +397,4 @@ export const isValidName = (name) => {
   const nameRegex = /^[a-zA-ZÀ-ÿ\u00C0-\u017F\s\-']+$/;
   
   return nameRegex.test(cleanName);
-}; 
+};

@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PhoneInput } from '@/components/ui/phone-input';
 import { NameInput } from '@/components/ui/name-input';
+import { LinkedInInput } from '@/components/ui/linkedin-input';
 import { Label } from '@/components/ui/label';
 import { Pencil, Loader2 } from 'lucide-react';
 import { Skeleton } from "@/components/ui/skeleton";
@@ -99,6 +100,12 @@ const EditableField = memo(({
         <div className="mt-2 space-y-2">
           {type === 'phone' ? (
             <PhoneInput
+              value={editedValue}
+              onChange={onChange}
+              className="w-full"
+            />
+          ) : type === 'linkedin' ? (
+            <LinkedInInput
               value={editedValue}
               onChange={onChange}
               className="w-full"
