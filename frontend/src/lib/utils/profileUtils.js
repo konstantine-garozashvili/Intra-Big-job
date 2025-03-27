@@ -108,4 +108,103 @@ export const getUserInitials = (user) => {
   const lastName = user.lastName || '';
   
   return `${firstName.charAt(0)}${lastName.charAt(0)}`;
+};
+
+import { studentProfileService } from "../services/studentProfileService";
+
+// Fonction pour synchroniser la mise à jour du portfolio dans l'application
+export const synchronizePortfolioUpdate = (portfolioUrl) => {
+  console.log("profileUtils: Synchronizing portfolio update:", portfolioUrl);
+  
+  // Dispatcher un événement personnalisé pour notifier tous les composants
+  const event = new CustomEvent('portfolio-updated', {
+    detail: { portfolioUrl }
+  });
+  
+  window.dispatchEvent(event);
+  
+  // Également dispatcher un événement plus général de mise à jour de profil
+  // pour compatibilité avec d'autres écouteurs
+  const profileEvent = new CustomEvent('profile-updated', {
+    detail: { 
+      type: 'portfolio',
+      portfolioUrl
+    }
+  });
+  
+  window.dispatchEvent(profileEvent);
+  
+  // Mettre à jour le stockage local
+  try {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      const userData = JSON.parse(storedUser);
+      if (userData && typeof userData === 'object') {
+        // Si le profil étudiant existe
+        if (userData.studentProfile) {
+          userData.studentProfile.portfolioUrl = portfolioUrl;
+        } else if (!userData.studentProfile && userData.roles) {
+          // Créer un profil étudiant si l'utilisateur est un étudiant
+          const isStudent = Array.isArray(userData.roles) && userData.roles.some(role => 
+            (typeof role === 'string' && role.includes('STUDENT')) || 
+            (typeof role === 'object' && role.name && role.name.includes('STUDENT'))
+          );
+          
+          if (isStudent) {
+            userData.studentProfile = {
+              portfolioUrl: portfolioUrl
+            };
+          }
+        }
+        
+        // Mettre à jour le stockage local
+        localStorage.setItem('user', JSON.stringify(userData));
+      }
+    }
+    
+    // Faire la même chose pour le sessionStorage
+    const sessionUser = sessionStorage.getItem('user');
+    if (sessionUser) {
+      const userData = JSON.parse(sessionUser);
+      if (userData && typeof userData === 'object') {
+        if (userData.studentProfile) {
+          userData.studentProfile.portfolioUrl = portfolioUrl;
+        } else if (!userData.studentProfile && userData.roles) {
+          const isStudent = Array.isArray(userData.roles) && userData.roles.some(role => 
+            (typeof role === 'string' && role.includes('STUDENT')) || 
+            (typeof role === 'object' && role.name && role.name.includes('STUDENT'))
+          );
+          
+          if (isStudent) {
+            userData.studentProfile = {
+              portfolioUrl: portfolioUrl
+            };
+          }
+        }
+        
+        sessionStorage.setItem('user', JSON.stringify(userData));
+      }
+    }
+  } catch (error) {
+    console.warn("profileUtils: Error updating local storage:", error);
+  }
+  
+  // Forcer l'invalidation du cache du service
+  studentProfileService.clearCache();
+};
+
+// Ajouter un gestionnaire d'écouteur pour les mises à jour de portfolio
+export const addPortfolioUpdateListener = (callback) => {
+  const handler = (event) => {
+    if (event.detail && event.detail.portfolioUrl !== undefined) {
+      callback(event.detail.portfolioUrl);
+    }
+  };
+  
+  window.addEventListener('portfolio-updated', handler);
+  
+  // Renvoyer une fonction de nettoyage pour React useEffect
+  return () => {
+    window.removeEventListener('portfolio-updated', handler);
+  };
 }; 

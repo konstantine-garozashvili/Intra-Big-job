@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import ProfileHeader from "../components/profile-view/ProfileHeader";
 import ProfileTabs from "../components/profile-view/ProfileTabs";
 import { motion } from "framer-motion";
@@ -9,17 +9,23 @@ import { useProfilePicture } from "../hooks/useProfilePicture";
 import { isGuest } from "../utils/roleUtils";
 import documentService from "../services/documentService";
 import apiService from "@/lib/services/apiService";
+import { toast } from "sonner";
+import { studentProfileService } from "@/lib/services/studentProfileService";
 
 const ProfileView = () => {
   const { userId } = useParams();
   const [documents, setDocuments] = useState([]);
+  const [studentProfile, setStudentProfile] = useState(null);
+  const [hasLoadedStudentProfile, setHasLoadedStudentProfile] = useState(false);
+  const [isLoadingStudentProfile, setIsLoadingStudentProfile] = useState(false);
   const isPublicProfile = !!userId;
   
   const { 
     user: currentProfileData, 
     isLoading: isLoadingCurrentProfile,
     error: currentProfileError,
-    forceRefresh: refetchCurrentProfile
+    forceRefresh: refetchCurrentProfile,
+    setUser: setCurrentProfileData
   } = useUserData({
     preferComprehensiveData: true,
     enabled: !isPublicProfile
@@ -28,6 +34,174 @@ const ProfileView = () => {
   const [publicProfileData, setPublicProfileData] = useState(null);
   const [isLoadingPublicProfile, setIsLoadingPublicProfile] = useState(false);
   const [publicProfileError, setPublicProfileError] = useState(null);
+  
+  // Fonction réutilisable pour charger le profil étudiant
+  const fetchStudentProfile = useCallback(async (forceFresh = true) => {
+    if (isLoadingStudentProfile) return; // Éviter les appels multiples
+    
+    try {
+      setIsLoadingStudentProfile(true);
+      console.log("Fetching student profile in ProfileView...", forceFresh ? "(force refresh)" : "");
+      
+      const response = await studentProfileService.getMyProfile(forceFresh);
+      console.log("Fetched student profile:", response);
+      
+      if (response && response.success && response.data) {
+        setStudentProfile(response.data);
+        
+        // Mettre également à jour les données dans le profil utilisateur
+        if (currentProfileData && !isPublicProfile) {
+          currentProfileData.studentProfile = response.data;
+          
+          // Notifier les autres composants de la mise à jour
+          handleProfileUpdate({
+            studentProfile: response.data
+          });
+        }
+      }
+      setHasLoadedStudentProfile(true);
+    } catch (error) {
+      console.error("Failed to fetch student profile:", error);
+      setHasLoadedStudentProfile(true); // Même en cas d'erreur, pour éviter les appels en boucle
+    } finally {
+      setIsLoadingStudentProfile(false);
+    }
+  }, [isLoadingStudentProfile, currentProfileData, isPublicProfile]);
+  
+  // Préchargement du profil étudiant pour résoudre le problème d'affichage
+  useEffect(() => {
+    if (!isPublicProfile && currentProfileData && !hasLoadedStudentProfile && !isLoadingStudentProfile) {
+      // Vérifie si l'utilisateur est un étudiant
+      const isStudent = currentProfileData.roles?.some(role => {
+        if (typeof role === 'string') {
+          return role.includes('STUDENT');
+        } else if (typeof role === 'object' && role !== null && role.name) {
+          return role.name.includes('STUDENT');
+        }
+        return false;
+      });
+      
+      if (isStudent) {
+        // Toujours forcer le chargement frais des données lors de l'initialisation
+        fetchStudentProfile(true);
+      } else {
+        setHasLoadedStudentProfile(true); // Marquer comme chargé si l'utilisateur n'est pas un étudiant
+      }
+    }
+  }, [isPublicProfile, currentProfileData, hasLoadedStudentProfile, isLoadingStudentProfile, fetchStudentProfile]);
+  
+  // Gestionnaire de mise à jour du profil utilisateur depuis les composants enfants
+  const handleProfileUpdate = useCallback((updatedData) => {
+    console.log("Profile update triggered with:", updatedData);
+    
+    if (isPublicProfile) {
+      // Pour les profils publics, mettre à jour l'état local
+      setPublicProfileData(prev => ({
+        ...prev,
+        ...updatedData
+      }));
+    } else {
+      // Pour le profil de l'utilisateur connecté, utiliser la fonction de mise à jour du hook
+      if (setCurrentProfileData) {
+        setCurrentProfileData(prev => ({
+          ...prev,
+          ...updatedData
+        }));
+      } else {
+        // Fallback: forcer un rafraichissement complet des données
+        refetchCurrentProfile();
+      }
+      
+      // Mettre à jour aussi l'état local des documents si nécessaire
+      if (updatedData.documents) {
+        setDocuments(updatedData.documents);
+      }
+      
+      // Mettre à jour l'état du profil étudiant si présent
+      if (updatedData.studentProfile) {
+        setStudentProfile(updatedData.studentProfile);
+      }
+    }
+    
+    // Toast pour indiquer que le profil a été mis à jour
+    if (updatedData.toastMessage !== false) {
+      toast.success(updatedData.toastMessage || "Profil mis à jour");
+    }
+  }, [isPublicProfile, setCurrentProfileData, refetchCurrentProfile]);
+  
+  // Écouter les événements de mise à jour des statuts de recherche
+  useEffect(() => {
+    if (!isPublicProfile) {
+      // Gestionnaire pour les mises à jour de statut de recherche
+      const handleJobStatusUpdate = async (event) => {
+        console.log("Job status update event received:", event.detail);
+        await fetchStudentProfile(true);
+      };
+      
+      // Gestionnaire pour les mises à jour de portfolio
+      const handlePortfolioUpdate = async (event) => {
+        console.log("Portfolio update event received:", event.detail);
+        
+        // Forcer le rafraîchissement du profil étudiant si c'est une mise à jour de portfolio
+        if (event.detail?.portfolioUrl !== undefined || (event.detail?.type === 'portfolio')) {
+          const portfolioUrl = event.detail.portfolioUrl || (event.detail.type === 'portfolio' ? event.detail.portfolioUrl : undefined);
+          
+          // Mise à jour optimiste immédiate
+          if (studentProfile && portfolioUrl !== undefined) {
+            setStudentProfile(prevProfile => ({
+              ...prevProfile,
+              portfolioUrl: portfolioUrl
+            }));
+            
+            // Mettre également à jour le profil utilisateur principal
+            if (currentProfileData && currentProfileData.studentProfile) {
+              currentProfileData.studentProfile.portfolioUrl = portfolioUrl;
+              handleProfileUpdate({
+                studentProfile: {
+                  ...currentProfileData.studentProfile,
+                  portfolioUrl: portfolioUrl
+                },
+                toastMessage: false // Éviter d'afficher un toast pour cette mise à jour
+              });
+            }
+          }
+          
+          // Puis forcer le chargement complet des données fraîches
+          await fetchStudentProfile(true);
+        }
+      };
+      
+      // Écouter les événements personnalisés
+      window.addEventListener('job-status-updated', handleJobStatusUpdate);
+      window.addEventListener('profile-updated', handlePortfolioUpdate);
+      window.addEventListener('portfolio-updated', handlePortfolioUpdate);
+      
+      // Nettoyer les écouteurs quand le composant est démonté
+      return () => {
+        window.removeEventListener('job-status-updated', handleJobStatusUpdate);
+        window.removeEventListener('profile-updated', handlePortfolioUpdate);
+        window.removeEventListener('portfolio-updated', handlePortfolioUpdate);
+      };
+    }
+  }, [isPublicProfile, fetchStudentProfile, studentProfile, currentProfileData, handleProfileUpdate]);
+  
+  // Add this useEffect to clear cache when component mounts or when reloading the page
+  useEffect(() => {
+    // Clear cache on page reload
+    const handleBeforeUnload = () => {
+      studentProfileService.clearCache();
+    };
+    
+    // Listen for page reload/navigation
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    // Initial cache clear when component mounts
+    studentProfileService.clearCache();
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
   
   useEffect(() => {
     if (isPublicProfile && userId) {
@@ -89,6 +263,7 @@ const ProfileView = () => {
         const docs = await documentService.getDocuments(true);
         setDocuments(docs);
       } catch (error) {
+        console.error("Error fetching documents:", error);
       }
     };
     
@@ -258,7 +433,8 @@ const ProfileView = () => {
   } else {
     userData = {
       user: data,
-      studentProfile: data.studentProfile || {
+      // Priorité au profil étudiant préchargé, sinon utiliser celui des données actuelles
+      studentProfile: studentProfile || data.studentProfile || {
         isSeekingInternship: false,
         isSeekingApprenticeship: false
       },
@@ -269,6 +445,11 @@ const ProfileView = () => {
     };
   }
 
+  console.log("Final userData structure being passed to ProfileHeader:", userData);
+  
+  if (studentProfile) {
+    console.log("Student profile state is being used:", studentProfile);
+  }
 
   return (
     <motion.div
@@ -282,12 +463,14 @@ const ProfileView = () => {
         userData={userData} 
         isPublicProfile={isPublicProfile} 
         profilePictureUrl={profilePictureUrl}
+        onProfileUpdate={handleProfileUpdate}
       />
 
       <ProfileTabs 
         userData={userData}
         isPublicProfile={isPublicProfile}
         documents={documents}
+        onProfileUpdate={handleProfileUpdate}
       />
 
     </motion.div>

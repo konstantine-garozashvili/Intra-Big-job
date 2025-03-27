@@ -1,10 +1,10 @@
-import React, { memo, useState } from 'react';
+import React, { memo, useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PhoneInput } from '@/components/ui/phone-input';
 import { NameInput } from '@/components/ui/name-input';
 import { Label } from '@/components/ui/label';
-import { Pencil, Loader2 } from 'lucide-react';
+import { Pencil, Loader2, ExternalLink } from 'lucide-react';
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatFrenchPhoneNumber } from '@/lib/utils/formatting';
 import { toast } from 'sonner';
@@ -23,16 +23,56 @@ const EditableField = memo(({
   onCancel,
   onChange,
   className = '',
-  isSaving = false,
-  isLoading = false
+  loading = false
 }) => {
   // Local state for optimistic updates
   const [localValue, setLocalValue] = useState(value);
   const [error, setError] = useState(null);
   
+  // Update local value when the actual value changes (only if not in edit mode)
+  useEffect(() => {
+    if (!isEditing) {
+      setLocalValue(value);
+      setError(null);
+      
+      // Également synchroniser la valeur éditée avec la valeur actuelle quand on n'est pas en mode édition
+      if (onChange && type === 'url' && !isEditing) {
+        onChange(value);
+      }
+    }
+  }, [value, isEditing, onChange, type]);
+  
+  // Always display the most up-to-date value (either edited or saved)
+  const displayValue = isEditing ? editedValue : (localValue || value);
+  
+  // Format the display value based on the field type
+  const getFormattedDisplayValue = () => {
+    if (type === 'phone' && displayValue) {
+      return formatFrenchPhoneNumber(displayValue);
+    }
+    return displayValue;
+  };
+
+  // Tronquer une URL longue pour l'affichage
+  const getTruncatedUrl = (url) => {
+    if (!url) return '';
+    
+    if (url.length > 40) {
+      return url.substring(0, 37) + '...';
+    }
+    return url;
+  };
+  
   // Handle save with optimistic update
   const handleSave = React.useCallback(async () => {
     try {
+      // Validation spécifique pour les URLs
+      if (type === 'url' && editedValue && !editedValue.startsWith('https://')) {
+        setError("L'URL doit commencer par https://");
+        toast.error("L'URL doit commencer par https://");
+        return;
+      }
+      
       // Update local value immediately for optimistic UI
       setLocalValue(editedValue);
       
@@ -50,26 +90,7 @@ const EditableField = memo(({
       setError(err.response?.data?.message || 'Une erreur est survenue');
       toast.error(err.response?.data?.message || 'Une erreur est survenue');
     }
-  }, [onSave, field, editedValue, onEdit, value]);
-
-  // Update local value when the actual value changes
-  React.useEffect(() => {
-    if (!isEditing) {
-      setLocalValue(value);
-      setError(null);
-    }
-  }, [value, isEditing]);
-
-  // Always display the most up-to-date value (either edited or saved)
-  const displayValue = isEditing ? editedValue : (localValue || value);
-
-  // Format the display value based on the field type
-  const getFormattedDisplayValue = () => {
-    if (type === 'phone' && displayValue) {
-      return formatFrenchPhoneNumber(displayValue);
-    }
-    return displayValue;
-  };
+  }, [onSave, field, editedValue, onEdit, value, type]);
 
   return (
     <div 
@@ -82,13 +103,17 @@ const EditableField = memo(({
       `}
     >
       <Label className="text-xs sm:text-sm font-medium text-gray-700 flex items-center justify-between">
-        <span>{label}</span>
+        <span className="flex items-center gap-2">
+          {icon}
+          {label}
+        </span>
         {isEditable && !isEditing && (
           <Button
             variant="ghost"
             size="sm"
             onClick={onEdit}
             className="h-7 w-7 p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-colors"
+            disabled={loading}
           >
             <Pencil className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           </Button>
@@ -102,6 +127,7 @@ const EditableField = memo(({
               value={editedValue}
               onChange={onChange}
               className="w-full"
+              disabled={loading}
             />
           ) : (
             <Input
@@ -109,6 +135,8 @@ const EditableField = memo(({
               value={editedValue}
               onChange={(e) => onChange(e.target.value)}
               className={`w-full ${error ? 'border-red-500' : ''}`}
+              disabled={loading}
+              placeholder={type === 'url' ? 'https://...' : ''}
             />
           )}
           {error && (
@@ -119,16 +147,16 @@ const EditableField = memo(({
               variant="ghost"
               size="sm"
               onClick={onCancel}
-              disabled={isSaving}
+              disabled={loading}
             >
               Annuler
             </Button>
             <Button
               size="sm"
               onClick={handleSave}
-              disabled={isSaving}
+              disabled={loading}
             >
-              {isSaving ? (
+              {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Enregistrement...
@@ -140,16 +168,19 @@ const EditableField = memo(({
           </div>
         </div>
       ) : (
-        <div className="mt-1">
-          {displayValue ? (
+        <div className="mt-1 min-h-[1.5rem]">
+          {loading ? (
+            <Skeleton className="h-5 w-full" />
+          ) : displayValue ? (
             type === 'url' ? (
               <a
                 href={displayValue}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-600 hover:text-blue-800 break-all"
+                className="flex items-center text-blue-600 hover:text-blue-800 break-all group"
               >
-                {displayValue}
+                <span className="truncate mr-1">{getTruncatedUrl(displayValue)}</span>
+                <ExternalLink className="h-3 w-3 opacity-70 group-hover:opacity-100 flex-shrink-0" />
               </a>
             ) : (
               <span className="text-gray-900">{getFormattedDisplayValue()}</span>
@@ -163,10 +194,12 @@ const EditableField = memo(({
   );
 }, (prevProps, nextProps) => {
   // Custom comparison function for memo
+  // N'inclure que les propriétés essentielles pour éviter des re-rendus inutiles
   return (
     prevProps.value === nextProps.value &&
     prevProps.isEditing === nextProps.isEditing &&
-    prevProps.editedValue === nextProps.editedValue
+    prevProps.editedValue === nextProps.editedValue &&
+    prevProps.loading === nextProps.loading
   );
 });
 

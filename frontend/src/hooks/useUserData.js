@@ -483,6 +483,106 @@ export function useUserData(options = {}) {
       return [{ id: 0, name: 'USER' }];
     };
     
+    // Extraire les adresses et normaliser leur structure
+    const extractAddresses = (source) => {
+      // Si addresses est un tableau dans la source, l'utiliser directement
+      if (Array.isArray(source.addresses)) {
+        return source.addresses.map(address => {
+          // Normaliser la structure de chaque adresse
+          return {
+            id: address.id,
+            name: address.name || '',
+            complement: address.complement || '',
+            postalCode: address.postalCode || null,
+            // Normaliser la structure de la ville
+            city: typeof address.city === 'object' && address.city !== null 
+              ? address.city 
+              : (typeof address.city === 'string' 
+                ? { id: 0, name: address.city } 
+                : null)
+          };
+        });
+      }
+      
+      // Si addresses existe dans les données root
+      if (Array.isArray(rawData.addresses)) {
+        return rawData.addresses.map(address => {
+          // Normaliser la structure de chaque adresse
+          return {
+            id: address.id,
+            name: address.name || '',
+            complement: address.complement || '',
+            postalCode: address.postalCode || null,
+            // Normaliser la structure de la ville
+            city: typeof address.city === 'object' && address.city !== null 
+              ? address.city 
+              : (typeof address.city === 'string' 
+                ? { id: 0, name: address.city } 
+                : null)
+          };
+        });
+      }
+      
+      return [];
+    };
+    
+    // Extraire les diplômes avec normalisation
+    const extractDiplomas = (source) => {
+      // Si diplomas est directement dans la source
+      if (Array.isArray(source.diplomas)) {
+        return source.diplomas.map(diploma => ({
+          id: diploma.id,
+          name: diploma.name || diploma.title || '',
+          obtainedAt: diploma.obtainedAt || diploma.obtained_at || null,
+          institution: diploma.institution || diploma.school || null,
+          location: diploma.location || diploma.city || null
+        }));
+      }
+      
+      // Si diplomas est dans les données root
+      if (Array.isArray(rawData.diplomas)) {
+        return rawData.diplomas.map(diploma => ({
+          id: diploma.id,
+          name: diploma.name || diploma.title || '',
+          obtainedAt: diploma.obtainedAt || diploma.obtained_at || null,
+          institution: diploma.institution || diploma.school || null,
+          location: diploma.location || diploma.city || null
+        }));
+      }
+      
+      return [];
+    };
+    
+    // Normaliser le profil étudiant
+    const extractStudentProfile = (source) => {
+      const defaultStudentProfile = {
+        isSeekingInternship: false,
+        isSeekingApprenticeship: false,
+        portfolioUrl: null,
+        currentInternshipCompany: null,
+        internshipStartDate: null,
+        internshipEndDate: null,
+        situationType: null
+      };
+      
+      if (!source.studentProfile) {
+        return defaultStudentProfile;
+      }
+      
+      return {
+        ...defaultStudentProfile,
+        ...source.studentProfile,
+        // S'assurer que portfolioUrl existe
+        portfolioUrl: source.studentProfile.portfolioUrl || null,
+        // S'assurer que les flags de recherche sont booléens
+        isSeekingInternship: !!source.studentProfile.isSeekingInternship,
+        isSeekingApprenticeship: !!source.studentProfile.isSeekingApprenticeship,
+        // Normaliser les dates
+        internshipStartDate: source.studentProfile.internshipStartDate || null,
+        internshipEndDate: source.studentProfile.internshipEndDate || null,
+      };
+    };
+    
     // Construire l'objet utilisateur normalisé
     const normalizedObj = {
       // Conserver les propriétés originales pour la compatibilité
@@ -497,29 +597,36 @@ export function useUserData(options = {}) {
       birthDate: extractValue(userSource, ['birthDate', 'birth_date', 'birthdate']),
       profilePictureUrl: extractValue(userSource, ['profilePictureUrl', 'profile_picture_url']),
       profilePicturePath: extractValue(userSource, ['profilePicturePath', 'profile_picture_path']),
-      city: extractValue(userSource, ['city']),
-      nationality: extractValue(userSource, ['nationality']),
-      gender: extractValue(userSource, ['gender']),
+      
+      // Données spécifiques pour l'affichage du profil
       linkedinUrl: extractValue(userSource, ['linkedinUrl', 'linkedin_url']),
+      cvFilePath: extractValue(userSource, ['cvFilePath', 'cv_file_path']),
+      
+      // Normaliser la ville directement dans l'utilisateur (pour compatibilité)
+      city: typeof userSource.city === 'object' && userSource.city !== null 
+        ? userSource.city 
+        : (typeof userSource.city === 'string' 
+          ? { id: 0, name: userSource.city } 
+          : null),
+      
+      // S'assurer que les adresses ont toujours une structure cohérente
+      addresses: extractAddresses(userSource),
+      
+      // Extraire la nationalité avec normalisation
+      nationality: userSource.nationality || null,
+      
+      // Normaliser les données restantes
+      gender: extractValue(userSource, ['gender']),
       specialization: userSource.specialization || {},
       
       // S'assurer que les rôles sont correctement formatés
       roles: extractRoles(userSource),
       
-      // Propriétés spécifiques au profil étudiant (avec valeurs par défaut)
-      studentProfile: userSource.studentProfile || {
-        isSeekingInternship: false,
-        isSeekingApprenticeship: false,
-        currentInternshipCompany: null,
-        internshipStartDate: null,
-        internshipEndDate: null,
-        portfolioUrl: null,
-        situationType: null
-      },
+      // Profil étudiant normalisé
+      studentProfile: extractStudentProfile(userSource),
       
       // Collections (avec valeurs par défaut)
-      diplomas: Array.isArray(userSource.diplomas) ? userSource.diplomas : [],
-      addresses: Array.isArray(userSource.addresses) ? userSource.addresses : [],
+      diplomas: extractDiplomas(userSource),
       documents: Array.isArray(userSource.documents) ? userSource.documents : [],
       stats: userSource.stats || { profile: { completionPercentage: 0 } }
     };

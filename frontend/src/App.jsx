@@ -65,8 +65,6 @@ const UserRoleManager = lazy(() => import('./pages/Admin/components/UserRoleMana
 // Import du composant HomePage 
 const HomePage = lazy(() => import('./components/HomePage'))
 
-
-
 // Ticket system components
 const TicketList = lazy(() => import('./components/TicketList'))
 const TicketForm = lazy(() => import('./components/TicketForm'))
@@ -241,7 +239,7 @@ function AppContent() {
                   <Route path="/reset-password/confirmation" element={<ResetPasswordConfirmation />} />
                   <Route path="/reset-password/:token" element={<ResetPassword />} />
                   
-                  
+         
                 </Route>
                 
                 <Route element={<ProtectedRoute />}>

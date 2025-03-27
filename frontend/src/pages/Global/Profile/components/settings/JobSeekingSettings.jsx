@@ -31,63 +31,71 @@ const JobSeekingSettings = memo(({ profile, onProfileUpdate }) => {
     }
   }, [profile]);
 
-  // Fonction pour mettre à jour les deux statuts en même temps
-  const updateBothStatuses = useCallback(async (internship, apprenticeship) => {
+  // Gérer le changement de statut de recherche d'emploi
+  const handleToggleInternship = useCallback(async () => {
     if (loading) return;
     
     try {
       setLoading(true);
-      const response = await studentProfileService.updateJobSeekingStatus({
-        isSeekingInternship: internship,
-        isSeekingApprenticeship: apprenticeship
-      });
       
-      // Vérifier que la réponse est valide
-      if (response && typeof response === 'object') {
-        // Mettre à jour l'état local
-        setIsSeekingInternship(Boolean(internship));
-        setIsSeekingApprenticeship(Boolean(apprenticeship));
-        
-        // Extraire les données à mettre à jour
-        const profileData = response.profile || response;
-        
-        // Mettre à jour le profil parent si la fonction est fournie
-        if (onProfileUpdate && typeof onProfileUpdate === 'function') {
-          onProfileUpdate(profileData);
-        }
-        
-        // Message de succès approprié
-        if (internship && apprenticeship) {
-          toast.success('Recherche d\'emploi et d\'alternance activées');
-        } else if (internship) {
-          toast.success('Recherche d\'emploi ' + (internship ? 'activée' : 'désactivée'));
-        } else if (apprenticeship) {
-          toast.success('Recherche d\'alternance ' + (apprenticeship ? 'activée' : 'désactivée'));
-        } else {
-          toast.success('Recherche d\'emploi désactivée');
-        }
-      } else {
-        throw new Error('Invalid response format');
+      // Inverser l'état actuel
+      const newStatus = !isSeekingInternship;
+      
+      // Mettre à jour l'état local immédiatement pour une UI réactive
+      setIsSeekingInternship(newStatus);
+      
+      // Appeler directement l'API
+      const response = await studentProfileService.toggleInternshipSeeking(newStatus);
+      
+      if (!response || !response.success) {
+        // En cas d'échec, revenir à l'état précédent
+        setIsSeekingInternship(!newStatus);
+        throw new Error('Échec de la mise à jour');
       }
+      
+      // Message de succès
+      toast.success(`Recherche d'emploi ${newStatus ? 'activée' : 'désactivée'}`);
+      
     } catch (error) {
-      // console.error('Erreur lors de la mise à jour du statut de recherche:', error);
+      console.error('Erreur lors de la mise à jour du statut de recherche de stage:', error);
       toast.error('Une erreur est survenue lors de la mise à jour de votre statut de recherche');
     } finally {
       setLoading(false);
     }
-  }, [loading, onProfileUpdate]);
-
-  // Gérer le changement de statut de recherche d'emploi
-  const handleToggleInternship = useCallback(async () => {
-    // Inverser l'état actuel sans affecter l'autre option
-    await updateBothStatuses(!isSeekingInternship, isSeekingApprenticeship);
-  }, [isSeekingInternship, isSeekingApprenticeship, updateBothStatuses]);
+  }, [loading, isSeekingInternship]);
 
   // Gérer le changement de statut de recherche d'alternance
   const handleToggleApprenticeship = useCallback(async () => {
-    // Inverser l'état actuel sans affecter l'autre option
-    await updateBothStatuses(isSeekingInternship, !isSeekingApprenticeship);
-  }, [isSeekingInternship, isSeekingApprenticeship, updateBothStatuses]);
+    if (loading) return;
+    
+    try {
+      setLoading(true);
+      
+      // Inverser l'état actuel
+      const newStatus = !isSeekingApprenticeship;
+      
+      // Mettre à jour l'état local immédiatement pour une UI réactive
+      setIsSeekingApprenticeship(newStatus);
+      
+      // Appeler directement l'API
+      const response = await studentProfileService.toggleApprenticeshipSeeking(newStatus);
+      
+      if (!response || !response.success) {
+        // En cas d'échec, revenir à l'état précédent
+        setIsSeekingApprenticeship(!newStatus);
+        throw new Error('Échec de la mise à jour');
+      }
+      
+      // Message de succès
+      toast.success(`Recherche d'alternance ${newStatus ? 'activée' : 'désactivée'}`);
+      
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du statut de recherche d\'alternance:', error);
+      toast.error('Une erreur est survenue lors de la mise à jour de votre statut de recherche');
+    } finally {
+      setLoading(false);
+    }
+  }, [loading, isSeekingApprenticeship]);
 
   return (
     <div className="space-y-4 sm:space-y-6">
