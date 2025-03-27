@@ -8,6 +8,8 @@ const axiosInstance = axios.create({
     'Accept': 'application/json',
     'X-Requested-With': 'XMLHttpRequest'
   },
+  // Don't send cookies by default - this can cause CORS issues if server isn't configured for it
+  withCredentials: false,
   // Désactiver les transformations de réponse qui pourraient perturber le flux
   transformResponse: [(data) => {
     try {

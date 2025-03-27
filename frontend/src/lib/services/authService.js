@@ -4,6 +4,7 @@ import { clearQueryCache, getQueryClient } from '../utils/queryClientUtils';
 import { showGlobalLoader, hideGlobalLoader } from '../utils/loadingUtils';
 import { toast } from 'sonner';
 import userDataManager from './userDataManager';
+import axios from 'axios'; // Import axios
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
 
@@ -51,8 +52,39 @@ export const authService = {
    */
   async register(userData) {
     try {
-      console.log('[authService] Début de l\'inscription:', { ...userData, password: '***' });
-      const response = await apiService.post('/register', userData);
+      // Hide sensitive data in logs
+      const logData = { ...userData };
+      if (logData.plainPassword) {
+        logData.plainPassword = '***';
+      }
+      if (logData.password) {
+        logData.password = '***';
+      }
+      
+      console.log('[authService] Début de l\'inscription:', logData);
+      
+      // Create registration data structure with all required fields for the backend
+      const registrationData = {
+        email: userData.email,
+        password: userData.plainPassword, // Backend expects 'password'
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        birthDate: userData.birthDate,
+        phoneNumber: userData.phoneNumber,
+        nationality: userData.nationality
+      };
+      
+      // Add address if provided
+      if (userData.address) {
+        registrationData.address = userData.address;
+      }
+      
+      // Hide sensitive data in logs
+      const logRegistrationData = { ...registrationData, password: '***' };
+      console.log('[authService] Données formatées pour l\'API:', logRegistrationData);
+      
+      // Use apiService to handle all API calls consistently
+      const response = await apiService.post('/register', registrationData);
       
       console.log('[authService] Inscription réussie:', response);
       
@@ -61,11 +93,8 @@ export const authService = {
         localStorage.setItem('token', response.token);
       }
       
-      // Retourner une réponse formatée avec un status 201 si l'API ne renvoie pas de statut
-      return {
-        status: response.status || 201,
-        data: response
-      };
+      // Retourner la réponse de l'API
+      return response;
     } catch (error) {
       console.error('[authService] Erreur lors de l\'inscription:', error);
       console.error('[authService] Détails:', error.response?.data || error.message);
@@ -116,84 +145,87 @@ export const authService = {
         device_type: deviceType
       };
       
-      // Use JWT standard route directly
-      const response = await apiService.post('/login_check', loginData);
+      console.log('[authService] Tentative de connexion:', { username: email, password: '***', device_id: deviceId });
+      
+      // Afficher l'URL complète pour le débogage
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
+      console.log('[authService] URL API:', apiUrl + '/login_check');
+      
+      // Use direct axios call to ensure proper error handling
+      const response = await axios.post(apiUrl + '/login_check', loginData, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
+      
+      console.log('[authService] Connexion réussie:', response.data);
       
       // Store JWT token in localStorage
-      if (response.token) {
-        localStorage.setItem('token', response.token);
+      if (response.data && response.data.token) {
+        localStorage.setItem('token', response.data.token);
       }
       
       // Store refresh token if present
-      if (response.refresh_token) {
-        localStorage.setItem('refresh_token', response.refresh_token);
+      if (response.data && response.data.refresh_token) {
+        localStorage.setItem('refresh_token', response.data.refresh_token);
       }
       
       // Extract detailed info from JWT token for immediate use
-      if (response.token) {
+      if (response.data && response.data.token) {
         try {
-          const tokenParts = response.token.split('.');
+          const tokenParts = response.data.token.split('.');
           if (tokenParts.length === 3) {
             const payload = JSON.parse(atob(tokenParts[1]));
             
             if (payload.roles) {
               // Create enhanced user object with token information
               const enhancedUser = {
-                username: payload.username,
+                id: payload.id || null,
+                email: payload.username || email,
                 roles: payload.roles,
-                // Extract additional information if available
-                id: payload.id,
-                email: payload.username,
-                firstName: payload.firstName,
-                lastName: payload.lastName,
-                // Add token extraction timestamp for tracking freshness
-                _extractedAt: Date.now(),
-                // Mark as minimal data to indicate it's from token
-                _minimal: true
+                firstName: payload.firstName || '',
+                lastName: payload.lastName || '',
+                // Add extra information we can extract from token
+                token_exp: payload.exp,
+                token_iat: payload.iat
               };
               
+              // Store user data in localStorage for immediate access
               localStorage.setItem('user', JSON.stringify(enhancedUser));
               
-              // IMPORTANT: Also store roles separately in localStorage
-              localStorage.setItem('userRoles', JSON.stringify(payload.roles));
+              // Dispatch an event to notify app that user is logged in
+              window.dispatchEvent(new Event('login-success'));
               
-              // Pre-populate cache with this minimal data to speed up initial rendering
-              if (queryClient) {
-                queryClient.setQueryData(['user', 'current'], enhancedUser);
-              }
-              
-              // Signal that minimal data is ready for rendering
-              document.dispatchEvent(new CustomEvent('auth:minimal-data-ready', { 
-                detail: { user: enhancedUser } 
-              }));
+              // Trigger background loading of complete user data
+              this.lazyLoadUserData(true);
             }
           }
-        } catch (tokenError) {
-          // Silently handle token parsing errors
-          console.error('Error parsing token:', tokenError);
+        } catch (e) {
+          console.error('Error parsing JWT token:', e);
         }
       }
       
-      // Hide the global loader immediately after basic auth is completed
-      // This will allow the UI to render with skeleton loaders
+      // Hide loader after successful login
       hideGlobalLoader();
       
-      // Trigger the login success event immediately
-      window.dispatchEvent(new Event('login-success'));
-      
-      // Initiate user data loading in the background without blocking navigation
-      this.lazyLoadUserData(true).catch(err => {
-        console.warn('Background data loading error:', err);
-      });
-      
-      return response;
-    } catch (error) {
-      // Clear login in progress flag on error
+      // Remove login in progress flag
       sessionStorage.removeItem('login_in_progress');
       
+      return response.data;
+    } catch (error) {
+      // Hide loader after failed login
       hideGlobalLoader();
-      console.error('Erreur lors de la connexion:', error);
-      console.error('Détails de l\'erreur:', error.response?.data || error.message);
+      
+      // Remove login in progress flag
+      sessionStorage.removeItem('login_in_progress');
+      
+      // Log detailed error information for debugging
+      console.error('[authService] Login error:', error);
+      if (error.response) {
+        console.error('[authService] Error response:', error.response.data);
+      }
+      
       throw error;
     }
   },
@@ -243,10 +275,9 @@ export const authService = {
         try {
           const queryClient = getQueryClient();
           if (queryClient) {
-            const sessionId = getSessionId();
             queryClient.setQueryData(['user', 'current'], enhancedUser);
-            queryClient.setQueryData(['unified-user-data', '/api/me', sessionId], enhancedUser);
-            queryClient.setQueryData(['user-data', enhancedUser?.id || 'anonymous', sessionId], enhancedUser);
+            queryClient.setQueryData(['unified-user-data', '/api/me', getSessionId()], enhancedUser);
+            queryClient.setQueryData(['user-data', enhancedUser?.id || 'anonymous', getSessionId()], enhancedUser);
             console.log('🔄 authService.lazyLoadUserData: updated React Query cache');
           }
         } catch (cacheError) {
@@ -720,15 +751,27 @@ export const authService = {
       }
       
       // If we still don't have user data, create minimal data
-      if (!localStorage.getItem('user')) {
-        const minimalUser = {
-          id: '1',
-          email: 'student@example.com',
-          firstName: 'Test',
-          lastName: 'Student',
-          roles: ['ROLE_STUDENT'] // Always include ROLE_STUDENT
-        };
-        localStorage.setItem('user', JSON.stringify(minimalUser));
+      // Based on data from token
+      try {
+        const token = localStorage.getItem('token');
+        if (token) {
+          const decodedToken = decodeToken(token);
+          if (decodedToken) {
+            const minimalUser = {
+              id: decodedToken.id || '1',
+              email: decodedToken.username || 'user@example.com',
+              roles: decodedToken.roles || ['ROLE_USER'],
+              _fixedAt: Date.now()
+            };
+            
+            localStorage.setItem('user', JSON.stringify(minimalUser));
+            
+            console.log('Created minimal user data from token');
+            return true;
+          }
+        }
+      } catch (tokenError) {
+        console.error('Error creating fallback user data:', tokenError);
       }
       
       // Ensure roles exist - default to student role
@@ -746,6 +789,34 @@ export const authService = {
     } catch (error) {
       console.error('Error ensuring user data:', error);
       return false;
+    }
+  },
+
+  /**
+   * Récupère les données minimales de l'utilisateur à partir du localStorage
+   * Utilisé comme fallback lorsque les appels API échouent
+   * @returns {Object|null} - Données minimales utilisateur ou null
+   */
+  getMinimalUserData() {
+    try {
+      const userStr = localStorage.getItem('user');
+      if (!userStr) return null;
+      
+      const userData = JSON.parse(userStr);
+      
+      // Vérifier que les données minimales requises sont présentes
+      if (!userData || (!userData.firstName && !userData.lastName)) {
+        return null;
+      }
+      
+      return {
+        ...userData,
+        _source: 'localStorage',
+        _retrievedAt: Date.now()
+      };
+    } catch (error) {
+      console.error('Erreur lors de la récupération des données minimales:', error);
+      return null;
     }
   },
 
@@ -811,7 +882,6 @@ export const authService = {
             };
             
             localStorage.setItem('user', JSON.stringify(minimalUser));
-            localStorage.setItem('userRoles', JSON.stringify(minimalUser.roles));
             
             console.log('Created minimal profile data from token');
             return { success: true, message: 'Created minimal profile data' };
@@ -827,34 +897,6 @@ export const authService = {
       return { success: false, message: error.message };
     }
   },
-
-  /**
-   * Récupère les données minimales de l'utilisateur à partir du localStorage
-   * Utilisé comme fallback lorsque les appels API échouent
-   * @returns {Object|null} - Données minimales utilisateur ou null
-   */
-  getMinimalUserData() {
-    try {
-      const userStr = localStorage.getItem('user');
-      if (!userStr) return null;
-      
-      const userData = JSON.parse(userStr);
-      
-      // Vérifier que les données minimales requises sont présentes
-      if (!userData || (!userData.firstName && !userData.lastName)) {
-        return null;
-      }
-      
-      return {
-        ...userData,
-        _source: 'localStorage',
-        _retrievedAt: Date.now()
-      };
-    } catch (error) {
-      console.error('Erreur lors de la récupération des données minimales:', error);
-      return null;
-    }
-  }
 };
 
 // Générer ou récupérer un identifiant unique pour l'appareil

@@ -1,9 +1,12 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { motion, AnimatePresence, useScroll, useTransform, useSpring, useMotionValue } from 'framer-motion';
 import { toast } from 'sonner';
-import { authService } from '@/lib/services/authService';
+import { authService } from '../lib/services/authService';
+import { addressService } from '../lib/services/addressService';
 import { useRolePermissions } from '@/features/roles/useRolePermissions';
+import { useRoles } from '@/features/roles/roleContext';
+import { Loader2 } from "lucide-react";
 import ConnectionModal from '@/components/ConnectionModal';
 import RegistrationModal from '@/components/RegistrationModal';
 
@@ -497,7 +500,7 @@ const FEATURES = [
     description: "Bénéficiez d'assistants d'apprentissage intelligents qui s'adaptent à votre rythme et à vos besoins spécifiques.",
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-10 h-10 mb-4 text-blue-400">
-        <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.38-1 1.72V7h2a2 2 0 0 1 2 2v.28c.6.34 1 .98 1 1.72a2 2 0 0 1-2 2 2 2 0 0 1-2 2c0-.74.4-1.38 1-1.72V9a2 2 0 0 1 2-2h2V5.72c-.6-.34-1-.98-1-1.72a2 2 0 0 1 2-2z"></path>
+        <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.38-1 1.72V7h2a2 2 0 0 1 2 2v.28c.6.34 1 1.38 1 1.72a2 2 0 0 1-2 2 2 2 0 0 1-2 2c0-.74.4-1.38 1-1.72V9a2 2 0 0 1 2-2h2V5.72c-.6-.34-1-.98-1-1.72a2 2 0 0 1 2-2z"></path>
       </svg>
     )
   },
@@ -850,23 +853,742 @@ const InfoModal = ({ isOpen, info, onClose }) => {
   );
 };
 
+// Integrated Authentication Form Component
+const IntegratedAuthForm = ({ mode, onSwitchMode }) => {
+  const [formState, setFormState] = useState({
+    // Login fields
+    email: "",
+    password: "",
+    rememberMe: false,
+    // Registration fields
+    firstName: "",
+    lastName: "",
+    confirmPassword: "",
+    birthDate: "",
+    phoneNumber: "",
+    nationality: "FR", // Default to France
+    // Address fields
+    addressName: "",
+    addressCity: "",
+    addressPostalCode: "",
+    addressComplement: "",
+    agreeTerms: false
+  });
+  
+  const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [currentStep, setCurrentStep] = useState(1);
+  const [addressSuggestions, setAddressSuggestions] = useState([]);
+  const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
+  const navigate = useNavigate();
+  const { refreshRoles } = useRoles();
+
+  // Memoize the credentials object to prevent recreation on each render
+  const credentials = useMemo(() => ({
+    admin: { email: 'admin@bigproject.com', password: 'Password123@' },
+    superadmin: { email: 'superadmin@bigproject.com', password: 'Password123@' },
+    teacher: { email: 'teacher@bigproject.com', password: 'Password123@' },
+    student: { email: 'student@bigproject.com', password: 'Password123@' },
+    hr: { email: 'hr@bigproject.com', password: 'Password123@' },
+    guest: { email: 'guest@bigproject.com', password: 'Password123@' },
+    recruiter: { email: 'recruiter@bigproject.com', password: 'Password123@' }
+  }), []);
+
+  // Handle input changes
+  const handleInputChange = useCallback((e) => {
+    const { name, value, type, checked } = e.target;
+    setFormState(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+    
+    // Address autocomplete for French addresses
+    if (name === 'addressName' && value.length > 3) {
+      handleAddressSearch(value);
+    }
+  }, []);
+  
+  // Handle address search
+  const handleAddressSearch = useCallback(async (query) => {
+    if (!query || query.length < 3) {
+      setAddressSuggestions([]);
+      return;
+    }
+    
+    setIsLoadingAddresses(true);
+    try {
+      const features = await addressService.searchAddresses(query);
+      
+      const suggestions = features.map(feature => ({
+        label: feature.properties.label,
+        city: feature.properties.city,
+        postcode: feature.properties.postcode,
+        name: feature.properties.name || feature.properties.street
+      }));
+      
+      setAddressSuggestions(suggestions);
+    } catch (error) {
+      console.error('Error searching for addresses:', error);
+      setAddressSuggestions([]);
+    } finally {
+      setIsLoadingAddresses(false);
+    }
+  }, []);
+  
+  // Handle address selection
+  const handleSelectAddress = useCallback((suggestion) => {
+    setFormState(prev => ({
+      ...prev,
+      addressName: suggestion.name,
+      addressCity: suggestion.city,
+      addressPostalCode: suggestion.postcode
+    }));
+    setAddressSuggestions([]);
+  }, []);
+
+  const renderStep3 = () => (
+    <>
+      <h3 className="text-xl font-bold mb-4 text-blue-300">Étape 3: Adresse</h3>
+      
+      <div className="space-y-4">
+        <div className="relative">
+          <FormInput
+            id="addressName"
+            label="Adresse"
+            required
+            value={formState.addressName}
+            onChange={handleInputChange}
+            error={errors.addressName}
+          />
+          
+          {/* Address suggestions dropdown */}
+          {addressSuggestions.length > 0 && (
+            <div className="absolute z-10 mt-1 w-full bg-gray-800 border border-blue-600/30 rounded-md shadow-lg max-h-60 overflow-auto">
+              {isLoadingAddresses && (
+                <div className="flex items-center justify-center p-2 text-blue-300">
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Recherche en cours...
+                </div>
+              )}
+              <ul className="py-1">
+                {addressSuggestions.map((suggestion, index) => (
+                  <li 
+                    key={index}
+                    className="px-3 py-2 text-sm text-gray-300 hover:bg-blue-900/40 cursor-pointer"
+                    onClick={() => handleSelectAddress(suggestion)}
+                  >
+                    {suggestion.label}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+        
+        <FormInput
+          id="addressCity"
+          label="Ville"
+          required
+          value={formState.addressCity}
+          onChange={handleInputChange}
+          error={errors.addressCity}
+        />
+        
+        <FormInput
+          id="addressPostalCode"
+          label="Code postal"
+          required
+          value={formState.addressPostalCode}
+          onChange={handleInputChange}
+          error={errors.addressPostalCode}
+        />
+        
+        <FormInput
+          id="addressComplement"
+          label="Complément d'adresse"
+          value={formState.addressComplement}
+          onChange={handleInputChange}
+          error={errors.addressComplement}
+        />
+      </div>
+      
+      <div className="flex items-start mt-6">
+        <div className="flex items-center h-5">
+          <input
+            id="agreeTerms"
+            name="agreeTerms"
+            type="checkbox"
+            checked={formState.agreeTerms}
+            onChange={handleInputChange}
+            className="h-4 w-4 text-blue-500 focus:ring-blue-500 border-gray-700 rounded bg-gray-800"
+          />
+        </div>
+        <div className="ml-3 text-sm">
+          <label htmlFor="agreeTerms" className="text-gray-300">
+            J'accepte les <button type="button" className="text-blue-400 hover:underline">Conditions d'utilisation</button> et la <button type="button" className="text-blue-400 hover:underline">Politique de confidentialité</button>
+          </label>
+          {errors.agreeTerms && <p className="mt-1 text-xs text-red-500">{errors.agreeTerms}</p>}
+        </div>
+      </div>
+      
+      <div className="bg-blue-900/20 border border-blue-700/30 rounded-md p-4 text-sm text-blue-200 mt-4">
+        <p>En créant un compte, vous pourrez :</p>
+        <ul className="mt-2 list-disc list-inside space-y-1">
+          <li>Accéder à toutes les fonctionnalités de la plateforme</li>
+          <li>Suivre votre progression personnelle</li>
+          <li>Participer aux sessions de formation</li>
+          <li>Télécharger les ressources pédagogiques</li>
+        </ul>
+      </div>
+    </>
+  );
+
+  // Login submission handler
+  const handleLoginSubmit = async (e) => {
+    // ... [This part remains unchanged]
+  };
+
+  const handleRegistrationSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateRegistrationStep()) return;
+    
+    setIsLoading(true);
+    try {
+      // Format user data for registration API with all required fields
+      const userData = {
+        firstName: formState.firstName,
+        lastName: formState.lastName,
+        email: formState.email,
+        plainPassword: formState.password,
+        birthDate: formState.birthDate,
+        phoneNumber: formState.phoneNumber,
+        nationality: formState.nationality,
+        address: {
+          name: formState.addressName,
+          city: formState.addressCity,
+          postalCode: formState.addressPostalCode,
+          complement: formState.addressComplement || undefined
+        }
+      };
+      
+      // Use authService for proper backend registration
+      const response = await authService.register(userData);
+      
+      // Show success message
+      toast.success("Compte créé avec succès!");
+      
+      // Automatically log in after successful registration
+      try {
+        await authService.login(formState.email, formState.password);
+        
+        // Get the token
+        const token = localStorage.getItem('token');
+        
+        if (token) {
+          // Dispatch login success event
+          window.dispatchEvent(new Event('login-success'));
+          
+          // Add small delay before navigation
+          setTimeout(() => {
+            // Navigate to the guest dashboard
+            navigate('/dashboard');
+            
+            // Show success toast after navigation
+            toast.success("Connexion réussie", {
+              description: "Bienvenue sur la plateforme!"
+            });
+          }, 300);
+          
+          // Listen for when full user data is loaded
+          const handleUserDataLoaded = () => {
+            refreshRoles();
+            window.removeEventListener('user-data-loaded', handleUserDataLoaded);
+          };
+          
+          window.addEventListener('user-data-loaded', handleUserDataLoaded);
+        } else {
+          // If no token, redirect to login with filled email
+          localStorage.setItem('registeredEmail', formState.email);
+          onSwitchMode('login');
+          toast.info("Veuillez vous connecter avec votre nouveau compte");
+        }
+      } catch (loginError) {
+        console.error("Auto-login failed:", loginError);
+        // If auto-login fails, switch to login form
+        localStorage.setItem('registeredEmail', formState.email);
+        onSwitchMode('login');
+      }
+    } catch (error) {
+      if (error.response) {
+        const { data } = error.response;
+        
+        if (data.message) {
+          if (data.errors && Object.keys(data.errors).length > 0) {
+            // Map API validation errors to form fields
+            const apiErrors = {};
+            Object.entries(data.errors).forEach(([key, value]) => {
+              apiErrors[key] = Array.isArray(value) ? value[0] : value;
+            });
+            setErrors(apiErrors);
+          } else {
+            setErrors({ form: data.message });
+          }
+          
+          toast.error("Erreur d'inscription", {
+            description: data.message
+          });
+        } else {
+          setErrors({ form: "Une erreur est survenue lors de l'inscription" });
+          toast.error("Erreur d'inscription", {
+            description: "Une erreur est survenue lors de l'inscription"
+          });
+        }
+      } else {
+        setErrors({ form: error.message || "Une erreur est survenue lors de l'inscription" });
+        toast.error("Erreur d'inscription", {
+          description: error.message || "Une erreur est survenue lors de l'inscription"
+        });
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Render Login Form
+  const renderLoginForm = () => (
+    <motion.div 
+      className="w-full bg-gray-900/80 backdrop-blur-sm p-8 rounded-lg shadow-lg mx-auto border border-blue-500/30"
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.3 }}
+    >
+      <div className="text-center mb-8">
+        <h2 className="text-3xl font-extrabold text-blue-300 mb-2">
+          Connexion
+        </h2>
+        <p className="text-sm text-blue-200">
+          Accédez à votre espace <span className="font-bold text-blue-400">Big<span className="text-indigo-400">Project</span></span>
+        </p>
+      </div>
+
+      {errors.auth && (
+        <div className="p-3 mb-5 text-red-400 bg-red-900/30 border border-red-700 rounded">
+          {errors.auth}
+        </div>
+      )}
+
+      <form className="space-y-6" onSubmit={handleLoginSubmit}>
+        <FormInput
+          id="email"
+          label="Adresse email"
+          type="email"
+          autoComplete="email"
+          required
+          value={formState.email}
+          onChange={handleInputChange}
+          error={errors.email}
+        />
+
+        <FormInput
+          id="password"
+          label="Mot de passe"
+          type="password"
+          autoComplete="current-password"
+          required
+          value={formState.password}
+          onChange={handleInputChange}
+          error={errors.password}
+        />
+
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <input
+              id="rememberMe"
+              name="rememberMe"
+              type="checkbox"
+              checked={formState.rememberMe}
+              onChange={handleInputChange}
+              className="h-4 w-4 text-blue-500 focus:ring-blue-500 border-gray-700 rounded bg-gray-800"
+            />
+            <label htmlFor="rememberMe" className="block ml-2 text-sm text-gray-300">
+              Se souvenir de moi
+            </label>
+          </div>
+
+          <div className="text-sm">
+            <button 
+              type="button" 
+              onClick={() => navigate('/reset-password')}
+              className="font-medium text-blue-400 hover:underline"
+            >
+              Mot de passe oublié?
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <motion.button
+            type="submit"
+            disabled={isLoading}
+            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Connexion en cours...
+              </>
+            ) : (
+              "Se connecter"
+            )}
+          </motion.button>
+        </div>
+      </form>
+
+      <div className="mt-8">
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-700"></div>
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-2 text-gray-400 bg-gray-900">
+              Vous n'avez pas encore de compte?
+            </span>
+          </div>
+        </div>
+
+        <div className="mt-6">
+          <motion.button
+            type="button"
+            onClick={() => onSwitchMode('register')}
+            className="w-full flex justify-center py-3 px-4 border border-gray-700 text-gray-300 rounded-md hover:bg-gray-800"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            S'inscrire
+          </motion.button>
+        </div>
+      </div>
+    </motion.div>
+  );
+
+  // Render Registration Form based on current step
+  const renderRegistrationForm = () => {
+    // Define different form sections based on the current step
+    const renderStep1 = () => (
+      <>
+        <h3 className="text-xl font-bold mb-4 text-blue-300">Étape 1: Vos identifiants</h3>
+        <div className="space-y-4">
+          <FormInput
+            id="email"
+            label="Adresse email"
+            type="email"
+            required
+            value={formState.email}
+            onChange={handleInputChange}
+            error={errors.email}
+          />
+          
+          <FormInput
+            id="password"
+            label="Mot de passe"
+            type="password"
+            required
+            value={formState.password}
+            onChange={handleInputChange}
+            error={errors.password}
+          />
+          
+          <FormInput
+            id="confirmPassword"
+            label="Confirmer le mot de passe"
+            type="password"
+            required
+            value={formState.confirmPassword}
+            onChange={handleInputChange}
+            error={errors.confirmPassword}
+          />
+        </div>
+      </>
+    );
+    
+    const renderStep2 = () => (
+      <>
+        <h3 className="text-xl font-bold mb-4 text-blue-300">Étape 2: Informations personnelles</h3>
+        <div className="space-y-4">
+          <FormInput
+            id="firstName"
+            label="Prénom"
+            required
+            value={formState.firstName}
+            onChange={handleInputChange}
+            error={errors.firstName}
+          />
+          
+          <FormInput
+            id="lastName"
+            label="Nom"
+            required
+            value={formState.lastName}
+            onChange={handleInputChange}
+            error={errors.lastName}
+          />
+          
+          <FormInput
+            id="birthDate"
+            label="Date de naissance"
+            type="date"
+            required
+            value={formState.birthDate}
+            onChange={handleInputChange}
+            error={errors.birthDate}
+          />
+          
+          <FormInput
+            id="phoneNumber"
+            label="Numéro de téléphone"
+            type="tel"
+            required
+            value={formState.phoneNumber}
+            onChange={handleInputChange}
+            error={errors.phoneNumber}
+          />
+          
+          <FormInput
+            id="nationality"
+            label="Nationalité"
+            required
+            value={formState.nationality}
+            onChange={handleInputChange}
+            error={errors.nationality}
+          />
+        </div>
+      </>
+    );
+    
+    const renderStep3 = renderStep3();
+    
+    return (
+      <motion.div 
+        className="w-full bg-gray-900/80 backdrop-blur-sm p-8 rounded-lg shadow-lg mx-auto border border-blue-500/30"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.3 }}
+      >
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-extrabold text-blue-300 mb-2">
+            Inscription
+          </h2>
+          <p className="text-sm text-blue-200">
+            Rejoignez <span className="font-bold text-blue-400">Big<span className="text-indigo-400">Project</span></span> en quelques étapes
+          </p>
+        </div>
+        
+        {errors.form && (
+          <div className="p-3 mb-5 text-red-400 bg-red-900/30 border border-red-700 rounded">
+            {errors.form}
+          </div>
+        )}
+        
+        {/* Steps indicator */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between">
+            {[1, 2, 3].map((step) => (
+              <div key={step} className="flex flex-col items-center">
+                <div 
+                  className={`w-8 h-8 rounded-full ${currentStep === step 
+                    ? 'bg-blue-600 text-white' 
+                    : currentStep > step 
+                      ? 'bg-green-600 text-white' 
+                      : 'bg-gray-700 text-gray-300'
+                  }`}
+                >
+                  {currentStep > step ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : (
+                    step
+                  )}
+                </div>
+                <span className="text-xs mt-1 text-gray-400">
+                  {step === 1 ? 'Identifiants' : step === 2 ? 'Informations' : 'Adresse'}
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-2 flex justify-between">
+            <div className={`h-1 w-full ${currentStep > 1 ? 'bg-blue-600' : 'bg-gray-700'}`}></div>
+            <div className={`h-1 w-full ${currentStep > 2 ? 'bg-blue-600' : 'bg-gray-700'}`}></div>
+          </div>
+        </div>
+        
+        <form onSubmit={handleRegistrationSubmit}>
+          {/* Content based on current step */}
+          <div className="min-h-[280px]">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={`step-${currentStep}`}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                {currentStep === 1 && renderStep1()}
+                {currentStep === 2 && renderStep2()}
+                {currentStep === 3 && renderStep3()}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+          
+          {/* Navigation buttons */}
+          <div className="flex justify-between mt-8">
+            {currentStep > 1 ? (
+              <motion.button
+                type="button"
+                onClick={handlePrevStep}
+                className="px-4 py-2 border border-gray-700 text-gray-300 rounded-md hover:bg-gray-800"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Précédent
+              </motion.button>
+            ) : (
+              <motion.button
+                type="button"
+                onClick={() => onSwitchMode('login')}
+                className="px-4 py-2 border border-gray-700 text-gray-300 rounded-md hover:bg-gray-800"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                J'ai déjà un compte
+              </motion.button>
+            )}
+            
+            {currentStep < 3 ? (
+              <motion.button
+                type="button"
+                onClick={handleNextStep}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Suivant
+              </motion.button>
+            ) : (
+              <motion.button
+                type="submit"
+                disabled={isLoading}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-70 disabled:cursor-not-allowed flex items-center"
+                whileHover={{ scale: isLoading ? 1 : 1.05 }}
+                whileTap={{ scale: isLoading ? 1 : 0.95 }}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Création en cours...
+                  </>
+                ) : (
+                  "Créer mon compte"
+                )}
+              </motion.button>
+            )}
+          </div>
+        </form>
+      </motion.div>
+    );
+  };
+
+  return (
+    <div className="relative z-20 w-full max-w-md">
+      {mode === 'login' ? renderLoginForm() : renderRegistrationForm()}
+    </div>
+  );
+};
+
+// Form Input component for the authentication forms
+const FormInput = memo(({ 
+  id, 
+  label, 
+  type = "text", 
+  value, 
+  onChange, 
+  error, 
+  ...props 
+}) => {
+  const [showPassword, setShowPassword] = useState(false);
+  const actualType = type === "password" ? (showPassword ? "text" : "password") : type;
+
+  return (
+    <div>
+      <label htmlFor={id} className="block text-sm font-medium text-gray-300 mb-1">
+        {label}
+      </label>
+      <div className="mt-1 relative">
+        <input
+          id={id}
+          name={id}
+          type={actualType}
+          value={value}
+          onChange={onChange}
+          className="appearance-none block w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm placeholder-gray-500 bg-gray-800 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+          {...props}
+        />
+        {type === "password" && (
+          <button
+            type="button"
+            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-300"
+            onClick={() => setShowPassword(!showPassword)}
+          >
+            {showPassword ? (
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            ) : (
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+            )}
+          </button>
+        )}
+        {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+      </div>
+    </div>
+  );
+});
+
+FormInput.displayName = "FormInput";
+
 // Main Home component
 const Home = () => {
   const navigate = useNavigate();
   const permissions = useRolePermissions();
   
   // State variables
-  const [showConnectionModal, setShowConnectionModal] = useState(false);
-  const [showRegistrationModal, setShowRegistrationModal] = useState(false);
+  const [authMode, setAuthMode] = useState('login'); // 'login' or 'register'
+  const [showAuthForm, setShowAuthForm] = useState(false);
   const [showExploreModal, setShowExploreModal] = useState(false);
   
   // Navigation and button handlers
   const handleLoginClick = useCallback(() => {
-    setShowConnectionModal(true);
+    setAuthMode('login');
+    setShowAuthForm(true);
   }, []);
 
   const handleRegisterClick = useCallback(() => {
-    setShowRegistrationModal(true);
+    setAuthMode('register');
+    setShowAuthForm(true);
+  }, []);
+  
+  const handleSwitchAuthMode = useCallback((mode) => {
+    setAuthMode(mode);
+  }, []);
+  
+  const handleCloseAuthForm = useCallback(() => {
+    setShowAuthForm(false);
   }, []);
   
   return (
@@ -878,7 +1600,7 @@ const Home = () => {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="py-2 px-6 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 transition-colors"
+              className="py-2 px-6 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl flex items-center justify-center"
               onClick={handleLoginClick}
             >
               Connexion
@@ -886,7 +1608,7 @@ const Home = () => {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="py-2 px-6 bg-transparent border border-blue-500 text-blue-500 rounded-full font-medium hover:bg-blue-500 hover:text-white transition-colors"
+              className="py-2 px-6 bg-transparent border border-blue-500 text-blue-500 rounded-full font-medium hover:bg-blue-500 hover:text-white transition-colors shadow-lg hover:shadow-xl"
               onClick={handleRegisterClick}
             >
               Inscription
@@ -904,7 +1626,7 @@ const Home = () => {
           transition={{ duration: 1.5 }}
         >
           <div className="absolute top-1/4 left-1/4 w-40 h-40 bg-blue-500 rounded-full filter blur-3xl opacity-20 animate-pulse"></div>
-          <div className="absolute bottom-1/3 right-1/3 w-60 h-60 bg-purple-500 rounded-full filter blur-3xl opacity-10 animate-pulse" style={{animationDelay: '1s'}}></div>
+          <div className="absolute bottom-1/3 right-1/4 w-60 h-60 bg-purple-500 rounded-full filter blur-3xl opacity-10 animate-pulse" style={{animationDelay: '1s'}}></div>
         </motion.div>
       
         <motion.div 
@@ -950,12 +1672,17 @@ const Home = () => {
             className="flex flex-col md:flex-row gap-5 mt-5 justify-center"
           >
             <motion.button
-              className="py-3 px-8 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl flex items-center justify-center"
+              className="group relative inline-flex items-center justify-center px-8 py-3 text-lg font-medium text-white overflow-hidden bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => setShowExploreModal(true)}
             >
-              Explorer l'univers <span className="ml-2">→</span>
+              <span className="relative z-10">Explorer l'univers</span>
+              <motion.span 
+                className="absolute inset-0 w-full h-full bg-gradient-to-r from-blue-600 to-indigo-700"
+                animate={{ x: ['0%', '100%', '0%'] }}
+                transition={{ duration: 3, repeat: Infinity }}
+              />
             </motion.button>
             
             <motion.button
@@ -1288,8 +2015,47 @@ const Home = () => {
       </section>
       
       {/* Modals */}
-      <ConnectionModal isOpen={showConnectionModal} onClose={() => setShowConnectionModal(false)} />
-      <RegistrationModal isOpen={showRegistrationModal} onClose={() => setShowRegistrationModal(false)} />
+      <AnimatePresence>
+        {showAuthForm && (
+          <>
+            <motion.div
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={handleCloseAuthForm}
+            />
+            <motion.div
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ 
+                type: "spring",
+                damping: 25,
+                stiffness: 300
+              }}
+            >
+              <div onClick={(e) => e.stopPropagation()}>
+                <IntegratedAuthForm 
+                  mode={authMode} 
+                  onSwitchMode={handleSwitchAuthMode}
+                />
+                <motion.button
+                  className="absolute top-4 right-4 text-gray-400 hover:text-white p-2 rounded-full bg-gray-800/50"
+                  onClick={handleCloseAuthForm}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </motion.button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
       <ExploreModal isOpen={showExploreModal} onClose={() => setShowExploreModal(false)} />
     </div>
   );

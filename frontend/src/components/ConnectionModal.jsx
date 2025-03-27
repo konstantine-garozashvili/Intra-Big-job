@@ -1,71 +1,68 @@
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate, Navigate } from 'react-router-dom';
+import { motion, AnimatePresence, useScroll, useTransform, useSpring, useMotionValue } from 'framer-motion';
+import { toast } from 'sonner';
+import { authService } from '@/lib/services/authService';
+import { useRolePermissions } from '@/features/roles/useRolePermissions';
+import { Loader2 } from "lucide-react";
+import { useRoles } from '@/features/roles/roleContext';
 
 const ConnectionModal = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-    rememberMe: false
-  });
   const [errors, setErrors] = useState({});
 
-  // Pre-defined credentials for quick login (similar to QuickLoginButtons component)
-  const credentials = {
-    admin: { email: 'admin@bigproject.com', password: 'Password123@' },
-    superadmin: { email: 'superadmin@bigproject.com', password: 'Password123@' },
-    teacher: { email: 'teacher@bigproject.com', password: 'Password123@' },
-    student: { email: 'student@bigproject.com', password: 'Password123@' },
-    hr: { email: 'hr@bigproject.com', password: 'Password123@' },
-    guest: { email: 'guest@bigproject.com', password: 'Password123@' },
-    recruiter: { email: 'recruiter@bigproject.com', password: 'Password123@' }
-  };
+  // Check for stored email for "remember me" feature
+  useEffect(() => {
+    const storedEmail = localStorage.getItem('rememberedEmail');
+    if (storedEmail) {
+      setEmail(storedEmail);
+      setRememberMe(true);
+    }
+    
+    // Check if coming from registration
+    const registeredEmail = localStorage.getItem('registeredEmail');
+    if (registeredEmail) {
+      setEmail(registeredEmail);
+      localStorage.removeItem('registeredEmail'); // Clean up after using it
+      toast.info("Inscription réussie", {
+        description: "Veuillez vous connecter avec vos identifiants."
+      });
+    }
+  }, [isOpen]);
 
   // Reset form when modal closes
   useEffect(() => {
     if (!isOpen) {
       setTimeout(() => {
-        setFormData({
-          email: "",
-          password: "",
-          rememberMe: false
-        });
+        setPassword("");
         setErrors({});
+        // Don't reset email if rememberMe is enabled
+        if (!rememberMe) {
+          setEmail("");
+        }
       }, 300);
     }
-  }, [isOpen]);
-
-  const quickLogin = (role) => {
-    if (credentials[role]) {
-      setFormData(prev => ({
-        ...prev,
-        email: credentials[role].email,
-        password: credentials[role].password
-      }));
-    }
-  };
+  }, [isOpen, rememberMe]);
 
   const validateForm = () => {
     const newErrors = {};
     
-    if (!formData.email) newErrors.email = "Email obligatoire";
-    else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = "Format d'email invalide";
+    if (!email) {
+      newErrors.email = "Email obligatoire";
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      newErrors.email = "Format d'email invalide";
+    }
     
-    if (!formData.password) newErrors.password = "Mot de passe obligatoire";
+    if (!password) {
+      newErrors.password = "Mot de passe obligatoire";
+    }
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
-
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value
-    }));
   };
 
   const handleSubmit = async (e) => {
@@ -75,94 +72,104 @@ const ConnectionModal = ({ isOpen, onClose }) => {
     
     setIsLoading(true);
     try {
-      // Simulate API call with mock authentication
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Handle remember me preference
+      if (rememberMe) {
+        localStorage.setItem('rememberedEmail', email);
+      } else {
+        localStorage.removeItem('rememberedEmail');
+      }
       
-      // Store auth token in localStorage to persist login
-      localStorage.setItem('authToken', 'mock-auth-token-' + Date.now());
-      localStorage.setItem('userRole', formData.email.split('@')[0]); // Extract role from email
+      // Call authentication service
+      const response = await authService.login(email, password);
       
-      toast.success("Connexion réussie!");
+      // Show success notification
+      toast.success("Connexion réussie!", {
+        description: "Vous êtes maintenant connecté."
+      });
+      
+      // Close modal and redirect based on user role
       onClose();
-      navigate("/dashboard");
+      
+      // Use the decoded token info for redirection
+      const decoded = authService.getDecodedToken();
+      if (decoded && decoded.role) {
+        // Redirect based on user role
+        if (decoded.role.includes('ROLE_ADMIN')) {
+          navigate('/admin');
+        } else {
+          navigate('/dashboard');
+        }
+      } else {
+        navigate('/dashboard');
+      }
     } catch (error) {
-      toast.error("Email ou mot de passe incorrect.");
+      if (error.response) {
+        const { data, status } = error.response;
+        
+        // Handle different error scenarios
+        if (status === 401) {
+          setErrors({ form: "Email ou mot de passe incorrect" });
+          toast.error("Échec de connexion", {
+            description: "Email ou mot de passe incorrect"
+          });
+        } else if (status === 403) {
+          setErrors({ form: "Votre compte n'est pas vérifié. Veuillez vérifier votre email." });
+          toast.error("Compte non vérifié", { 
+            description: "Veuillez vérifier votre email pour activer votre compte."
+          });
+        } else if (data && data.message) {
+          setErrors({ form: data.message });
+          toast.error("Erreur de connexion", {
+            description: data.message
+          });
+        } else {
+          setErrors({ form: "Une erreur est survenue lors de la connexion" });
+          toast.error("Erreur de connexion", {
+            description: "Une erreur est survenue lors de la connexion"
+          });
+        }
+      } else {
+        setErrors({ form: "Une erreur est survenue lors de la connexion" });
+        toast.error("Erreur de connexion", {
+          description: "Une erreur est survenue lors de la connexion"
+        });
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Page transition variants for full-page slide effect
+  // Page and element animations
   const pageVariants = {
     initial: { 
-      x: "100%",
       opacity: 0,
+      x: 100,
       background: "linear-gradient(135deg, #02284f 0%, #011627 100%)",
     },
     animate: {
-      x: 0,
       opacity: 1,
+      x: 0,
       background: "linear-gradient(135deg, #02284f 0%, #011627 100%)",
       transition: {
         type: "spring",
-        damping: 30,
-        stiffness: 200,
-        when: "beforeChildren",
-        staggerChildren: 0.1,
-        duration: 0.8
+        damping: 25,
+        stiffness: 120,
+        duration: 0.3
       }
     },
     exit: {
-      x: "-100%",
       opacity: 0,
+      x: -100,
       background: "linear-gradient(135deg, #02284f 0%, #011627 100%)",
       transition: {
         type: "spring",
-        damping: 30,
-        stiffness: 200,
-        when: "afterChildren",
-        staggerChildren: 0.05,
-        staggerDirection: -1,
-        duration: 0.6
-      }
-    }
-  };
-
-  // Get animation variants for form effects
-  const formVariants = {
-    enter: { 
-      y: "100vh",
-      opacity: 0,
-      scale: 0.8,
-      rotateX: 30
-    },
-    center: {
-      y: 0,
-      opacity: 1,
-      scale: 1,
-      rotateX: 0,
-      transition: {
-        type: "spring",
-        stiffness: 300,
         damping: 25,
-        duration: 0.7
-      }
-    },
-    exit: { 
-      x: "100vw",
-      opacity: 0,
-      scale: 0.8,
-      rotateY: 30,
-      transition: {
-        type: "spring",
-        stiffness: 300,
-        damping: 30,
-        duration: 0.6
+        stiffness: 120,
+        duration: 0.3
       }
     }
   };
 
-  // Individual element animations
   const itemVariants = {
     hidden: { y: 20, opacity: 0 },
     visible: { 
@@ -170,17 +177,11 @@ const ConnectionModal = ({ isOpen, onClose }) => {
       opacity: 1,
       transition: {
         type: "spring",
-        stiffness: 500,
-        damping: 30
+        stiffness: 300,
+        damping: 24
       }
     },
-    exit: { 
-      y: -20, 
-      opacity: 0,
-      transition: {
-        duration: 0.2
-      }
-    },
+    exit: { y: -20, opacity: 0 },
     hover: { scale: 1.05 },
     tap: { scale: 0.95 }
   };
@@ -206,268 +207,174 @@ const ConnectionModal = ({ isOpen, onClose }) => {
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-50 overflow-hidden flex items-center justify-center perspective-1000"
+          key="modal-overlay"
+          className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
+          style={{ backdropFilter: "blur(3px)" }}
+          onClick={onClose}
         >
-          <motion.div 
-            className="absolute inset-0 bg-black bg-opacity-70 backdrop-blur-sm"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-          />
+          <div className="absolute inset-0 bg-black/60" />
           
           <motion.div
-            className="fixed inset-0 z-50 overflow-hidden flex items-center justify-center"
+            key="modal"
             variants={pageVariants}
             initial="initial"
             animate="animate"
             exit="exit"
-            style={{ transformStyle: 'preserve-3d' }}
+            className="relative z-10 w-full max-w-md max-h-[90vh] overflow-auto p-6 rounded-xl shadow-2xl"
+            onClick={e => e.stopPropagation()}
           >
-            {/* Background particles */}
-            {particles.map((particle) => (
-              <motion.div
-                key={particle.id}
-                className="absolute rounded-full bg-blue-400 opacity-20"
-                style={{
-                  width: `${particle.size}px`,
-                  height: `${particle.size}px`,
-                  top: `${particle.y}%`,
-                  left: `${particle.x}%`,
-                  boxShadow: `0 0 ${particle.size * 2}px rgba(59, 130, 246, 0.6)`
-                }}
-                animate={{
-                  y: [0, -20, 0, 20, 0],
-                  x: [0, 10, 0, -10, 0],
-                  opacity: [0.2, 0.3, 0.2, 0.3, 0.2],
-                }}
-                transition={{
-                  duration: particle.duration,
-                  repeat: Infinity,
-                  ease: "easeInOut"
-                }}
-              />
-            ))}
-            
-            {/* Stone texture overlay */}
-            <div 
-              className="absolute inset-0 opacity-10 pointer-events-none" 
-              style={{ 
-                backgroundImage: 'url("/assets/images/stone-texture.png")',
-                backgroundSize: '400px',
-                mixBlendMode: 'overlay'
-              }}
-            />
-            
-            <div className="relative w-full max-w-3xl mx-auto px-4 text-white">
-              <motion.div
-                className="relative w-full bg-opacity-80 bg-blue-900 backdrop-filter backdrop-blur-md rounded-2xl shadow-2xl overflow-hidden border border-blue-700"
-                initial={{ opacity: 0, y: 50 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-              >
+            {/* Background particles for visual effect */}
+            <div className="absolute inset-0 overflow-hidden rounded-xl">
+              {particles.map(particle => (
                 <motion.div
-                  className="absolute top-0 right-0 w-full h-1"
-                  initial={{ scaleX: 0 }}
-                  animate={{ 
-                    scaleX: 1,
-                    background: [
-                      "linear-gradient(90deg, #3b82f6, #8b5cf6)",
-                      "linear-gradient(90deg, #8b5cf6, #ec4899)",
-                      "linear-gradient(90deg, #ec4899, #3b82f6)"
-                    ]
+                  key={`particle-${particle.id}`}
+                  className="absolute rounded-full bg-blue-400"
+                  initial={{
+                    x: `${particle.x}%`,
+                    y: `${particle.y}%`,
+                    opacity: 0.3,
+                    scale: 0.5
+                  }}
+                  animate={{
+                    x: [`${particle.x}%`, `${(particle.x + 20) % 100}%`, `${(particle.x + 10) % 100}%`],
+                    y: [`${particle.y}%`, `${(particle.y + 15) % 100}%`, `${(particle.y + 5) % 100}%`],
+                    opacity: [0.3, 0.8, 0.3],
+                    scale: [0.5, 1, 0.5]
                   }}
                   transition={{
-                    duration: 2,
+                    duration: particle.duration,
+                    ease: "easeInOut",
                     repeat: Infinity,
                     repeatType: "reverse"
                   }}
-                  style={{ transformOrigin: "left" }}
+                  style={{
+                    width: `${particle.size}px`,
+                    height: `${particle.size}px`
+                  }}
                 />
+              ))}
+            </div>
+            
+            <div className="relative">
+              <motion.button
+                onClick={onClose}
+                className="absolute top-0 right-0 p-2 text-gray-300 hover:text-white focus:outline-none"
+                whileHover="hover"
+                whileTap="tap"
+                variants={itemVariants}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </motion.button>
+              
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <motion.h3 className="text-2xl font-bold text-white mb-6" variants={itemVariants}>
+                  Connexion
+                </motion.h3>
                 
-                <div className="p-8">
-                  <div className="flex justify-between items-center mb-8">
-                    <motion.h2 
-                      className="text-3xl font-bold text-white"
-                      variants={itemVariants}
-                      initial="hidden"
-                      animate="visible"
-                    >
-                      <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-300 to-purple-400">
-                        Connexion
+                {errors.form && (
+                  <motion.div
+                    className="bg-red-500/20 border border-red-400 text-white p-3 rounded-md mb-4"
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                  >
+                    {errors.form}
+                  </motion.div>
+                )}
+                
+                <motion.div variants={itemVariants}>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-1">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    id="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className={`w-full p-2 rounded-md bg-gray-800 border ${errors.email ? 'border-red-400' : 'border-gray-700'} focus:outline-none focus:ring-2 focus:ring-blue-500 text-white`}
+                    placeholder="votre@email.com"
+                  />
+                  {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email}</p>}
+                </motion.div>
+                
+                <motion.div variants={itemVariants}>
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-1">
+                    Mot de passe
+                  </label>
+                  <input
+                    type="password"
+                    id="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className={`w-full p-2 rounded-md bg-gray-800 border ${errors.password ? 'border-red-400' : 'border-gray-700'} focus:outline-none focus:ring-2 focus:ring-blue-500 text-white`}
+                    placeholder="••••••••"
+                  />
+                  {errors.password && <p className="text-red-400 text-xs mt-1">{errors.password}</p>}
+                </motion.div>
+                
+                <motion.div variants={itemVariants} className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="rememberMe"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-600 text-blue-500 focus:ring-blue-500 bg-gray-700"
+                  />
+                  <label htmlFor="rememberMe" className="ml-2 block text-sm text-gray-300">
+                    Se souvenir de moi
+                  </label>
+                </motion.div>
+                
+                <motion.div variants={itemVariants} className="pt-4">
+                  <motion.button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors disabled:opacity-50"
+                    whileHover="hover"
+                    whileTap="tap"
+                    variants={itemVariants}
+                  >
+                    {isLoading ? (
+                      <span className="flex justify-center items-center">
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Connexion en cours...
                       </span>
-                    </motion.h2>
-                    <motion.button 
-                      onClick={onClose}
-                      className="text-gray-300 hover:text-white transition-colors"
-                      whileHover={{ scale: 1.1, rotate: 90 }}
-                      whileTap={{ scale: 0.9 }}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </motion.button>
-                  </div>
-                  
-                  <form onSubmit={handleSubmit}>
-                    <motion.div
-                      key="login-form"
-                      variants={formVariants}
-                      initial="enter"
-                      animate="center"
-                      exit="exit"
-                      className="space-y-6"
-                    >
-                      <motion.div variants={itemVariants}>
-                        <label htmlFor="email" className="block text-base font-medium text-gray-200 mb-2">
-                          Email
-                        </label>
-                        <input
-                          id="email"
-                          name="email"
-                          type="email"
-                          value={formData.email}
-                          onChange={handleChange}
-                          className={`appearance-none block w-full px-4 py-3 border ${
-                            errors.email ? "border-red-400" : "border-gray-600"
-                          } rounded-md shadow-sm placeholder-gray-500 bg-gray-800 bg-opacity-50 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition-all`}
-                          placeholder="votre@email.com"
-                        />
-                        {errors.email && (
-                          <p className="mt-2 text-sm text-red-400">{errors.email}</p>
-                        )}
-                      </motion.div>
-                      
-                      <motion.div variants={itemVariants}>
-                        <label htmlFor="password" className="block text-base font-medium text-gray-200 mb-2">
-                          Mot de passe
-                        </label>
-                        <input
-                          id="password"
-                          name="password"
-                          type="password"
-                          value={formData.password}
-                          onChange={handleChange}
-                          className={`appearance-none block w-full px-4 py-3 border ${
-                            errors.password ? "border-red-400" : "border-gray-600"
-                          } rounded-md shadow-sm placeholder-gray-500 bg-gray-800 bg-opacity-50 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition-all`}
-                          placeholder="••••••••"
-                        />
-                        {errors.password && (
-                          <p className="mt-2 text-sm text-red-400">{errors.password}</p>
-                        )}
-                      </motion.div>
-                      
-                      <motion.div variants={itemVariants} className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <input
-                            id="rememberMe"
-                            name="rememberMe"
-                            type="checkbox"
-                            checked={formData.rememberMe}
-                            onChange={handleChange}
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-600 rounded"
-                          />
-                          <label htmlFor="rememberMe" className="ml-2 block text-sm text-gray-300">
-                            Se souvenir de moi
-                          </label>
-                        </div>
-                        <div className="text-sm">
-                          <a href="#" className="font-medium text-blue-400 hover:text-blue-300">
-                            Mot de passe oublié?
-                          </a>
-                        </div>
-                      </motion.div>
-                      
-                      <motion.div variants={itemVariants}>
-                        <button
-                          type="submit"
-                          disabled={isLoading}
-                          className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-lg text-base font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-blue-500 disabled:opacity-50 transition-all"
-                          style={{
-                            boxShadow: "0 0 20px rgba(59, 130, 246, 0.3)",
-                          }}
-                          whileHover={{ 
-                            scale: 1.02, 
-                            boxShadow: "0 0 25px rgba(59, 130, 246, 0.5)" 
-                          }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          {isLoading ? (
-                            <span className="flex items-center">
-                              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                              </svg>
-                              Connexion en cours...
-                            </span>
-                          ) : (
-                            "Se connecter"
-                          )}
-                        </button>
-                      </motion.div>
-                    </motion.div>
-                  </form>
-                  
-                  <motion.div 
-                    className="mt-8 pt-6 border-t border-gray-700"
-                    variants={itemVariants}
-                    initial="hidden"
-                    animate="visible"
+                    ) : (
+                      "Se connecter"
+                    )}
+                  </motion.button>
+                </motion.div>
+                
+                <motion.div variants={itemVariants} className="pt-2 text-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      navigate("/register");
+                    }}
+                    className="text-sm text-blue-400 hover:text-blue-300 focus:outline-none"
                   >
-                    <h3 className="text-base font-medium text-gray-300 mb-4">Connexion rapide</h3>
-                    <div className="mb-6 grid grid-cols-3 gap-2">
-                      <motion.button
-                        type="button"
-                        variants={itemVariants}
-                        whileHover="hover"
-                        whileTap="tap"
-                        className="text-xs bg-blue-600/20 p-2 rounded text-white hover:bg-blue-600/30 transition-colors"
-                        onClick={() => quickLogin('admin')}
-                      >
-                        Admin
-                      </motion.button>
-                      <motion.button
-                        type="button" 
-                        variants={itemVariants}
-                        whileHover="hover"
-                        whileTap="tap"
-                        className="text-xs bg-blue-600/20 p-2 rounded text-white hover:bg-blue-600/30 transition-colors"
-                        onClick={() => quickLogin('student')}
-                      >
-                        Étudiant
-                      </motion.button>
-                      <motion.button
-                        type="button"
-                        variants={itemVariants}
-                        whileHover="hover"
-                        whileTap="tap"
-                        className="text-xs bg-blue-600/20 p-2 rounded text-white hover:bg-blue-600/30 transition-colors"
-                        onClick={() => quickLogin('teacher')}
-                      >
-                        Professeur
-                      </motion.button>
-                    </div>
-                  </motion.div>
-                  
-                  <motion.div 
-                    className="mt-6 text-center"
-                    variants={itemVariants}
-                    initial="hidden"
-                    animate="visible"
+                    Pas encore de compte ? S'inscrire
+                  </button>
+                </motion.div>
+                
+                <motion.div variants={itemVariants} className="text-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      navigate("/forgot-password");
+                    }}
+                    className="text-sm text-gray-400 hover:text-gray-300 focus:outline-none"
                   >
-                    <p className="text-sm text-gray-400">
-                      Vous n'avez pas de compte?{" "}
-                      <a href="#" className="text-blue-400 hover:text-blue-300 font-medium">
-                        Créer un compte
-                      </a>
-                    </p>
-                  </motion.div>
-                </div>
-              </motion.div>
+                    Mot de passe oublié ?
+                  </button>
+                </motion.div>
+              </form>
             </div>
           </motion.div>
         </motion.div>

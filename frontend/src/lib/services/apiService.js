@@ -1,3 +1,6 @@
+// Backend API base URL - make sure this points to your backend
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+
 import axios from 'axios';
 
 // Import the low performance mode detection from loadingUtils
@@ -158,7 +161,7 @@ const cleanupCache = () => {
  */
 export const normalizeApiUrl = (path) => {
   // Handle null or undefined paths
-  if (!path) return '/api';
+  if (!path) return `${API_URL}`;
   
   // Remove trailing slashes for consistency
   const trimmedPath = path.replace(/\/+$/, '');
@@ -168,17 +171,23 @@ export const normalizeApiUrl = (path) => {
     return trimmedPath;
   }
   
+  // Extract base API URL without trailing "/api"
+  const baseUrl = API_URL.endsWith('/api') 
+    ? API_URL 
+    : API_URL.endsWith('/api/') 
+      ? API_URL.slice(0, -1) 
+      : `${API_URL}`;
+  
   // Check if the path already has the /api prefix
   if (trimmedPath.startsWith('/api/')) {
-    return trimmedPath;
+    return `${baseUrl.replace(/\/api$/, '')}${trimmedPath}`;
   }
   
-  // Simplify handling of the /api prefix
-  // Add /api prefix if it's not already there
+  // Add the path to the base URL properly
   if (trimmedPath.startsWith('/')) {
-    return `/api${trimmedPath}`;
+    return `${baseUrl}${trimmedPath}`;
   } else {
-    return `/api/${trimmedPath}`;
+    return `${baseUrl}/${trimmedPath}`;
   }
 };
 
@@ -320,23 +329,23 @@ const apiService = {
       const response = await axios.post(url, data, options);
       return response.data;
     } catch (error) {
-      // Pour login_check, on ne doit PAS transformer l'erreur, mais la rejeter
+      // Pour login_check et register, on ne doit PAS transformer l'erreur, mais la rejeter
       // afin que le composant d'authentification puisse la traiter correctement
-      if (path.includes('login_check')) {
+      if (path.includes('login_check') || path.includes('register')) {
         throw error;
       }
       
       // Gestion spécifique des erreurs CORS
       if (error.message && error.message.includes('Network Error')) {
-        return { success: false, message: 'Erreur de communication avec le serveur' };
+        throw error; // Rejeter pour permettre une gestion appropriée
       }
       
       // Retourner une réponse formatée en cas d'erreur pour éviter les crashes
       if (error.response && error.response.data) {
-        return { success: false, message: error.response.data.message || 'Une erreur est survenue' };
+        throw error; // Rejeter l'erreur pour permettre une gestion appropriée
       }
       
-      return { success: false, message: 'Une erreur est survenue' };
+      throw error; // Toujours rejeter l'erreur pour une manipulation cohérente
     }
   },
   
