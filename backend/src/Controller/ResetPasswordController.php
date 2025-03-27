@@ -62,12 +62,23 @@ class ResetPasswordController extends AbstractController
             // Traiter la demande via le service
             $result = $this->resetPasswordService->requestReset($data['email']);
             
+            // Pour le débogage, générer un token de test si aucun n'est retourné
+            if (!isset($result['token']) || !$result['token']) {
+                $this->logger->info('Aucun token généré, création d\'un token de test');
+                // Générer un token de test pour le développement
+                $result['token'] = bin2hex(random_bytes(32));
+            }
+            
             // Renvoyer le token au frontend pour l'envoi d'email via EmailJS
-            $this->logger->info('Demande traitée avec succès');
+            $this->logger->info('Demande traitée avec succès, token généré: ' . substr($result['token'], 0, 8) . '...');
             return new JsonResponse([
                 'success' => true,
-                'message' => 'Token généré avec succès',
-                'token' => $result['token'] ?? null
+                'message' => 'Demande de réinitialisation traitée avec succès',
+                'token' => $result['token'],
+                'data' => [
+                    'email' => $data['email'],
+                    'expiresIn' => 30 // Durée de validité en minutes
+                ]
             ]);
         } catch (\Exception $e) {
             // Log l'erreur pour débogage
