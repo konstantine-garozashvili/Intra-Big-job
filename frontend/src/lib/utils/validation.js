@@ -85,23 +85,19 @@ export const isValidPhone = (phone) => {
   }
   
   // Cas 2: Format international français (+33 X XX XX XX XX)
-  if ((cleanPhone.startsWith('33') && cleanPhone.length === 11) || 
-      (cleanPhone.startsWith('330') && cleanPhone.length === 12)) {
+  if (cleanPhone.startsWith('33') && cleanPhone.length === 11) {
     // Extraire le numéro sans l'indicatif
-    const withoutPrefix = cleanPhone.startsWith('330') 
-      ? cleanPhone.substring(3) 
-      : '0' + cleanPhone.substring(2);
-    
+    const withoutPrefix = '0' + cleanPhone.substring(2);
     // Vérifier que le deuxième chiffre est entre 1-9
     return /^0[1-9]/.test(withoutPrefix);
   }
   
-  // Cas 3: Autres formats internationaux (entre 8 et 15 chiffres)
-  if (cleanPhone.length >= 8 && cleanPhone.length <= 15) {
-    return true;
+  // Limiter à 9 chiffres après le 33
+  if (cleanPhone.startsWith('33') && cleanPhone.length > 11) {
+    return false;
   }
   
-  return false;
+  return true;
 };
 
 /**
@@ -113,31 +109,25 @@ export const formatPhone = (phone) => {
   // Nettoyer le numéro (enlever les espaces, tirets, etc.)
   let cleanPhone = phone.replace(/\D/g, '');
   
-  // Si le numéro commence par 33 (indicatif français), on l'enlève
+  // Si le numéro commence par +33, on le garde
   if (cleanPhone.startsWith('33')) {
-    cleanPhone = '0' + cleanPhone.substring(2);
-  }
-  
-  // S'assurer que le numéro commence par 0
-  if (!cleanPhone.startsWith('0') && cleanPhone.length === 9) {
-    cleanPhone = '0' + cleanPhone;
-  }
-  
-  // Limiter à 10 chiffres
-  cleanPhone = cleanPhone.slice(0, 10);
-  
-  // Formater avec des espaces (XX XX XX XX XX)
-  if (cleanPhone.length === 0) return '';
-  
-  let formatted = '';
-  for (let i = 0; i < cleanPhone.length; i += 2) {
-    formatted += cleanPhone.substring(i, Math.min(i+2, cleanPhone.length));
-    if (i+2 < cleanPhone.length) {
-      formatted += ' ';
+    // Limiter à 11 chiffres (33 + 9 chiffres)
+    cleanPhone = cleanPhone.substring(0, 11);
+    // Si le numéro est complet (11 chiffres), formater
+    if (cleanPhone.length === 11) {
+      return `+33 ${cleanPhone.substring(2,4)} ${cleanPhone.substring(4,6)} ${cleanPhone.substring(6,8)} ${cleanPhone.substring(8,10)} ${cleanPhone.substring(10)}`;
     }
+    // Sinon, juste afficher le numéro tel quel
+    return `+33 ${cleanPhone.substring(2)}`;
   }
   
-  return formatted;
+  // Si le numéro commence par 0
+  if (cleanPhone.startsWith('0') && cleanPhone.length <= 10) {
+    return `${cleanPhone.substring(0,2)} ${cleanPhone.substring(2,4)} ${cleanPhone.substring(4,6)} ${cleanPhone.substring(6,8)} ${cleanPhone.substring(8)}`;
+  }
+  
+  // Pour les autres formats, ne rien faire
+  return phone;
 };
 
 /**
