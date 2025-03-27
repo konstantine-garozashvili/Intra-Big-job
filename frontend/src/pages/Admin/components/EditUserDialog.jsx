@@ -31,6 +31,8 @@ import {
     UserCog
 } from 'lucide-react';
 import { format, parse, isValid } from 'date-fns';
+import { PhoneInput } from '../../../components/ui/phone-input';
+import { isValidPhone } from '../../../lib/utils/validation';
 
 const EditUserDialog = ({ 
     isOpen, 
@@ -75,20 +77,45 @@ const EditUserDialog = ({
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setFormData(prev => {
-            const newData = {
-                ...prev,
-                [name]: value
-            };
+        const currentValue = formData[name];
+        
+        // Only set formChanged if the value actually changed
+        if (currentValue !== value) {
             setFormChanged(true);
-            return newData;
-        });
+        }
+        
+        setFormData(prev => ({
+            ...prev,
+            [name]: value
+        }));
         
         // Clear error when field is changed
         if (errors[name]) {
             setErrors(prev => ({
                 ...prev,
                 [name]: null
+            }));
+        }
+    };
+
+    const handlePhoneChange = (value) => {
+        const currentValue = formData.phoneNumber;
+        
+        // Only set formChanged if the value actually changed
+        if (currentValue !== value) {
+            setFormChanged(true);
+        }
+        
+        setFormData(prev => ({
+            ...prev,
+            phoneNumber: value
+        }));
+        
+        // Clear error when field is changed
+        if (errors.phoneNumber) {
+            setErrors(prev => ({
+                ...prev,
+                phoneNumber: null
             }));
         }
     };
@@ -114,7 +141,7 @@ const EditUserDialog = ({
         }
         
         // Phone number validation (optional)
-        if (formData.phoneNumber && !/^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/.test(formData.phoneNumber)) {
+        if (formData.phoneNumber && !isValidPhone(formData.phoneNumber)) {
             newErrors.phoneNumber = 'Numéro de téléphone invalide';
         }
         
@@ -282,17 +309,17 @@ const EditUserDialog = ({
                                     Téléphone
                                 </Label>
                                 <div className="relative">
-                                    <Input
+                                    <PhoneInput
                                         id="phoneNumber"
                                         name="phoneNumber"
                                         value={formData.phoneNumber}
-                                        onChange={handleChange}
-                                        className={`w-full ${errors.phoneNumber ? 'border-red-300 focus:ring-red-500' : ''}`}
+                                        onChange={handlePhoneChange}
+                                        error={errors.phoneNumber}
                                         disabled={isProcessing || isSuperAdminAndCurrentUserIsNot}
-                                        placeholder="+33 6 12 34 56 78"
+                                        placeholder="06 12 34 56 78"
                                     />
                                     {errors.phoneNumber && (
-                                        <div className="text-red-500 text-xs mt-1 flex items-center">
+                                        <div className="mt-1 text-sm text-red-500">
                                             <X className="h-3 w-3 mr-1" />
                                             {errors.phoneNumber}
                                         </div>

@@ -10,6 +10,7 @@ import ProfilePicture from './settings/ProfilePicture';
 import { isValidEmail, isValidPhone, isValidLinkedInUrl, isValidName, isValidUrl } from '@/lib/utils/validation';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { PhoneInput } from '@/components/ui/phone-input';
 import { Upload, FileText, Trash2, Send } from 'lucide-react';
 // Importer notre hook centralisé
 import { useUserDataCentralized } from '@/hooks';
