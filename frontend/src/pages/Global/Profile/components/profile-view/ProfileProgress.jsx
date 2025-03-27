@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useContext } from "react";
+import React, { useState, useEffect, useMemo, useContext, useRef } from "react";
 import { CheckCircle2, XCircle, InfoIcon, ExternalLinkIcon, PieChart, RefreshCw } from "lucide-react";
 import {
   Popover,
@@ -7,6 +7,8 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { ProfileContext } from "@/components/MainLayout";
+import { documentEvents } from "../../services/documentService";
+import { toast } from "sonner";
 
 const ProfileProgress = ({ userData }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -17,6 +19,10 @@ const ProfileProgress = ({ userData }) => {
   
   // Référence pour stocker la dernière valeur de profileData pour comparaison
   const [lastProfileData, setLastProfileData] = useState(null);
+  
+  // Référence pour suivre les mises à jour récentes
+  const lastUpdateRef = useRef(Date.now());
+  const refreshTimeoutRef = useRef(null);
 
   // Mettre à jour les données locales lorsque userData change
   useEffect(() => {
@@ -31,6 +37,7 @@ const ProfileProgress = ({ userData }) => {
     if (profileData && JSON.stringify(profileData) !== JSON.stringify(lastProfileData)) {
       setLocalUserData(profileData);
       setLastProfileData(profileData);
+      lastUpdateRef.current = Date.now();
       
       // Si nous étions en train de rafraîchir, terminer le rafraîchissement
       if (isRefreshing) {
@@ -49,6 +56,7 @@ const ProfileProgress = ({ userData }) => {
         // Utiliser les dernières données disponibles
         if (profileData) {
           setLocalUserData(profileData);
+          lastUpdateRef.current = Date.now();
         }
       }, 3000);
     }
@@ -57,6 +65,45 @@ const ProfileProgress = ({ userData }) => {
       if (timeoutId) clearTimeout(timeoutId);
     };
   }, [isRefreshing, profileData]);
+  
+  // Écouter les événements de mise à jour des documents (CV, diplômes)
+  useEffect(() => {
+    // Fonction pour rafraîchir les données après une mise à jour de document
+    const handleDocumentUpdate = () => {
+      // Éviter les rafraîchissements trop fréquents (limiter à un toutes les 2 secondes)
+      const now = Date.now();
+      if (now - lastUpdateRef.current < 2000) {
+        // Si une mise à jour a été faite récemment, programmer un rafraîchissement différé
+        if (refreshTimeoutRef.current) {
+          clearTimeout(refreshTimeoutRef.current);
+        }
+        
+        refreshTimeoutRef.current = setTimeout(() => {
+          refreshProfileData();
+          refreshTimeoutRef.current = null;
+        }, 2000);
+        
+        return;
+      }
+      
+      // Sinon, rafraîchir immédiatement
+      refreshProfileData();
+      lastUpdateRef.current = now;
+    };
+    
+    // S'abonner aux événements de mise à jour des documents
+    const unsubscribe = documentEvents.subscribe(handleDocumentUpdate);
+    
+    return () => {
+      // Se désabonner lors du démontage du composant
+      unsubscribe();
+      
+      // Nettoyer les timeouts
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
+    };
+  }, [refreshProfileData]);
 
   // Calculer les éléments complétés à partir des données locales
   const { completedItems, completionItems } = useMemo(() => {
@@ -110,10 +157,16 @@ const ProfileProgress = ({ userData }) => {
         setLocalUserData(newData);
         setLastProfileData(newData);
         setIsRefreshing(false);
+        lastUpdateRef.current = Date.now();
+        toast.success("Profil mis à jour", {
+          position: "bottom-right",
+          duration: 2000
+        });
       }
       // Sinon, l'useEffect qui surveille profileData s'en chargera
     } catch (error) {
       setIsRefreshing(false);
+      toast.error("Erreur lors de la mise à jour du profil");
     }
   };
 
