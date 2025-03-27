@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useMemo, memo, useCallback, useEffect } from 'react';
+import { useMemo, memo, useCallback, useEffect, useState } from 'react';
 import {
   User,
   Bell,
@@ -35,6 +35,20 @@ const NavButton = memo(({ item, isActive, onClick }) => (
 
 NavButton.displayName = 'NavButton';
 
+// Helper function to normalize role checks
+const normalizeRoleCheck = (roles, roleToCheck) => {
+  if (!roles || !Array.isArray(roles)) return false;
+  
+  // Check both with and without ROLE_ prefix
+  const normalizedRole = roleToCheck.replace(/^ROLE_/, '');
+  const prefixedRole = `ROLE_${normalizedRole}`;
+  
+  return roles.some(role => {
+    const roleName = typeof role === 'object' && role?.name ? role.name : role;
+    return roleName === roleToCheck || roleName === normalizedRole || roleName === prefixedRole;
+  });
+};
+
 // Highly optimized SidebarProfile component
 const SidebarProfile = memo(({ onNavigate }) => {
   const navigate = useNavigate();
@@ -42,7 +56,33 @@ const SidebarProfile = memo(({ onNavigate }) => {
   const { setSidebarLoaded } = useProfileLayout();
 
   // Utiliser notre hook centralisé avec son nouveau nom
-  const { user, isLoading, isStudent, isGuest } = useUserDataCentralized();
+  const { user, isLoading, hasRole } = useUserDataCentralized();
+  const [debugInfo, setDebugInfo] = useState(null);
+
+  // Direct role checking for more reliable results
+  const isStudent = useMemo(() => {
+    if (!user || !user.roles) return false;
+    return normalizeRoleCheck(user.roles, 'ROLE_STUDENT');
+  }, [user]);
+
+  const isGuest = useMemo(() => {
+    if (!user || !user.roles) return false;
+    return normalizeRoleCheck(user.roles, 'ROLE_GUEST');
+  }, [user]);
+
+  // Log role information for debugging when user data changes
+  useEffect(() => {
+    if (user && user.roles) {
+      const info = {
+        roles: user.roles,
+        isStudent,
+        isGuest,
+        shouldShowCareer: isStudent || isGuest
+      };
+      setDebugInfo(info);
+      console.log('SidebarProfile: User role debug info:', info);
+    }
+  }, [user, isStudent, isGuest]);
 
   // Informer le contexte que la sidebar est chargée lorsque les données utilisateur sont prêtes
   useEffect(() => {
