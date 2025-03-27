@@ -1262,7 +1262,7 @@ const IntegratedAuthForm = ({ mode, onSwitchMode }) => {
         <div className="mt-6">
           <motion.button
             type="button"
-            onClick={() => onSwitchMode('register')}
+            onClick={() => navigate('/register')}
             className="w-full flex justify-center py-3 px-4 border border-gray-700 text-gray-300 rounded-md hover:bg-gray-800"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -1579,9 +1579,8 @@ const Home = () => {
   }, []);
 
   const handleRegisterClick = useCallback(() => {
-    setAuthMode('register');
-    setShowAuthForm(true);
-  }, []);
+    navigate('/register');
+  }, [navigate]);
   
   const handleSwitchAuthMode = useCallback((mode) => {
     setAuthMode(mode);
