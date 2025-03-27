@@ -15,7 +15,7 @@ const ResetPasswordRequest = () => {
     // Ajout de logs pour vérifier les variables d'environnement au chargement du composant
     console.log('Variables d\'environnement EmailJS au chargement:');
     console.log('Service ID:', import.meta.env.VITE_EMAILJS_SERVICE_ID);
-    console.log('Template ID:', import.meta.env.VITE_EMAILJS_TEMPLATE_ID);
+    console.log('Template ID:', import.meta.env.VITE_EMAILJS_RESET_PASSWORD_TEMPLATE_ID);
     console.log('Public Key:', import.meta.env.VITE_EMAILJS_PUBLIC_KEY);
 
     // Fonction de test pour envoyer un email directement
