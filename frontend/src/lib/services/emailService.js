@@ -11,10 +11,10 @@ class EmailService {
         // Initialiser EmailJS avec la clé publique
         init(this.publicKey);
         
-        // Log des informations au démarrage du service
-        console.log('EmailService initialisé avec:');
-        console.log('Service ID:', this.serviceId);
-        console.log('Public Key:', this.publicKey);
+        // Log uniquement en développement
+        if (import.meta.env.DEV) {
+            console.log('EmailService initialisé');
+        }
     }
 
     /**
@@ -25,14 +25,7 @@ class EmailService {
      * @returns {Promise} - Promesse résolue avec la réponse d'EmailJS
      */
     async sendPasswordResetEmail(data) {
-        const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
-        
-        console.log('Envoi d\'email avec:');
-        console.log('Service ID:', this.serviceId);
-        console.log('Template ID:', templateId);
-        console.log('Public Key:', this.publicKey);
-        console.log('Email destinataire:', data.email);
-        console.log('Token:', data.token ? data.token.substring(0, 10) + '...' : 'non défini');
+        const templateId = import.meta.env.VITE_EMAILJS_RESET_PASSWORD_TEMPLATE_ID;
         
         // Préparer les paramètres du template
         const templateParams = {
@@ -43,15 +36,11 @@ class EmailService {
             email: data.email // Email complet (pour compatibilité)
         };
         
-        console.log('Paramètres du template:', templateParams);
+        if (import.meta.env.DEV) {
+            console.log('Envoi d\'email de réinitialisation à:', data.email);
+        }
         
         try {
-            // Utilisation directe des valeurs hardcodées pour tester
-            console.log('Tentative d\'envoi avec valeurs hardcodées:');
-            console.log('Service ID hardcodé: service_q5cwwom');
-            console.log('Template ID hardcodé: template_evcziac');
-            console.log('Public Key hardcodée: cTAnGuHvCEX3qZi8d');
-            
             // Essai avec les valeurs hardcodées
             const response = await send(
                 'service_q5cwwom',
@@ -60,16 +49,15 @@ class EmailService {
                 'cTAnGuHvCEX3qZi8d'
             );
             
-            console.log('Email envoyé avec succès (valeurs hardcodées):', response);
+            if (import.meta.env.DEV) {
+                console.log('Email de réinitialisation envoyé avec succès');
+            }
             return response;
         } catch (error) {
-            console.error('Erreur lors de l\'envoi de l\'email (valeurs hardcodées):', error);
-            console.error('Message d\'erreur:', error.message);
-            console.error('Détails:', error.text || 'Pas de détails supplémentaires');
+            console.error('Erreur lors de l\'envoi de l\'email de réinitialisation:', error.message);
             
             // Essai avec les variables d'environnement
             try {
-                console.log('Tentative d\'envoi avec variables d\'environnement:');
                 const response = await send(
                     this.serviceId,
                     templateId,
@@ -77,12 +65,103 @@ class EmailService {
                     this.publicKey
                 );
                 
-                console.log('Email envoyé avec succès (variables d\'environnement):', response);
+                if (import.meta.env.DEV) {
+                    console.log('Email de réinitialisation envoyé avec succès (variables d\'environnement)');
+                }
                 return response;
             } catch (envError) {
-                console.error('Erreur lors de l\'envoi de l\'email (variables d\'environnement):', envError);
-                console.error('Message d\'erreur:', envError.message);
-                console.error('Détails:', envError.text || 'Pas de détails supplémentaires');
+                console.error('Erreur lors de l\'envoi de l\'email de réinitialisation:', envError.message);
+                throw envError;
+            }
+        }
+    }
+
+    /**
+     * Envoie un email de bienvenue après l'inscription d'un utilisateur
+     * @param {Object} data - Données pour l'email
+     * @param {string} data.email - Email du destinataire
+     * @param {string} data.firstName - Prénom de l'utilisateur
+     * @param {string} data.lastName - Nom de l'utilisateur
+     * @param {string} data.birthDate - Date de naissance (optionnel)
+     * @param {string} data.nationality - Nationalité (optionnel)
+     * @param {string} data.phoneNumber - Numéro de téléphone (optionnel)
+     * @param {Object} data.address - Informations d'adresse (optionnel)
+     * @returns {Promise} - Promesse résolue avec la réponse d'EmailJS
+     */
+    async sendWelcomeEmail(data) {
+        // Utiliser le template ID spécifique pour l'email de bienvenue
+        const templateId = import.meta.env.VITE_EMAILJS_WELCOME_TEMPLATE_ID || 'template_xece4rf';
+        
+        if (import.meta.env.DEV) {
+            console.log('Envoi d\'email de bienvenue à:', data.email);
+        }
+        
+        // Formatage de la date de naissance si elle existe
+        let formattedBirthDate = '';
+        if (data.birthDate) {
+            // Si c'est déjà un objet Date
+            if (data.birthDate instanceof Date) {
+                formattedBirthDate = data.birthDate.toLocaleDateString('fr-FR');
+            } 
+            // Si c'est une chaîne au format ISO
+            else if (typeof data.birthDate === 'string') {
+                formattedBirthDate = new Date(data.birthDate).toLocaleDateString('fr-FR');
+            }
+        }
+        
+        // Préparer les paramètres du template avec toutes les informations d'inscription
+        const templateParams = {
+            // Informations de base
+            to_name: data.firstName || data.email.split('@')[0],
+            full_name: `${data.firstName || ''} ${data.lastName || ''}`.trim(),
+            to_email: data.email,
+            email: data.email,
+            login_url: `${window.location.origin}/login`,
+            subject: 'Bienvenue sur notre plateforme !',
+            
+            // Partie 2 : Informations personnelles
+            birth_date: formattedBirthDate || 'Non renseignée',
+            nationality: data.nationality || 'Non renseignée',
+            phone_number: data.phoneNumber || 'Non renseigné',
+            
+            // Partie 3 : Informations d'adresse
+            address: data.address?.name || 'Non renseignée',
+            address_complement: data.address?.complement || '',
+            postal_code: data.address?.postalCode || 'Non renseigné',
+            city: data.address?.city || 'Non renseignée'
+        };
+        
+        try {
+            // Essai avec les valeurs hardcodées
+            const response = await send(
+                'service_q5cwwom',
+                templateId,
+                templateParams,
+                'cTAnGuHvCEX3qZi8d'
+            );
+            
+            if (import.meta.env.DEV) {
+                console.log('Email de bienvenue envoyé avec succès');
+            }
+            return response;
+        } catch (error) {
+            console.error('Erreur lors de l\'envoi de l\'email de bienvenue:', error.message);
+            
+            // Essai avec les variables d'environnement
+            try {
+                const response = await send(
+                    this.serviceId,
+                    templateId,
+                    templateParams,
+                    this.publicKey
+                );
+                
+                if (import.meta.env.DEV) {
+                    console.log('Email de bienvenue envoyé avec succès (variables d\'environnement)');
+                }
+                return response;
+            } catch (envError) {
+                console.error('Erreur lors de l\'envoi de l\'email de bienvenue:', envError.message);
                 throw envError;
             }
         }
