@@ -453,185 +453,75 @@ export function useUserData(options = {}) {
       return defaultValue;
     };
     
-    // Extraire les rôles avec normalisation
-    const extractRoles = (source) => {
-      if (!source || !source.roles) return [{ id: 0, name: 'USER' }];
-      
-      if (Array.isArray(source.roles)) {
-        return source.roles.map(role => {
-          if (typeof role === 'string') {
-            return { id: 0, name: role };
-          } else if (typeof role === 'object' && role !== null && role.name) {
-            return role;
-          } else {
-            return { id: 0, name: 'USER' };
+    // Extraire et normaliser le profil étudiant 
+    let studentProfile = null;
+    
+    // Vérifier les différentes sources possibles pour studentProfile
+    if (userSource.studentProfile) {
+      studentProfile = { ...userSource.studentProfile };
+    } else if (rawData.studentProfile) {
+      studentProfile = { ...rawData.studentProfile };
+    } else if (hasNestedData && rawData.data.studentProfile) {
+      studentProfile = { ...rawData.data.studentProfile };
+    }
+    
+    // Ensure portfolioUrl is captured and preserved
+    if (studentProfile) {
+      // Make sure we preserve the portfolioUrl if it exists
+      if (studentProfile.portfolioUrl === undefined) {
+        const possibleSources = [
+          userSource.studentProfile?.portfolioUrl,
+          rawData.studentProfile?.portfolioUrl,
+          rawData.data?.studentProfile?.portfolioUrl
+        ];
+        
+        for (const source of possibleSources) {
+          if (source !== undefined) {
+            studentProfile.portfolioUrl = source;
+            break;
           }
-        });
-      } else if (typeof source.roles === 'object' && source.roles !== null) {
-        // Cas où les rôles sont un objet { 0: "ROLE_X", 1: "ROLE_Y" }
-        return Object.values(source.roles).map(role => {
-          if (typeof role === 'string') {
-            return { id: 0, name: role };
-          } else if (typeof role === 'object' && role !== null && role.name) {
-            return role;
-          } else {
-            return { id: 0, name: 'USER' };
-          }
-        });
+        }
       }
-      
-      return [{ id: 0, name: 'USER' }];
-    };
+    }
     
-    // Extraire les adresses et normaliser leur structure
-    const extractAddresses = (source) => {
-      // Si addresses est un tableau dans la source, l'utiliser directement
-      if (Array.isArray(source.addresses)) {
-        return source.addresses.map(address => {
-          // Normaliser la structure de chaque adresse
-          return {
-            id: address.id,
-            name: address.name || '',
-            complement: address.complement || '',
-            postalCode: address.postalCode || null,
-            // Normaliser la structure de la ville
-            city: typeof address.city === 'object' && address.city !== null 
-              ? address.city 
-              : (typeof address.city === 'string' 
-                ? { id: 0, name: address.city } 
-                : null)
-          };
-        });
-      }
-      
-      // Si addresses existe dans les données root
-      if (Array.isArray(rawData.addresses)) {
-        return rawData.addresses.map(address => {
-          // Normaliser la structure de chaque adresse
-          return {
-            id: address.id,
-            name: address.name || '',
-            complement: address.complement || '',
-            postalCode: address.postalCode || null,
-            // Normaliser la structure de la ville
-            city: typeof address.city === 'object' && address.city !== null 
-              ? address.city 
-              : (typeof address.city === 'string' 
-                ? { id: 0, name: address.city } 
-                : null)
-          };
-        });
-      }
-      
-      return [];
-    };
-    
-    // Extraire les diplômes avec normalisation
-    const extractDiplomas = (source) => {
-      // Si diplomas est directement dans la source
-      if (Array.isArray(source.diplomas)) {
-        return source.diplomas.map(diploma => ({
-          id: diploma.id,
-          name: diploma.name || diploma.title || '',
-          obtainedAt: diploma.obtainedAt || diploma.obtained_at || null,
-          institution: diploma.institution || diploma.school || null,
-          location: diploma.location || diploma.city || null
-        }));
-      }
-      
-      // Si diplomas est dans les données root
-      if (Array.isArray(rawData.diplomas)) {
-        return rawData.diplomas.map(diploma => ({
-          id: diploma.id,
-          name: diploma.name || diploma.title || '',
-          obtainedAt: diploma.obtainedAt || diploma.obtained_at || null,
-          institution: diploma.institution || diploma.school || null,
-          location: diploma.location || diploma.city || null
-        }));
-      }
-      
-      return [];
-    };
-    
-    // Normaliser le profil étudiant
-    const extractStudentProfile = (source) => {
-      const defaultStudentProfile = {
-        isSeekingInternship: false,
-        isSeekingApprenticeship: false,
-        portfolioUrl: null,
-        currentInternshipCompany: null,
-        internshipStartDate: null,
-        internshipEndDate: null,
-        situationType: null
-      };
-      
-      if (!source.studentProfile) {
-        return defaultStudentProfile;
-      }
-      
-      return {
-        ...defaultStudentProfile,
-        ...source.studentProfile,
-        // S'assurer que portfolioUrl existe
-        portfolioUrl: source.studentProfile.portfolioUrl || null,
-        // S'assurer que les flags de recherche sont booléens
-        isSeekingInternship: !!source.studentProfile.isSeekingInternship,
-        isSeekingApprenticeship: !!source.studentProfile.isSeekingApprenticeship,
-        // Normaliser les dates
-        internshipStartDate: source.studentProfile.internshipStartDate || null,
-        internshipEndDate: source.studentProfile.internshipEndDate || null,
-      };
-    };
-    
-    // Construire l'objet utilisateur normalisé
-    const normalizedObj = {
-      // Conserver les propriétés originales pour la compatibilité
-      ...rawData,
-      
-      // Propriétés standards de l'utilisateur avec normalisations et fallbacks
+    return {
+      // Extraire et normaliser les propriétés utilisateur
       id: extractValue(userSource, ['id']),
-      firstName: extractValue(userSource, ['firstName', 'firstname', 'first_name']),
-      lastName: extractValue(userSource, ['lastName', 'lastname', 'last_name']),
+      firstName: extractValue(userSource, ['firstName', 'first_name']),
+      lastName: extractValue(userSource, ['lastName', 'last_name']),
+      fullName: extractValue(userSource, ['fullName', 'full_name']),
       email: extractValue(userSource, ['email']),
-      phoneNumber: extractValue(userSource, ['phoneNumber', 'phone_number', 'phonenumber']),
-      birthDate: extractValue(userSource, ['birthDate', 'birth_date', 'birthdate']),
+      phoneNumber: extractValue(userSource, ['phoneNumber', 'phone_number']),
+      linkedinUrl: extractValue(userSource, ['linkedinUrl', 'linkedin_url']),
       profilePictureUrl: extractValue(userSource, ['profilePictureUrl', 'profile_picture_url']),
       profilePicturePath: extractValue(userSource, ['profilePicturePath', 'profile_picture_path']),
-      
-      // Données spécifiques pour l'affichage du profil
-      linkedinUrl: extractValue(userSource, ['linkedinUrl', 'linkedin_url']),
-      cvFilePath: extractValue(userSource, ['cvFilePath', 'cv_file_path']),
-      
-      // Normaliser la ville directement dans l'utilisateur (pour compatibilité)
-      city: typeof userSource.city === 'object' && userSource.city !== null 
-        ? userSource.city 
-        : (typeof userSource.city === 'string' 
-          ? { id: 0, name: userSource.city } 
-          : null),
-      
-      // S'assurer que les adresses ont toujours une structure cohérente
-      addresses: extractAddresses(userSource),
-      
-      // Extraire la nationalité avec normalisation
+      birthDate: extractValue(userSource, ['birthDate', 'birth_date']),
+      age: extractValue(userSource, ['age'], null),
       nationality: userSource.nationality || null,
+      theme: userSource.theme || null,
+      roles: Array.isArray(userSource.roles) ? userSource.roles : [],
+      specialization: userSource.specialization || null,
       
-      // Normaliser les données restantes
-      gender: extractValue(userSource, ['gender']),
-      specialization: userSource.specialization || {},
+      // Extraire et normaliser les tableaux associés
+      diplomas: Array.isArray(userSource.diplomas) ? userSource.diplomas : 
+                (Array.isArray(rawData.diplomas) ? rawData.diplomas : []),
       
-      // S'assurer que les rôles sont correctement formatés
-      roles: extractRoles(userSource),
+      addresses: Array.isArray(userSource.addresses) ? userSource.addresses : 
+                 (Array.isArray(rawData.addresses) ? rawData.addresses : []),
       
-      // Profil étudiant normalisé
-      studentProfile: extractStudentProfile(userSource),
+      documents: Array.isArray(userSource.documents) ? userSource.documents : 
+                 (Array.isArray(rawData.documents) ? rawData.documents : []),
       
-      // Collections (avec valeurs par défaut)
-      diplomas: extractDiplomas(userSource),
-      documents: Array.isArray(userSource.documents) ? userSource.documents : [],
-      stats: userSource.stats || { profile: { completionPercentage: 0 } }
+      // Ajouter le profil étudiant normalisé
+      studentProfile,
+      
+      // Statistiques utilisateur
+      stats: userSource.stats || (rawData.stats || { profile: { completionPercentage: 0 } }),
+      
+      // Dates de création/modification
+      createdAt: extractValue(userSource, ['createdAt', 'created_at']),
+      updatedAt: extractValue(userSource, ['updatedAt', 'updated_at']),
     };
-    
-    return normalizedObj;
   }, [userData, localStorageUser]);
 
   // Retourner tout ce dont les composants pourraient avoir besoin
