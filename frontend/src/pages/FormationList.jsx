@@ -51,6 +51,8 @@ const FormationList = () => {
   });
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedDeleteStudentIds, setSelectedDeleteStudentIds] = useState([]);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [formationToDelete, setFormationToDelete] = useState(null);
 
   useEffect(() => {
     loadFormations();
@@ -184,17 +186,23 @@ const FormationList = () => {
     }
   };
 
+  const confirmDeleteFormation = (formation) => {
+    setFormationToDelete(formation);
+    setShowDeleteConfirmation(true);
+  };
+
   const handleDeleteFormation = async () => {
-    if (!editFormation) return;
+    if (!formationToDelete) return;
     try {
-      const response = await formationService.deleteFormation(editFormation.id);
+      const response = await formationService.deleteFormation(formationToDelete.id);
       if (response.success === false) {
         toast.error(response.message.replace(' (simulation)','') || 'Erreur lors de la suppression de la formation');
         return;
       }
       toast.success('Formation supprimée avec succès');
       // Remove the formation from state directly:
-      setFormations(prev => prev.filter(f => f.id !== editFormation.id));
+      setFormations(prev => prev.filter(f => f.id !== formationToDelete.id));
+      setShowDeleteConfirmation(false);
       closeEditModal();
     } catch (error) {
       console.error('Erreur lors de la suppression de la formation:', error);
@@ -617,11 +625,40 @@ const FormationList = () => {
                   'Modifier'
                 )}
               </Button>
-              <Button type="button" variant="destructive" onClick={handleDeleteFormation} disabled={isSubmitting} className="ml-2">
+              <Button 
+                type="button" 
+                variant="destructive" 
+                onClick={() => confirmDeleteFormation(editFormation)} 
+                disabled={isSubmitting} 
+                className="ml-2"
+              >
                 Supprimer
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de confirmation de suppression */}
+      <Dialog open={showDeleteConfirmation} onOpenChange={setShowDeleteConfirmation}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Êtes-vous sûr de vouloir supprimer cette formation ?</DialogTitle>
+            <DialogDescription>
+              Vous êtes sur le point de supprimer la formation "{formationToDelete?.name}". Cette action est irréversible.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setShowDeleteConfirmation(false)}>
+              Annuler
+            </Button>
+            <Button 
+              onClick={handleDeleteFormation}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Oui, supprimer
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
