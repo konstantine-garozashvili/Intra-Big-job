@@ -14,7 +14,6 @@ import { useSearchSuggestions } from '../lib/hooks/useSearchSuggestions';
 import { SearchSuggestionsList } from './SearchSuggestionsList';
 
 export const SearchBar = () => {
-  // Références et state
   const wrapperRef = useRef(null);
   const inputRef = useRef(null);
   const suggestionsRef = useRef(null);
@@ -23,7 +22,6 @@ export const SearchBar = () => {
   const [containerWidth, setContainerWidth] = useState(0);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
 
-  // Custom hooks
   const { 
     allowedSearchRoles,
     isLoggedIn,
@@ -56,7 +54,6 @@ export const SearchBar = () => {
     checkForRoleSearch 
   });
 
-  // Mettre à jour la largeur du conteneur au montage et au redimensionnement
   useEffect(() => {
     const updateWidth = () => {
       if (wrapperRef.current) {
@@ -72,7 +69,6 @@ export const SearchBar = () => {
     };
   }, [showSuggestions]);
 
-  // Gérer les clics en dehors du composant pour fermer les suggestions
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
@@ -94,7 +90,6 @@ export const SearchBar = () => {
     };
   }, [setShowSuggestions]);
 
-  // Faire défiler la suggestion active dans la vue
   useEffect(() => {
     if (activeSuggestion >= 0 && suggestionsRef.current) {
       const activeElement = suggestionsRef.current.children[activeSuggestion];
@@ -104,7 +99,6 @@ export const SearchBar = () => {
     }
   }, [activeSuggestion]);
 
-  // Mettre à jour la position du dropdown quand il devient visible
   useEffect(() => {
     if (showSuggestions && wrapperRef.current) {
       const updatePosition = () => {
@@ -128,12 +122,15 @@ export const SearchBar = () => {
     }
   }, [showSuggestions]);
 
-  // Gérer la navigation vers le profil utilisateur sélectionné
   const handleSuggestionClick = (suggestion, event) => {
     if (event) {
       event.preventDefault();
       event.stopPropagation();
     }
+    
+    // Clear existing profile cache before navigation
+    localStorage.removeItem('user');
+    sessionStorage.removeItem('user');
     
     const userId = suggestion.id;
     if (!userId) {
@@ -155,7 +152,6 @@ export const SearchBar = () => {
     }
   };
 
-  // Gérer les événements clavier
   const handleKeyDown = (e) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -178,7 +174,6 @@ export const SearchBar = () => {
     }
   };
 
-  // Gérer le focus de l'input
   const handleInputFocus = () => {
     if (!isLoggedIn) {
       inputRef.current.blur();
@@ -253,7 +248,6 @@ export const SearchBar = () => {
           )}
         </AnimatePresence>
         
-        {/* Loading indicator */}
         {isLoading && (
           <div className="absolute right-10 z-10">
             <div className="w-3 h-3 border-2 border-t-transparent border-white/30 rounded-full animate-spin"></div>
@@ -261,7 +255,6 @@ export const SearchBar = () => {
         )}
       </div>
       
-      {/* Message d'aide (affiché uniquement quand focusé, query vide et PAS un rôle spécial) */}
       {isFocused && query.length === 0 && isLoggedIn && 
        !hasSpecialRole() &&
        !showSuggestions && (
@@ -280,14 +273,12 @@ export const SearchBar = () => {
         </div>
       )}
       
-      {/* Message d'aide pour les utilisateurs non connectés */}
       {!isLoggedIn && isFocused && (
         <div className="absolute top-full left-0 w-full mt-2 px-3 py-2 text-xs text-white/70 bg-[#02284f]/90 rounded-md">
           <p>Vous devez être connecté pour effectuer une recherche.</p>
         </div>
       )}
       
-      {/* Render dropdown portal */}
       {showSuggestions && createPortal(
         <AnimatePresence mode="wait">
           <SearchSuggestionsList
