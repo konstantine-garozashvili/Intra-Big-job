@@ -1,20 +1,22 @@
-import React, { useState, useEffect, useRef } from 'react';
-import FullCalendar from '@fullcalendar/react';
-import dayGridPlugin from '@fullcalendar/daygrid';
-import timeGridPlugin from '@fullcalendar/timegrid';
-import interactionPlugin from '@fullcalendar/interaction';
-import frLocale from '@fullcalendar/core/locales/fr';
-import apiService from '@/lib/services/apiService';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog.tsx';
+import { Button } from '@/components/ui/button.tsx';
+import { Input } from '@/components/ui/input.tsx';
+import { Label } from '@/components/ui/label.tsx';
+import { Checkbox } from '@/components/ui/checkbox.tsx';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.tsx';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, X, Calendar as CalendarIcon, Clock, MapPin, Users, Info, Plus } from 'lucide-react';
-import PageTransition from '../../components/PageTransition';
+import { ChevronLeft, ChevronRight, X, CalendarIcon, Clock, MapPin, Users, Info, Plus } from 'lucide-react';
+import PageTransition from '../../components/PageTransition.tsx';
 import "./Calendar.css";
+
+// Lazy load FullCalendar components
+const FullCalendar = lazy(() => import('@fullcalendar/react').then(module => ({ default: module.FullCalendar })));
+const DayGridPlugin = lazy(() => import('@fullcalendar/daygrid').then(module => ({ default: module.DayGrid })));
+const TimeGridPlugin = lazy(() => import('@fullcalendar/timegrid').then(module => ({ default: module.TimeGrid })));
+const InteractionPlugin = lazy(() => import('@fullcalendar/interaction').then(module => ({ default: module.Interaction })));
+const FrLocale = lazy(() => import('@fullcalendar/core/locales/fr'));
+import apiService from '@/lib/services/apiService.ts';
 
 const cardVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -57,8 +59,6 @@ const Calendar = () => {
     const [selectedDate, setSelectedDate] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
     const [filteredUsers, setFilteredUsers] = useState(null);
-    const calendarRef = useRef(null);
-
     const [newEvent, setNewEvent] = useState({
         title: '',
         date: '',
@@ -68,6 +68,7 @@ const Calendar = () => {
         type: '',
         description: '',
     });
+    const calendarRef = useRef(null);
 
     useEffect(() => {
         // Ajouter un petit délai pour s'assurer que le token et les données utilisateur sont chargés
@@ -621,35 +622,37 @@ const Calendar = () => {
                             </CardHeader>
                             <CardContent className="p-0">
                                 <div className={`overflow-hidden bg-white ${currentView === 'timeGridDay' ? 'day-view-container' : ''}`}>
-                                    <FullCalendar
-                                        allDaySlot={false}
-                                        slotMinTime="07:00:00"
-                                        slotMaxTime="20:00:00"
-                                        slotDuration="01:00:00"
-                                        slotLabelInterval="01:00"
-                                        ref={calendarRef}
-                                        plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-                                        initialView="timeGridDay"
-                                        headerToolbar={false}
-                                        events={events}
-                                        selectable={false}
-                                        select={handleDateSelect}
-                                        eventClick={handleEventClick}
-                                        editable={true}
-                                        dayMaxEvents={true}
-                                        height="auto"
-                                        locale={frLocale}
-                                        eventContent={renderEventContent}
-                                        slotLabelFormat={{
-                                            hour: '2-digit',
-                                            minute: '2-digit',
-                                            hour12: false,
-                                            omitZeroMinute: true
-                                        }}
-                                        dateClick={handleDayClick}
-                                        dayCellContent={dayCellContent}
-                                        nowIndicator={true}
-                                    />
+                                    <Suspense fallback={<div className="h-[600px] flex items-center justify-center">Chargement du calendrier...</div>}>
+                                        <FullCalendar
+                                            allDaySlot={false}
+                                            slotMinTime="07:00:00"
+                                            slotMaxTime="20:00:00"
+                                            slotDuration="01:00:00"
+                                            slotLabelInterval="01:00"
+                                            ref={calendarRef}
+                                            plugins={[DayGridPlugin, TimeGridPlugin, InteractionPlugin]}
+                                            initialView="timeGridDay"
+                                            headerToolbar={false}
+                                            events={events}
+                                            selectable={false}
+                                            select={handleDateSelect}
+                                            eventClick={handleEventClick}
+                                            editable={true}
+                                            dayMaxEvents={true}
+                                            height="auto"
+                                            locale={FrLocale}
+                                            eventContent={renderEventContent}
+                                            slotLabelFormat={{
+                                                hour: '2-digit',
+                                                minute: '2-digit',
+                                                hour12: false,
+                                                omitZeroMinute: true
+                                            }}
+                                            dateClick={handleDayClick}
+                                            dayCellContent={dayCellContent}
+                                            nowIndicator={true}
+                                        />
+                                    </Suspense>
                                 </div>
                             </CardContent>
                         </Card>
