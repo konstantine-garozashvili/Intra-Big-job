@@ -51,6 +51,10 @@ const FormationList = () => {
   });
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedDeleteStudentIds, setSelectedDeleteStudentIds] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [formationToDelete, setFormationToDelete] = useState(null);
+  const [searchDeleteQuery, setSearchDeleteQuery] = useState(''); // Ajout de cet état
 
   useEffect(() => {
     loadFormations();
@@ -184,17 +188,25 @@ const FormationList = () => {
     }
   };
 
+  // Nouvelle fonction pour demander confirmation avant suppression
+  const confirmDeleteFormation = (formation) => {
+    setFormationToDelete(formation);
+    setShowDeleteConfirmation(true);
+  };
+
+  // Modification de la fonction de suppression pour utiliser formationToDelete
   const handleDeleteFormation = async () => {
-    if (!editFormation) return;
+    if (!formationToDelete) return;
     try {
-      const response = await formationService.deleteFormation(editFormation.id);
+      const response = await formationService.deleteFormation(formationToDelete.id);
       if (response.success === false) {
         toast.error(response.message.replace(' (simulation)','') || 'Erreur lors de la suppression de la formation');
         return;
       }
       toast.success('Formation supprimée avec succès');
       // Remove the formation from state directly:
-      setFormations(prev => prev.filter(f => f.id !== editFormation.id));
+      setFormations(prev => prev.filter(f => f.id !== formationToDelete.id));
+      setShowDeleteConfirmation(false);
       closeEditModal();
     } catch (error) {
       console.error('Erreur lors de la suppression de la formation:', error);
@@ -306,6 +318,28 @@ const FormationList = () => {
       setIsSubmitting(false);
     }
   };
+
+  // Fonction de filtrage des étudiants en fonction de la recherche
+  const filteredStudents = availableStudents.filter(student => {
+    if (!searchQuery.trim()) return true;
+    
+    const query = searchQuery.toLowerCase();
+    const fullName = `${student.firstName} ${student.lastName}`.toLowerCase();
+    const email = student.email ? student.email.toLowerCase() : '';
+    
+    return fullName.includes(query) || email.includes(query);
+  });
+
+  // Fonction de filtrage pour les étudiants à supprimer
+  const filteredDeleteStudents = selectedFormation?.students.filter(student => {
+    if (!searchDeleteQuery.trim()) return true;
+    
+    const query = searchDeleteQuery.toLowerCase();
+    const fullName = `${student.firstName} ${student.lastName}`.toLowerCase();
+    const email = student.email ? student.email.toLowerCase() : '';
+    
+    return fullName.includes(query) || email.includes(query);
+  }) || [];
 
   if (loading) {
     return (
@@ -435,7 +469,7 @@ const FormationList = () => {
         </CardContent>
       </Card>
 
-      {/* Modal d'ajout d'étudiants */}
+      {/* Modal d'ajout d'étudiants avec barre de recherche */}
       <Dialog open={showModal} onOpenChange={setShowModal}>
         <DialogContent>
           <DialogHeader>
@@ -444,37 +478,80 @@ const FormationList = () => {
               Sélectionnez les étudiants à ajouter à cette formation.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            <div className="space-y-4">
-              {availableStudents.map((student) => (
-                <div key={student.id} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`student-${student.id}`}
-                    checked={selectedStudentIds.includes(student.id)}
-                    onCheckedChange={() => toggleStudent(student.id)}
-                  />
-                  <label
-                    htmlFor={`student-${student.id}`}
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    {student.firstName} {student.lastName}
-                  </label>
-                </div>
-              ))}
+          
+          {/* Barre de recherche pour filtrer les étudiants */}
+          <div className="mb-4">
+            <Label htmlFor="search-students" className="text-sm mb-2 block">Rechercher des étudiants</Label>
+            <div className="relative">
+              <Input
+                id="search-students"
+                type="search"
+                placeholder="Rechercher par nom, prénom ou email..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"
+              >
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.3-4.3"></path>
+              </svg>
             </div>
           </div>
+
+          <div className="py-4">
+            <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2">
+              {filteredStudents.length > 0 ? (
+                filteredStudents.map((student) => (
+                  <div key={student.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`student-${student.id}`}
+                      checked={selectedStudentIds.includes(student.id)}
+                      onCheckedChange={() => toggleStudent(student.id)}
+                    />
+                    <label
+                      htmlFor={`student-${student.id}`}
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1"
+                    >
+                      <span className="block">
+                        {student.firstName} {student.lastName}
+                      </span>
+                      {student.email && (
+                        <span className="text-xs text-muted-foreground block mt-0.5">
+                          {student.email}
+                        </span>
+                      )}
+                    </label>
+                  </div>
+                ))
+              ) : (
+                <p className="text-center text-muted-foreground py-4">
+                  {searchQuery ? "Aucun étudiant trouvé" : "Aucun étudiant disponible"}
+                </p>
+              )}
+            </div>
+          </div>
+          
           <DialogFooter>
             <Button variant="outline" onClick={closeModal}>
               Annuler
             </Button>
-            <Button onClick={addStudents}>
-              Ajouter
+            <Button onClick={addStudents} disabled={selectedStudentIds.length === 0}>
+              Ajouter {selectedStudentIds.length > 0 ? `(${selectedStudentIds.length})` : ''}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Modal de suppression d'étudiants */}
+      {/* Modal de suppression d'étudiants avec barre de recherche */}
       <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
         <DialogContent>
           <DialogHeader>
@@ -483,35 +560,81 @@ const FormationList = () => {
               Sélectionnez les étudiants à retirer de cette formation.
             </DialogDescription>
           </DialogHeader>
+          
+          {/* Ajout de la barre de recherche pour filtrer les étudiants à supprimer */}
+          <div className="mb-4">
+            <Label htmlFor="search-delete-students" className="text-sm mb-2 block">Rechercher des étudiants</Label>
+            <div className="relative">
+              <Input
+                id="search-delete-students"
+                type="search"
+                placeholder="Rechercher par nom, prénom ou email..."
+                value={searchDeleteQuery}
+                onChange={(e) => setSearchDeleteQuery(e.target.value)}
+                className="pl-9"
+              />
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"
+              >
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.3-4.3"></path>
+              </svg>
+            </div>
+          </div>
+          
           <div className="py-4">
-            <div className="space-y-4">
+            <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2">
               {selectedFormation?.students && selectedFormation.students.length > 0 ? (
-                selectedFormation.students.map((student) => (
-                  <div key={student.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`delete-student-${student.id}`}
-                      checked={selectedDeleteStudentIds.includes(student.id)}
-                      onCheckedChange={() => toggleDeleteStudent(student.id)}
-                    />
-                    <label
-                      htmlFor={`delete-student-${student.id}`}
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    >
-                      {student.firstName} {student.lastName}
-                    </label>
-                  </div>
-                ))
+                filteredDeleteStudents.length > 0 ? (
+                  filteredDeleteStudents.map((student) => (
+                    <div key={student.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`delete-student-${student.id}`}
+                        checked={selectedDeleteStudentIds.includes(student.id)}
+                        onCheckedChange={() => toggleDeleteStudent(student.id)}
+                      />
+                      <label
+                        htmlFor={`delete-student-${student.id}`}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1"
+                      >
+                        <span className="block">
+                          {student.firstName} {student.lastName}
+                        </span>
+                        {student.email && (
+                          <span className="text-xs text-muted-foreground block mt-0.5">
+                            {student.email}
+                          </span>
+                        )}
+                      </label>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-center text-muted-foreground py-4">
+                    {searchDeleteQuery ? "Aucun étudiant trouvé" : "Aucun étudiant inscrit"}
+                  </p>
+                )
               ) : (
                 <p className="text-gray-500 italic">Aucun étudiant inscrit</p>
               )}
             </div>
           </div>
+          
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteModal(false)}>
+            <Button variant="outline" onClick={() => {
+              setSearchDeleteQuery(''); // Réinitialiser la recherche à la fermeture
+              setShowDeleteModal(false);
+            }}>
               Annuler
             </Button>
-            <Button onClick={removeStudents}>
-              Supprimer
+            <Button onClick={removeStudents} disabled={selectedDeleteStudentIds.length === 0}>
+              Supprimer {selectedDeleteStudentIds.length > 0 ? `(${selectedDeleteStudentIds.length})` : ''}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -617,11 +740,41 @@ const FormationList = () => {
                   'Modifier'
                 )}
               </Button>
-              <Button type="button" variant="destructive" onClick={handleDeleteFormation} disabled={isSubmitting} className="ml-2">
+              <Button 
+                type="button" 
+                variant="destructive" 
+                onClick={() => confirmDeleteFormation(editFormation)} 
+                disabled={isSubmitting} 
+                className="ml-2"
+              >
                 Supprimer
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de confirmation de suppression */}
+      <Dialog open={showDeleteConfirmation} onOpenChange={setShowDeleteConfirmation}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Êtes-vous sûr de vouloir supprimer cette formation ?</DialogTitle>
+            <DialogDescription>
+              Vous êtes sur le point de supprimer la formation "{formationToDelete?.name}".
+              Cette action est irréversible.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setShowDeleteConfirmation(false)}>
+              Annuler
+            </Button>
+            <Button 
+              onClick={handleDeleteFormation}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Oui, supprimer
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
