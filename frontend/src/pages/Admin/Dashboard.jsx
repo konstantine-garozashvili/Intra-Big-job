@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import authService from '@/lib/services/authService';
 import { Checkbox } from '@/components/ui/checkbox';
 import apiService from '@/lib/services/apiService';
+import ConvertCsv from "@/components/ConvertCsv"; // Importation sans accolades
 
 const ROLE_COLORS = {
   'ADMIN': 'bg-blue-100 text-blue-800',
@@ -48,7 +49,7 @@ const itemVariants = {
 };
 
 const AdminDashboard = () => {
-  const { user, users, isLoading, isError, error, refetch } = useAdminDashboardData();
+  const { user, users, isLoading, isError, error, refetch, } = useAdminDashboardData();
   
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -93,7 +94,8 @@ const AdminDashboard = () => {
       link: '/formations',
     }
   ];
-
+ 
+  
   const editUserMutation = useApiMutation(
     (data) => data && data.id ? `/users/${data.id}` : '/users',
     'put',
@@ -369,6 +371,9 @@ const AdminDashboard = () => {
                       >
                         Actualiser la liste
                       </Button>
+                      <ConvertCsv />
+                    
+
                     </div>
                   </div>
 
