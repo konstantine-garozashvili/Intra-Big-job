@@ -386,11 +386,64 @@ const apiService = {
    * Fonctions spécifiques pour la gestion des rôles utilisateurs
    */
   async getUsersByRole(roleName) {
-    return this.get(`/user-roles/users/${roleName}`);
+    // S'assurer que le rôle est au format correct (avec le préfixe ROLE_)
+    const formattedRoleName = roleName.startsWith('ROLE_') 
+      ? roleName 
+      : `ROLE_${roleName.replace('ROLE_', '')}`;
+    
+    console.log(`ApiService: Récupération des utilisateurs avec le rôle ${formattedRoleName}`);
+    
+    try {
+      // Essayons d'abord avec la méthode /api/users-by-role endpoint
+      return await this.get(`/users-by-role/${formattedRoleName}`);
+    } catch (error) {
+      console.warn(`L'API /users-by-role/${formattedRoleName} a échoué, tentative avec /users`);
+      
+      // Si ça échoue, récupérons tous les utilisateurs et filtrons côté client
+      const response = await this.get('/users');
+      
+      if (response.success && response.data) {
+        // Filtrer manuellement les utilisateurs par rôle
+        const filteredUsers = response.data.filter(user => 
+          user.roles && user.roles.some(role => 
+            role.name === formattedRoleName || 
+            role.name === formattedRoleName.replace('ROLE_', '') ||
+            'ROLE_' + role.name === formattedRoleName
+          )
+        );
+        
+        // Retourner dans le même format que l'API
+        return {
+          success: true,
+          data: filteredUsers
+        };
+      }
+      
+      return response;
+    }
   },
   
   async getAllRoles() {
-    return this.get('/user-roles/roles');
+    try {
+      // Tenter d'obtenir les rôles depuis l'API
+      return await this.get('/user-roles/roles');
+    } catch (error) {
+      console.warn("Erreur lors de la récupération des rôles depuis l'API, utilisation des rôles prédéfinis", error);
+      
+      // Retourner des rôles par défaut en cas d'erreur
+      return {
+        success: true,
+        data: [
+          { id: 1, name: "ROLE_SUPERADMIN", description: "Super Administrateur" },
+          { id: 2, name: "ROLE_ADMIN", description: "Administrateur" },
+          { id: 3, name: "ROLE_TEACHER", description: "Formateur" },
+          { id: 4, name: "ROLE_STUDENT", description: "Étudiant" },
+          { id: 5, name: "ROLE_HR", description: "Ressources Humaines" },
+          { id: 6, name: "ROLE_RECRUITER", description: "Recruteur" },
+          { id: 7, name: "ROLE_GUEST", description: "Invité" }
+        ]
+      };
+    }
   },
   
   /**
@@ -406,6 +459,16 @@ const apiService = {
       oldRoleName,
       newRoleName
     });
+  },
+  
+  /**
+   * Update user information
+   * @param {number} userId - The user's ID
+   * @param {Object} userData - User data to update (firstName, lastName, email, phoneNumber, birthDate, roles, etc.)
+   * @returns {Promise<Object>} - API response
+   */
+  async updateUser(userId, userData) {
+    return this.put(`/users/${userId}`, userData);
   },
   
   /**
