@@ -11,6 +11,7 @@ import documentService from "../services/documentService";
 import apiService from "@/lib/services/apiService";
 import { toast } from "sonner";
 import { studentProfileService } from "@/lib/services/studentProfileService";
+import profileService from "../services/profileService";
 
 const ProfileView = () => {
   const { userId } = useParams();
@@ -203,7 +204,8 @@ const ProfileView = () => {
       
       const fetchPublicProfile = async () => {
         try {
-          const data = await apiService.get(`/profile/public/${userId}`);
+          const data = await profileService.getPublicProfile(userId);
+          console.log("Public profile data:", data);
           
           if (data && (data.success === true || data.data)) {
             setPublicProfileData(data.data || data);
@@ -211,6 +213,7 @@ const ProfileView = () => {
             setPublicProfileError(data.error || 'Failed to fetch profile data');
           }
         } catch (error) {
+          console.error("Error fetching public profile:", error);
           setPublicProfileError(error.message || 'Error fetching profile data');
         } finally {
           setIsLoadingPublicProfile(false);
@@ -240,8 +243,9 @@ const ProfileView = () => {
   useEffect(() => {
     if (data && profilePictureUrl) {
       if (isPublicProfile) {
-        if (data.profilePictureUrl !== profilePictureUrl) {
-          data.profilePictureUrl = profilePictureUrl;
+        if (data.user && !data.user.profilePictureUrl && data.user.profilePicturePath) {
+          // Convertir profilePicturePath en profilePictureUrl pour profil public
+          data.user.profilePictureUrl = data.user.profilePicturePath;
         }
       } else {
         if (data.profilePictureUrl !== profilePictureUrl) {
@@ -376,17 +380,19 @@ const ProfileView = () => {
   }
 
   if (error) {
+    console.error("ProfileView error:", error);
     return (
       <div className="w-full max-w-7xl mx-auto px-4 py-6" data-testid="profile-error">
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative" role="alert">
           <strong className="font-bold">Erreur :</strong>
-          <span className="block sm:inline"> {error.message || "Une erreur est survenue lors du chargement du profil."}</span>
+          <span className="block sm:inline"> {error?.message || error || "Une erreur est survenue lors du chargement du profil."}</span>
         </div>
       </div>
     );
   }
 
   if (!data) {
+    console.warn("ProfileView: No data available");
     return (
       <div className="w-full max-w-7xl mx-auto px-4 py-6" data-testid="profile-no-data">
         <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded relative" role="alert">
@@ -397,22 +403,25 @@ const ProfileView = () => {
     );
   }
 
+  console.log("Data before userData transformation:", data);
+  
   let userData;
   
   if (isPublicProfile) {
     userData = {
       user: {
-        id: data.id || data.user?.id,
-        firstName: data.firstName || data.user?.firstName || "",
-        lastName: data.lastName || data.user?.lastName || "",
-        email: data.email || data.user?.email || "",
-        phoneNumber: data.phoneNumber || data.user?.phoneNumber || "",
-        profilePictureUrl: profilePictureUrl || data.profilePictureUrl || data.user?.profilePictureUrl || "",
-        roles: Array.isArray(data.roles) 
-          ? data.roles.map(role => typeof role === 'string' ? { name: role } : role)
-          : (data.user?.roles || [{ name: 'USER' }]),
-        specialization: data.specialization || data.user?.specialization || {},
-        linkedinUrl: data.linkedinUrl || data.user?.linkedinUrl || "",
+        id: data.user?.id || "",
+        firstName: data.user?.firstName || "",
+        lastName: data.user?.lastName || "",
+        fullName: data.user?.fullName || `${data.user?.firstName || ""} ${data.user?.lastName || ""}`.trim(),
+        email: data.user?.email || "",
+        phoneNumber: data.user?.phoneNumber || "",
+        profilePictureUrl: profilePictureUrl || data.user?.profilePictureUrl || data.user?.profilePicturePath || "",
+        roles: Array.isArray(data.user?.roles) 
+          ? data.user.roles.map(role => typeof role === 'string' ? { name: role } : role)
+          : [],
+        specialization: data.user?.specialization || {},
+        linkedinUrl: data.user?.linkedinUrl || "",
         city: data.city || ""
       },
       studentProfile: data.studentProfile || {
@@ -439,8 +448,7 @@ const ProfileView = () => {
     };
   }
 
-  if (studentProfile) {
-  }
+  console.log("Final userData object:", userData);
 
   return (
     <motion.div

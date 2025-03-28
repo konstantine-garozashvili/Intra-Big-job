@@ -247,8 +247,24 @@ class ProfileService {
     
     try {
       const response = await apiService.get(`/profile/public/${userId}`);
-      return response.data;
+      console.log("Raw profileService response:", response);
+      
+      // Normaliser la réponse pour assurer la cohérence
+      let data = response.data || response;
+      
+      // Vérifier et adapter la structure des données
+      if (data.success === true && data.data) {
+        // Déjà dans le bon format
+        return data;
+      } 
+      
+      // Si les données ne sont pas déjà correctement structurées
+      return {
+        success: true,
+        data: data
+      };
     } catch (error) {
+      console.error("Error in profileService.getPublicProfile:", error);
       throw error;
     }
   }

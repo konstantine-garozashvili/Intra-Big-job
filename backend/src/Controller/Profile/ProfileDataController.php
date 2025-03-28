@@ -11,6 +11,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Serializer\SerializerInterface;
+use App\Service\UserProfileService;
 
 #[Route('/api/profile')]
 class ProfileDataController extends AbstractController
@@ -20,19 +21,22 @@ class ProfileDataController extends AbstractController
     private $entityManager;
     private $userRepository;
     private $diplomaRepository;
+    private $userProfileService;
     
     public function __construct(
         Security $security,
         SerializerInterface $serializer,
         EntityManagerInterface $entityManager,
         UserRepository $userRepository,
-        DiplomaRepository $diplomaRepository
+        DiplomaRepository $diplomaRepository,
+        UserProfileService $userProfileService
     ) {
         $this->security = $security;
         $this->serializer = $serializer;
         $this->entityManager = $entityManager;
         $this->userRepository = $userRepository;
         $this->diplomaRepository = $diplomaRepository;
+        $this->userProfileService = $userProfileService;
     }
 
     /**
@@ -171,6 +175,105 @@ class ProfileDataController extends AbstractController
         return $this->json([
             'success' => true,
             'data' => $profileData['data']
+        ]);
+    }
+
+    /**
+     * Récupère les données du profil d'un utilisateur spécifique
+     */
+    #[Route('/public/{id}', name: 'api_profil_public', methods: ['GET'])]
+    public function getPublicUserProfile(int $id): JsonResponse
+    {
+        /** @var User $currentUser */
+        $currentUser = $this->security->getUser();
+        
+        if (!$currentUser) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Utilisateur non authentifié'
+            ], 401);
+        }
+        
+        // Récupérer l'utilisateur cible
+        $targetUser = $this->userRepository->find($id);
+        
+        if (!$targetUser) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Utilisateur non trouvé'
+            ], 404);
+        }
+        
+        // Récupérer l'utilisateur avec toutes ses relations chargées
+        $targetUser = $this->userRepository->findOneWithAllRelations($targetUser->getId());
+        
+        // Formatter les diplômes
+        $diplomas = [];
+        foreach ($targetUser->getDiplomas() as $diploma) {
+            $diplomas[] = [
+                'id' => $diploma->getId(),
+                'name' => $diploma->getName(),
+                'obtainedAt' => $diploma->getObtainedAt() ? $diploma->getObtainedAt()->format('Y-m-d') : null,
+                'institution' => $diploma->getInstitution() ? $diploma->getInstitution()->getName() : null,
+                'location' => $diploma->getLocation(),
+            ];
+        }
+        
+        // Récupérer les données utilisateur avec les relations
+        $userData = [
+            'user' => [
+                'id' => $targetUser->getId(),
+                'firstName' => $targetUser->getFirstName(),
+                'lastName' => $targetUser->getLastName(),
+                'fullName' => $targetUser->getFirstName() . ' ' . $targetUser->getLastName(),
+                'profilePicturePath' => $targetUser->getProfilePicturePath(),
+                'nationality' => $targetUser->getNationality() ? [
+                    'name' => $targetUser->getNationality()->getName(),
+                ] : null,
+                'specialization' => $targetUser->getSpecialization() ? [
+                    'id' => $targetUser->getSpecialization()->getId(),
+                    'name' => $targetUser->getSpecialization()->getName(),
+                    'domain' => $targetUser->getSpecialization()->getDomain() ? [
+                        'id' => $targetUser->getSpecialization()->getDomain()->getId(),
+                        'name' => $targetUser->getSpecialization()->getDomain()->getName(),
+                    ] : null,
+                ] : null,
+                'linkedinUrl' => $targetUser->getLinkedinUrl(),
+                'roles' => array_map(function($role) {
+                    if (is_string($role)) {
+                        return ['name' => $role];
+                    } else {
+                        return [
+                            'id' => $role->getId(),
+                            'name' => $role->getName()
+                        ];
+                    }
+                }, $targetUser->getRoles()),
+            ],
+            'diplomas' => $diplomas
+        ];
+        
+        // Ajouter le profil étudiant si l'utilisateur en a un
+        if ($targetUser->getStudentProfile()) {
+            $studentProfile = $targetUser->getStudentProfile();
+            $userData['studentProfile'] = [
+                'id' => $studentProfile->getId(),
+                'isSeekingInternship' => $studentProfile->isSeekingInternship(),
+                'isSeekingApprenticeship' => $studentProfile->isSeekingApprenticeship(),
+                'portfolioUrl' => $studentProfile->getPortfolioUrl(),
+                'currentInternshipCompany' => $studentProfile->getCurrentInternshipCompany(),
+                'internshipStartDate' => $studentProfile->getInternshipStartDate() ? $studentProfile->getInternshipStartDate()->format('Y-m-d') : null,
+                'internshipEndDate' => $studentProfile->getInternshipEndDate() ? $studentProfile->getInternshipEndDate()->format('Y-m-d') : null,
+                'situationType' => $studentProfile->getSituationType() ? [
+                    'id' => $studentProfile->getSituationType()->getId(),
+                    'name' => $studentProfile->getSituationType()->getName()
+                ] : null,
+            ];
+        }
+        
+        return $this->json([
+            'success' => true,
+            'data' => $userData
         ]);
     }
 

@@ -10,6 +10,8 @@ import apiService from "@/lib/services/apiService";
 import RoleBadge from "@/components/ui/RoleBadge";
 
 const ProfileHeader = ({ userData, isPublicProfile = false, profilePictureUrl }) => {
+  console.log("ProfileHeader received:", { userData, isPublicProfile, profilePictureUrl });
+  
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [domainData, setDomainData] = useState(null);
