@@ -57,21 +57,25 @@ export const ProfessionalInfoSection = ({
     setLocalPortfolioUrl(currentPortfolioUrl);
   }, [currentPortfolioUrl]);
   
-  // Synchronize local LinkedIn URL state
+  // Update state for LinkedIn URL changes
   useEffect(() => {
-    setLocalLinkedInUrl(currentLinkedInUrl);
-    
-    // Also update the edited data when LinkedIn URL changes
-    if (currentLinkedInUrl && currentLinkedInUrl !== editedData.personal.linkedinUrl) {
-      handleInputChange('linkedinUrl', currentLinkedInUrl);
+    if (userData?.linkedinUrl !== undefined) {
+      setLocalLinkedInUrl(userData.linkedinUrl || '');
     }
-  }, [currentLinkedInUrl]);
+  }, [userData?.linkedinUrl]);
+
+  // Set LinkedIn URL from potential sources
+  useEffect(() => {
+    const linkedinUrl = extractLinkedInUrl(userData);
+    if (linkedinUrl) {
+      setLocalLinkedInUrl(linkedinUrl);
+    }
+  }, [userData]);
 
   // Écouter les événements de mise à jour du portfolio
   useEffect(() => {
     const handlePortfolioUpdate = (event) => {
       if (event.detail?.portfolioUrl !== undefined) {
-        console.log('Mise à jour du portfolio détectée:', event.detail.portfolioUrl);
         setLocalPortfolioUrl(event.detail.portfolioUrl);
       }
     };
@@ -130,21 +134,14 @@ export const ProfessionalInfoSection = ({
     }
   };
 
-  // Pour débogage - loguer les valeurs importantes
-  useEffect(() => {
-    console.log('ProfessionalInfoSection - studentProfile?.portfolioUrl:', studentProfile?.portfolioUrl);
-    console.log('ProfessionalInfoSection - localPortfolioUrl:', localPortfolioUrl);
-    console.log('ProfessionalInfoSection - editedData.personal.portfolioUrl:', editedData.personal.portfolioUrl);
+  // LinkedIn URL field
+  const handleLinkedInUrlChange = (value) => {
+    // First update local state for responsive UI
+    setLocalLinkedInUrl(value);
     
-    // Debug LinkedIn URL
-    console.log('DEBUG LINKEDIN URL - Current value:', {
-      'userData.linkedinUrl': userData.linkedinUrl,
-      'localLinkedInUrl': localLinkedInUrl,
-      'editedData.personal.linkedinUrl': editedData.personal.linkedinUrl,
-      'extractedLinkedInUrl': extractLinkedInUrl(userData),
-      'From DOM': document.querySelector('[data-field="linkedinUrl"] .field-value')?.textContent
-    });
-  }, [studentProfile?.portfolioUrl, localPortfolioUrl, editedData.personal.portfolioUrl, userData, localLinkedInUrl]);
+    // Then update parent component state
+    handleInputChange('linkedinUrl', value);
+  };
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6">
@@ -178,7 +175,7 @@ export const ProfessionalInfoSection = ({
         }}
         onSave={() => onSave('linkedinUrl', editedData.personal.linkedinUrl || '')}
         onCancel={() => handleCancelField('linkedinUrl')}
-        onChange={(value) => handleInputChange('linkedinUrl', value || '')}
+        onChange={handleLinkedInUrlChange}
       />
 
       {isStudent && (

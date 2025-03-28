@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useApiQuery, useApiMutation } from '@/hooks/useReactQuery';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { profileService } from '../services/profileService';
 import apiService from '@/lib/services/apiService';
 import ProfilePicture from './settings/ProfilePicture';
-import { isValidEmail, isValidPhone, isValidLinkedInUrl, isValidName, isValidUrl } from '@/lib/utils/validation';
+import { isValidEmail, isValidPhone, isValidLinkedInUrl, isValidName, isValidUrl, looksLikeLinkedInUrl } from '@/lib/utils/validation';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { PhoneInput } from '@/components/ui/phone-input';
@@ -108,54 +108,101 @@ const UserProfileSettings = () => {
     return { userRole, isStudent };
   }, [userData?.roles, userData?.studentProfile]);
 
-  // Initialize editedData when userData changes
+  // Add direct API check for latest profile data
   useEffect(() => {
+    // Skip if we've already checked once this component lifecycle
+    if (hasCheckedRef.current) {
+      return;
+    }
+    
+    // Check if we need to fetch fresh data directly
+    const fetchDirectProfileData = async () => {
+      try {
+        // Remove debug log
+        const response = await apiService.get('/profile');
+        
+        if (response && response.data) {
+          // Remove debug log
+          
+          // Use our enhanced extraction function
+          const directLinkedInUrl = extractLinkedInUrl(response.data);
+          
+          // Remove debug log
+          
+          // Only update if we actually have a LinkedIn URL to avoid unnecessary renders
+          if (directLinkedInUrl) {
+            setEditedData(prev => ({
+              ...prev,
+              personal: {
+                ...prev.personal,
+                linkedinUrl: directLinkedInUrl
+              }
+            }));
+          }
+          
+          // Mark that we've checked
+          hasCheckedRef.current = true;
+        }
+      } catch (error) {
+        console.error("Error checking profile directly:", error);
+        // Make sure we don't try again even if there was an error
+        hasCheckedRef.current = true;
+      }
+    };
+    
+    // Slight delay to avoid race conditions with initial data loading
+    const timeoutId = setTimeout(() => {
+      fetchDirectProfileData();
+    }, 300);
+    
+    // Cleanup timeout to prevent memory leaks
+    return () => clearTimeout(timeoutId);
+  }, []);
+
+  // Initialize editedData when userData changes - completely disable LinkedIn URL updates
+  const userDataRef = useRef(userData);
+  useEffect(() => {
+    // Skip updates if userData hasn't meaningfully changed
+    if (
+      userData && 
+      userDataRef.current && 
+      JSON.stringify(userData) === JSON.stringify(userDataRef.current)
+    ) {
+      return;
+    }
+    
+    // Update ref
+    userDataRef.current = userData;
+    
     if (userData && Object.keys(userData).length > 0) {
-      // Log all potential LinkedIn URL sources for debugging
-      console.log('UserProfileSettings - LinkedIn URL Debug:', {
-        'userData.linkedinUrl': userData.linkedinUrl,
-        'userData.user?.linkedinUrl': userData.user?.linkedinUrl,
-        'userData.data?.linkedinUrl': userData.data?.linkedinUrl,
-        'userData.profile?.linkedinUrl': userData.profile?.linkedinUrl,
-        'All userData keys': Object.keys(userData)
-      });
-      
-      // Enhanced LinkedIn URL detection - check multiple possible paths
-      const linkedinUrl = userData.linkedinUrl || 
-                        userData.user?.linkedinUrl || 
-                        userData.profile?.linkedinUrl || 
-                        userData.data?.linkedinUrl || 
-                        '';
-      
       // Use a deep comparison to avoid unnecessary updates
       const newPersonalData = {
         firstName: userData.firstName ?? '',
         lastName: userData.lastName ?? '',
         email: userData.email ?? '',
         phoneNumber: userData.phoneNumber ?? '',
-        linkedinUrl: linkedinUrl,
         portfolioUrl: userData.studentProfile?.portfolioUrl ?? '',
         nationality: userData.nationality ?? '',
         birthDate: userData.birthDate ?? '',
+        // Explicitly exclude LinkedIn URL
       };
-      
-      console.log('UserProfileSettings - Setting editedData from userData:', { 
-        linkedinInUserData: linkedinUrl,
-        userDataFields: Object.keys(userData),
-        newPersonalData
-      });
       
       // Only update if the data has actually changed
       if (JSON.stringify(newPersonalData) !== JSON.stringify(editedData.personal)) {
         setEditedData(prev => ({
           ...prev,
-          personal: newPersonalData,
+          personal: {
+            ...prev.personal,
+            ...newPersonalData,
+            // Preserve the existing LinkedIn URL
+            linkedinUrl: prev.personal.linkedinUrl
+          },
           address: {},
           academic: {},
         }));
       }
     }
-  }, [userData, editedData.personal]);
+  }, [userData]);
 
   // Add a utility function to extract LinkedIn URL from any data structure
   const extractLinkedInUrl = (data) => {
@@ -198,60 +245,6 @@ const UserProfileSettings = () => {
     
     return '';
   };
-
-  // Add direct API check for latest profile data
-  useEffect(() => {
-    // Skip if we've already checked once this component lifecycle
-    if (hasCheckedRef.current) {
-      return;
-    }
-    
-    // Check if we need to fetch fresh data directly
-    const fetchDirectProfileData = async () => {
-      try {
-        console.log("UserProfileSettings - Performing direct API check for LinkedIn URL");
-        const response = await apiService.get('/profile');
-        
-        if (response && response.data) {
-          console.log("UserProfileSettings - Direct profile data:", response.data);
-          
-          // Use our enhanced extraction function
-          const directLinkedInUrl = extractLinkedInUrl(response.data);
-          
-          console.log("UserProfileSettings - Direct LinkedIn check result:", {
-            directLinkedInUrl,
-            currentLinkedInUrl: editedData.personal.linkedinUrl
-          });
-          
-          // Only update if we actually have a LinkedIn URL to avoid unnecessary renders
-          if (directLinkedInUrl) {
-            setEditedData(prev => ({
-              ...prev,
-              personal: {
-                ...prev.personal,
-                linkedinUrl: directLinkedInUrl
-              }
-            }));
-          }
-          
-          // Mark that we've checked
-          hasCheckedRef.current = true;
-        }
-      } catch (error) {
-        console.error("Error checking profile directly:", error);
-        // Make sure we don't try again even if there was an error
-        hasCheckedRef.current = true;
-      }
-    };
-    
-    // Slight delay to avoid race conditions with initial data loading
-    const timeoutId = setTimeout(() => {
-      fetchDirectProfileData();
-    }, 300);
-    
-    // Cleanup timeout to prevent memory leaks
-    return () => clearTimeout(timeoutId);
-  }, []);
 
   // Add event listener for portfolio URL updates from other components
   useEffect(() => {
@@ -346,19 +339,47 @@ const UserProfileSettings = () => {
     }
   }, [userData]);
 
+  // Handle editing fields
+  const handleEditField = (field) => {
+    setEditMode(prev => ({
+      ...prev,
+      [field]: !prev[field]
+    }));
+  };
+  
+  // Handle changes to edited values
+  const handleChange = (field, value) => {
+    // Skip LinkedIn URL updates through this function - handled separately
+    if (field === 'linkedinUrl') return;
+    
+    const [category, key] = field.split('.');
+    
+    if (category && key) {
+      setEditedData(prev => ({
+        ...prev,
+        [category]: {
+          ...prev[category],
+          [key]: value
+        }
+      }));
+    } else {
+      // For other fields that don't have a category.key format
+      setEditedData(prev => ({
+        ...prev,
+        personal: {
+          ...prev.personal,
+          [field]: value
+        }
+      }));
+    }
+  };
+
   // Handler for saving personal information
   const handleSavePersonal = async (field) => {
     try {
       const value = editedData.personal[field];
       
-      // Special case for LinkedIn URL: log debug info
-      if (field === 'linkedinUrl') {
-        console.log("Attempting to save LinkedIn URL:", {
-          value,
-          isValid: isValidLinkedInUrl(value),
-          validationFunction: isValidLinkedInUrl.toString().substring(0, 100) + "..."
-        });
-      }
+      // Remove special case debug for LinkedIn URL
       
       // Validation spécifique selon le type de champ
       if (field === 'birthDate' && value) {
@@ -701,6 +722,80 @@ const UserProfileSettings = () => {
     */
   }, []);
 
+  const [isLinkedinUrlSaving, setIsLinkedinUrlSaving] = useState(false);
+  
+  // Handle LinkedIn URL change
+  const handleLinkedinUrlChange = (e) => {
+    const newValue = e.target.value;
+    setEditedData(prev => ({
+      ...prev,
+      personal: {
+        ...prev.personal,
+        linkedinUrl: newValue
+      }
+    }));
+  };
+  
+  // Handle LinkedIn URL blur (save on blur)
+  const handleLinkedinUrlBlur = async () => {
+    const currentUrl = editedData.personal.linkedinUrl;
+    
+    // Skip if empty or unchanged
+    if (!currentUrl || (userData && currentUrl === userData.linkedinUrl)) return;
+    
+    setIsLinkedinUrlSaving(true);
+    try {
+      // Format URL if needed
+      let formattedUrl = currentUrl.trim();
+      
+      // Add https:// if missing
+      if (formattedUrl && !formattedUrl.startsWith('http://') && !formattedUrl.startsWith('https://')) {
+        formattedUrl = 'https://' + formattedUrl;
+        
+        // Update state with formatted URL
+        setEditedData(prev => ({
+          ...prev,
+          personal: {
+            ...prev.personal,
+            linkedinUrl: formattedUrl
+          }
+        }));
+      }
+      
+      const dataToSave = { linkedinUrl: formattedUrl === '' ? null : formattedUrl };
+      
+      // Direct API call
+      await apiService.put('/profile', dataToSave);
+      toast.success('URL LinkedIn mise à jour avec succès');
+      
+      // Store in sessionStorage for other components
+      try {
+        sessionStorage.setItem('linkedinUrl', JSON.stringify({
+          url: formattedUrl,
+          timestamp: Date.now()
+        }));
+      } catch (e) {
+        // Ignore storage errors
+      }
+    } catch (error) {
+      console.error('Error updating LinkedIn URL:', error);
+      toast.error('Erreur lors de la mise à jour');
+      
+      // Revert to original on error if we have it
+      if (userData && userData.linkedinUrl) {
+        setEditedData(prev => ({
+          ...prev,
+          personal: {
+            ...prev.personal,
+            linkedinUrl: userData.linkedinUrl
+          }
+        }));
+      }
+    } finally {
+      setIsLinkedinUrlSaving(false);
+    }
+  };
+
   // Render loading state
   if (isProfileLoading) {
     return <ProfileSettingsSkeleton />;
@@ -776,68 +871,11 @@ const UserProfileSettings = () => {
                 <Input
                   id="linkedinUrl"
                   value={editedData.personal.linkedinUrl || ''}
-                  onChange={(e) => {
-                    // Update local state immediately without validation
-                    setEditedData(prev => ({
-                      ...prev,
-                      personal: {
-                        ...prev.personal,
-                        linkedinUrl: e.target.value
-                      }
-                    }));
-                  }}
-                  onBlur={(e) => {
-                    // Only try to save when the field loses focus
-                    try {
-                      const value = e.target.value;
-                      
-                      // Debug log
-                      console.debug("Attempting to save LinkedIn URL:", value, 
-                        "Looks like LinkedIn URL:", value.includes('linkedin.com'));
-                      
-                      // Prepare for API call if needed
-                      if (value !== userData?.linkedinUrl) {
-                        // Apply basic formatting if needed
-                        let formattedUrl = value.trim();
-                        
-                        // Add https:// if missing
-                        if (formattedUrl && !formattedUrl.startsWith('http://') && !formattedUrl.startsWith('https://')) {
-                          formattedUrl = 'https://' + formattedUrl;
-                          
-                          // Update the field with formatted URL
-                          setEditedData(prev => ({
-                            ...prev,
-                            personal: {
-                              ...prev.personal,
-                              linkedinUrl: formattedUrl
-                            }
-                          }));
-                        }
-                        
-                        // Check if it at least looks like a LinkedIn URL
-                        if (formattedUrl && !formattedUrl.includes('linkedin.com')) {
-                          toast.info("L'URL ne semble pas être une URL LinkedIn valide, mais nous l'avons sauvegardée quand même.");
-                        }
-                        
-                        // Skip validation, just update the data
-                        updateLocalState('linkedinUrl', formattedUrl);
-                        
-                        // Send to API
-                        const dataToSave = { linkedinUrl: formattedUrl === '' ? null : formattedUrl };
-                        updatePersonalInfo(dataToSave)
-                          .then(() => toast.success('URL LinkedIn mise à jour avec succès'))
-                          .catch(err => {
-                            console.error("API error updating LinkedIn URL:", err);
-                            toast.error("Erreur lors de la mise à jour: " + (err.message || 'Erreur inconnue'));
-                          });
-                      }
-                    } catch (error) {
-                      console.error("Error updating LinkedIn URL:", error);
-                      toast.error("Erreur lors de la mise à jour de l'URL LinkedIn");
-                    }
-                  }}
+                  onChange={handleLinkedinUrlChange}
+                  onBlur={handleLinkedinUrlBlur}
                   placeholder="https://www.linkedin.com/in/your-profile"
                   className="w-full"
+                  disabled={isLinkedinUrlSaving}
                 />
               </div>
             </div>

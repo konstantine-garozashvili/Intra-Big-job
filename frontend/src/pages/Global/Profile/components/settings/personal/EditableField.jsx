@@ -1,4 +1,4 @@
-import React, { memo, useState, useEffect } from 'react';
+import React, { memo, useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PhoneInput } from '@/components/ui/phone-input';
@@ -28,19 +28,25 @@ const EditableField = memo(({
   // Local state for optimistic updates
   const [localValue, setLocalValue] = useState(value);
   const [error, setError] = useState(null);
+  const isEditingRef = useRef(isEditing);
+  const editedValueRef = useRef(editedValue);
+  const lastExternalChangeRef = useRef(Date.now());
+  
+  // Initialize local value on first render
+  useEffect(() => {
+    setLocalValue(value);
+  }, []);
+  
+  // Update refs to track changes
+  useEffect(() => {
+    isEditingRef.current = isEditing;
+    editedValueRef.current = editedValue;
+  }, [isEditing, editedValue]);
   
   // Update local value when the actual value changes (only if not in edit mode)
   useEffect(() => {
     if (!isEditing) {
-      // Log debug info for LinkedIn URL
-      if (field === 'linkedinUrl') {
-        console.log(`EditableField [${field}] - Value updates:`, {
-          previous: localValue,
-          new: value,
-          editedValue
-        });
-      }
-      
+      lastExternalChangeRef.current = Date.now();
       setLocalValue(value);
       setError(null);
       
@@ -49,44 +55,29 @@ const EditableField = memo(({
         onChange(value);
       }
     }
-  }, [value, isEditing, onChange, type, field, editedValue]);
+  }, [value, isEditing, onChange, type]);
   
-  // Always display the most up-to-date value (either edited or saved)
-  const displayValue = isEditing ? editedValue : (localValue || value);
-  
-  // Debug output for field's value during render
-  React.useEffect(() => {
-    if (field === 'linkedinUrl') {
-      console.log(`EditableField [${field}] - Render values:`, {
-        localValue,
-        value,
-        displayValue,
-        editedValue,
-        isEditing
-      });
+  // Special handling for LinkedIn URL - always update local value during edits
+  useEffect(() => {
+    if (isEditing && field === 'linkedinUrl' && editedValue !== undefined) {
+      setLocalValue(editedValue);
     }
-  }, [field, localValue, value, displayValue, editedValue, isEditing]);
-  
-  // Format the display value based on the field type
-  const getFormattedDisplayValue = () => {
-    if (type === 'phone' && displayValue) {
-      return formatFrenchPhoneNumber(displayValue);
-    }
-    return displayValue;
-  };
+  }, [isEditing, editedValue, field]);
 
-  // Tronquer une URL longue pour l'affichage
-  const getTruncatedUrl = (url) => {
-    if (!url) return '';
+  // Always return the current value being edited
+  const currentInputValue = isEditing ? editedValue : localValue;
+  
+  // Handle input change with better state handling
+  const handleInputChange = (newValue) => {
+    // Always update local value for immediate UI feedback
+    setLocalValue(newValue);
     
-    if (url.length > 40) {
-      return url.substring(0, 37) + '...';
-    }
-    return url;
+    // Call parent onChange to update parent state
+    onChange(newValue);
   };
   
   // Handle save with optimistic update
-  const handleSave = React.useCallback(async () => {
+  const handleSave = async () => {
     try {
       // Validation spécifique pour les URLs
       if (type === 'url' && editedValue && !editedValue.startsWith('https://')) {
@@ -112,7 +103,7 @@ const EditableField = memo(({
       setError(err.response?.data?.message || 'Une erreur est survenue');
       toast.error(err.response?.data?.message || 'Une erreur est survenue');
     }
-  }, [onSave, field, editedValue, onEdit, value, type]);
+  };
 
   return (
     <div 
@@ -141,50 +132,63 @@ const EditableField = memo(({
           </Button>
         )}
       </Label>
-
+      
       {isEditing ? (
         <div className="mt-2 space-y-2">
           {type === 'phone' ? (
             <PhoneInput
-              value={editedValue}
-              onChange={onChange}
+              value={currentInputValue}
+              onChange={handleInputChange}
+              className="w-full"
+              disabled={loading}
+            />
+          ) : type === 'name' ? (
+            <NameInput 
+              value={currentInputValue}
+              onChange={handleInputChange}
+              placeholder={label}
               className="w-full"
               disabled={loading}
             />
           ) : (
             <Input
-              type={type}
-              value={editedValue}
-              onChange={(e) => onChange(e.target.value)}
+              type={type === 'password' ? 'password' : type === 'email' ? 'email' : 'text'}
+              value={currentInputValue}
+              onChange={(e) => handleInputChange(e.target.value)}
               className={`w-full ${error ? 'border-red-500' : ''}`}
               disabled={loading}
-              placeholder={type === 'url' ? 'https://...' : ''}
+              placeholder={type === 'url' ? 'https://...' : label}
             />
           )}
+          
           {error && (
-            <p className="text-sm text-red-500">{error}</p>
+            <p className="text-xs text-red-500">{error}</p>
           )}
-          <div className="flex justify-end space-x-2">
+          
+          <div className="flex justify-end gap-2 mt-2">
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={onCancel}
+              className="h-8 px-3 text-gray-600"
               disabled={loading}
             >
               Annuler
             </Button>
             <Button
+              variant="default"
               size="sm"
               onClick={handleSave}
+              className="h-8 px-3 flex items-center gap-1"
               disabled={loading}
             >
               {loading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Enregistrement...
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <span>Enregistrement...</span>
                 </>
               ) : (
-                'Enregistrer'
+                <span>Enregistrer</span>
               )}
             </Button>
           </div>
@@ -193,19 +197,19 @@ const EditableField = memo(({
         <div className="mt-1 min-h-[1.5rem]" data-field={field}>
           {loading ? (
             <Skeleton className="h-5 w-full" />
-          ) : displayValue ? (
+          ) : localValue ? (
             type === 'url' ? (
               <a
-                href={displayValue}
+                href={localValue}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center text-blue-600 hover:text-blue-800 break-all group"
               >
-                <span className="truncate mr-1 field-value">{getTruncatedUrl(displayValue)}</span>
+                <span className="truncate mr-1 field-value">{getTruncatedUrl(localValue)}</span>
                 <ExternalLink className="h-3 w-3 opacity-70 group-hover:opacity-100 flex-shrink-0" />
               </a>
             ) : (
-              <span className="text-gray-900 field-value">{getFormattedDisplayValue()}</span>
+              <span className="text-gray-900 field-value">{getFormattedDisplayValue(localValue, type)}</span>
             )
           ) : (
             <span className="text-gray-500 field-value">Non renseigné</span>
@@ -215,8 +219,13 @@ const EditableField = memo(({
     </div>
   );
 }, (prevProps, nextProps) => {
-  // Custom comparison function for memo
-  // N'inclure que les propriétés essentielles pour éviter des re-rendus inutiles
+  // Prevent unnecessary re-renders during editing for LinkedIn URL
+  if (prevProps.field === 'linkedinUrl' && prevProps.isEditing && nextProps.isEditing) {
+    // The only prop we want to update during LinkedIn URL editing is the editedValue
+    return prevProps.editedValue === nextProps.editedValue;
+  }
+  
+  // For other fields or when not editing, use normal comparison
   return (
     prevProps.value === nextProps.value &&
     prevProps.isEditing === nextProps.isEditing &&
@@ -224,6 +233,24 @@ const EditableField = memo(({
     prevProps.loading === nextProps.loading
   );
 });
+
+// Helper functions (moved outside component to avoid recreating on each render)
+const getFormattedDisplayValue = (value, type) => {
+  if (type === 'phone' && value) {
+    return formatFrenchPhoneNumber(value);
+  }
+  return value;
+};
+
+// Tronquer une URL longue pour l'affichage
+const getTruncatedUrl = (url) => {
+  if (!url) return '';
+  
+  if (url.length > 40) {
+    return url.substring(0, 37) + '...';
+  }
+  return url;
+};
 
 EditableField.displayName = 'EditableField';
 

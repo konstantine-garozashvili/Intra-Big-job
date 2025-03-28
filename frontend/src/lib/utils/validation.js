@@ -175,12 +175,15 @@ export const isValidBirthDate = (date) => {
  * @returns {boolean} - True si l'URL ressemble à une URL LinkedIn
  */
 export const looksLikeLinkedInUrl = (url) => {
-  if (!url) return true; // Empty is OK during typing
+  if (!url) return true; // Empty is OK
   
-  // Check for common LinkedIn URL patterns
-  return url.includes('linkedin.com') || 
-         url.includes('linkedin.com/in/') || 
-         url.includes('linkedin.com/profile/');
+  // Always allow typing for short URLs 
+  if (url.length < 20) return true;
+  
+  // Lenient check for any LinkedIn-like URL
+  return url.toLowerCase().includes('linkedin') || 
+         url.toLowerCase().includes('lnkd') || 
+         url.includes('in/');
 };
 
 /**
@@ -189,37 +192,39 @@ export const looksLikeLinkedInUrl = (url) => {
  * @returns {boolean} - True si l'URL est valide et commence par https://www.linkedin.com/in/
  */
 export const isValidLinkedInUrl = (url) => {
-  if (!url) return false;
+  // Allow empty URLs
+  if (!url) return true;
   
+  // Try to parse the URL
+  let validUrl = url.trim();
+  
+  // Add https:// if missing
+  if (!validUrl.startsWith('http://') && !validUrl.startsWith('https://')) {
+    validUrl = 'https://' + validUrl;
+  }
+  
+  // Convert linkedin.com to www.linkedin.com for consistency
+  if (validUrl.startsWith('https://linkedin.com/')) {
+    validUrl = validUrl.replace('https://linkedin.com/', 'https://www.linkedin.com/');
+  }
+  
+  // Try to parse the URL
   try {
-    // Make URL validation more flexible
-    let validUrl = url.trim();
-    
-    // Handle URLs without protocol
-    if (!validUrl.startsWith('http://') && !validUrl.startsWith('https://')) {
-      validUrl = 'https://' + validUrl;
-    }
-    
-    // Handle URLs without www
-    if (validUrl.startsWith('https://linkedin.com/')) {
-      validUrl = validUrl.replace('https://linkedin.com/', 'https://www.linkedin.com/');
-    }
-    
     const urlObj = new URL(validUrl);
-
-    // Check hostname variations
-    const isLinkedInDomain = urlObj.hostname === 'www.linkedin.com' || 
-                            urlObj.hostname === 'linkedin.com' ||
-                            urlObj.hostname === 'fr.linkedin.com' ||
-                            urlObj.hostname === 'www.fr.linkedin.com';
     
-    // Check path variations
-    const isProfilePath = urlObj.pathname.startsWith('/in/') || 
-                         urlObj.pathname.startsWith('/profile/');
+    // Check if the domain is a LinkedIn domain
+    const isLinkedInDomain = urlObj.hostname === 'www.linkedin.com' ||
+                           urlObj.hostname === 'linkedin.com' ||
+                           urlObj.hostname === 'fr.linkedin.com' ||
+                           urlObj.hostname === 'www.fr.linkedin.com';
     
+    // Check if the path contains '/in/' for a profile URL
+    const isProfilePath = urlObj.pathname.includes('/in/');
+    
+    // Must be both a LinkedIn domain and a profile path
     return isLinkedInDomain && isProfilePath;
   } catch (e) {
-    // For user input, we want to be lenient
+    // URL is not valid
     // Just check if it at least contains linkedin.com
     return looksLikeLinkedInUrl(url);
   }
