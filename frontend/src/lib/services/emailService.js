@@ -13,7 +13,7 @@ class EmailService {
         
         // Log uniquement en développement
         if (import.meta.env.DEV) {
-            console.log('EmailService initialisé');
+            console.log('EmailService initialisé avec serviceId:', this.serviceId);
         }
     }
 
@@ -31,48 +31,36 @@ class EmailService {
         const templateParams = {
             to_name: data.email.split('@')[0], // Nom d'utilisateur extrait de l'email
             reset_url: `${window.location.origin}/reset-password/${data.token}`, // Lien de réinitialisation
-            to_email: data.email, // Ajout du champ to_email pour le destinataire
+            to_email: data.email, // Champ pour le destinataire (IMPORTANT: doit correspondre au paramètre utilisé dans le template EmailJS)
+            recipient: data.email, // Ajout d'un champ alternatif au cas où le template utilise un nom différent
+            user_email: data.email, // Autre alternative
+            email: data.email, // Maintenu pour compatibilité
             expires_in: "30", // Durée de validité en minutes
-            email: data.email // Email complet (pour compatibilité)
         };
         
         if (import.meta.env.DEV) {
             console.log('Envoi d\'email de réinitialisation à:', data.email);
+            console.log('Utilisation du service:', this.serviceId);
+            console.log('Utilisation du template:', templateId);
+            console.log('Paramètres du template:', templateParams);
         }
         
         try {
-            // Essai avec les valeurs hardcodées
             const response = await send(
-                'service_q5cwwom',
-                'template_evcziac',
+                this.serviceId,
+                templateId,
                 templateParams,
-                'cTAnGuHvCEX3qZi8d'
+                this.publicKey
             );
             
             if (import.meta.env.DEV) {
                 console.log('Email de réinitialisation envoyé avec succès');
+                console.log('Réponse EmailJS:', response);
             }
             return response;
         } catch (error) {
-            console.error('Erreur lors de l\'envoi de l\'email de réinitialisation:', error.message);
-            
-            // Essai avec les variables d'environnement
-            try {
-                const response = await send(
-                    this.serviceId,
-                    templateId,
-                    templateParams,
-                    this.publicKey
-                );
-                
-                if (import.meta.env.DEV) {
-                    console.log('Email de réinitialisation envoyé avec succès (variables d\'environnement)');
-                }
-                return response;
-            } catch (envError) {
-                console.error('Erreur lors de l\'envoi de l\'email de réinitialisation:', envError.message);
-                throw envError;
-            }
+            console.error('Erreur lors de l\'envoi de l\'email de réinitialisation:', error);
+            throw error;
         }
     }
 
@@ -90,10 +78,12 @@ class EmailService {
      */
     async sendWelcomeEmail(data) {
         // Utiliser le template ID spécifique pour l'email de bienvenue
-        const templateId = import.meta.env.VITE_EMAILJS_WELCOME_TEMPLATE_ID || 'template_xece4rf';
+        const templateId = import.meta.env.VITE_EMAILJS_WELCOME_TEMPLATE_ID;
         
         if (import.meta.env.DEV) {
             console.log('Envoi d\'email de bienvenue à:', data.email);
+            console.log('Utilisation du service:', this.serviceId);
+            console.log('Utilisation du template:', templateId);
         }
         
         // Formatage de la date de naissance si elle existe
@@ -132,12 +122,11 @@ class EmailService {
         };
         
         try {
-            // Essai avec les valeurs hardcodées
             const response = await send(
-                'service_q5cwwom',
+                this.serviceId,
                 templateId,
                 templateParams,
-                'cTAnGuHvCEX3qZi8d'
+                this.publicKey
             );
             
             if (import.meta.env.DEV) {
@@ -145,25 +134,8 @@ class EmailService {
             }
             return response;
         } catch (error) {
-            console.error('Erreur lors de l\'envoi de l\'email de bienvenue:', error.message);
-            
-            // Essai avec les variables d'environnement
-            try {
-                const response = await send(
-                    this.serviceId,
-                    templateId,
-                    templateParams,
-                    this.publicKey
-                );
-                
-                if (import.meta.env.DEV) {
-                    console.log('Email de bienvenue envoyé avec succès (variables d\'environnement)');
-                }
-                return response;
-            } catch (envError) {
-                console.error('Erreur lors de l\'envoi de l\'email de bienvenue:', envError.message);
-                throw envError;
-            }
+            console.error('Erreur lors de l\'envoi de l\'email de bienvenue:', error);
+            throw error;
         }
     }
 }
