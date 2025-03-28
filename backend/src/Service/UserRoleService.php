@@ -72,6 +72,23 @@ class UserRoleService
             throw new NotFoundHttpException(sprintf('L\'utilisateur avec ID "%d" n\'existe pas.', $userId));
         }
         
+        // Vérifier si l'utilisateur a déjà ce rôle
+        $newRoleCriteria = $this->buildRoleNameCriteria($newRoleName);
+        $existingRole = $this->entityManager->getRepository(Role::class)
+            ->createQueryBuilder('r')
+            ->innerJoin('r.userRoles', 'ur')
+            ->where('ur.user = :user')
+            ->andWhere('(LOWER(r.name) = LOWER(:name1) OR LOWER(r.name) = LOWER(:name2))')
+            ->setParameter('user', $user)
+            ->setParameter('name1', $newRoleCriteria['simple'])
+            ->setParameter('name2', $newRoleCriteria['prefixed'])
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        if ($existingRole) {
+            throw new \InvalidArgumentException('L\'utilisateur possède déjà ce rôle.');
+        }
+        
         // Rechercher l'ancien rôle avec différentes variations du nom
         $oldRoleCriteria = $this->buildRoleNameCriteria($oldRoleName);
         $oldRole = $this->entityManager->getRepository(Role::class)

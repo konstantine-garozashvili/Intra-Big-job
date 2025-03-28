@@ -25,7 +25,25 @@ export const ProfileLayoutProvider = ({ children }) => {
   // Use React Query to fetch user data and control sidebar loading state
   const { data: userData, isLoading: isUserDataLoading, isSuccess } = useQuery({
     queryKey: ['currentUser'],
-    queryFn: () => authService.getCurrentUser(),
+    queryFn: () => {
+      // Check if we have recent cached data first to avoid unnecessary API calls
+      const cachedData = userDataManager.getCachedUserData();
+      const now = Date.now();
+      const cacheAge = cachedData && userDataManager.cache && userDataManager.cache.timestamp ? 
+        now - userDataManager.cache.timestamp : Infinity;
+        
+      // If we have fresh data (less than 30s old), use it directly without triggering more calls
+      if (cachedData && cacheAge < 30000) {
+        console.log("ProfileLayoutContext: Using cached user data");
+        return Promise.resolve(cachedData);
+      }
+      
+      // Otherwise, get user data with special flag to prevent circular updates
+      return authService.getCurrentUser(false, { 
+        requestSource: 'profileLayout',
+        preventRecursion: true
+      });
+    },
     staleTime: 5 * 60 * 1000,
     cacheTime: 30 * 60 * 1000,
     enabled: authService.isLoggedIn(),
@@ -139,4 +157,4 @@ export const useProfileLayout = () => {
   return context;
 };
 
-export default ProfileLayoutContext; 
+export default ProfileLayoutContext;

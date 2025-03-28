@@ -11,9 +11,48 @@ import { useQuery } from '@tanstack/react-query';
  * Optimisé pour éviter les problèmes d'affichage intermittent
  */
 export const useUserData = () => {
+  // Use a unique session ID to prevent unnecessary refetches
+  const sessionId = getSessionId();
+  
   return useQuery({
-    queryKey: ['user'],
+    queryKey: ['dashboard-user', sessionId],
     queryFn: async () => {
+      // First check if we have cached data
+      const cachedData = localStorage.getItem('user');
+      if (cachedData) {
+        try {
+          const parsedData = JSON.parse(cachedData);
+          // Only use cache if it's less than 5 minutes old
+          const cacheTime = parsedData._extractedAt || 0;
+          const cacheAge = Date.now() - cacheTime;
+          if (cacheAge < 5 * 60 * 1000) { // 5 minutes
+            console.log("useUserData - Using cached data (less than 5min old)");
+            return parsedData;
+          }
+        } catch (e) {
+          // Error parsing cache, continue to fetch
+        }
+      }
+      
+      // Check if we should throttle requests
+      const lastFetchTime = sessionStorage.getItem('last_user_data_fetch');
+      if (lastFetchTime) {
+        const timeSinceLastFetch = Date.now() - parseInt(lastFetchTime, 10);
+        if (timeSinceLastFetch < 2000) { // 2 seconds throttle
+          console.log("useUserData - Throttling request, using cached data");
+          if (cachedData) {
+            try {
+              return JSON.parse(cachedData);
+            } catch (e) {
+              // Error parsing cache
+            }
+          }
+        }
+      }
+      
+      // Update last fetch time
+      sessionStorage.setItem('last_user_data_fetch', Date.now().toString());
+      
       console.log("useUserData - Starting user data fetch");
       try {
         // Récupérer les données complètes de l'utilisateur
@@ -45,6 +84,7 @@ export const useUserData = () => {
     cacheTime: 60 * 60 * 1000, // 1 heure
     refetchOnWindowFocus: false,
     refetchOnMount: true,
+    refetchInterval: false, // Disable automatic refetching
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
     onSuccess: (data) => {
