@@ -99,7 +99,14 @@ export const ProfessionalInfoSection = ({
     console.log('ProfessionalInfoSection - studentProfile?.portfolioUrl:', studentProfile?.portfolioUrl);
     console.log('ProfessionalInfoSection - localPortfolioUrl:', localPortfolioUrl);
     console.log('ProfessionalInfoSection - editedData.personal.portfolioUrl:', editedData.personal.portfolioUrl);
-  }, [studentProfile?.portfolioUrl, localPortfolioUrl, editedData.personal.portfolioUrl]);
+    
+    // Debug LinkedIn URL
+    console.log('DEBUG LINKEDIN URL - Current value:', {
+      'userData.linkedinUrl': userData.linkedinUrl,
+      'editedData.personal.linkedinUrl': editedData.personal.linkedinUrl,
+      'From DOM': document.querySelector('[data-field="linkedinUrl"] .field-value')?.textContent
+    });
+  }, [studentProfile?.portfolioUrl, localPortfolioUrl, editedData.personal.portfolioUrl, userData.linkedinUrl]);
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6">
@@ -119,15 +126,15 @@ export const ProfessionalInfoSection = ({
         field="linkedinUrl"
         label="LinkedIn"
         icon={<Linkedin className="h-4 w-4" />}
-        value={userData.linkedinUrl}
-        editedValue={editedData.personal.linkedinUrl}
+        value={userData?.linkedinUrl || ''}
+        editedValue={editedData.personal.linkedinUrl || ''}
         type="url"
         isEditing={editMode.linkedinUrl}
         isEditable={true}
         onEdit={() => toggleFieldEdit('linkedinUrl')}
-        onSave={() => onSave('linkedinUrl', editedData.personal.linkedinUrl)}
+        onSave={() => onSave('linkedinUrl', editedData.personal.linkedinUrl || '')}
         onCancel={() => handleCancelField('linkedinUrl')}
-        onChange={(value) => handleInputChange('linkedinUrl', value)}
+        onChange={(value) => handleInputChange('linkedinUrl', value || '')}
       />
 
       {isStudent && (

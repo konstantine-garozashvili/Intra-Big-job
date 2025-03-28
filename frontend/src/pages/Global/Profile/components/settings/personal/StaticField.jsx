@@ -7,13 +7,17 @@ export const StaticField = ({ label, icon, value, fieldType = 'text' }) => {
   const formattedValue = formatValue(value, fieldType);
       
   return (
-    <div className="bg-gray-50 rounded-lg p-4 sm:p-5">
-      <Label className="text-sm font-medium text-gray-700">{label}</Label>
-      <div className="mt-2">
-        <div className="flex items-center text-sm text-gray-900">
-          {icon}
-          <span className="font-medium break-words">{formattedValue}</span>
-        </div>
+    <div className="bg-gray-50 p-3 sm:p-4 md:p-5 rounded-lg">
+      <span className="text-xs sm:text-sm font-medium text-gray-700 flex items-center gap-2">
+        {icon}
+        {label}
+      </span>
+      <div className="mt-1 min-h-[1.5rem]">
+        {value ? (
+          <span className="text-gray-900 field-value">{formattedValue}</span>
+        ) : (
+          <span className="text-gray-500 field-value">Non renseigné</span>
+        )}
       </div>
     </div>
   );

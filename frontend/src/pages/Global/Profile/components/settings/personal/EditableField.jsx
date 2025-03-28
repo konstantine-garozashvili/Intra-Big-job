@@ -32,6 +32,15 @@ const EditableField = memo(({
   // Update local value when the actual value changes (only if not in edit mode)
   useEffect(() => {
     if (!isEditing) {
+      // Log debug info for LinkedIn URL
+      if (field === 'linkedinUrl') {
+        console.log(`EditableField [${field}] - Value updates:`, {
+          previous: localValue,
+          new: value,
+          editedValue
+        });
+      }
+      
       setLocalValue(value);
       setError(null);
       
@@ -40,10 +49,23 @@ const EditableField = memo(({
         onChange(value);
       }
     }
-  }, [value, isEditing, onChange, type]);
+  }, [value, isEditing, onChange, type, field, editedValue]);
   
   // Always display the most up-to-date value (either edited or saved)
   const displayValue = isEditing ? editedValue : (localValue || value);
+  
+  // Debug output for field's value during render
+  React.useEffect(() => {
+    if (field === 'linkedinUrl') {
+      console.log(`EditableField [${field}] - Render values:`, {
+        localValue,
+        value,
+        displayValue,
+        editedValue,
+        isEditing
+      });
+    }
+  }, [field, localValue, value, displayValue, editedValue, isEditing]);
   
   // Format the display value based on the field type
   const getFormattedDisplayValue = () => {
@@ -168,7 +190,7 @@ const EditableField = memo(({
           </div>
         </div>
       ) : (
-        <div className="mt-1 min-h-[1.5rem]">
+        <div className="mt-1 min-h-[1.5rem]" data-field={field}>
           {loading ? (
             <Skeleton className="h-5 w-full" />
           ) : displayValue ? (
@@ -179,14 +201,14 @@ const EditableField = memo(({
                 rel="noopener noreferrer"
                 className="flex items-center text-blue-600 hover:text-blue-800 break-all group"
               >
-                <span className="truncate mr-1">{getTruncatedUrl(displayValue)}</span>
+                <span className="truncate mr-1 field-value">{getTruncatedUrl(displayValue)}</span>
                 <ExternalLink className="h-3 w-3 opacity-70 group-hover:opacity-100 flex-shrink-0" />
               </a>
             ) : (
-              <span className="text-gray-900">{getFormattedDisplayValue()}</span>
+              <span className="text-gray-900 field-value">{getFormattedDisplayValue()}</span>
             )
           ) : (
-            <span className="text-gray-500">Non renseigné</span>
+            <span className="text-gray-500 field-value">Non renseigné</span>
           )}
         </div>
       )}

@@ -119,6 +119,12 @@ const UserProfileSettings = () => {
         birthDate: userData.birthDate ?? '',
       };
       
+      console.log('UserProfileSettings - Setting editedData from userData:', { 
+        linkedinInUserData: userData.linkedinUrl,
+        userDataFields: Object.keys(userData),
+        newPersonalData
+      });
+      
       // Only update if the data has actually changed
       if (JSON.stringify(newPersonalData) !== JSON.stringify(editedData.personal)) {
         setEditedData(prev => ({

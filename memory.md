@@ -364,4 +364,45 @@ Previous work included addressing issues with:
 
 The main focus was on ensuring the profile completion status was correctly updated when documents were uploaded, particularly CV and diploma files and we fixed it. 
 
+## API Authentication Examples
+
+### Login API Request
+
+To authenticate with the API, use the following curl command format:
+
+```bash
+# Login API request example
+curl -X POST http://localhost:8000/api/login_check \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin@bigproject.com","password":"Password123@"}'
+```
+
+The response includes a JWT token that should be included in subsequent requests:
+
+```json
+{
+  "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...[truncated]",
+  "refresh_token": "abc123def456...[truncated]"
+}
+```
+
+### Protected API Request
+
+To access protected endpoints, include the JWT token in the Authorization header:
+
+```bash
+curl -X GET http://localhost:8000/api/profile \
+  -H "Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...[truncated]"
+```
+
+### Token Refresh
+
+When the JWT token expires, use the refresh token to get a new token:
+
+```bash
+curl -X POST http://localhost:8000/api/token/refresh \
+  -H "Content-Type: application/json" \
+  -d '{"refresh_token":"abc123def456...[truncated]"}'
+```
+
 

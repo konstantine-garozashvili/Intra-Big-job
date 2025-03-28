@@ -69,16 +69,32 @@ const MainLayout = () => {
   }, [location.pathname, calculateMinHeight]);
 
   // Create a memoized refresh function that can be called from child components
-  const refreshProfileData = useCallback(async () => {
+  const refreshProfileData = useCallback(async (options = {}) => {
     if (authService.isLoggedIn()) {
       try {
         setLoadingState(LOADING_STATES.LOADING);
-        // Only fetch profile data since we already have basic user data
-        const newProfileData = await profileService.getAllProfileData();
-        // S'assurer que les données sont bien mises à jour avant de les retourner
+        
+        // If direct data is provided, use it instead of making an API call
+        if (options.directData) {
+          console.log("Using direct data instead of API call:", options.directData);
+          setProfileData(options.directData);
+          setLoadingState(LOADING_STATES.COMPLETE);
+          return options.directData;
+        }
+        
+        // Force refresh profile data to get latest information
+        const newProfileData = await profileService.getAllProfileData({ 
+          forceRefresh: options.forceRefresh !== false,  // Force a refresh to bypass any cache
+          bypassThrottle: options.bypassThrottle !== false // Bypass request throttling 
+        });
+        
+        // Log the retrieved data for debugging
+        console.log("Refreshed profile data:", newProfileData);
+        
+        // Ensure data is updated before returning
         setProfileData(newProfileData);
         setLoadingState(LOADING_STATES.COMPLETE);
-        return newProfileData; // Retourner les nouvelles données pour permettre aux composants de les utiliser
+        return newProfileData; // Return the new data for components to use
       } catch (error) {
         console.error('Error refreshing profile data:', error);
         setLoadingState(LOADING_STATES.ERROR);
@@ -87,6 +103,40 @@ const MainLayout = () => {
     }
     return null;
   }, []);
+
+  // Add effect to refresh profile data when location changes to dashboard
+  useEffect(() => {
+    const isGuestDashboard = location.pathname === '/guest/dashboard';
+    
+    // Prevent too frequent refreshes - add a throttle
+    const lastRefreshTime = localStorage.getItem('lastProfileRefreshTime');
+    const now = Date.now();
+    const refreshThreshold = 60000; // 60 seconds - much higher to prevent constant refreshing
+    
+    // Don't refresh if we've refreshed within the threshold
+    if (lastRefreshTime && (now - parseInt(lastRefreshTime)) < refreshThreshold) {
+      console.log("Skipping refresh - too soon since last refresh");
+      return;
+    }
+    
+    // Only refresh when navigating to dashboard and not too frequently
+    if (isGuestDashboard && authService.isLoggedIn()) {
+      console.log("Navigated to dashboard - refreshing profile data");
+      
+      // Use a small timeout to ensure navigation has completed
+      const timeoutId = setTimeout(() => {
+        refreshProfileData({
+          forceRefresh: true,
+          bypassThrottle: true
+        }).then(() => {
+          console.log("Profile data refreshed after dashboard navigation");
+          localStorage.setItem('lastProfileRefreshTime', Date.now().toString());
+        });
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [location.pathname, refreshProfileData]);
 
   // Écouter les événements d'authentification
   useEffect(() => {
@@ -191,11 +241,23 @@ const MainLayout = () => {
   }, [calculateMinHeight]);
 
   // Create a memoized context value to prevent unnecessary re-renders
-  const profileContextValue = useMemo(() => ({
-    profileData,
-    refreshProfileData,
-    isProfileLoading: loadingState === LOADING_STATES.LOADING
-  }), [profileData, refreshProfileData, loadingState]);
+  const profileContextValue = useMemo(() => {
+    // Ensure the refresh function is properly memoized and wrapped for safety
+    const safeRefreshProfileData = async (options = {}) => {
+      try {
+        return await refreshProfileData(options);
+      } catch (error) {
+        console.error("Error in safeRefreshProfileData:", error);
+        return null;
+      }
+    };
+    
+    return {
+      profileData,
+      refreshProfileData: safeRefreshProfileData,
+      isProfileLoading: loadingState === LOADING_STATES.LOADING
+    };
+  }, [profileData, refreshProfileData, loadingState]);
 
   // Déterminer si nous devons afficher un état de chargement
   const isLoading = loadingState === LOADING_STATES.INITIAL || loadingState === LOADING_STATES.LOADING;
@@ -228,7 +290,7 @@ const MainLayout = () => {
         </main>
 
         {showProgress && profileData && hasRole(ROLES.GUEST) && (
-          <ProfileProgress userData={profileData} />
+          <ProfileProgress userData={profileData} refreshData={refreshProfileData} />
         )}
         
         {/* Add ChatButton for authenticated users */}

@@ -105,11 +105,19 @@ class ProfileService {
    * Récupère toutes les données de profil consolidées
    * @param {Object} options - Options de récupération
    * @param {boolean} options.forceRefresh - Force une nouvelle requête
+   * @param {boolean} options.bypassThrottle - Ignorer les règles de limitation de fréquence
    * @returns {Promise<Object>} - Données de profil
    */
   async getAllProfileData(options = {}) {
     try {
-      // Vérifier si une requête est déjà en cours pour cette route
+      // Clear cache if force refresh is requested
+      if (options.forceRefresh) {
+        profileCache.consolidatedData = null;
+        profileCache.consolidatedDataTimestamp = 0;
+        console.log("Profile cache cleared due to force refresh");
+      }
+      
+      // Check if a request is already active for this route and not forcing refresh
       if (userDataManager.requestRegistry.getActiveRequest('/profile/consolidated') && !options.forceRefresh) {
         const activeRequest = userDataManager.requestRegistry.getActiveRequest('/profile/consolidated');
         if (activeRequest) {
@@ -117,7 +125,7 @@ class ProfileService {
         }
       }
       
-      // Vérifier si nous avons des données valides en cache local
+      // Check if we have valid data in local cache
       const now = Date.now();
       if (!options.forceRefresh && 
           profileCache.consolidatedData && 
@@ -125,13 +133,14 @@ class ProfileService {
         return profileCache.consolidatedData;
       }
       
-      // Utiliser le gestionnaire centralisé des données utilisateur avec coordination
+      // Use the centralized user data manager with coordination
       const response = await userDataManager.coordinateRequest(
         '/profile/consolidated',
         SERVICE_ID,
         () => userDataManager.getUserData({
           routeKey: '/profile/consolidated',
           forceRefresh: options.forceRefresh,
+          bypassThrottle: options.bypassThrottle,
           useCache: !options.forceRefresh
         })
       );

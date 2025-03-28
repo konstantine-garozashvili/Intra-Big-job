@@ -367,73 +367,49 @@ const userDataManager = {
   },
 
   /**
-   * Charge les données utilisateur depuis l'API ou le cache
+   * Récupérer les données utilisateur avec contrôle de la mise en cache
    * @param {Object} options - Options pour la requête
-   * @param {boolean} options.forceRefresh - Forcer le rafraîchissement des données
-   * @param {boolean} options.useCache - Utiliser le cache si disponible
-   * @param {string} options.requestId - ID de la requête pour le suivi
-   * @param {boolean} options.preventRecursion - Éviter les notifications qui peuvent causer des appels récursifs
+   * @param {string} options.routeKey - Route API à utiliser
+   * @param {boolean} options.forceRefresh - Force une nouvelle requête ignorant le cache
+   * @param {boolean} options.useCache - Utilise le cache si disponible
+   * @param {boolean} options.bypassThrottle - Ignorer les règles de limitation de fréquence
    * @returns {Promise<Object>} - Données utilisateur
    */
   getUserData(options = {}) {
+    // Valeurs par défaut
     const {
-      forceRefresh = false,
-      useCache = true,
-      componentId = 'default',
-      requestId = null,
-      routeKey = '/api/me',
-      preventRecursion = false
-    } = typeof options === 'object' ? options : { forceRefresh: !!options };
+      routeKey = '/api/me',      // Route API à utiliser
+      componentId = 'global',    // Identifiant du composant demandeur
+      forceRefresh = false,      // Force une nouvelle requête
+      useCache = true,           // Utilise le cache si disponible
+      bypassThrottle = false     // Ignorer les règles de limitation de fréquence
+    } = options;
     
-    // Static counter to track recursion depth for each request chain
-    if (!window._userDataRequestDepth) {
-      window._userDataRequestDepth = 0;
-    }
+    // Log the request
+    this._log(`getUserData request for route ${routeKey}. Options: forceRefresh=${forceRefresh}, useCache=${useCache}, bypassThrottle=${bypassThrottle}`);
     
-    // If we're already at recursion depth > 2, use cache to break the cycle
-    if (window._userDataRequestDepth > 2) {
-      console.warn("Breaking potential recursive getUserData call chain");
-      const cachedData = this.getCachedUserData();
+    // Si le cache est autorisé et non forcé à rafraîchir
+    if (useCache && !forceRefresh) {
+      // Essayer d'abord d'utiliser le cache
+      const cachedData = this.cache.get(routeKey);
       if (cachedData) {
+        this._debugCounters.cacheHits++;
         return Promise.resolve(cachedData);
       }
     }
     
-    // Increment the recursion depth counter
-    window._userDataRequestDepth++;
-    
-    // Use a finally block to ensure we decrement the counter
-    const cleanup = () => {
-      window._userDataRequestDepth--;
-    };
-    
-    try {
-      // Si forceRefresh est true, ignorer le cache et forcer un appel API
-      if (forceRefresh) {
-        // Sinon, charger les données depuis l'API
-        return this._loadUserData(componentId, { preventRecursion }).finally(cleanup);
-      }
-      
-      // Si useCache est true, vérifier si le cache est disponible
-      if (useCache) {
-        const cachedData = userDataCache;
-        const now = Date.now();
-        
-        // Si le cache est frais (moins de 30 secondes), l'utiliser
-        if (cachedData && cachedData.data && cachedData.timestamp && now - cachedData.timestamp < 30000) {
-          this._debugCounters.cacheHits++;
-          this._log(`getUserData: Using fresh cache (age: ${now - cachedData.timestamp}ms)`);
-          cleanup();
-          return Promise.resolve(cachedData.data);
-        }
-      }
-        
-      // Sinon, charger les données depuis l'API
-      return this._loadUserData(componentId, { preventRecursion }).finally(cleanup);
-    } catch (error) {
-      cleanup();
-      return Promise.reject(error);
+    // Check if we should throttle this request (unless bypass is requested)
+    if (!bypassThrottle && requestRegistry.shouldThrottleRequest(routeKey)) {
+      this._log(`Request throttled for route ${routeKey}`, 'warn');
+      return this.getCachedUserData() || Promise.resolve(null);
     }
+    
+    return this._loadUserData(componentId, {
+      routeKey,
+      forceRefresh,
+      useCache,
+      bypassThrottle
+    });
   },
 
   /**
