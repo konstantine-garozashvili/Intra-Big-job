@@ -62,10 +62,9 @@ class ResetPasswordController extends AbstractController
             // Traiter la demande via le service
             $result = $this->resetPasswordService->requestReset($data['email']);
             
-            // Pour le débogage, générer un token de test si aucun n'est retourné
+            // Générer un token de test pour le développement
             if (!isset($result['token']) || !$result['token']) {
                 $this->logger->info('Aucun token généré, création d\'un token de test');
-                // Générer un token de test pour le développement
                 $result['token'] = bin2hex(random_bytes(32));
             }
             
@@ -117,27 +116,6 @@ class ResetPasswordController extends AbstractController
     {
         try {
             $this->logger->info('Vérification du token: ' . substr($token, 0, 8) . '...');
-            
-            // Vérifier si c'est un token de test (en développement uniquement)
-            if (str_starts_with($token, 'test_token_') || 
-                str_starts_with($token, 'fallback_token_') || 
-                str_starts_with($token, 'client_token_') || 
-                str_starts_with($token, 'emergency_token_')) {
-                
-                $this->logger->info('Token de test détecté: ' . substr($token, 0, 12) . '...');
-                
-                // En environnement de développement, accepter les tokens de test
-                if ($_ENV['APP_ENV'] === 'dev') {
-                    $this->logger->info('Token de test accepté en environnement de développement');
-                    return new JsonResponse([
-                        'success' => true,
-                        'message' => 'Token de test valide',
-                        'data' => [
-                            'email' => 'test@example.com'
-                        ]
-                    ]);
-                }
-            }
             
             // Vérifier le token dans la base de données
             $user = $this->resetPasswordService->validateToken($token);
@@ -195,24 +173,6 @@ class ResetPasswordController extends AbstractController
                     'success' => false,
                     'message' => 'Le mot de passe doit comporter au moins 8 caractères'
                 ], 400);
-            }
-            
-            // Vérifier si c'est un token de test (en développement uniquement)
-            if (str_starts_with($token, 'test_token_') || 
-                str_starts_with($token, 'fallback_token_') || 
-                str_starts_with($token, 'client_token_') || 
-                str_starts_with($token, 'emergency_token_')) {
-                
-                $this->logger->info('Token de test détecté pour réinitialisation: ' . substr($token, 0, 12) . '...');
-                
-                // En environnement de développement, accepter les tokens de test
-                if ($_ENV['APP_ENV'] === 'dev') {
-                    $this->logger->info('Réinitialisation avec token de test acceptée en environnement de développement');
-                    return new JsonResponse([
-                        'success' => true,
-                        'message' => 'Votre mot de passe a été réinitialisé avec succès (mode test)'
-                    ]);
-                }
             }
             
             // Réinitialiser le mot de passe
