@@ -1,6 +1,5 @@
 <?php
 
-
 namespace App\Entity;
 use App\Domains\Student\Entity\StudentProfile;
 use App\Repository\UserRepository;
@@ -78,8 +77,9 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     #[ORM\ManyToMany(targetEntity: Formation::class, mappedBy: 'students')]
     private Collection $formations;
 
-    #[ORM\OneToOne(mappedBy: 'user', targetEntity: \App\Domains\Student\Entity\StudentProfile::class, cascade: ['persist', 'remove'])]
-    private ?\App\Domains\Student\Entity\StudentProfile $studentProfile = null;
+    #[ORM\OneToOne(mappedBy: 'user', targetEntity: StudentProfile::class, cascade: ['persist', 'remove'])]
+    #[Groups(['user:read'])]
+    private ?StudentProfile $studentProfile = null;
 
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $profilePicturePath = null;
@@ -634,25 +634,14 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
         return $this;
     }
 
-    public function getStudentProfile(): ?\App\Domains\Student\Entity\StudentProfile
+    public function getStudentProfile(): ?StudentProfile
     {
         return $this->studentProfile;
     }
 
-    public function setStudentProfile(?\App\Domains\Student\Entity\StudentProfile $studentProfile): self
+    public function setStudentProfile(?StudentProfile $studentProfile): self
     {
-        // unset the owning side of the relation if necessary
-        if ($studentProfile === null && $this->studentProfile !== null) {
-            $this->studentProfile->setUser(null);
-        }
-
-        // set the owning side of the relation if necessary
-        if ($studentProfile !== null && $studentProfile->getUser() !== $this) {
-            $studentProfile->setUser($this);
-        }
-
         $this->studentProfile = $studentProfile;
-
         return $this;
     }
 
