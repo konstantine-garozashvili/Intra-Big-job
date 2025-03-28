@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { useQueryClient } from '@tanstack/react-query';
 import { profileService } from '../services/profileService';
+import apiService from '@/lib/services/apiService';
 import ProfilePicture from './settings/ProfilePicture';
 import { isValidEmail, isValidPhone, isValidLinkedInUrl, isValidName, isValidUrl } from '@/lib/utils/validation';
 import { Label } from '@/components/ui/label';
@@ -49,6 +50,9 @@ const UserProfileSettings = () => {
     address: {},
     academic: {},
   });
+
+  // Create ref at the top level of component
+  const hasCheckedRef = React.useRef(false);
 
   // Utiliser notre hook centralisé pour récupérer les données utilisateur
   const { 
@@ -116,20 +120,27 @@ const UserProfileSettings = () => {
         'All userData keys': Object.keys(userData)
       });
       
+      // Enhanced LinkedIn URL detection - check multiple possible paths
+      const linkedinUrl = userData.linkedinUrl || 
+                        userData.user?.linkedinUrl || 
+                        userData.profile?.linkedinUrl || 
+                        userData.data?.linkedinUrl || 
+                        '';
+      
       // Use a deep comparison to avoid unnecessary updates
       const newPersonalData = {
         firstName: userData.firstName ?? '',
         lastName: userData.lastName ?? '',
         email: userData.email ?? '',
         phoneNumber: userData.phoneNumber ?? '',
-        linkedinUrl: userData.linkedinUrl ?? '',
+        linkedinUrl: linkedinUrl,
         portfolioUrl: userData.studentProfile?.portfolioUrl ?? '',
         nationality: userData.nationality ?? '',
         birthDate: userData.birthDate ?? '',
       };
       
       console.log('UserProfileSettings - Setting editedData from userData:', { 
-        linkedinInUserData: userData.linkedinUrl,
+        linkedinInUserData: linkedinUrl,
         userDataFields: Object.keys(userData),
         newPersonalData
       });
@@ -144,7 +155,103 @@ const UserProfileSettings = () => {
         }));
       }
     }
-  }, [userData]); // Use userData directly to detect all changes
+  }, [userData, editedData.personal]);
+
+  // Add a utility function to extract LinkedIn URL from any data structure
+  const extractLinkedInUrl = (data) => {
+    if (!data) return '';
+    
+    // Try direct property
+    if (typeof data.linkedinUrl === 'string') return data.linkedinUrl;
+    
+    // Try nested properties
+    if (data.user?.linkedinUrl) return data.user.linkedinUrl;
+    if (data.profile?.linkedinUrl) return data.profile.linkedinUrl;
+    if (data.data?.linkedinUrl) return data.data.linkedinUrl;
+    
+    // Try case variations
+    if (data.LinkedinUrl) return data.LinkedinUrl;
+    if (data.linkedInUrl) return data.linkedInUrl;
+    if (data.linkedin_url) return data.linkedin_url;
+    
+    // Try to find it in any property
+    for (const key in data) {
+      if (
+        typeof data[key] === 'string' && 
+        (data[key].includes('linkedin.com/') || data[key].includes('linkedin.fr/'))
+      ) {
+        return data[key];
+      }
+      
+      // Check one level deep
+      if (typeof data[key] === 'object' && data[key] !== null) {
+        for (const subKey in data[key]) {
+          if (
+            typeof data[key][subKey] === 'string' && 
+            (data[key][subKey].includes('linkedin.com/') || data[key][subKey].includes('linkedin.fr/'))
+          ) {
+            return data[key][subKey];
+          }
+        }
+      }
+    }
+    
+    return '';
+  };
+
+  // Add direct API check for latest profile data
+  useEffect(() => {
+    // Skip if we've already checked once this component lifecycle
+    if (hasCheckedRef.current) {
+      return;
+    }
+    
+    // Check if we need to fetch fresh data directly
+    const fetchDirectProfileData = async () => {
+      try {
+        console.log("UserProfileSettings - Performing direct API check for LinkedIn URL");
+        const response = await apiService.get('/profile');
+        
+        if (response && response.data) {
+          console.log("UserProfileSettings - Direct profile data:", response.data);
+          
+          // Use our enhanced extraction function
+          const directLinkedInUrl = extractLinkedInUrl(response.data);
+          
+          console.log("UserProfileSettings - Direct LinkedIn check result:", {
+            directLinkedInUrl,
+            currentLinkedInUrl: editedData.personal.linkedinUrl
+          });
+          
+          // Only update if we actually have a LinkedIn URL to avoid unnecessary renders
+          if (directLinkedInUrl) {
+            setEditedData(prev => ({
+              ...prev,
+              personal: {
+                ...prev.personal,
+                linkedinUrl: directLinkedInUrl
+              }
+            }));
+          }
+          
+          // Mark that we've checked
+          hasCheckedRef.current = true;
+        }
+      } catch (error) {
+        console.error("Error checking profile directly:", error);
+        // Make sure we don't try again even if there was an error
+        hasCheckedRef.current = true;
+      }
+    };
+    
+    // Slight delay to avoid race conditions with initial data loading
+    const timeoutId = setTimeout(() => {
+      fetchDirectProfileData();
+    }, 300);
+    
+    // Cleanup timeout to prevent memory leaks
+    return () => clearTimeout(timeoutId);
+  }, []);
 
   // Add event listener for portfolio URL updates from other components
   useEffect(() => {

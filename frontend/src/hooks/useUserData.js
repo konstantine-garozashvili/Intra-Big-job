@@ -83,12 +83,37 @@ export function useUserData(options = {}) {
         // Use a timestamp-based requestId to help with debugging
         const requestId = `useUserData_${componentId}_${now}`;
         
-        const freshData = await userDataManager.getUserData({
-          routeKey,
-          forceRefresh: false, // Change to false to allow using cache
-          useCache: true,      // Allow using cache
-          requestId           // Add requestId for tracing
-        });
+        // Wrap the getUserData call in a try-catch block to handle errors with the cache
+        let freshData = null;
+        try {
+          freshData = await userDataManager.getUserData({
+            routeKey,
+            forceRefresh: false, // Change to false to allow using cache
+            useCache: true,      // Allow using cache
+            requestId           // Add requestId for tracing
+          });
+        } catch (getUserDataError) {
+          console.warn(`Error calling getUserData: ${getUserDataError.message}`);
+          // If the error is likely due to the cache.get method, try a fallback approach
+          if (getUserDataError.message?.includes("is not a function") || 
+              getUserDataError.stack?.includes("cache.get")) {
+            console.log("Attempting direct API call due to cache error");
+            freshData = await userDataManager.coordinateRequest(
+              routeKey,
+              componentId,
+              async () => {
+                return await apiService.get(routeKey, {
+                  noCache: true,
+                  retries: 2,
+                  timeout: 12000
+                });
+              }
+            );
+          } else {
+            // Re-throw unexpected errors
+            throw getUserDataError;
+          }
+        }
         
         if (freshData) {
           queryClient.setQueryData(['unified-user-data', routeKey, sessionId], freshData);
@@ -105,7 +130,7 @@ export function useUserData(options = {}) {
         setLastFetchTime(now);
       } catch (error) {
         // Error in initial data fetch
-        console.warn("Error fetching user data:", error);
+        console.error("Error fetching user data:", error);
       } finally {
         setIsInitialLoading(false);
       }
@@ -503,8 +528,50 @@ export function useUserData(options = {}) {
       return defaultValue;
     };
     
-    // Extended LinkedIn URL extraction logic
+    // Enhanced LinkedIn URL extraction logic that checks in session/localStorage
     const linkedinUrl = (() => {
+      // Create a timestamp for this specific check
+      const extractionId = Date.now();
+      
+      // Try to get cached data from session/localStorage first
+      let cachedLinkedinUrl = null;
+      try {
+        // Check if we have a recently found LinkedIn URL in sessionStorage
+        const cachedLinkedIn = sessionStorage.getItem('linkedinUrl');
+        if (cachedLinkedIn) {
+          const cachedData = JSON.parse(cachedLinkedIn);
+          // Use cached URL if it's less than 10 minutes old
+          if (cachedData && cachedData.timestamp && (Date.now() - cachedData.timestamp < 10 * 60 * 1000)) {
+            cachedLinkedinUrl = cachedData.url;
+          }
+        }
+      } catch (e) {
+        // Ignore sessionStorage errors
+      }
+      
+      // If we have a cached URL, return it immediately
+      if (cachedLinkedinUrl) {
+        return cachedLinkedinUrl;
+      }
+      
+      // Try to get directly from dashboard data in localStorage
+      try {
+        const dashboardData = localStorage.getItem('dashboardDirectData');
+        if (dashboardData) {
+          const parsedData = JSON.parse(dashboardData);
+          if (parsedData && parsedData.linkedinUrl) {
+            // Cache this URL for future use
+            sessionStorage.setItem('linkedinUrl', JSON.stringify({
+              url: parsedData.linkedinUrl,
+              timestamp: Date.now()
+            }));
+            return parsedData.linkedinUrl;
+          }
+        }
+      } catch (e) {
+        // Ignore localStorage errors
+      }
+      
       // Check all potential sources for the LinkedIn URL
       const potentialSources = [
         userSource.linkedinUrl,
@@ -512,26 +579,47 @@ export function useUserData(options = {}) {
         rawData.user?.linkedinUrl,
         rawData.data?.linkedinUrl,
         rawData.profile?.linkedinUrl,
-        userSource.profile?.linkedinUrl
+        userSource.profile?.linkedinUrl,
+        // Additional paths that might contain the URL
+        localStorage.getItem('linkedinUrl') ? JSON.parse(localStorage.getItem('linkedinUrl')).url : null,
+        rawData.personal?.linkedinUrl,
+        userSource.personal?.linkedinUrl,
+        rawData._directApiData?.linkedinUrl
       ];
       
       // Use the first defined value
       for (const source of potentialSources) {
-        if (source) return source;
+        if (source) {
+          // Cache the found URL in sessionStorage for future use
+          try {
+            sessionStorage.setItem('linkedinUrl', JSON.stringify({
+              url: source,
+              timestamp: Date.now()
+            }));
+          } catch (e) {
+            // Ignore sessionStorage errors
+          }
+          return source;
+        }
       }
       return "";
     })();
     
-    // Log all potential linkedinUrl sources for debugging
-    console.log('useUserData - LinkedIn URL extraction:', {
-      'userSource.linkedinUrl': userSource.linkedinUrl,
-      'rawData.linkedinUrl': rawData.linkedinUrl,
-      'rawData.user?.linkedinUrl': rawData.user?.linkedinUrl,
-      'rawData.data?.linkedinUrl': rawData.data?.linkedinUrl,
-      'rawData.profile?.linkedinUrl': rawData.profile?.linkedinUrl,
-      'userSource.profile?.linkedinUrl': userSource.profile?.linkedinUrl,
-      'finalLinkedinUrl': linkedinUrl
-    });
+    // Controlled logging of LinkedIn URL extraction - only log every 30 seconds at most
+    const lastLinkedinLogTime = parseInt(sessionStorage.getItem('lastLinkedinLogTime') || '0');
+    if (Date.now() - lastLinkedinLogTime > 30000) {
+      console.log('useUserData - LinkedIn URL extraction:', {
+        'userSource.linkedinUrl': userSource.linkedinUrl,
+        'rawData.linkedinUrl': rawData.linkedinUrl,
+        'rawData.user?.linkedinUrl': rawData.user?.linkedinUrl,
+        'rawData.data?.linkedinUrl': rawData.data?.linkedinUrl,
+        'rawData.profile?.linkedinUrl': rawData.profile?.linkedinUrl,
+        'userSource.profile?.linkedinUrl': userSource.profile?.linkedinUrl,
+        'finalLinkedinUrl': linkedinUrl,
+        'fromCache': !!sessionStorage.getItem('linkedinUrl')
+      });
+      sessionStorage.setItem('lastLinkedinLogTime', Date.now().toString());
+    }
     
     // Extraire et normaliser le profil étudiant 
     let studentProfile = null;

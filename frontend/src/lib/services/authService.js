@@ -62,6 +62,8 @@ export const authService = {
       
       if (response.token) {
         localStorage.setItem('token', response.token);
+        localStorage.setItem('lastLoginTime', Date.now().toString());
+        
         const payload = decodeToken(response.token);
         if (payload?.roles) {
           const enhancedUser = {

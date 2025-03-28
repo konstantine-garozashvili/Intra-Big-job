@@ -37,6 +37,24 @@ const userDataCache = {
   invalidate() {
     this.data = null;
     this.timestamp = 0;
+  },
+  
+  // Méthode pour récupérer des données du cache
+  get(routeKey) {
+    // Pour l'instant, ne retourne que la donnée principale du cache
+    // Ce code pourrait être étendu pour gérer différentes routes
+    if (routeKey === '/api/me' || !routeKey) {
+      return this.data;
+    }
+    
+    // Cas pour les différentes routes d'API
+    if (routeKey.includes('/profile/')) {
+      // Pour les requêtes de profil, on peut retourner les mêmes données
+      return this.data;
+    }
+    
+    // Retourne null pour les routes non reconnues
+    return null;
   }
 };
 
@@ -238,13 +256,32 @@ const requestRegistry = {
   
   // Enregistrer une requête active
   registerActiveRequest(route, promise) {
+    // Ensure we're dealing with a proper Promise
+    if (!promise || typeof promise !== 'object' || typeof promise.finally !== 'function') {
+      console.warn(`Invalid promise for route ${route}, creating a proper Promise wrapper`);
+      // Create a proper Promise wrapper for the value
+      const wrappedPromise = Promise.resolve(promise);
+      this.activeRequests.set(route, wrappedPromise);
+      
+      wrappedPromise.finally(() => {
+        if (this.activeRequests.get(route) === wrappedPromise) {
+          this.activeRequests.delete(route);
+        }
+      });
+      
+      return wrappedPromise;
+    }
+    
+    // Original behavior for valid Promises
     this.activeRequests.set(route, promise);
+    
     // Nettoyer la requête une fois terminée
     promise.finally(() => {
       if (this.activeRequests.get(route) === promise) {
         this.activeRequests.delete(route);
       }
     });
+    
     return promise;
   },
   
@@ -270,14 +307,40 @@ const requestRegistry = {
     // Marquer la route comme étant en cours de traitement
     this.markRouteAsProcessing(route);
     
-    // Créer et enregistrer la nouvelle requête
-    const request = requestFn().finally(() => {
-      // Marquer la route comme n'étant plus en cours de traitement
+    try {
+      // Créer et enregistrer la nouvelle requête
+      let request;
+      
+      try {
+        // Execute the request function
+        const result = requestFn();
+        
+        // Check if the result is a valid Promise
+        if (result && typeof result === 'object' && typeof result.finally === 'function') {
+          request = result;
+        } else {
+          console.warn(`Request function for route ${route} did not return a valid Promise, wrapping result`);
+          request = Promise.resolve(result);
+        }
+      } catch (error) {
+        console.error(`Error executing request function for route ${route}:`, error);
+        request = Promise.reject(error);
+      }
+      
+      // Add cleanup regardless of promise type
+      request.finally(() => {
+        // Marquer la route comme n'étant plus en cours de traitement
+        this.markRouteAsNotProcessing(route);
+      });
+      
+      this.registerActiveRequest(route, request);
+      return request;
+    } catch (error) {
+      // Handle any unexpected errors
+      console.error(`Critical error in coordinateRequest for route ${route}:`, error);
       this.markRouteAsNotProcessing(route);
-    });
-    
-    this.registerActiveRequest(route, request);
-    return request;
+      return Promise.reject(error);
+    }
   }
 };
 
@@ -390,11 +453,25 @@ const userDataManager = {
     
     // Si le cache est autorisé et non forcé à rafraîchir
     if (useCache && !forceRefresh) {
-      // Essayer d'abord d'utiliser le cache
-      const cachedData = this.cache.get(routeKey);
-      if (cachedData) {
-        this._debugCounters.cacheHits++;
-        return Promise.resolve(cachedData);
+      try {
+        // Essayer d'abord d'utiliser le cache - avec une vérification défensive
+        let cachedData = null;
+        
+        // Vérifier si la méthode get existe sur l'objet cache
+        if (this.cache && typeof this.cache.get === 'function') {
+          cachedData = this.cache.get(routeKey);
+        } else {
+          // Fallback: utiliser directement les données du cache
+          cachedData = this.cache?.data || null;
+        }
+        
+        if (cachedData) {
+          this._debugCounters.cacheHits++;
+          return Promise.resolve(cachedData);
+        }
+      } catch (error) {
+        console.warn(`Error retrieving data from cache for ${routeKey}:`, error);
+        // Continuer en cas d'erreur de cache
       }
     }
     
@@ -641,14 +718,35 @@ const userDataManager = {
     
     // Create an ID based on event name and a hash of the data
     const now = Date.now();
-    const dataHash = args[0] ? JSON.stringify(args[0]).substring(0, 50) : 'no-data';
-    const notificationId = `${eventName}_${dataHash}`;
+    let dataHash = 'no-data';
     
-    // Check if we've sent this exact notification recently (within 500ms)
+    try {
+      // For userData events, use a more stable identifier based on user ID
+      if (eventName === USER_DATA_EVENTS.UPDATED || eventName === USER_DATA_EVENTS.LOADED) {
+        const userData = args[0];
+        if (userData && userData.id) {
+          // Use user ID and update timestamp for notification ID to better detect duplicates
+          dataHash = `user-${userData.id}-${userData._timestamp || now}`;
+        } else if (userData) {
+          // Just use first 20 chars of stringified data for non-user objects
+          dataHash = JSON.stringify(userData).substring(0, 20);
+        }
+      } else if (args[0]) {
+        // For other events, use a short prefix of the JSON string
+        dataHash = JSON.stringify(args[0]).substring(0, 30);
+      }
+    } catch (error) {
+      console.warn('Error creating notification hash:', error);
+      dataHash = 'hash-error-' + now;
+    }
+    
+    const notificationId = `${eventName}:${dataHash}`;
+    
+    // Check if we've sent this exact notification recently (within 800ms)
     if (this._recentNotifications[notificationId] && 
-        now - this._recentNotifications[notificationId] < 500) {
+        now - this._recentNotifications[notificationId] < 800) {
       // Skip duplicate notifications that happen too quickly
-      console.log(`Skipping duplicate notification: ${eventName}`);
+      console.log(`Skipping duplicate notification: ${eventName}:${dataHash.substring(0, 20)}`);
       return;
     }
     
@@ -661,6 +759,14 @@ const userDataManager = {
         delete this._recentNotifications[key];
       }
     });
+    
+    // Limit subscribers to process - if there are more than 10 subscribers to an event,
+    // something might be wrong (memory leak)
+    if (this.subscribers[eventName] && this.subscribers[eventName].length > 10) {
+      console.warn(`Unusually high number of subscribers (${this.subscribers[eventName].length}) for event ${eventName}. Possible memory leak.`);
+      // Keep only the 10 most recently added subscribers
+      this.subscribers[eventName] = this.subscribers[eventName].slice(-10);
+    }
     
     // Use setTimeout to break potential immediate recursion
     setTimeout(() => {
@@ -774,20 +880,48 @@ const userDataManager = {
       // Otherwise, make a new request and register it
       this._debugCounters.apiCalls++;
       this._log('Making new API request', 'info', true);
-      const request = requestFn().then(response => {
-        // Store the response in our cache
-        userDataCache.data = response;
-        userDataCache.timestamp = Date.now();
+      
+      // Safely handle the request function
+      let request;
+      try {
+        const result = requestFn();
         
-        // Also update localStorage
-        try {
-          localStorage.setItem('user', JSON.stringify(response));
-        } catch (e) {
-          console.warn('Error storing user data in localStorage:', e);
+        // Ensure result is a proper Promise
+        if (result && typeof result === 'object' && typeof result.then === 'function') {
+          request = result.then(response => {
+            // Store the response in our cache
+            userDataCache.data = response;
+            userDataCache.timestamp = Date.now();
+            
+            // Also update localStorage
+            try {
+              localStorage.setItem('user', JSON.stringify(response));
+            } catch (e) {
+              console.warn('Error storing user data in localStorage:', e);
+            }
+            
+            return response;
+          });
+        } else {
+          console.warn('Request function did not return a Promise for /api/me route, wrapping result');
+          request = Promise.resolve(result).then(response => {
+            if (response) {
+              userDataCache.data = response;
+              userDataCache.timestamp = Date.now();
+              
+              try {
+                localStorage.setItem('user', JSON.stringify(response));
+              } catch (e) {
+                console.warn('Error storing user data in localStorage:', e);
+              }
+            }
+            return response;
+          });
         }
-        
-        return response;
-      });
+      } catch (error) {
+        console.error('Error executing request function for /api/me:', error);
+        request = Promise.reject(error);
+      }
       
       this.requestRegistry.registerActiveRequest(route, request);
       return request;
@@ -807,7 +941,22 @@ const userDataManager = {
       }
       
       // Otherwise, make a new request and register it
-      const request = requestFn();
+      let request;
+      try {
+        const result = requestFn();
+        
+        // Ensure result is a proper Promise
+        if (result && typeof result === 'object' && typeof result.then === 'function') {
+          request = result;
+        } else {
+          console.warn(`Request function did not return a Promise for critical route ${route}, wrapping result`);
+          request = Promise.resolve(result);
+        }
+      } catch (error) {
+        console.error(`Error executing request function for critical route ${route}:`, error);
+        request = Promise.reject(error);
+      }
+      
       this.requestRegistry.registerActiveRequest(route, request);
       return request;
     }

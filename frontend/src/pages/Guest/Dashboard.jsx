@@ -104,11 +104,42 @@ const GuestDashboard = () => {
           _loadTime: Date.now()
         };
         
+        // Check and save LinkedIn URL if it exists in the API response
+        if (profileResult.status === 'fulfilled' && profileResult.value) {
+          const responseData = profileResult.value;
+          // Check for LinkedIn URL in various places in the response
+          const linkedinUrl = responseData.linkedinUrl || 
+                            responseData.data?.linkedinUrl || 
+                            responseData[0]?.linkedinUrl;
+                            
+          if (linkedinUrl) {
+            console.log("GuestDashboard - Found LinkedIn URL in API response:", linkedinUrl);
+            // Store in both completeProfile and sessionStorage
+            completeProfile.linkedinUrl = linkedinUrl;
+            
+            // Store in sessionStorage for sharing with other components
+            try {
+              sessionStorage.setItem('linkedinUrl', JSON.stringify({
+                url: linkedinUrl,
+                timestamp: Date.now()
+              }));
+            } catch (e) {
+              console.warn("Error storing LinkedIn URL in sessionStorage:", e);
+            }
+          }
+        }
+        
         console.log("GuestDashboard - Combined profile data:", completeProfile);
         setDirectlyLoadedData(completeProfile);
         
-        // Save the load time to prevent frequent reloading
-        localStorage.setItem('profileDataLoadTime', Date.now().toString());
+        // Save the profile data and load time to localStorage
+        localStorage.setItem('profileDataLoadTime', now.toString());
+        try {
+          // Store the complete data in localStorage for sharing
+          localStorage.setItem('dashboardDirectData', JSON.stringify(completeProfile));
+        } catch (e) {
+          console.warn("Error storing dashboard data in localStorage:", e);
+        }
         
         // Force refresh context data too if available
         if (refreshProfileData && typeof refreshProfileData === 'function') {

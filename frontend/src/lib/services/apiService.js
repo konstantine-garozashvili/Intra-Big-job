@@ -884,35 +884,90 @@ export const normalizeUserData = (userData) => {
   // Add a timestamp for when normalization occurred
   const timestamp = Date.now();
   
-  // Debug log of the original structure
-  console.log(`[${timestamp}] Normalizing user data structure`, {
-    originalKeys: Object.keys(normalizedData),
-    hasNestedUser: !!normalizedData.user,
-    hasNestedData: !!normalizedData.data,
-    dataSource: normalizedData._source || 'api'
-  });
+  // Calculate a unique identifier for this normalization process to avoid duplicate logs
+  const normalizationId = `norm_${timestamp}_${Math.random().toString(36).substr(2, 5)}`;
   
-  // Handle LinkedIn URL - ensure it's available at the top level
+  // Get the last time we logged normalization info to avoid spamming console
+  const lastLogTime = parseInt(sessionStorage.getItem('lastNormalizationLogTime') || '0');
+  const shouldLog = (timestamp - lastLogTime) > 5000; // Only log every 5 seconds
+  
+  if (shouldLog) {
+    console.log(`[${timestamp}] Normalizing user data structure`, {
+      originalKeys: Object.keys(normalizedData),
+      hasNestedUser: !!normalizedData.user,
+      hasNestedData: !!normalizedData.data,
+      dataSource: normalizedData._source || 'api'
+    });
+    // Update the last log time
+    sessionStorage.setItem('lastNormalizationLogTime', timestamp.toString());
+  }
+  
+  // Try to get LinkedIn URL from sessionStorage first
+  let linkedinUrlFromSession = null;
+  try {
+    const cachedLinkedIn = sessionStorage.getItem('linkedinUrl');
+    if (cachedLinkedIn) {
+      const cachedData = JSON.parse(cachedLinkedIn);
+      // Use cached URL if it's less than 10 minutes old
+      if (cachedData && cachedData.timestamp && (timestamp - cachedData.timestamp < 10 * 60 * 1000)) {
+        linkedinUrlFromSession = cachedData.url;
+      }
+    }
+  } catch (e) {
+    // Ignore sessionStorage errors
+  }
+  
   // Check if linkedinUrl exists at the top level, if not, try to find it elsewhere
   if (!normalizedData.linkedinUrl) {
-    // Check various possible locations for linkedinUrl
-    const potentialSources = [
-      normalizedData.user?.linkedinUrl,
-      normalizedData.data?.linkedinUrl,
-      normalizedData.user?.profile?.linkedinUrl,
-      normalizedData.profile?.linkedinUrl,
-      // Additional paths that might contain LinkedIn URL
-      normalizedData.personal?.linkedinUrl,
-      normalizedData.user?.personal?.linkedinUrl
-    ];
-    
-    // Use the first non-empty value
-    for (const source of potentialSources) {
-      if (source) {
-        normalizedData.linkedinUrl = source;
-        console.log(`[${timestamp}] Found LinkedIn URL in nested data:`, source);
-        break;
+    // First use the one from session if available
+    if (linkedinUrlFromSession) {
+      normalizedData.linkedinUrl = linkedinUrlFromSession;
+      if (shouldLog) {
+        console.log(`[${timestamp}] Using LinkedIn URL from session:`, linkedinUrlFromSession);
       }
+    } else {
+      // Check various possible locations for linkedinUrl
+      const potentialSources = [
+        normalizedData.user?.linkedinUrl,
+        normalizedData.data?.linkedinUrl,
+        normalizedData.user?.profile?.linkedinUrl,
+        normalizedData.profile?.linkedinUrl,
+        // Additional paths that might contain LinkedIn URL
+        normalizedData.personal?.linkedinUrl,
+        normalizedData.user?.personal?.linkedinUrl
+      ];
+      
+      // Use the first non-empty value
+      for (const source of potentialSources) {
+        if (source) {
+          normalizedData.linkedinUrl = source;
+          if (shouldLog) {
+            console.log(`[${timestamp}] Found LinkedIn URL in nested data:`, source);
+          }
+          
+          // Store in sessionStorage for other components to use
+          try {
+            sessionStorage.setItem('linkedinUrl', JSON.stringify({
+              url: source,
+              timestamp
+            }));
+          } catch (e) {
+            // Ignore sessionStorage errors
+          }
+          break;
+        }
+      }
+    }
+  } else if (normalizedData.linkedinUrl && shouldLog) {
+    // Store the existing LinkedIn URL in sessionStorage for other components
+    try {
+      sessionStorage.setItem('linkedinUrl', JSON.stringify({
+        url: normalizedData.linkedinUrl,
+        timestamp
+      }));
+      console.log(`[${timestamp}] Stored existing LinkedIn URL in session:`, normalizedData.linkedinUrl);
+    } catch (e) {
+      // Ignore sessionStorage errors
     }
   }
   
@@ -925,8 +980,10 @@ export const normalizeUserData = (userData) => {
     if (!normalizedData.personal) normalizedData.personal = {};
     normalizedData.personal.linkedinUrl = normalizedData.linkedinUrl;
     
-    console.log(`[${timestamp}] LinkedIn URL normalized and propagated:`, normalizedData.linkedinUrl);
-  } else {
+    if (shouldLog) {
+      console.log(`[${timestamp}] LinkedIn URL normalized and propagated:`, normalizedData.linkedinUrl);
+    }
+  } else if (shouldLog) {
     console.log(`[${timestamp}] No LinkedIn URL found in any data source`);
   }
   
@@ -968,6 +1025,41 @@ export const debugApiCalls = (enabled = true) => {
     console.log('API debugging disabled');
     apiDebugging = false;
   }
+};
+
+// Add a specific debug wrapper for profile requests
+// This doesn't alter functionality but adds better error tracing
+const originalGet = apiService.get;
+
+apiService.get = function(url, options = {}) {
+  // Add special handling for profile routes
+  if (url === '/profile') {
+    console.log(`[API] Making request to ${url} with options:`, options);
+    
+    return originalGet.call(this, url, options)
+      .then(response => {
+        console.log(`[API] Profile request succeeded:`, {
+          status: response?.status,
+          hasData: !!response?.data,
+          dataKeys: response?.data ? Object.keys(response.data) : [],
+          hasLinkedinUrl: response?.data?.linkedinUrl ? true : false,
+          linkedinUrl: response?.data?.linkedinUrl
+        });
+        return response;
+      })
+      .catch(error => {
+        console.error(`[API] Profile request failed:`, {
+          url,
+          status: error?.response?.status,
+          message: error?.message,
+          data: error?.response?.data
+        });
+        throw error;
+      });
+  }
+  
+  // Otherwise use the original implementation
+  return originalGet.call(this, url, options);
 };
 
 export default apiService; 

@@ -25,6 +25,47 @@ const LOADING_STATES = {
   ERROR: 'error'          // Erreur de chargement
 };
 
+// Previous location tracking for profile refresh
+const locationHistory = {
+  previous: null,
+  current: null,
+  isDashboardNavigation: false,
+  lastRefreshTime: 0
+};
+
+// Extract location path without query string
+function getPathOnly(location) {
+  return location ? location.pathname : '';
+}
+
+// Check if this is a navigation to a dashboard
+function isDashboardNavigation(previousPath, currentPath) {
+  return !previousPath && currentPath.includes('/dashboard') || 
+         (previousPath && !previousPath.includes('/dashboard') && currentPath.includes('/dashboard'));
+}
+
+// Function to check if we should refresh based on navigation and timing
+function shouldRefreshOnNavigation(previousPath, currentPath) {
+  const now = Date.now();
+  const timeSinceLastRefresh = now - locationHistory.lastRefreshTime;
+  
+  // Check for navigation to dashboard
+  const toDashboard = isDashboardNavigation(previousPath, currentPath);
+  
+  // Always set this flag for component state
+  locationHistory.isDashboardNavigation = toDashboard;
+  
+  // Only refresh if:
+  // 1. We're navigating to dashboard AND
+  // 2. It's been at least 10 seconds since last refresh 
+  if (toDashboard && timeSinceLastRefresh > 10000) {
+    locationHistory.lastRefreshTime = now;
+    return true;
+  }
+  
+  return false;
+}
+
 const MainLayout = () => {
   const [userData, setUserData] = useState(null);
   const [profileData, setProfileData] = useState(null);
@@ -112,37 +153,59 @@ const MainLayout = () => {
 
   // Add effect to refresh profile data when location changes to dashboard
   useEffect(() => {
-    const isGuestDashboard = location.pathname === '/guest/dashboard';
+    if (!location) return;
     
-    // Prevent too frequent refreshes - add a throttle
-    const lastRefreshTime = localStorage.getItem('lastProfileRefreshTime');
+    const currentPath = getPathOnly(location);
+    const previousPath = locationHistory.current;
+    
+    // Don't do anything if the path hasn't changed
+    if (currentPath === previousPath) return;
+    
+    // Update location history
+    locationHistory.previous = previousPath;
+    locationHistory.current = currentPath;
+    
+    // Log route change for debugging
+    console.log("[App] Route changed to:", currentPath);
+    
+    // Calculate time since last refresh for use in this scope
     const now = Date.now();
-    const refreshThreshold = 60000; // 60 seconds - much higher to prevent constant refreshing
+    const timeSinceLastRefresh = now - locationHistory.lastRefreshTime;
     
-    // Don't refresh if we've refreshed within the threshold
-    if (lastRefreshTime && (now - parseInt(lastRefreshTime)) < refreshThreshold) {
-      console.log("Skipping refresh - too soon since last refresh");
-      return;
-    }
-    
-    // Only refresh when navigating to dashboard and not too frequently
-    if (isGuestDashboard && authService.isLoggedIn()) {
+    // Check if we should refresh profile based on navigation
+    if (shouldRefreshOnNavigation(previousPath, currentPath)) {
       console.log("Navigated to dashboard - refreshing profile data");
       
-      // Use a small timeout to ensure navigation has completed
-      const timeoutId = setTimeout(() => {
-        refreshProfileData({
-          forceRefresh: true,
-          bypassThrottle: true
-        }).then(() => {
-          console.log("Profile data refreshed after dashboard navigation");
-          localStorage.setItem('lastProfileRefreshTime', Date.now().toString());
-        });
-      }, 100);
-      
-      return () => clearTimeout(timeoutId);
+      // When navigating to dashboard, force fresh profile data
+      refreshProfileData({ 
+        forceRefresh: true,
+        bypassThrottle: true
+      }).then(data => {
+        console.log("Profile data refreshed after dashboard navigation");
+        
+        // Check if LinkedIn URL was found and save to session if present
+        if (data && data.linkedinUrl) {
+          try {
+            sessionStorage.setItem('linkedinUrl', JSON.stringify({
+              url: data.linkedinUrl,
+              timestamp: Date.now()
+            }));
+          } catch (e) {
+            // Ignore sessionStorage errors
+          }
+        }
+      });
+    } else if (timeSinceLastRefresh > 120000) { // 2 minutes
+      // For other navigations, refresh in background every 2 minutes
+      console.log("Refreshing profile data in background (time-based)");
+      refreshProfileData({ 
+        background: true,
+        silent: true
+      });
+    } else {
+      console.log("Skipping refresh - too soon since last refresh");
     }
-  }, [location.pathname, refreshProfileData]);
+  }, [location?.pathname, refreshProfileData]);
 
   // Écouter les événements d'authentification
   useEffect(() => {
