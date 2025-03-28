@@ -54,6 +54,8 @@ const CareerSettings = lazy(() => import('./pages/Global/Profile/views/CareerSet
 const ProfileView = lazy(() => import('./pages/Global/Profile/views/ProfileView'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 
+const Mentionslegales = lazy(() => import('./pages/Mentionslegales'))
+
 // Dashboards spécifiques par rôle
 const AdminDashboard = lazy(() => import('./pages/Admin/Dashboard'))
 const StudentDashboard = lazy(() => import('./pages/Student/Dashboard'))
@@ -399,9 +401,11 @@ const AppContent = () => {
                 <Route element={<MainLayout />}>
                   {/* Route racine avec redirection automatique */}
                   <Route path="/" element={<HomePage />} />
+                  <Route path="/mentionlegales" element={<Mentionslegales />} />
                   
                   {/* Routes publiques - Accès interdit aux utilisateurs authentifiés */}
                   <Route element={<PublicRoute />}>
+
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
                     <Route path="/registration-success" element={<RegistrationSuccess />} />
@@ -411,6 +415,7 @@ const AppContent = () => {
                     <Route path="/reset-password" element={<ResetPasswordRequest />} />
                     <Route path="/reset-password/confirmation" element={<ResetPasswordConfirmation />} />
                     <Route path="/reset-password/:token" element={<ResetPassword />} />
+
                   </Route>
                   
                   <Route element={<ProtectedRoute />}>
