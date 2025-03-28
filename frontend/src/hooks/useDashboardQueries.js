@@ -27,7 +27,6 @@ export const useUserData = () => {
           const cacheTime = parsedData._extractedAt || 0;
           const cacheAge = Date.now() - cacheTime;
           if (cacheAge < 5 * 60 * 1000) { // 5 minutes
-            console.log("useUserData - Using cached data (less than 5min old)");
             return parsedData;
           }
         } catch (e) {
@@ -40,7 +39,6 @@ export const useUserData = () => {
       if (lastFetchTime) {
         const timeSinceLastFetch = Date.now() - parseInt(lastFetchTime, 10);
         if (timeSinceLastFetch < 2000) { // 2 seconds throttle
-          console.log("useUserData - Throttling request, using cached data");
           if (cachedData) {
             try {
               return JSON.parse(cachedData);
@@ -54,30 +52,21 @@ export const useUserData = () => {
       // Update last fetch time
       sessionStorage.setItem('last_user_data_fetch', Date.now().toString());
       
-      console.log("useUserData - Starting user data fetch");
       try {
         // Récupérer les données complètes de l'utilisateur
-        console.log("useUserData - Calling authService.getCurrentUser()");
         const userData = await authService.getCurrentUser();
-        console.log("useUserData - Received user data:", userData);
         return userData;
       } catch (error) {
-        console.error("useUserData - Error fetching user data:", error);
-        
         // En cas d'erreur, essayer de récupérer les données minimales du localStorage
         try {
-          console.log("useUserData - Attempting to get minimal data from localStorage");
           const minimalData = authService.getMinimalUserData();
-          console.log("useUserData - Minimal data from localStorage:", minimalData);
           if (minimalData) {
             return minimalData;
           }
         } catch (localError) {
-          console.error("useUserData - Error retrieving minimal data:", localError);
+          // Si toutes les tentatives échouent, propager l'erreur
+          throw error;
         }
-        
-        // Si toutes les tentatives échouent, propager l'erreur
-        throw error;
       }
     },
     // Paramètres optimisés pour la stabilité et la performance
@@ -89,10 +78,8 @@ export const useUserData = () => {
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
     onSuccess: (data) => {
-      console.log("useUserData - Success callback with data:", data);
     },
     onError: (error) => {
-      console.error("useUserData - Error callback:", error);
     }
   });
 };

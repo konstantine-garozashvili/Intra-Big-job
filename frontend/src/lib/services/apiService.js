@@ -295,20 +295,6 @@ const apiService = {
             
             // Use very fresh cache immediately (under 30 seconds old)
             if (cacheAge < 30000) {
-              console.log('Using very fresh localStorage cache for /me');
-              
-              // Schedule background refresh if needed but don't wait for it
-              if (cacheAge > 10000 && !prefetchedRequests.has(requestKey)) {
-                prefetchedRequests.add(requestKey);
-                setTimeout(() => {
-                  this.get(path, { ...options, noCache: true, background: true })
-                    .catch(() => {})
-                    .finally(() => {
-                      prefetchedRequests.delete(requestKey);
-                    });
-                }, 50);
-              }
-              
               return Promise.resolve(userData);
             }
           }
@@ -328,22 +314,6 @@ const apiService = {
         const cached = apiCache.get(cacheKey);
         
         if (cached && cached.expiry > Date.now()) {
-          // For profile requests, we want to refresh in background if cache is getting stale
-          const cacheAge = Date.now() - cached.timestamp;
-          const refreshThreshold = isProfileRequest ? PROFILE_CACHE_TTL * 0.5 : STATIC_CACHE_TTL * 0.7;
-          
-          if (isProfileRequest && cacheAge > refreshThreshold && !prefetchedRequests.has(requestKey)) {
-            // Schedule background refresh without blocking the response
-            prefetchedRequests.add(requestKey);
-            setTimeout(() => {
-              this.get(path, { ...options, noCache: true, background: true })
-                .catch(() => {})
-                .finally(() => {
-                  prefetchedRequests.delete(requestKey);
-                });
-            }, 10);
-          }
-          
           return cached.data;
         }
       }
@@ -395,12 +365,6 @@ const apiService = {
           try {
             const response = await axios.get(url, requestConfig);
             
-            // Log performance for profile requests
-            if (isProfileRequest) {
-              const duration = Date.now() - startTime;
-              console.log(`Profile request completed in ${duration}ms`);
-            }
-            
             // Si success, mettre en cache si le caching n'est pas désactivé
             if (!options.noCache) {
               const cacheKey = generateCacheKey('GET', url, options.params);
@@ -428,8 +392,6 @@ const apiService = {
                   expiry: Date.now() + ttl,
                   size: responseSize // Store size for future reference
                 });
-              } else {
-                console.log(`Response too large for memory cache: ${responseSize} bytes`);
               }
               
               // For profile data, also store in localStorage for faster access
@@ -458,14 +420,12 @@ const apiService = {
                 const cacheKey = generateCacheKey('GET', url, options.params);
                 const cached = apiCache.get(cacheKey);
                 if (cached) {
-                  console.log('Using memory cache for profile after error');
                   return cached.data;
                 }
                 
                 // Try localStorage next
                 const cachedUser = localStorage.getItem('user');
                 if (cachedUser) {
-                  console.log('Using localStorage cache for profile after error');
                   return JSON.parse(cachedUser);
                 }
               } catch (e) {
@@ -590,8 +550,6 @@ const apiService = {
     const formattedRoleName = roleName.startsWith('ROLE_') 
       ? roleName 
       : `ROLE_${roleName.replace('ROLE_', '')}`;
-    
-    console.log(`ApiService: Récupération des utilisateurs avec le rôle ${formattedRoleName}`);
     
     try {
       // Essayons d'abord avec la méthode /api/users-by-role endpoint
@@ -776,16 +734,6 @@ const apiService = {
           
           // Use very fresh cache immediately (under 30 seconds old)
           if (cacheAge < 30000) {
-            console.log('getUserProfile: Using very fresh localStorage cache');
-            
-            // Schedule background refresh if needed but don't wait for it
-            if (cacheAge > 10000) {
-              setTimeout(() => {
-                this.getUserProfile({ noCache: true, background: true })
-                  .catch(() => {});
-              }, 10);
-            }
-            
             return userData;
           }
         }

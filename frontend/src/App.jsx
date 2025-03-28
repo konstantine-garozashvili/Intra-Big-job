@@ -80,13 +80,6 @@ function useIntelligentPreload() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   
-  // Log the current location for debugging
-  useEffect(() => {
-    if (import.meta.env.DEV) {
-      console.log('[App] Current location:', location.pathname);
-    }
-  }, [location]);
-
   // Preload relevant pages based on location
   useEffect(() => {
     // Only preload if we're in a logged-in area
@@ -99,9 +92,6 @@ function useIntelligentPreload() {
             await queryClient.prefetchQuery({
               queryKey: ['session', 'user-profile'],
               queryFn: async () => {
-                if (import.meta.env.DEV) {
-                  console.log('[App] Preloading profile data');
-                }
                 return await apiService.get('/api/me');
               },
               staleTime: 2 * 60 * 1000 // 2 minutes
@@ -148,13 +138,6 @@ function AppInitializer() {
 function PrefetchHandler() {
   const location = useLocation();
   
-  // Log route changes for debugging
-  useEffect(() => {
-    if (import.meta.env.DEV) {
-      console.log('[App] Route changed to:', location.pathname);
-    }
-  }, [location.pathname]);
-
   return null;
 }
 
@@ -206,13 +189,6 @@ function App() {
 function AppContent() {
   const location = useLocation();
   
-  // Log route changes for debugging
-  useEffect(() => {
-    if (import.meta.env.DEV) {
-      console.log('[App] Current route:', location.pathname);
-    }
-  }, [location.pathname]);
-
   return (
     <div className="relative font-poppins">
       <PrefetchHandler />

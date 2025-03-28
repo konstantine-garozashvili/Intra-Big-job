@@ -48,7 +48,6 @@ const Dashboard = () => {
   useEffect(() => {
     // Check if we already have user data before forcing a refetch
     if (!user && !isLoading) {
-      console.log("Dashboard mounted, no user data available, forcing data refresh");
       // Use a shorter timeout to improve perceived performance
       const timer = setTimeout(() => {
         refetch().catch(err => {
@@ -57,8 +56,6 @@ const Dashboard = () => {
       }, 20); // Reduced from 50ms to 20ms for faster response
       
       return () => clearTimeout(timer);
-    } else {
-      console.log("Dashboard mounted, user data already available, skipping refetch");
     }
   }, [refetch, user, isLoading]);
   
@@ -82,7 +79,6 @@ const Dashboard = () => {
       window._dashboardCleanupTimeout = setTimeout(() => {
         // Clear any unnecessary caches after 5 minutes of inactivity
         if (!document.hasFocus()) {
-          console.log("Dashboard inactive, cleaning up resources");
           apiService.clearMemoryCache();
         }
       }, 5 * 60 * 1000); // 5 minutes
@@ -121,36 +117,14 @@ const Dashboard = () => {
     
     try {
       const storedUser = localStorage.getItem('user');
-      console.log("Dashboard fallback: localStorage check", !!storedUser);
       return storedUser ? JSON.parse(storedUser) : null;
     } catch (e) {
-      console.error("Error parsing localStorage user:", e);
       return null;
     }
   }, [user]);
   
   // Utiliser soit les données de l'API, soit les données de fallback
   const displayUser = user || fallbackUser;
-  
-  // Debugging - log complet des données disponibles
-  useEffect(() => {
-    console.log("Dashboard component state:", {
-      user: user ? { id: user.id, firstName: user.firstName, lastName: user.lastName, roles: user.roles } : null,
-      fallbackUser: fallbackUser ? { id: fallbackUser.id, firstName: fallbackUser.firstName, roles: fallbackUser.roles } : null,
-      displayUser: displayUser ? { id: displayUser.id, firstName: displayUser.firstName, roles: displayUser.roles } : null,
-      isLoading,
-      error: error?.message
-    });
-    
-    if (displayUser) {
-      // Tentative de mise à jour localStorage si nécessaire
-      try {
-        localStorage.setItem('user', JSON.stringify(displayUser));
-      } catch (e) {
-        console.error("Error updating localStorage user:", e);
-      }
-    }
-  }, [user, fallbackUser, displayUser, isLoading, error]);
   
   // Utiliser useMemo pour éviter les re-rendus inutiles
   const welcomeMessage = useMemo(() => {
@@ -172,7 +146,6 @@ const Dashboard = () => {
   // Si pas de données du tout, essayer de forcer un rechargement
   useEffect(() => {
     if (!displayUser && !isLoading) {
-      console.log("No display user data, forcing reload");
       const reloadTimer = setTimeout(() => {
         window.location.reload();
       }, 2000);
