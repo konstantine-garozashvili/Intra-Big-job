@@ -7,8 +7,6 @@
 
 // Test function to verify axiosInstance is correctly configured
 async function testAxiosConfig() {
-  console.log('Testing axios configuration...');
-  
   try {
     // Import axiosInstance
     const axiosModule = await import('../../lib/axios');

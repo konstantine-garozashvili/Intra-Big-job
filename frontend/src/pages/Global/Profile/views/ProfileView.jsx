@@ -41,10 +41,8 @@ const ProfileView = () => {
     
     try {
       setIsLoadingStudentProfile(true);
-      console.log("Fetching student profile in ProfileView...", forceFresh ? "(force refresh)" : "");
       
       const response = await studentProfileService.getMyProfile(forceFresh);
-      console.log("Fetched student profile:", response);
       
       if (response && response.success && response.data) {
         setStudentProfile(response.data);
@@ -61,7 +59,6 @@ const ProfileView = () => {
       }
       setHasLoadedStudentProfile(true);
     } catch (error) {
-      console.error("Failed to fetch student profile:", error);
       setHasLoadedStudentProfile(true); // Même en cas d'erreur, pour éviter les appels en boucle
     } finally {
       setIsLoadingStudentProfile(false);
@@ -92,7 +89,6 @@ const ProfileView = () => {
   
   // Gestionnaire de mise à jour du profil utilisateur depuis les composants enfants
   const handleProfileUpdate = useCallback((updatedData) => {
-    console.log("Profile update triggered with:", updatedData);
     
     if (isPublicProfile) {
       // Pour les profils publics, mettre à jour l'état local
@@ -134,13 +130,11 @@ const ProfileView = () => {
     if (!isPublicProfile) {
       // Gestionnaire pour les mises à jour de statut de recherche
       const handleJobStatusUpdate = async (event) => {
-        console.log("Job status update event received:", event.detail);
         await fetchStudentProfile(true);
       };
       
       // Gestionnaire pour les mises à jour de portfolio
       const handlePortfolioUpdate = async (event) => {
-        console.log("Portfolio update event received:", event.detail);
         
         // Forcer le rafraîchissement du profil étudiant si c'est une mise à jour de portfolio
         if (event.detail?.portfolioUrl !== undefined || (event.detail?.type === 'portfolio')) {
@@ -445,10 +439,7 @@ const ProfileView = () => {
     };
   }
 
-  console.log("Final userData structure being passed to ProfileHeader:", userData);
-  
   if (studentProfile) {
-    console.log("Student profile state is being used:", studentProfile);
   }
 
   return (

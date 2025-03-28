@@ -114,22 +114,6 @@ const RoleGuard = ({
   // Handle side effects (toast and logging) in useEffect
   useEffect(() => {
     if (!roleCheckResult && !toastShownRef.current && initialLoadComplete && !gracePeriod) {
-      // Development logging
-      if (process.env.NODE_ENV === 'development') {
-        if (typeof effectiveRoles === 'string') {
-          console.log(`Checking single role: ${effectiveRoles}, hasAccess: ${roleCheckResult}`);
-        } else if (requireAll) {
-          console.log(`Checking all roles: ${JSON.stringify(effectiveRoles)}, hasAccess: ${roleCheckResult}`);
-        } else {
-          console.log(`Checking any role: ${JSON.stringify(effectiveRoles)}, hasAccess: ${roleCheckResult}`);
-        }
-        console.log('User roles:', userRoles);
-        console.log('isLoading:', isLoading);
-        console.log('initialLoadComplete:', initialLoadComplete);
-        console.log('gracePeriod:', gracePeriod);
-        console.log('hasRole functions:', { hasRole, hasAnyRole, hasAllRoles, hasRoleNormalized, hasAnyRoleNormalized });
-      }
-      
       // Show toast notification
       toast.error("Accès non autorisé. Vous n'avez pas les permissions nécessaires pour accéder à cette page.", {
         duration: 4000,

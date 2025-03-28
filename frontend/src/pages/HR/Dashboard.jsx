@@ -218,7 +218,7 @@ const HRDashboard = () => {
         refreshAttemptedRef.current = true;
         await refetch();
       } catch (error) {
-        console.log("Erreur lors du rafraîchissement des données utilisateur", error);
+        // Suppression des console.log d'erreur
       }
     };
     
