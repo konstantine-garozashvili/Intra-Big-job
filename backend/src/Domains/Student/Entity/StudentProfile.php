@@ -24,6 +24,11 @@ class StudentProfile
     #[Groups(['student_profile:read'])]
     private ?User $user = null;
 
+    #[ORM\ManyToOne(targetEntity: UserSituationType::class)]
+    #[ORM\JoinColumn(nullable: true)]
+    #[Groups(['student_profile:read', 'user:read'])]
+    private ?UserSituationType $situationType = null;
+
     #[ORM\Column]
     #[Groups(['student_profile:read', 'user:read'])]
     private bool $isSeekingInternship = false;
@@ -49,16 +54,12 @@ class StudentProfile
     private ?string $portfolioUrl = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
-    #[Groups(['student_profile:read'])]
-    private ?\DateTimeInterface $createdAt = null;
+    #[Groups(['student_profile:read', 'user:read'])]
+    private \DateTimeInterface $createdAt;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
-    #[Groups(['student_profile:read'])]
-    private ?\DateTimeInterface $updatedAt = null;
-
-    #[ORM\ManyToOne]
     #[Groups(['student_profile:read', 'user:read'])]
-    private ?UserSituationType $situationType = null;
+    private \DateTimeInterface $updatedAt;
 
     public function __construct()
     {
@@ -66,12 +67,7 @@ class StudentProfile
         $this->updatedAt = new \DateTime();
     }
 
-    #[ORM\PreUpdate]
-    public function setUpdatedAtValue(): void
-    {
-        $this->updatedAt = new \DateTime();
-    }
-
+    // Getters and Setters
     public function getId(): ?int
     {
         return $this->id;
@@ -82,9 +78,20 @@ class StudentProfile
         return $this->user;
     }
 
-    public function setUser(?User $user): static
+    public function setUser(?User $user): self
     {
         $this->user = $user;
+        return $this;
+    }
+
+    public function getSituationType(): ?UserSituationType
+    {
+        return $this->situationType;
+    }
+
+    public function setSituationType(?UserSituationType $situationType): self
+    {
+        $this->situationType = $situationType;
         return $this;
     }
 
@@ -93,7 +100,7 @@ class StudentProfile
         return $this->isSeekingInternship;
     }
 
-    public function setIsSeekingInternship(bool $isSeekingInternship): static
+    public function setIsSeekingInternship(bool $isSeekingInternship): self
     {
         $this->isSeekingInternship = $isSeekingInternship;
         return $this;
@@ -104,7 +111,7 @@ class StudentProfile
         return $this->isSeekingApprenticeship;
     }
 
-    public function setIsSeekingApprenticeship(bool $isSeekingApprenticeship): static
+    public function setIsSeekingApprenticeship(bool $isSeekingApprenticeship): self
     {
         $this->isSeekingApprenticeship = $isSeekingApprenticeship;
         return $this;
@@ -115,7 +122,7 @@ class StudentProfile
         return $this->currentInternshipCompany;
     }
 
-    public function setCurrentInternshipCompany(?string $currentInternshipCompany): static
+    public function setCurrentInternshipCompany(?string $currentInternshipCompany): self
     {
         $this->currentInternshipCompany = $currentInternshipCompany;
         return $this;
@@ -126,7 +133,7 @@ class StudentProfile
         return $this->internshipStartDate;
     }
 
-    public function setInternshipStartDate(?\DateTimeInterface $internshipStartDate): static
+    public function setInternshipStartDate(?\DateTimeInterface $internshipStartDate): self
     {
         $this->internshipStartDate = $internshipStartDate;
         return $this;
@@ -137,7 +144,7 @@ class StudentProfile
         return $this->internshipEndDate;
     }
 
-    public function setInternshipEndDate(?\DateTimeInterface $internshipEndDate): static
+    public function setInternshipEndDate(?\DateTimeInterface $internshipEndDate): self
     {
         $this->internshipEndDate = $internshipEndDate;
         return $this;
@@ -148,43 +155,31 @@ class StudentProfile
         return $this->portfolioUrl;
     }
 
-    public function setPortfolioUrl(?string $portfolioUrl): static
+    public function setPortfolioUrl(?string $portfolioUrl): self
     {
         $this->portfolioUrl = $portfolioUrl;
         return $this;
     }
 
-    public function getCreatedAt(): ?\DateTimeInterface
+    public function getCreatedAt(): \DateTimeInterface
     {
         return $this->createdAt;
     }
 
-    public function setCreatedAt(\DateTimeInterface $createdAt): static
+    public function setCreatedAt(\DateTimeInterface $createdAt): self
     {
         $this->createdAt = $createdAt;
         return $this;
     }
 
-    public function getUpdatedAt(): ?\DateTimeInterface
+    public function getUpdatedAt(): \DateTimeInterface
     {
         return $this->updatedAt;
     }
 
-    public function setUpdatedAt(\DateTimeInterface $updatedAt): static
+    public function setUpdatedAt(\DateTimeInterface $updatedAt): self
     {
         $this->updatedAt = $updatedAt;
         return $this;
     }
-
-    public function getSituationType(): ?UserSituationType
-    {
-        return $this->situationType;
-    }
-
-    public function setSituationType(?UserSituationType $situationType): static
-    {
-        $this->situationType = $situationType;
-
-        return $this;
-    }
-} 
+}
