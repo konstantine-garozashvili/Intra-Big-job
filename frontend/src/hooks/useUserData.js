@@ -503,6 +503,36 @@ export function useUserData(options = {}) {
       return defaultValue;
     };
     
+    // Extended LinkedIn URL extraction logic
+    const linkedinUrl = (() => {
+      // Check all potential sources for the LinkedIn URL
+      const potentialSources = [
+        userSource.linkedinUrl,
+        rawData.linkedinUrl,
+        rawData.user?.linkedinUrl,
+        rawData.data?.linkedinUrl,
+        rawData.profile?.linkedinUrl,
+        userSource.profile?.linkedinUrl
+      ];
+      
+      // Use the first defined value
+      for (const source of potentialSources) {
+        if (source) return source;
+      }
+      return "";
+    })();
+    
+    // Log all potential linkedinUrl sources for debugging
+    console.log('useUserData - LinkedIn URL extraction:', {
+      'userSource.linkedinUrl': userSource.linkedinUrl,
+      'rawData.linkedinUrl': rawData.linkedinUrl,
+      'rawData.user?.linkedinUrl': rawData.user?.linkedinUrl,
+      'rawData.data?.linkedinUrl': rawData.data?.linkedinUrl,
+      'rawData.profile?.linkedinUrl': rawData.profile?.linkedinUrl,
+      'userSource.profile?.linkedinUrl': userSource.profile?.linkedinUrl,
+      'finalLinkedinUrl': linkedinUrl
+    });
+    
     // Extraire et normaliser le profil étudiant 
     let studentProfile = null;
     
@@ -542,7 +572,7 @@ export function useUserData(options = {}) {
       fullName: extractValue(userSource, ['fullName', 'full_name']),
       email: extractValue(userSource, ['email']),
       phoneNumber: extractValue(userSource, ['phoneNumber', 'phone_number']),
-      linkedinUrl: extractValue(userSource, ['linkedinUrl', 'linkedin_url']),
+      linkedinUrl, // Use our enhanced extraction logic
       profilePictureUrl: extractValue(userSource, ['profilePictureUrl', 'profile_picture_url']),
       profilePicturePath: extractValue(userSource, ['profilePicturePath', 'profile_picture_path']),
       birthDate: extractValue(userSource, ['birthDate', 'birth_date']),

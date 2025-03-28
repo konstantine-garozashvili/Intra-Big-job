@@ -869,43 +869,93 @@ const apiService = {
   },
 };
 
-// Add a function to handle authentication state inconsistencies
+/**
+ * Normalize user data structure to ensure consistent access to properties
+ * This helps with handling different API response formats and structures
+ * @param {Object} userData - The user data to normalize
+ * @returns {Object} - Normalized user data
+ */
 export const normalizeUserData = (userData) => {
   if (!userData) return null;
   
-  // Create a normalized version with consistent structure
-  const normalized = { ...userData };
+  // Create a deep copy to avoid modifying the original
+  const normalizedData = JSON.parse(JSON.stringify(userData));
   
-  // Always ensure linkedinUrl is accessible at the top level
-  if (!normalized.linkedinUrl) {
-    if (normalized.user?.linkedinUrl) {
-      normalized.linkedinUrl = normalized.user.linkedinUrl;
-    }
-    else if (normalized.data?.linkedinUrl) {
-      normalized.linkedinUrl = normalized.data.linkedinUrl;
-    }
-    else if (normalized.profile?.linkedinUrl) {
-      normalized.linkedinUrl = normalized.profile.linkedinUrl;
-    }
-  }
+  // Add a timestamp for when normalization occurred
+  const timestamp = Date.now();
   
-  // Normalize documents array
-  if (!normalized.documents || !Array.isArray(normalized.documents)) {
-    normalized.documents = [];
+  // Debug log of the original structure
+  console.log(`[${timestamp}] Normalizing user data structure`, {
+    originalKeys: Object.keys(normalizedData),
+    hasNestedUser: !!normalizedData.user,
+    hasNestedData: !!normalizedData.data,
+    dataSource: normalizedData._source || 'api'
+  });
+  
+  // Handle LinkedIn URL - ensure it's available at the top level
+  // Check if linkedinUrl exists at the top level, if not, try to find it elsewhere
+  if (!normalizedData.linkedinUrl) {
+    // Check various possible locations for linkedinUrl
+    const potentialSources = [
+      normalizedData.user?.linkedinUrl,
+      normalizedData.data?.linkedinUrl,
+      normalizedData.user?.profile?.linkedinUrl,
+      normalizedData.profile?.linkedinUrl,
+      // Additional paths that might contain LinkedIn URL
+      normalizedData.personal?.linkedinUrl,
+      normalizedData.user?.personal?.linkedinUrl
+    ];
     
-    // Try to find documents in other locations
-    if (Array.isArray(normalized.user?.documents)) {
-      normalized.documents = [...normalized.user.documents];
-    }
-    else if (Array.isArray(normalized.data?.documents)) {
-      normalized.documents = [...normalized.data.documents];
+    // Use the first non-empty value
+    for (const source of potentialSources) {
+      if (source) {
+        normalizedData.linkedinUrl = source;
+        console.log(`[${timestamp}] Found LinkedIn URL in nested data:`, source);
+        break;
+      }
     }
   }
   
-  // Add normalization timestamp
-  normalized._normalized = Date.now();
+  // Force data consistency for reconnection scenarios
+  if (normalizedData.linkedinUrl) {
+    // Ensure linkedinUrl is set in all potential locations for maximum compatibility
+    if (!normalizedData.user) normalizedData.user = {};
+    normalizedData.user.linkedinUrl = normalizedData.linkedinUrl;
+    
+    if (!normalizedData.personal) normalizedData.personal = {};
+    normalizedData.personal.linkedinUrl = normalizedData.linkedinUrl;
+    
+    console.log(`[${timestamp}] LinkedIn URL normalized and propagated:`, normalizedData.linkedinUrl);
+  } else {
+    console.log(`[${timestamp}] No LinkedIn URL found in any data source`);
+  }
   
-  return normalized;
+  // Ensure documents is always an array
+  if (!Array.isArray(normalizedData.documents)) {
+    const potentialDocumentsSources = [
+      normalizedData.user?.documents,
+      normalizedData.data?.documents
+    ];
+    
+    // Use the first array value
+    for (const source of potentialDocumentsSources) {
+      if (Array.isArray(source)) {
+        normalizedData.documents = source;
+        break;
+      }
+    }
+    
+    // If no array was found, initialize as empty array
+    if (!Array.isArray(normalizedData.documents)) {
+      normalizedData.documents = [];
+    }
+  }
+  
+  // Add normalization metadata for debugging
+  normalizedData._normalized = timestamp;
+  normalizedData._normalizedVersion = 2; // Increment version when making changes
+  
+  return normalizedData;
 };
 
 // Add a debug version of the apiService to diagnose any API issues

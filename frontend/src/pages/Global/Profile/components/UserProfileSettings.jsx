@@ -107,6 +107,15 @@ const UserProfileSettings = () => {
   // Initialize editedData when userData changes
   useEffect(() => {
     if (userData && Object.keys(userData).length > 0) {
+      // Log all potential LinkedIn URL sources for debugging
+      console.log('UserProfileSettings - LinkedIn URL Debug:', {
+        'userData.linkedinUrl': userData.linkedinUrl,
+        'userData.user?.linkedinUrl': userData.user?.linkedinUrl,
+        'userData.data?.linkedinUrl': userData.data?.linkedinUrl,
+        'userData.profile?.linkedinUrl': userData.profile?.linkedinUrl,
+        'All userData keys': Object.keys(userData)
+      });
+      
       // Use a deep comparison to avoid unnecessary updates
       const newPersonalData = {
         firstName: userData.firstName ?? '',
@@ -135,7 +144,7 @@ const UserProfileSettings = () => {
         }));
       }
     }
-  }, [profileData]); // Only depend on profileData, not derived values
+  }, [userData]); // Use userData directly to detect all changes
 
   // Add event listener for portfolio URL updates from other components
   useEffect(() => {

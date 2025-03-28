@@ -6,6 +6,26 @@ import { studentProfileService } from '@/lib/services';
 import { synchronizePortfolioUpdate } from '@/lib/utils/profileUtils';
 import { toast } from 'sonner';
 
+// Helper function to extract LinkedIn URL from various data sources
+const extractLinkedInUrl = (userData) => {
+  if (!userData) return '';
+  
+  // Check all potential sources for LinkedIn URL
+  const sources = [
+    userData.linkedinUrl,
+    userData.personal?.linkedinUrl,
+    userData.user?.linkedinUrl,
+    userData.profile?.linkedinUrl
+  ];
+  
+  // Return first valid URL found
+  for (const url of sources) {
+    if (url) return url;
+  }
+  
+  return '';
+};
+
 export const ProfessionalInfoSection = ({ 
   userData, 
   studentProfile,
@@ -20,16 +40,32 @@ export const ProfessionalInfoSection = ({
 }) => {
   const [loading, setLoading] = React.useState(false);
   const [localPortfolioUrl, setLocalPortfolioUrl] = React.useState('');
+  const [localLinkedInUrl, setLocalLinkedInUrl] = React.useState('');
 
   // Utiliser useMemo pour calculer la valeur actuelle du portfolio
   const currentPortfolioUrl = useMemo(() => {
     return studentProfile?.portfolioUrl || '';
   }, [studentProfile?.portfolioUrl]);
+  
+  // Get LinkedIn URL from multiple possible sources
+  const currentLinkedInUrl = useMemo(() => {
+    return extractLinkedInUrl(userData) || '';
+  }, [userData]);
 
   // Synchroniser l'état local avec la valeur la plus récente
   useEffect(() => {
     setLocalPortfolioUrl(currentPortfolioUrl);
   }, [currentPortfolioUrl]);
+  
+  // Synchronize local LinkedIn URL state
+  useEffect(() => {
+    setLocalLinkedInUrl(currentLinkedInUrl);
+    
+    // Also update the edited data when LinkedIn URL changes
+    if (currentLinkedInUrl && currentLinkedInUrl !== editedData.personal.linkedinUrl) {
+      handleInputChange('linkedinUrl', currentLinkedInUrl);
+    }
+  }, [currentLinkedInUrl]);
 
   // Écouter les événements de mise à jour du portfolio
   useEffect(() => {
@@ -103,10 +139,12 @@ export const ProfessionalInfoSection = ({
     // Debug LinkedIn URL
     console.log('DEBUG LINKEDIN URL - Current value:', {
       'userData.linkedinUrl': userData.linkedinUrl,
+      'localLinkedInUrl': localLinkedInUrl,
       'editedData.personal.linkedinUrl': editedData.personal.linkedinUrl,
+      'extractedLinkedInUrl': extractLinkedInUrl(userData),
       'From DOM': document.querySelector('[data-field="linkedinUrl"] .field-value')?.textContent
     });
-  }, [studentProfile?.portfolioUrl, localPortfolioUrl, editedData.personal.portfolioUrl, userData.linkedinUrl]);
+  }, [studentProfile?.portfolioUrl, localPortfolioUrl, editedData.personal.portfolioUrl, userData, localLinkedInUrl]);
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6">
@@ -126,12 +164,18 @@ export const ProfessionalInfoSection = ({
         field="linkedinUrl"
         label="LinkedIn"
         icon={<Linkedin className="h-4 w-4" />}
-        value={userData?.linkedinUrl || ''}
+        value={localLinkedInUrl || userData?.linkedinUrl || ''}
         editedValue={editedData.personal.linkedinUrl || ''}
         type="url"
         isEditing={editMode.linkedinUrl}
         isEditable={true}
-        onEdit={() => toggleFieldEdit('linkedinUrl')}
+        onEdit={() => {
+          // Ensure the edited value is initialized with the current value
+          if (localLinkedInUrl && localLinkedInUrl !== editedData.personal.linkedinUrl) {
+            handleInputChange('linkedinUrl', localLinkedInUrl);
+          }
+          toggleFieldEdit('linkedinUrl');
+        }}
         onSave={() => onSave('linkedinUrl', editedData.personal.linkedinUrl || '')}
         onCancel={() => handleCancelField('linkedinUrl')}
         onChange={(value) => handleInputChange('linkedinUrl', value || '')}
