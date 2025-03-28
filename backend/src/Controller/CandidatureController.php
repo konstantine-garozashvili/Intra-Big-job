@@ -71,7 +71,7 @@ class CandidatureController extends AbstractController
                 $data[] = [
                     'id' => $situationType->getId(),
                     'name' => $situationType->getName(),
-                    'description' => $situationType->getDescription()
+                    'description' => method_exists($situationType, 'getDescription') ? $situationType->getDescription() : null
                 ];
             }
             
@@ -104,7 +104,7 @@ class CandidatureController extends AbstractController
             
             // Récupérer tous les profils étudiants avec ce type de situation
             $studentProfiles = $entityManager->createQuery(
-                'SELECT sp FROM App\Domains\Student\Entity\StudentProfile sp
+                'SELECT sp FROM App\Entity\StudentProfile sp
                 WHERE sp.situationType = :situationId'
             )->setParameter('situationId', $situationId)
              ->getResult();
@@ -114,20 +114,33 @@ class CandidatureController extends AbstractController
                 $user = $profile->getUser();
                 
                 // Récupérer la spécialisation
-                $specialization = $user->getSpecialization() ? [
-                    'name' => $user->getSpecialization()->getName(),
-                    'domain' => $user->getSpecialization()->getDomain() ? 
-                        $user->getSpecialization()->getDomain()->getName() : 'Non précisé'
-                ] : ['name' => 'Non précisé', 'domain' => 'Non précisé'];
+                $specialization = null;
+                if (method_exists($user, 'getSpecialization') && $user->getSpecialization()) {
+                    $specialization = [
+                        'name' => $user->getSpecialization()->getName(),
+                        'domain' => method_exists($user->getSpecialization(), 'getDomain') && $user->getSpecialization()->getDomain() ? 
+                            $user->getSpecialization()->getDomain()->getName() : 'Non précisé'
+                    ];
+                } else {
+                    $specialization = ['name' => 'Non précisé', 'domain' => 'Non précisé'];
+                }
                 
-                $data[] = [
+                $userData = [
                     'id' => $user->getId(),
                     'studentName' => $user->getFirstName() . ' ' . $user->getLastName(),
-                    'type' => $user->getUserRoles()[0]->getRole()->getName() ?? 'Non précisé',
                     'domaine' => $specialization['domain'],
                     'specialite' => $specialization['name'],
                     'status' => $situationType->getName()
                 ];
+                
+                // Ajouter le type d'utilisateur si disponible
+                if (method_exists($user, 'getUserRoles') && !empty($user->getUserRoles())) {
+                    $userData['type'] = $user->getUserRoles()[0]->getRole()->getName() ?? 'Non précisé';
+                } else {
+                    $userData['type'] = 'Non précisé';
+                }
+                
+                $data[] = $userData;
             }
             
             return $this->json([
@@ -137,7 +150,7 @@ class CandidatureController extends AbstractController
                 'situationType' => [
                     'id' => $situationType->getId(),
                     'name' => $situationType->getName(),
-                    'description' => $situationType->getDescription()
+                    'description' => method_exists($situationType, 'getDescription') ? $situationType->getDescription() : null
                 ]
             ]);
         } catch (\Exception $e) {
