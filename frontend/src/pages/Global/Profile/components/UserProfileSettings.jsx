@@ -351,6 +351,15 @@ const UserProfileSettings = () => {
     try {
       const value = editedData.personal[field];
       
+      // Special case for LinkedIn URL: log debug info
+      if (field === 'linkedinUrl') {
+        console.log("Attempting to save LinkedIn URL:", {
+          value,
+          isValid: isValidLinkedInUrl(value),
+          validationFunction: isValidLinkedInUrl.toString().substring(0, 100) + "..."
+        });
+      }
+      
       // Validation spécifique selon le type de champ
       if (field === 'birthDate' && value) {
         const birthDate = new Date(value);
@@ -390,8 +399,13 @@ const UserProfileSettings = () => {
 
       // Validate LinkedIn URL
       if (field === 'linkedinUrl' && value) {
-        if (!isValidLinkedInUrl(value)) {
-          toast.error("L'URL LinkedIn doit commencer par 'https://www.linkedin.com/in/'");
+        // Use more lenient validation for LinkedIn URLs during input
+        const looksLikeLinkedIn = value.includes('linkedin.com/') || 
+                                   value.includes('linkedin.fr/') || 
+                                   value.match(/linkedin/i);
+        
+        if (!looksLikeLinkedIn && value.length > 15) {
+          toast.error("Cette URL ne semble pas être une URL LinkedIn valide");
           return;
         }
       }
@@ -428,6 +442,7 @@ const UserProfileSettings = () => {
       }
       
     } catch (error) {
+      console.error("Error in handleSavePersonal:", error);
       // Revert optimistic update on error
       if (field === 'portfolioUrl' && isStudent) {
         updateLocalState('portfolioUrl', profileData?.data?.studentProfile?.portfolioUrl || null);
@@ -754,6 +769,75 @@ const UserProfileSettings = () => {
                   value={editedData.personal.birthDate || ''}
                   onChange={(e) => handleSavePersonal('birthDate')}
                   disabled={!editMode.personal}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="linkedinUrl">LinkedIn URL</Label>
+                <Input
+                  id="linkedinUrl"
+                  value={editedData.personal.linkedinUrl || ''}
+                  onChange={(e) => {
+                    // Update local state immediately without validation
+                    setEditedData(prev => ({
+                      ...prev,
+                      personal: {
+                        ...prev.personal,
+                        linkedinUrl: e.target.value
+                      }
+                    }));
+                  }}
+                  onBlur={(e) => {
+                    // Only try to save when the field loses focus
+                    try {
+                      const value = e.target.value;
+                      
+                      // Debug log
+                      console.debug("Attempting to save LinkedIn URL:", value, 
+                        "Looks like LinkedIn URL:", value.includes('linkedin.com'));
+                      
+                      // Prepare for API call if needed
+                      if (value !== userData?.linkedinUrl) {
+                        // Apply basic formatting if needed
+                        let formattedUrl = value.trim();
+                        
+                        // Add https:// if missing
+                        if (formattedUrl && !formattedUrl.startsWith('http://') && !formattedUrl.startsWith('https://')) {
+                          formattedUrl = 'https://' + formattedUrl;
+                          
+                          // Update the field with formatted URL
+                          setEditedData(prev => ({
+                            ...prev,
+                            personal: {
+                              ...prev.personal,
+                              linkedinUrl: formattedUrl
+                            }
+                          }));
+                        }
+                        
+                        // Check if it at least looks like a LinkedIn URL
+                        if (formattedUrl && !formattedUrl.includes('linkedin.com')) {
+                          toast.info("L'URL ne semble pas être une URL LinkedIn valide, mais nous l'avons sauvegardée quand même.");
+                        }
+                        
+                        // Skip validation, just update the data
+                        updateLocalState('linkedinUrl', formattedUrl);
+                        
+                        // Send to API
+                        const dataToSave = { linkedinUrl: formattedUrl === '' ? null : formattedUrl };
+                        updatePersonalInfo(dataToSave)
+                          .then(() => toast.success('URL LinkedIn mise à jour avec succès'))
+                          .catch(err => {
+                            console.error("API error updating LinkedIn URL:", err);
+                            toast.error("Erreur lors de la mise à jour: " + (err.message || 'Erreur inconnue'));
+                          });
+                      }
+                    } catch (error) {
+                      console.error("Error updating LinkedIn URL:", error);
+                      toast.error("Erreur lors de la mise à jour de l'URL LinkedIn");
+                    }
+                  }}
+                  placeholder="https://www.linkedin.com/in/your-profile"
+                  className="w-full"
                 />
               </div>
             </div>

@@ -150,7 +150,7 @@ class DocumentService {
           'Authorization': `Bearer ${authService.getToken()}`,
           'Content-Type': 'multipart/form-data'
         },
-        withCredentials: true // Ensure cookies are sent for cross-domain requests
+        withCredentials: false // Set to false to avoid requiring Access-Control-Allow-Credentials header
       };
       
       console.log('DocumentService.uploadCV - Sending request to:', '/documents/upload/cv');
@@ -161,13 +161,13 @@ class DocumentService {
         // First try direct axios call with full URL to avoid any CORS issues
         response = await axios({
           method: 'post',
-          url: `${API_URL}/api/documents/upload/cv`,
+          url: `${API_URL}/documents/upload/cv`, // Remove duplicated /api/ since API_URL already contains it
           data: formData,
           headers: {
             'Authorization': `Bearer ${authService.getToken()}`,
             'Content-Type': 'multipart/form-data'
           },
-          withCredentials: true
+          withCredentials: false // Set to false to avoid requiring Access-Control-Allow-Credentials header
         });
       } catch (axiosError) {
         console.error('DocumentService.uploadCV - Direct axios call failed:', axiosError);
@@ -182,7 +182,8 @@ class DocumentService {
             raw: true,
             headers: {
               'Content-Type': 'multipart/form-data'
-            }
+            },
+            withCredentials: false // Ensure this is false for the apiService as well
           });
         } else {
           // Re-throw for other errors
@@ -283,12 +284,13 @@ class DocumentService {
         headers: {
           'Authorization': `Bearer ${authService.getToken()}`
         },
-        responseType: 'blob'
+        responseType: 'blob',
+        withCredentials: false // Set to false to avoid CORS issues
       };
       
-      // Use apiService.get with raw: true option
+      // Use direct axios call with correct URL (no duplicate /api)
       const response = await axios.get(
-        `${API_URL}/api/documents/${documentId}/download`,
+        `${API_URL}/documents/${documentId}/download`,
         config
       );
       

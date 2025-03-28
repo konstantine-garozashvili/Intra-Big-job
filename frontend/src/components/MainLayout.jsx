@@ -168,10 +168,6 @@ const MainLayout = () => {
     // Log route change for debugging
     console.log("[App] Route changed to:", currentPath);
     
-    // Calculate time since last refresh for use in this scope
-    const now = Date.now();
-    const timeSinceLastRefresh = now - locationHistory.lastRefreshTime;
-    
     // Check if we should refresh profile based on navigation
     if (shouldRefreshOnNavigation(previousPath, currentPath)) {
       console.log("Navigated to dashboard - refreshing profile data");
@@ -195,15 +191,21 @@ const MainLayout = () => {
           }
         }
       });
-    } else if (timeSinceLastRefresh > 120000) { // 2 minutes
-      // For other navigations, refresh in background every 2 minutes
-      console.log("Refreshing profile data in background (time-based)");
-      refreshProfileData({ 
-        background: true,
-        silent: true
-      });
     } else {
-      console.log("Skipping refresh - too soon since last refresh");
+      // Calculate time since last refresh
+      const now = Date.now();
+      const timeSinceLastRefresh = now - locationHistory.lastRefreshTime;
+      
+      // For other navigations, refresh in background every 2 minutes
+      if (timeSinceLastRefresh > 120000) { // 2 minutes
+        console.log("Refreshing profile data in background (time-based)");
+        refreshProfileData({ 
+          background: true,
+          silent: true
+        });
+      } else {
+        console.log("Skipping refresh - too soon since last refresh");
+      }
     }
   }, [location?.pathname, refreshProfileData]);
 

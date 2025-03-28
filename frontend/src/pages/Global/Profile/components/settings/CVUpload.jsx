@@ -128,8 +128,22 @@ const CVUpload = memo(({ userData, onUpdate }) => {
     // Show upload progress toast
     const uploadingToast = toast.loading('Uploading your CV...');
     
-    // Direct upload using the document service for better reliability
-    documentService.uploadCV(formData)
+    // Try the direct upload using apiService first as it's more reliable
+    const url = '/documents/upload/cv'; // No leading /api as it's added by apiService
+    
+    console.log('CV Upload - Sending request to:', url);
+    
+    // Use apiService directly instead of documentService for more control
+    import('@/lib/services/apiService').then(module => {
+      const apiService = module.default;
+      
+      apiService.post(url, formData, {
+        raw: true,
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        },
+        withCredentials: false // Explicitly set to false to avoid CORS issues
+      })
       .then(response => {
         console.log('CV Upload - Success response:', response);
         toast.dismiss(uploadingToast);
@@ -157,35 +171,54 @@ const CVUpload = memo(({ userData, onUpdate }) => {
         
         toast.dismiss(uploadingToast);
         
-        // Provide more specific error messages based on error type
-        let errorMessage = 'Failed to upload CV';
-        
-        if (error.message && error.message.includes('Network Error')) {
-          errorMessage += ': Network error - please check your connection';
-        } else if (error.response) {
-          // Server responded with error
-          if (error.response.status === 413) {
-            errorMessage += ': File too large for server';
-          } else if (error.response.status === 415) {
-            errorMessage += ': Unsupported file format';
-          } else if (error.response.status === 401) {
-            errorMessage += ': Authentication error, please try logging in again';
-            // Force profile refresh to update auth state
-            if (onUpdate) onUpdate();
-          } else {
-            errorMessage += `: ${error.response.data?.message || error.message || 'Server error'}`;
-          }
-        } else if (error.message && error.message.includes('CORS')) {
-          errorMessage += ': CORS error - please try again later';
-        }
-        
-        toast.error(errorMessage);
-        
-        // Try to recover by refreshing CV data anyway
-        setTimeout(() => {
-          refetchCV();
-        }, 1000);
+        // Fall back to documentService only if apiService fails
+        documentService.uploadCV(formData)
+          .then(response => {
+            console.log('CV Upload - Success response from fallback:', response);
+            toast.dismiss(uploadingToast);
+            toast.success('CV uploaded successfully');
+            setCvFile(null);
+            
+            setTimeout(() => {
+              refetchCV();
+              if (onUpdate) onUpdate();
+            }, 1500);
+            
+            const fileInput = document.getElementById('cv-upload');
+            if (fileInput) fileInput.value = '';
+          })
+          .catch(fallbackError => {
+            // Provide more specific error messages based on error type
+            let errorMessage = 'Failed to upload CV';
+            
+            if (fallbackError.message && fallbackError.message.includes('Network Error')) {
+              errorMessage += ': Network error - please check your connection';
+            } else if (fallbackError.response) {
+              // Server responded with error
+              if (fallbackError.response.status === 413) {
+                errorMessage += ': File too large for server';
+              } else if (fallbackError.response.status === 415) {
+                errorMessage += ': Unsupported file format';
+              } else if (fallbackError.response.status === 401) {
+                errorMessage += ': Authentication error, please try logging in again';
+                // Force profile refresh to update auth state
+                if (onUpdate) onUpdate();
+              } else {
+                errorMessage += `: ${fallbackError.response.data?.message || fallbackError.message || 'Server error'}`;
+              }
+            } else if (fallbackError.message && fallbackError.message.includes('CORS')) {
+              errorMessage += ': CORS error - please try again later';
+            }
+            
+            toast.error(errorMessage);
+            
+            // Try to recover by refreshing CV data anyway
+            setTimeout(() => {
+              refetchCV();
+            }, 1000);
+          });
       });
+    });
   }, [cvFile, refetchCV, onUpdate]);
 
   // Handle document deletion
@@ -219,10 +252,12 @@ const CVUpload = memo(({ userData, onUpdate }) => {
     }
     
     try {
+      // Remove /api from the URL - the backend already has this prefix
       const response = await fetch(`${import.meta.env.VITE_API_URL}/documents/${cvDocument.id}/download`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
+        },
+        credentials: 'omit' // Don't send credentials
       });
       
       if (!response.ok) {

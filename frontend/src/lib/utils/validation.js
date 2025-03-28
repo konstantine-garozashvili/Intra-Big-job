@@ -170,6 +170,20 @@ export const isValidBirthDate = (date) => {
 };
 
 /**
+ * Vérifie si une URL ressemble à une URL LinkedIn (pour la validation pendant la saisie)
+ * @param {string} url - URL à vérifier
+ * @returns {boolean} - True si l'URL ressemble à une URL LinkedIn
+ */
+export const looksLikeLinkedInUrl = (url) => {
+  if (!url) return true; // Empty is OK during typing
+  
+  // Check for common LinkedIn URL patterns
+  return url.includes('linkedin.com') || 
+         url.includes('linkedin.com/in/') || 
+         url.includes('linkedin.com/profile/');
+};
+
+/**
  * Valide un URL LinkedIn
  * @param {string} url - URL LinkedIn à valider
  * @returns {boolean} - True si l'URL est valide et commence par https://www.linkedin.com/in/
@@ -178,19 +192,38 @@ export const isValidLinkedInUrl = (url) => {
   if (!url) return false;
   
   try {
-    const urlObj = new URL(url);
-
-    // Vérifier que l'URL commence par https://www.linkedin.com/in/
-    if (urlObj.protocol === 'https:' && urlObj.hostname === 'www.linkedin.com' && urlObj.pathname.startsWith('/in/')) {
-      return true;
+    // Make URL validation more flexible
+    let validUrl = url.trim();
+    
+    // Handle URLs without protocol
+    if (!validUrl.startsWith('http://') && !validUrl.startsWith('https://')) {
+      validUrl = 'https://' + validUrl;
     }
     
-    return false;
+    // Handle URLs without www
+    if (validUrl.startsWith('https://linkedin.com/')) {
+      validUrl = validUrl.replace('https://linkedin.com/', 'https://www.linkedin.com/');
+    }
+    
+    const urlObj = new URL(validUrl);
+
+    // Check hostname variations
+    const isLinkedInDomain = urlObj.hostname === 'www.linkedin.com' || 
+                            urlObj.hostname === 'linkedin.com' ||
+                            urlObj.hostname === 'fr.linkedin.com' ||
+                            urlObj.hostname === 'www.fr.linkedin.com';
+    
+    // Check path variations
+    const isProfilePath = urlObj.pathname.startsWith('/in/') || 
+                         urlObj.pathname.startsWith('/profile/');
+    
+    return isLinkedInDomain && isProfilePath;
   } catch (e) {
-    return false;
+    // For user input, we want to be lenient
+    // Just check if it at least contains linkedin.com
+    return looksLikeLinkedInUrl(url);
   }
 };
-
 
 /**
  * Valide un URL général
