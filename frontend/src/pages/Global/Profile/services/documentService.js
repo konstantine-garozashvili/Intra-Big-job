@@ -112,6 +112,22 @@ class DocumentService {
       // Extraire le fichier pour l'optimistic update
       const file = formData.get('file') || formData.get('cv');
       
+      if (!file) {
+        console.error('No file found in formData - keys:', Array.from(formData.keys()));
+        throw new Error('No file provided');
+      }
+      
+      console.log('DocumentService.uploadCV - File details:', {
+        name: file.name,
+        type: file.type,
+        size: file.size
+      });
+      
+      // Make sure type is included in the formData
+      if (!formData.has('type')) {
+        formData.append('type', 'CV');
+      }
+      
       // Créer un document temporaire pour l'optimistic update
       const tempDocument = {
         id: `temp-${Date.now()}`,
@@ -128,17 +144,53 @@ class DocumentService {
       // Notifier les abonnés de la mise à jour optimiste
       documentEvents.notify();
       
-      // Ajouter le type au formData
-      formData.append('type', 'CV');
-      
+      // Create a proper config for file upload with correct CORS settings
       const config = {
         headers: {
-          'Authorization': `Bearer ${authService.getToken()}`
-        }
+          'Authorization': `Bearer ${authService.getToken()}`,
+          'Content-Type': 'multipart/form-data'
+        },
+        withCredentials: true // Ensure cookies are sent for cross-domain requests
       };
       
-      // Use apiService instead of direct axios call
-      const response = await apiService.post('/documents/upload/cv', formData, config);
+      console.log('DocumentService.uploadCV - Sending request to:', '/documents/upload/cv');
+      
+      let response;
+      
+      try {
+        // First try direct axios call with full URL to avoid any CORS issues
+        response = await axios({
+          method: 'post',
+          url: `${API_URL}/api/documents/upload/cv`,
+          data: formData,
+          headers: {
+            'Authorization': `Bearer ${authService.getToken()}`,
+            'Content-Type': 'multipart/form-data'
+          },
+          withCredentials: true
+        });
+      } catch (axiosError) {
+        console.error('DocumentService.uploadCV - Direct axios call failed:', axiosError);
+        console.error('Error response:', axiosError.response);
+        console.error('Error request:', axiosError.request);
+        
+        if (axiosError.response?.status === 0 || (axiosError.message && axiosError.message.includes('CORS'))) {
+          console.log('CORS error detected, trying alternative upload method...');
+          
+          // Fall back to using apiService
+          response = await apiService.post('/documents/upload/cv', formData, {
+            raw: true,
+            headers: {
+              'Content-Type': 'multipart/form-data'
+            }
+          });
+        } else {
+          // Re-throw for other errors
+          throw axiosError;
+        }
+      }
+      
+      console.log('DocumentService.uploadCV - Upload success:', response.data);
       
       // Clear cache after upload
       documentCache.clear();
@@ -148,6 +200,20 @@ class DocumentService {
       
       return response;
     } catch (error) {
+      // Log detailed error information
+      console.error('DocumentService.uploadCV - Error:', error);
+      console.error('Error type:', error.constructor.name);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+      
+      if (error.response) {
+        console.error('Error response status:', error.response.status);
+        console.error('Error response data:', error.response.data);
+        console.error('Error response headers:', error.response.headers);
+      } else if (error.request) {
+        console.error('Error request:', error.request);
+      }
+      
       // En cas d'erreur, forcer un rafraîchissement pour supprimer les documents temporaires
       documentCache.clear();
       documentEvents.notify();

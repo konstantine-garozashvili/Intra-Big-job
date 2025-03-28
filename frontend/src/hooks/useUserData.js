@@ -136,6 +136,32 @@ export function useUserData(options = {}) {
     setIsInitialLoading(true);
     
     try {
+      // Check token first for guest accounts which might not have an API endpoint
+      const token = localStorage.getItem('token');
+      let tokenData = null;
+      
+      if (token) {
+        try {
+          // Extract user data from token
+          const base64Url = token.split('.')[1];
+          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+          const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(c => {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+          }).join(''));
+          
+          tokenData = JSON.parse(jsonPayload);
+          console.log("useUserData - Token data:", tokenData);
+          
+          // If this is a guest user, we might not need to make the API call
+          if (tokenData.roles && tokenData.roles.includes('ROLE_GUEST')) {
+            console.log("useUserData - Guest user detected in token");
+          }
+        } catch (tokenError) {
+          console.error("useUserData - Error parsing token:", tokenError);
+        }
+      }
+      
+      // Attempt to get data from API
       const response = await userDataManager.coordinateRequest(
         routeKey,
         componentId,
@@ -150,9 +176,27 @@ export function useUserData(options = {}) {
         }
       );
       
+      console.log("useUserData - API response:", response);
+      
       let normalizedData;
       
-      if (response) {
+      // If API response is empty but we have token data, use that
+      if ((!response || Object.keys(response).length === 0) && tokenData) {
+        console.log("useUserData - Using token data as fallback");
+        normalizedData = {
+          id: tokenData.id || tokenData.userId || "",
+          email: tokenData.username || tokenData.email || "",
+          firstName: tokenData.firstName || tokenData.first_name || "",
+          lastName: tokenData.lastName || tokenData.last_name || "",
+          roles: tokenData.roles || [],
+          // Add other defaults
+          profilePictureUrl: "",
+          diplomas: [],
+          addresses: [],
+          stats: { profile: { completionPercentage: 0 } },
+          _source: "token" // Mark the source for debugging
+        };
+      } else if (response) {
         if (response.user && typeof response.user === 'object') {
           normalizedData = response;
         } 
@@ -165,7 +209,8 @@ export function useUserData(options = {}) {
             profilePictureUrl: response.profilePictureUrl || response.profile_picture_url || "",
             diplomas: Array.isArray(response.diplomas) ? response.diplomas : [],
             addresses: Array.isArray(response.addresses) ? response.addresses : [],
-            stats: response.stats || { profile: { completionPercentage: 0 } }
+            stats: response.stats || { profile: { completionPercentage: 0 } },
+            _source: "direct" // Mark the source for debugging
           };
         }
         else if ((response.data && typeof response.data === 'object') || response.success) {
@@ -178,11 +223,15 @@ export function useUserData(options = {}) {
             profilePictureUrl: userData.profilePictureUrl || userData.profile_picture_url || "",
             diplomas: Array.isArray(userData.diplomas) ? userData.diplomas : [],
             addresses: Array.isArray(userData.addresses) ? userData.addresses : [],
-            stats: userData.stats || { profile: { completionPercentage: 0 } }
+            stats: userData.stats || { profile: { completionPercentage: 0 } },
+            _source: "wrapped" // Mark the source for debugging
           };
         }
         else {
-          normalizedData = response;
+          normalizedData = {
+            ...response,
+            _source: "unknown" // Mark the source for debugging
+          };
         }
       } else {
         normalizedData = {
@@ -192,7 +241,8 @@ export function useUserData(options = {}) {
           profilePictureUrl: "",
           diplomas: [],
           addresses: [],
-          stats: { profile: { completionPercentage: 0 } }
+          stats: { profile: { completionPercentage: 0 } },
+          _source: "empty" // Mark the source for debugging
         };
       }
       

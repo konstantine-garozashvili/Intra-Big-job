@@ -30,6 +30,7 @@ import {
   Ticket
 } from 'lucide-react';
 import { useRolePermissions } from '@/features/roles/useRolePermissions';
+import { authService } from '@/lib/services/authService';
 
 // Style personnalisé pour les animations et transitions
 const customStyles = `
@@ -127,6 +128,29 @@ const MenuBurger = memo(() => {
   const { roles, hasRole, hasAnyRole, refreshRoles } = useRoles();
   const { translateRoleName } = useRoleUI();
   const permissions = useRolePermissions();
+  // Add state to track authentication
+  const [isAuthenticated, setIsAuthenticated] = useState(authService.isLoggedIn());
+  
+  // Check auth state before opening menu
+  const toggleMenu = () => {
+    // Force refresh auth state when opening the menu
+    if (!menuOpen) {
+      const currentAuthState = authService.isLoggedIn();
+      setIsAuthenticated(currentAuthState);
+      
+      // If authentication state changed, refresh roles
+      if (currentAuthState !== isAuthenticated) {
+        refreshRoles();
+      }
+      
+      // If token exists but userData is missing, try to reload it
+      if (currentAuthState && !userData && authService.getToken()) {
+        authService.lazyLoadUserData(false).catch(() => {});
+      }
+    }
+    
+    setMenuOpen(!menuOpen);
+  };
 
   // Gestionnaire de clic à l'extérieur du menu
   useEffect(() => {
@@ -151,6 +175,29 @@ const MenuBurger = memo(() => {
     };
   }, [menuOpen]);
 
+  // Listen for authentication state changes
+  useEffect(() => {
+    const handleAuthChange = () => {
+      const newAuthState = authService.isLoggedIn();
+      setIsAuthenticated(newAuthState);
+      
+      // If we're logged out, close the menu
+      if (!newAuthState && menuOpen) {
+        setMenuOpen(false);
+      }
+    };
+    
+    window.addEventListener('auth-state-change', handleAuthChange);
+    window.addEventListener('login-success', handleAuthChange);
+    window.addEventListener('logout-success', handleAuthChange);
+    
+    return () => {
+      window.removeEventListener('auth-state-change', handleAuthChange);
+      window.removeEventListener('login-success', handleAuthChange);
+      window.removeEventListener('logout-success', handleAuthChange);
+    };
+  }, [menuOpen]);
+
   // Effet pour fermer le menu lorsque les rôles changent
   useEffect(() => {
     if (menuOpen) {
@@ -158,8 +205,6 @@ const MenuBurger = memo(() => {
     }
   }, [roles]);
   
-  const toggleMenu = () => setMenuOpen(!menuOpen);
-
   const toggleSubMenu = (menu) => {
     setOpenSubMenus((prev) => ({
       ...Object.keys(prev).reduce((acc, key) => ({ ...acc, [key]: false }), {}),

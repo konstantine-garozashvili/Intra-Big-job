@@ -1,6 +1,6 @@
 import { createContext, useContext, useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { authService } from '../../lib/services/authService';
+import { authService } from '@/lib/services/authService';
 import userDataManager from '../../lib/services/userDataManager';
 
 // Create the context
@@ -18,8 +18,10 @@ export const ROLES = {
 };
 
 export const RoleProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [lastRole, setLastRole] = useState(null);
+  const [roles, setRoles] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [lastRefresh, setLastRefresh] = useState(0);
+  const refreshThreshold = 5000; // 5 seconds
   const queryClient = useQueryClient();
   const refreshInProgressRef = useRef(false);
   const lastRefreshTimestampRef = useRef(0);
@@ -32,216 +34,155 @@ export const RoleProvider = ({ children }) => {
   // Intervalle minimum entre rafraîchissements (3 secondes)
   const minRefreshIntervalRef = useRef(3000);
   
-  // Function to fetch user data with deduplication logic
-  const fetchUser = useCallback(async (forceRefresh = false) => {
-    if (!authService.isLoggedIn()) {
-      setUser(null);
-      setLastRole(null);
-      queryClient.setQueryData(['userRoles'], []);
-      return null;
+  // Function to load roles from localStorage or token
+  const loadRoles = useCallback(() => {
+    setIsLoading(true);
+    
+    // First check if user is authenticated at all
+    const isLoggedIn = authService.isLoggedIn();
+    if (!isLoggedIn) {
+      setRoles([]);
+      setIsLoading(false);
+      return;
     }
     
     try {
-      // Prevent multiple fetches in a short time window
-      const now = Date.now();
-      if (refreshInProgressRef.current) {
-        // Use cached user data instead of making a new request
-        const cachedUser = userDataManager.getCachedUserData();
-        if (cachedUser) {
-          return cachedUser;
+      // Try to get roles from localStorage first
+      const storedRoles = localStorage.getItem('userRoles');
+      if (storedRoles) {
+        try {
+          const parsedRoles = JSON.parse(storedRoles);
+          setRoles(parsedRoles);
+          setIsLoading(false);
+          setLastRefresh(Date.now());
+        } catch (parseError) {
+          console.error('Error parsing stored roles:', parseError);
+          fallbackToTokenRoles();
         }
+      } else {
+        fallbackToTokenRoles();
       }
-      
-      // Anti-rebond (debounce) - si un refresh a été fait récemment, utiliser le cache
-      if (!forceRefresh && now - lastRefreshTimestampRef.current < refreshThrottleTimeRef.current) {
-        const cachedUser = userDataManager.getCachedUserData();
-        if (cachedUser) {
-          return cachedUser;
-        }
-      }
-      
-      refreshInProgressRef.current = true;
-      lastRefreshTimestampRef.current = now;
-      
-      // Add a unique requestId for tracing/deduplication
-      const userData = await authService.getCurrentUser(forceRefresh, { requestSource: 'roleContext' });
-      setUser(userData);
-      
-      // Check if role has changed
-      const currentRole = userData?.roles?.[0];
-      if (currentRole && lastRole && currentRole !== lastRole) {
-        // Clear role-specific caches
-        queryClient.removeQueries(['admin-users']);
-        queryClient.removeQueries(['admin-dashboard']);
-        queryClient.removeQueries(['student-dashboard']);
-        queryClient.removeQueries(['teacher-dashboard']);
-        queryClient.removeQueries(['hr-dashboard']);
-      }
-      
-      // Update last role
-      if (currentRole) {
-        setLastRole(currentRole);
-      }
-      
-      refreshInProgressRef.current = false;
-      return userData;
     } catch (error) {
-      refreshInProgressRef.current = false;
-      setUser(null);
-      setLastRole(null);
-      // Clear query data to ensure consistent state
-      queryClient.setQueryData(['userRoles'], []);
-      return null;
+      console.error('Error loading roles:', error);
+      setRoles([]);
+      setIsLoading(false);
     }
-  }, [queryClient, lastRole]);
-  
-  // Fetch user data when the component mounts
+  }, []);
+
+  // Fallback to extract roles from token
+  const fallbackToTokenRoles = useCallback(() => {
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        // Extract roles from token if possible
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(c => {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        
+        const payload = JSON.parse(jsonPayload);
+        if (payload.roles) {
+          setRoles(payload.roles);
+          localStorage.setItem('userRoles', JSON.stringify(payload.roles));
+        } else {
+          setRoles([]);
+        }
+      } else {
+        setRoles([]);
+      }
+    } catch (error) {
+      console.error('Error extracting roles from token:', error);
+      setRoles([]);
+    } finally {
+      setIsLoading(false);
+      setLastRefresh(Date.now());
+    }
+  }, []);
+
+  // Function to refresh roles (can be called from components)
+  const refreshRoles = useCallback(() => {
+    // Prevent frequent refreshes
+    const now = Date.now();
+    if (now - lastRefresh < refreshThreshold) {
+      return;
+    }
+    
+    loadRoles();
+  }, [loadRoles, lastRefresh]);
+
+  // Load roles on mount and when auth status changes
   useEffect(() => {
-    // On mount, use cached data first if available to avoid a new request
-    const cachedUser = userDataManager.getCachedUserData();
-    if (cachedUser) {
-      setUser(cachedUser);
-      if (cachedUser.roles && cachedUser.roles.length > 0) {
-        setLastRole(cachedUser.roles[0]);
-      }
-      
-      // Then refresh in the background only if data is stale
-      const cachedTimestamp = userDataManager.getStats().lastUpdated 
-        ? new Date(userDataManager.getStats().lastUpdated).getTime() 
-        : 0;
-      
-      const now = Date.now();
-      if (now - cachedTimestamp > 2 * 60 * 1000) { // 2 minutes
-        fetchUser(false).catch(() => {});
-      }
-    } else {
-      fetchUser(false).catch(() => {});
-    }
+    loadRoles();
     
     // Listen for authentication events
-    const handleLoginSuccess = () => {
-      fetchUser(true).then(() => {
-        // Invalidate the userRoles query to force a refetch
-        queryClient.invalidateQueries(['userRoles']);
-      });
+    const handleAuthChange = () => {
+      loadRoles();
     };
     
-    const handleLogoutSuccess = () => {
-      setUser(null);
-      setLastRole(null);
-      // Clear the userRoles query data
-      queryClient.setQueryData(['userRoles'], []);
-      // Also remove the queries completely
-      queryClient.removeQueries(['userRoles']);
-    };
+    window.addEventListener('auth-state-change', handleAuthChange);
+    window.addEventListener('login-success', handleAuthChange);
+    window.addEventListener('logout-success', handleAuthChange);
+    window.addEventListener('role-change', handleAuthChange);
     
-    const handleRoleChange = () => {
-      // Check if a refresh is already in progress
-      if (refreshInProgressRef.current) {
-        return;
-      }
-      
-      fetchUser(true).then(() => {
-        // Invalidate all role-related queries
-        queryClient.invalidateQueries(['userRoles']);
-      });
-    };
-    
-    // Add event listeners
-    window.addEventListener('login-success', handleLoginSuccess);
-    window.addEventListener('logout-success', handleLogoutSuccess);
-    window.addEventListener('role-change', handleRoleChange);
-    window.addEventListener('auth-logout-success', handleLogoutSuccess);
-    window.addEventListener('query-cache-cleared', handleLogoutSuccess);
-    
-    // Cleanup
     return () => {
-      window.removeEventListener('login-success', handleLoginSuccess);
-      window.removeEventListener('logout-success', handleLogoutSuccess);
-      window.removeEventListener('role-change', handleRoleChange);
-      window.removeEventListener('auth-logout-success', handleLogoutSuccess);
-      window.removeEventListener('query-cache-cleared', handleLogoutSuccess);
+      window.removeEventListener('auth-state-change', handleAuthChange);
+      window.removeEventListener('login-success', handleAuthChange);
+      window.removeEventListener('logout-success', handleAuthChange);
+      window.removeEventListener('role-change', handleAuthChange);
     };
-  }, [fetchUser, queryClient]);
-  
-  // Use React Query to fetch user roles
-  const { data: userRoles, isLoading } = useQuery({
-    queryKey: ['userRoles', user?.id],
-    queryFn: async () => {
-      // If no user, return empty array
-      if (!user) {
-        return [];
-      }
-      
-      // If user has roles already, use those
-      if (user.roles && Array.isArray(user.roles) && user.roles.length > 0) {
-        return user.roles;
-      }
-      
-      return [];
-    },
-    enabled: !!user,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    cacheTime: 10 * 60 * 1000, // 10 minutes
-    onError: () => {
-      return [];
+  }, [loadRoles]);
+
+  // Function to check if user has specific role
+  const hasRole = useCallback((role) => {
+    if (!authService.isLoggedIn()) return false;
+    
+    if (roles.length === 0 && !isLoading) {
+      // If no roles but authenticated, try to refresh
+      refreshRoles();
+      return false;
     }
-  });
+    
+    // First normalize the role name
+    const normalizedRole = role.toUpperCase().startsWith('ROLE_') ? role.toUpperCase() : `ROLE_${role.toUpperCase()}`;
+    
+    return roles.some(userRole => {
+      if (typeof userRole === 'string') {
+        const normalizedUserRole = userRole.toUpperCase().startsWith('ROLE_') ? 
+          userRole.toUpperCase() : `ROLE_${userRole.toUpperCase()}`;
+        return normalizedUserRole === normalizedRole;
+      }
+      
+      return false;
+    });
+  }, [roles, isLoading, refreshRoles]);
+
+  // Function to check if user has any of the specified roles
+  const hasAnyRole = useCallback((roleList) => {
+    if (!roleList || roleList.length === 0) return true;
+    if (!authService.isLoggedIn()) return false;
+    
+    return roleList.some(role => hasRole(role));
+  }, [hasRole]);
 
   // Create memoized value for the context
   const value = useMemo(() => {
     return {
-      roles: userRoles || [],
-      isLoading: isLoading || !user, // Considérer comme chargement si pas d'utilisateur
+      roles: roles || [],
+      isLoading: isLoading || !authService.isLoggedIn(), // Considérer comme chargement si pas d'utilisateur
       // Add role check functions
-      hasRole: (role) => {
-        // Si toujours en chargement, on retourne null pour indiquer l'indécision
-        if (isLoading) return null;
-        const result = userRoles?.some(r => r === role);
-        return result;
-      },
-      hasAnyRole: (roles) => {
-        if (isLoading) return null;
-        if (!roles || !Array.isArray(roles)) return false;
-        const result = roles.some(role => userRoles?.some(r => r === role));
-        return result;
-      },
+      hasRole: hasRole,
+      hasAnyRole: hasAnyRole,
       hasAllRoles: (roles) => {
         if (isLoading) return null;
         if (!roles || !Array.isArray(roles)) return false;
-        const result = roles.every(role => userRoles?.some(r => r === role));
+        const result = roles.every(role => hasRole(role));
         return result;
       },
       // Add a function to refresh roles with debounce
-      refreshRoles: () => {
-        // Annuler tout timer existant
-        if (refreshRolesTimerRef.current) {
-          clearTimeout(refreshRolesTimerRef.current);
-        }
-        
-        const now = Date.now();
-        
-        // Si un rafraîchissement a été fait récemment, programmer un nouveau après l'intervalle
-        if (now - lastActualRefreshTimestampRef.current < minRefreshIntervalRef.current) {
-          refreshRolesTimerRef.current = setTimeout(() => {
-            lastActualRefreshTimestampRef.current = Date.now();
-            fetchUser(true).then(() => {
-              queryClient.invalidateQueries(['userRoles']);
-            });
-            refreshRolesTimerRef.current = null;
-          }, minRefreshIntervalRef.current - (now - lastActualRefreshTimestampRef.current));
-          
-          return;
-        }
-        
-        // Exécuter immédiatement si l'intervalle minimum est passé
-        lastActualRefreshTimestampRef.current = now;
-        fetchUser(true).then(() => {
-          queryClient.invalidateQueries(['userRoles']);
-        });
-      }
+      refreshRoles: refreshRoles
     };
-  }, [userRoles, isLoading, queryClient, fetchUser, user]);
+  }, [roles, isLoading, hasRole, hasAnyRole, refreshRoles]);
 
   return (
     <RoleContext.Provider value={value}>

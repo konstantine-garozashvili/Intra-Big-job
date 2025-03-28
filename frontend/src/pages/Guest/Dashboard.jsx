@@ -3,6 +3,8 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { useUserData } from '@/hooks/useDashboardQueries';
 import { ProfileContext } from '@/components/MainLayout';
 import apiService from '@/lib/services/apiService';
+import { useRoles } from '@/features/roles/roleContext';
+import { authService } from '@/lib/services/authService';
 
 /**
  * Tableau de bord spécifique pour les invités
@@ -11,6 +13,58 @@ const GuestDashboard = () => {
   const { data: user, isLoading, error, refetch } = useUserData();
   const { profileData, refreshProfileData, isProfileLoading } = useContext(ProfileContext);
   const [directlyLoadedData, setDirectlyLoadedData] = useState(null);
+  const { roles, refreshRoles } = useRoles(); // Add roles context
+  
+  // Fallback to extract data from token if API fails
+  useEffect(() => {
+    // If we already have user data, don't try to extract from token
+    if (user && user.firstName && user.lastName) {
+      console.log("GuestDashboard - Using existing user data:", user);
+      return;
+    }
+    
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    
+    try {
+      // Parse JWT token to extract user information
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(c => {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      
+      const tokenData = JSON.parse(jsonPayload);
+      console.log("GuestDashboard - Extracted token data:", tokenData);
+      
+      if (tokenData.firstName && tokenData.lastName) {
+        console.log("GuestDashboard - Using data from token");
+        
+        // Create a user object from token data
+        const tokenUser = {
+          id: tokenData.id || tokenData.userId || "",
+          firstName: tokenData.firstName || "",
+          lastName: tokenData.lastName || "",
+          email: tokenData.username || tokenData.email || "",
+          roles: tokenData.roles || [],
+          _extractedFromToken: true
+        };
+        
+        // Update localStorage with token data to ensure consistency
+        localStorage.setItem('user', JSON.stringify(tokenUser));
+        
+        // Force refresh roles to ensure they're loaded
+        if (refreshRoles) {
+          refreshRoles();
+        }
+        
+        // Set directly loaded data from token
+        setDirectlyLoadedData(tokenUser);
+      }
+    } catch (error) {
+      console.error("GuestDashboard - Error extracting data from token:", error);
+    }
+  }, [user, refreshRoles]);
   
   // Direct API call to force correct data
   useEffect(() => {
@@ -71,79 +125,81 @@ const GuestDashboard = () => {
     
     // Run this effect once on mount
     loadProfileDirectly();
-  }, []);
-  
-  // Force refresh profile data when dashboard loads - DISABLED since we now do direct loading
-  // This eliminates duplicate API calls that were happening
-  /* 
-  useEffect(() => {
-    const refreshData = async () => {
-      try {
-        console.log("GuestDashboard - Refreshing all data sources");
-        
-        // Refresh user data from the API
-        if (typeof refetch === 'function') {
-          await refetch();
-        }
-        
-        // Only try to refresh profile if the context function exists
-        if (refreshProfileData && typeof refreshProfileData === 'function') {
-          console.log("GuestDashboard - Refreshing profile data");
-          
-          // Add a small delay to ensure context is fully initialized
-          setTimeout(async () => {
-            try {
-              const newData = await refreshProfileData({
-                forceRefresh: true,
-                bypassThrottle: true 
-              });
-              console.log("GuestDashboard - Profile data refreshed:", newData ? 'success' : 'no data');
-            } catch (err) {
-              console.error("GuestDashboard - Error refreshing profile:", err);
-            }
-          }, 200);
-        } else {
-          console.warn("GuestDashboard - refreshProfileData function is not available in context");
-        }
-      } catch (err) {
-        console.error("GuestDashboard - Error in refresh process:", err);
-      }
-    };
-    
-    refreshData();
-  }, [refreshProfileData, refetch]); // Only depend on function references
-  */
+  }, [refreshProfileData]);
   
   // Utiliser useMemo pour éviter les re-rendus inutiles
   const roleAlias = React.useMemo(() => {
-    if (!user?.roles?.length) return '';
-    const role = user.roles[0].replace('ROLE_', '');
+    // First try to get from user data
+    if (user?.roles?.length) {
+      const role = user.roles[0].replace('ROLE_', '');
+      
+      // Mapping des rôles vers des alias plus conviviaux
+      const roleAliases = {
+        'SUPER_ADMIN': 'Super Administrateur',
+        'ADMIN': 'Administrateur',
+        'TEACHER': 'Formateur',
+        'STUDENT': 'Étudiant',
+        'HR': 'Ressources Humaines',
+        'RECRUITER': 'Recruteur',
+        'GUEST': 'Invité'
+      };
+      
+      return roleAliases[role] || role;
+    }
     
-    // Mapping des rôles vers des alias plus conviviaux
-    const roleAliases = {
-      'SUPER_ADMIN': 'Super Administrateur',
-      'ADMIN': 'Administrateur',
-      'TEACHER': 'Formateur',
-      'STUDENT': 'Étudiant',
-      'HR': 'Ressources Humaines',
-      'RECRUITER': 'Recruteur',
-      'GUEST': 'Invité'
-    };
+    // Fallback to directly loaded data
+    if (directlyLoadedData?.roles?.length) {
+      const role = directlyLoadedData.roles[0].replace('ROLE_', '');
+      
+      const roleAliases = {
+        'SUPER_ADMIN': 'Super Administrateur',
+        'ADMIN': 'Administrateur',
+        'TEACHER': 'Formateur',
+        'STUDENT': 'Étudiant',
+        'HR': 'Ressources Humaines',
+        'RECRUITER': 'Recruteur',
+        'GUEST': 'Invité'
+      };
+      
+      return roleAliases[role] || role;
+    }
     
-    return roleAliases[role] || role;
-  }, [user]);
+    // Fallback to roles context
+    if (roles && roles.length > 0) {
+      const role = roles[0].replace('ROLE_', '');
+      
+      const roleAliases = {
+        'SUPER_ADMIN': 'Super Administrateur',
+        'ADMIN': 'Administrateur',
+        'TEACHER': 'Formateur',
+        'STUDENT': 'Étudiant',
+        'HR': 'Ressources Humaines',
+        'RECRUITER': 'Recruteur',
+        'GUEST': 'Invité'
+      };
+      
+      return roleAliases[role] || role;
+    }
+    
+    return '';
+  }, [user, directlyLoadedData, roles]);
+
+  // Determine which user data source to use
+  const displayUser = user || directlyLoadedData || {};
 
   // Log the profile data we currently have in the dashboard component
-  console.log("GuestDashboard - Current profile data:", { 
+  console.log("GuestDashboard - Current data sources:", { 
+    userData: user,
     contextData: profileData,
-    directData: directlyLoadedData 
+    directData: directlyLoadedData,
+    roles: roles
   });
 
   return (
     <DashboardLayout loading={isLoading || isProfileLoading} error={error?.message}>
       <div className="bg-white rounded-lg shadow-lg p-6">
         <h1 className="mb-8 text-3xl font-bold text-gray-800">
-          Bienvenue {user?.firstName} {user?.lastName}
+          Bienvenue {displayUser?.firstName} {displayUser?.lastName}
         </h1>
         <div className="mb-6 p-4 bg-gray-50 border-l-4 border-gray-500 rounded-md">
           <p className="text-lg text-gray-800">

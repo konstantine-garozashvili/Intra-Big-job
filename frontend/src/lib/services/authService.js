@@ -102,6 +102,22 @@ export const authService = {
     if (!cachedUser) return null;
     
     try {
+      // For guest users, we might not need to make API calls
+      if (cachedUser.roles && cachedUser.roles.includes('ROLE_GUEST')) {
+        console.log('lazyLoadUserData - Using cached guest user data');
+        
+        // Just ensure the role information is stored properly
+        if (cachedUser.roles && cachedUser.roles.length > 0) {
+          localStorage.setItem('userRoles', JSON.stringify(cachedUser.roles));
+        }
+        
+        // Dispatch events to update UI
+        document.dispatchEvent(new CustomEvent('user:data-updated', { detail: { user: cachedUser } }));
+        window.dispatchEvent(new Event('user-data-loaded'));
+        
+        return cachedUser;
+      }
+      
       const profileResult = await this._loadProfileData();
       let enhancedUser = cachedUser;
       
@@ -124,6 +140,7 @@ export const authService = {
       
       return enhancedUser;
     } catch (error) {
+      console.error('Error in lazyLoadUserData:', error);
       sessionStorage.removeItem('login_in_progress');
       window.dispatchEvent(new Event('user-data-loaded'));
       return cachedUser;
@@ -241,7 +258,51 @@ export const authService = {
 
   getUser() {
     const userStr = localStorage.getItem('user');
-    return userStr ? JSON.parse(userStr) : null;
+    if (userStr) {
+      try {
+        return JSON.parse(userStr);
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+        return null;
+      }
+    }
+    
+    // If no user in localStorage, try to extract from token for guest users
+    try {
+      const token = this.getToken();
+      if (token) {
+        const payload = decodeToken(token);
+        if (payload && payload.roles && payload.roles.includes('ROLE_GUEST')) {
+          console.log('Extracting guest user data from token');
+          
+          // Create minimal user object from token
+          const minimalUser = {
+            id: payload.id || payload.userId || '',
+            username: payload.username || '',
+            email: payload.username || payload.email || '',
+            firstName: payload.firstName || payload.first_name || '',
+            lastName: payload.lastName || payload.last_name || '',
+            roles: payload.roles || [],
+            _extractedAt: Date.now(),
+            _minimal: true
+          };
+          
+          // Cache in localStorage
+          localStorage.setItem('user', JSON.stringify(minimalUser));
+          
+          // Also ensure roles are cached
+          if (payload.roles && payload.roles.length > 0) {
+            localStorage.setItem('userRoles', JSON.stringify(payload.roles));
+          }
+          
+          return minimalUser;
+        }
+      }
+    } catch (tokenError) {
+      console.error('Error extracting user from token:', tokenError);
+    }
+    
+    return null;
   },
 
   isLoggedIn() {
@@ -249,8 +310,34 @@ export const authService = {
     if (!token) return false;
     try {
       const decodedToken = decodeToken(token);
-      return decodedToken && decodedToken.exp > Date.now() / 1000;
+      if (!decodedToken) return false;
+      
+      const isValid = decodedToken.exp > Date.now() / 1000;
+      
+      // If token is valid but no user data, try to extract and cache it
+      if (isValid && !localStorage.getItem('user')) {
+        const minimalUser = {
+          id: decodedToken.id || decodedToken.userId || '',
+          username: decodedToken.username || '',
+          email: decodedToken.username || decodedToken.email || '',
+          firstName: decodedToken.firstName || decodedToken.first_name || '',
+          lastName: decodedToken.lastName || decodedToken.last_name || '',
+          roles: decodedToken.roles || [],
+          _extractedAt: Date.now(),
+          _minimal: true
+        };
+        
+        localStorage.setItem('user', JSON.stringify(minimalUser));
+        
+        // Also ensure roles are cached
+        if (decodedToken.roles && decodedToken.roles.length > 0) {
+          localStorage.setItem('userRoles', JSON.stringify(decodedToken.roles));
+        }
+      }
+      
+      return isValid;
     } catch (error) {
+      console.error('Error checking token validity:', error);
       return false;
     }
   },

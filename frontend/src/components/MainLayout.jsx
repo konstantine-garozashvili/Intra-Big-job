@@ -7,6 +7,7 @@ import { authService } from '../lib/services/authService';
 import { profileService } from '../pages/Global/Profile/services/profileService';
 import Footer from './Footer';
 import ChatButton from './chat/ChatButton';
+import apiService, { normalizeUserData } from '@/lib/services/apiService';
 
 // Create a context for profile data and refresh function
 export const ProfileContext = createContext({
@@ -77,9 +78,11 @@ const MainLayout = () => {
         // If direct data is provided, use it instead of making an API call
         if (options.directData) {
           console.log("Using direct data instead of API call:", options.directData);
-          setProfileData(options.directData);
+          // Apply normalization to ensure consistent structure
+          const normalizedData = normalizeUserData(options.directData);
+          setProfileData(normalizedData);
           setLoadingState(LOADING_STATES.COMPLETE);
-          return options.directData;
+          return normalizedData;
         }
         
         // Force refresh profile data to get latest information
@@ -91,10 +94,13 @@ const MainLayout = () => {
         // Log the retrieved data for debugging
         console.log("Refreshed profile data:", newProfileData);
         
+        // Apply normalization to ensure consistent structure
+        const normalizedData = normalizeUserData(newProfileData);
+        
         // Ensure data is updated before returning
-        setProfileData(newProfileData);
+        setProfileData(normalizedData);
         setLoadingState(LOADING_STATES.COMPLETE);
-        return newProfileData; // Return the new data for components to use
+        return normalizedData; // Return the new data for components to use
       } catch (error) {
         console.error('Error refreshing profile data:', error);
         setLoadingState(LOADING_STATES.ERROR);
@@ -179,9 +185,56 @@ const MainLayout = () => {
         } catch (error) {
           console.error('Error fetching initial user data:', error);
           setLoadingState(LOADING_STATES.ERROR);
+          
+          // If error is related to authentication, clear local state
+          if (error.response?.status === 401 || error.response?.status === 403) {
+            console.warn('Authentication error, clearing local state');
+            // Don't automatically logout to avoid redirect loops
+            // Just clear userData to force re-authentication
+            setUserData(null);
+            setIsAuthenticated(false);
+            setProfileData(null);
+          }
+        }
+      } else {
+        // Clear any existing data if not logged in
+        setUserData(null);
+        setProfileData(null);
+        setLoadingState(LOADING_STATES.INITIAL);
+      }
+    };
+
+    // Add a function to check token validity on route changes
+    const checkTokenValidity = () => {
+      const isLoggedIn = authService.isLoggedIn();
+      // If auth state changed, update it
+      if (isLoggedIn !== isAuthenticated) {
+        setIsAuthenticated(isLoggedIn);
+        
+        // If logged out, clear data
+        if (!isLoggedIn) {
+          setUserData(null);
+          setProfileData(null);
+          setLoadingState(LOADING_STATES.INITIAL);
+        } else {
+          // If logged in but no data, fetch it
+          if (!userData) {
+            fetchInitialUserData();
+          }
         }
       }
     };
+    
+    // Check auth state when route changes
+    checkTokenValidity();
+    
+    // Track route changes to check auth state
+    const unlisten = () => {}; // Empty function to satisfy ESLint
+    
+    // Run initial data load
+    if (isAuthenticated) {
+      fetchInitialUserData();
+    }
 
     const handleMinimalDataReady = (event) => {
       // Mise à jour immédiate avec les données minimales du token
@@ -221,10 +274,6 @@ const MainLayout = () => {
       setLoadingState(LOADING_STATES.INITIAL);
     };
     
-    // Vérifier l'état d'authentification et récupérer les données initiales
-    setIsAuthenticated(authService.isLoggedIn());
-    fetchInitialUserData();
-
     // Ajouter les écouteurs d'événements
     document.addEventListener('auth:minimal-data-ready', handleMinimalDataReady);
     document.addEventListener('user:data-updated', handleUserDataUpdated);

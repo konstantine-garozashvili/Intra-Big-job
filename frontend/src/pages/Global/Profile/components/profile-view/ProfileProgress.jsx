@@ -228,8 +228,37 @@ const ProfileProgress = ({ userData, refreshData }) => {
       (localUserData?.user?.linkedinUrl) || 
       (localUserData?.linkedinUrl) ||
       (localUserData?.profile?.linkedinUrl) ||
-      (localUserData?.profile?.user?.linkedinUrl)
+      (localUserData?.profile?.user?.linkedinUrl) ||
+      (localUserData?.data?.linkedinUrl) ||
+      // Check for URL in user.profile
+      (localUserData?.user?.profile?.linkedinUrl) ||
+      // Also check for any property that looks like a LinkedIn URL
+      (Object.entries(localUserData || {}).some(([key, value]) => 
+        typeof value === 'string' && 
+        (value.includes('linkedin.com/') || value.includes('linkedin.fr/')) &&
+        (key.toLowerCase().includes('linkedin') || key.toLowerCase().includes('url'))
+      ))
     );
+    
+    // Log LinkedIn detection details
+    if (DEBUG) {
+      console.log('LinkedIn URL detection - Checking paths:', {
+        'localUserData?.user?.linkedinUrl': localUserData?.user?.linkedinUrl,
+        'localUserData?.linkedinUrl': localUserData?.linkedinUrl,
+        'localUserData?.profile?.linkedinUrl': localUserData?.profile?.linkedinUrl,
+        'localUserData?.profile?.user?.linkedinUrl': localUserData?.profile?.user?.linkedinUrl,
+        'localUserData?.data?.linkedinUrl': localUserData?.data?.linkedinUrl,
+        'localUserData?.user?.profile?.linkedinUrl': localUserData?.user?.profile?.linkedinUrl,
+        // Also log any property that might be a LinkedIn URL
+        'dynamic_check': Object.entries(localUserData || {})
+          .filter(([key, value]) => 
+            typeof value === 'string' && 
+            (value.includes('linkedin.com/') || value.includes('linkedin.fr/')) &&
+            (key.toLowerCase().includes('linkedin') || key.toLowerCase().includes('url'))
+          ),
+        'result': hasLinkedIn
+      });
+    }
     
     // Enhanced detection for CV documents with multiple checks
     const hasCv = Boolean(

@@ -104,10 +104,89 @@ const CVUpload = memo(({ userData, onUpdate }) => {
       return;
     }
     
+    // Create FormData and ensure file is properly attached
     const formData = new FormData();
+    
+    // Add file with both keys for redundancy
     formData.append('file', cvFile);
-    uploadCV(formData);
-  }, [cvFile, uploadCV]);
+    formData.append('cv', cvFile); // Add as cv too in case backend looks for this key
+    
+    // Explicitly set the content type to ensure proper multipart handling
+    formData.append('type', 'CV');
+    
+    // Add debug information
+    console.log('CV Upload - File details:', {
+      name: cvFile.name,
+      type: cvFile.type,
+      size: cvFile.size,
+      lastModified: new Date(cvFile.lastModified).toISOString()
+    });
+    
+    // Log form data content for debugging
+    console.log('FormData keys:', Array.from(formData.keys()));
+    
+    // Show upload progress toast
+    const uploadingToast = toast.loading('Uploading your CV...');
+    
+    // Direct upload using the document service for better reliability
+    documentService.uploadCV(formData)
+      .then(response => {
+        console.log('CV Upload - Success response:', response);
+        toast.dismiss(uploadingToast);
+        toast.success('CV uploaded successfully');
+        setCvFile(null);
+        
+        // Force refresh after a small delay to ensure the backend has processed the file
+        setTimeout(() => {
+          refetchCV();
+          if (onUpdate) onUpdate();
+        }, 1500); // Extended delay to ensure backend processing time
+        
+        // Reset file input
+        const fileInput = document.getElementById('cv-upload');
+        if (fileInput) fileInput.value = '';
+      })
+      .catch(error => {
+        console.error('CV Upload - Error:', error);
+        console.error('Error details:', {
+          message: error.message,
+          response: error.response,
+          status: error.response?.status,
+          data: error.response?.data
+        });
+        
+        toast.dismiss(uploadingToast);
+        
+        // Provide more specific error messages based on error type
+        let errorMessage = 'Failed to upload CV';
+        
+        if (error.message && error.message.includes('Network Error')) {
+          errorMessage += ': Network error - please check your connection';
+        } else if (error.response) {
+          // Server responded with error
+          if (error.response.status === 413) {
+            errorMessage += ': File too large for server';
+          } else if (error.response.status === 415) {
+            errorMessage += ': Unsupported file format';
+          } else if (error.response.status === 401) {
+            errorMessage += ': Authentication error, please try logging in again';
+            // Force profile refresh to update auth state
+            if (onUpdate) onUpdate();
+          } else {
+            errorMessage += `: ${error.response.data?.message || error.message || 'Server error'}`;
+          }
+        } else if (error.message && error.message.includes('CORS')) {
+          errorMessage += ': CORS error - please try again later';
+        }
+        
+        toast.error(errorMessage);
+        
+        // Try to recover by refreshing CV data anyway
+        setTimeout(() => {
+          refetchCV();
+        }, 1000);
+      });
+  }, [cvFile, refetchCV, onUpdate]);
 
   // Handle document deletion
   const handleDeleteDocument = useCallback(() => {

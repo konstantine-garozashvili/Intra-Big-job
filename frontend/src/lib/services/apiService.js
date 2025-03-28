@@ -869,4 +869,55 @@ const apiService = {
   },
 };
 
+// Add a function to handle authentication state inconsistencies
+export const normalizeUserData = (userData) => {
+  if (!userData) return null;
+  
+  // Create a normalized version with consistent structure
+  const normalized = { ...userData };
+  
+  // Always ensure linkedinUrl is accessible at the top level
+  if (!normalized.linkedinUrl) {
+    if (normalized.user?.linkedinUrl) {
+      normalized.linkedinUrl = normalized.user.linkedinUrl;
+    }
+    else if (normalized.data?.linkedinUrl) {
+      normalized.linkedinUrl = normalized.data.linkedinUrl;
+    }
+    else if (normalized.profile?.linkedinUrl) {
+      normalized.linkedinUrl = normalized.profile.linkedinUrl;
+    }
+  }
+  
+  // Normalize documents array
+  if (!normalized.documents || !Array.isArray(normalized.documents)) {
+    normalized.documents = [];
+    
+    // Try to find documents in other locations
+    if (Array.isArray(normalized.user?.documents)) {
+      normalized.documents = [...normalized.user.documents];
+    }
+    else if (Array.isArray(normalized.data?.documents)) {
+      normalized.documents = [...normalized.data.documents];
+    }
+  }
+  
+  // Add normalization timestamp
+  normalized._normalized = Date.now();
+  
+  return normalized;
+};
+
+// Add a debug version of the apiService to diagnose any API issues
+export const debugApiCalls = (enabled = true) => {
+  // Enable or disable debug mode
+  if (enabled) {
+    console.log('API debugging enabled - all calls will be logged');
+    apiDebugging = true;
+  } else {
+    console.log('API debugging disabled');
+    apiDebugging = false;
+  }
+};
+
 export default apiService; 
