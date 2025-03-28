@@ -60,21 +60,7 @@ const ResetPasswordRequest = () => {
                     });
                 } catch (emailError) {
                     console.error('Erreur lors de l\'envoi de l\'email:', emailError.message);
-                    
-                    // Essayer d'envoyer avec un token généré côté client en cas d'échec
-                    try {
-                        const fallbackToken = 'fallback_token_' + Date.now();
-                        await emailService.sendPasswordResetEmail({
-                            email: email,
-                            token: fallbackToken
-                        });
-                        
-                        toast.success('Si votre email est enregistré dans notre système, vous recevrez un lien de réinitialisation');
-                        navigate('/reset-password/confirmation', { state: { email } });
-                    } catch (fallbackError) {
-                        console.error('Échec de la solution de secours:', fallbackError.message);
-                        toast.error('Erreur lors de l\'envoi de l\'email. Veuillez réessayer.');
-                    }
+                    toast.error('Erreur lors de l\'envoi de l\'email. Veuillez réessayer.');
                 }
             } else {
                 // En cas d'erreur côté serveur mais avec une réponse 200
@@ -82,19 +68,8 @@ const ResetPasswordRequest = () => {
                     console.log('Réponse sans token ou avec success=false');
                 }
                 
-                // Essayer d'envoyer avec un token généré côté client
-                try {
-                    const clientToken = 'client_token_' + Date.now();
-                    await emailService.sendPasswordResetEmail({
-                        email: email,
-                        token: clientToken
-                    });
-                    
-                    toast.success('Si votre email est enregistré dans notre système, vous recevrez un lien de réinitialisation');
-                } catch (clientTokenError) {
-                    console.error('Erreur avec token client:', clientTokenError.message);
-                    toast.error('Erreur lors de l\'envoi de l\'email. Veuillez réessayer.');
-                }
+                // Message standard pour ne pas révéler si l'email existe
+                toast.success('Si votre email est enregistré dans notre système, vous recevrez un lien de réinitialisation');
                 
                 // On redirige quand même pour ne pas révéler si l'email existe ou non
                 navigate('/reset-password/confirmation', { 
@@ -103,21 +78,7 @@ const ResetPasswordRequest = () => {
             }
         } catch (error) {
             console.error('Erreur lors de la demande de réinitialisation:', error.message);
-            
-            // Essayer d'envoyer avec un token généré côté client en cas d'échec complet
-            try {
-                const emergencyToken = 'emergency_token_' + Date.now();
-                await emailService.sendPasswordResetEmail({
-                    email: email,
-                    token: emergencyToken
-                });
-                
-                toast.success('Si votre email est enregistré dans notre système, vous recevrez un lien de réinitialisation');
-                navigate('/reset-password/confirmation', { state: { email } });
-            } catch (emergencyError) {
-                console.error('Échec de la solution d\'urgence:', emergencyError.message);
-                toast.error('Une erreur est survenue lors de la demande de réinitialisation');
-            }
+            toast.error('Une erreur est survenue lors de la demande de réinitialisation');
         } finally {
             setIsSubmitting(false);
         }
