@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { GraduationCap, Plus, Trash2, X, Save, Calendar, Check, ChevronsUpDown } from 'lucide-react';
+import React, { useState, lazy, Suspense, memo } from 'react';
+import { GraduationCap, Plus, Trash2, X, Save, Calendar as CalendarLucide, Check, ChevronsUpDown, CalendarIcon } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -19,12 +19,27 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import * as roleUtils from '../../utils/roleUtils';
 import { useApiQuery, useApiMutation } from '@/hooks/useReactQuery';
+import 'react-calendar/dist/Calendar.css';
+import '@/styles/custom-calendar.css'; // Import du CSS personnalisé pour le calendrier
+
+// Chargement dynamique du calendrier pour améliorer les performances
+const Calendar = lazy(() => import('react-calendar'));
+
+// Composant de chargement pour le calendrier - Mémorisé
+const CalendarFallback = memo(() => (
+  <div className="flex items-center justify-center p-8">
+    <div className="w-8 h-8 border-t-2 border-b-2 border-[#0066ff] rounded-full animate-spin"></div>
+  </div>
+));
+
+CalendarFallback.displayName = 'CalendarFallback';
 
 const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
   const userRole = userData?.role;
   const [isAdding, setIsAdding] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [diplomaToDelete, setDiplomaToDelete] = useState(null);
+  const [calendarOpen, setCalendarOpen] = useState(false);
   
   const [newDiploma, setNewDiploma] = useState({
     diplomaId: '',
@@ -33,6 +48,17 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
 
   const [error, setError] = useState('');
   const [open, setOpen] = useState(false);
+
+  // Formater la date pour l'affichage
+  const formattedObtainedDate = newDiploma.obtainedDate 
+    ? new Intl.DateTimeFormat('fr-FR').format(new Date(newDiploma.obtainedDate)) 
+    : null;
+
+  // Fonction pour gérer le changement de date
+  const handleDateChange = (date) => {
+    setNewDiploma({...newDiploma, obtainedDate: format(date, 'yyyy-MM-dd')});
+    if (error) setError('');
+  };
 
   // Fetch available diplomas using React Query
   const { 
@@ -337,22 +363,79 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
                   </Popover>
                 </div>
                 <div className="space-y-2">
-                  <label
-                    htmlFor="date-obtention"
-                    className="block text-sm font-medium text-gray-700"
-                  >
+                  <label className="block text-sm font-medium text-gray-700">
                     Date d'obtention
                   </label>
-                  <input
-                    id="date-obtention"
-                    type="date"
-                    value={newDiploma.obtainedDate}
-                    onChange={(e) => {
-                      setNewDiploma({...newDiploma, obtainedDate: e.target.value});
-                      if (error) setError('');
-                    }}
-                    className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm"
-                  />
+                  <div className="relative">
+                    <div 
+                      className={`w-full px-4 py-3 rounded-md border flex items-center cursor-pointer transition-colors hover:border-[#0066ff] ${error && error.includes('date') ? 'border-red-500' : 'border-gray-300'}`}
+                      onClick={() => setCalendarOpen(true)}
+                    >
+                      {formattedObtainedDate ? (
+                        <span className="text-gray-900">
+                          {formattedObtainedDate}
+                        </span>
+                      ) : (
+                        <span className="text-gray-500">JJ/MM/AAAA</span>
+                      )}
+                      <CalendarIcon className="ml-auto h-5 w-5 text-gray-500" />
+                    </div>
+                    
+                    <Dialog open={calendarOpen} onOpenChange={setCalendarOpen}>
+                      <DialogContent className="p-0 sm:max-w-[425px] bg-white rounded-lg shadow-xl border-none overflow-hidden">
+                        <div className="p-4 pb-0">
+                          <DialogTitle className="text-xl font-semibold text-center text-gray-900">
+                            Sélectionnez la date d'obtention
+                          </DialogTitle>
+                          <DialogDescription className="text-sm text-center text-gray-500 mt-1">
+                            Choisissez la date à laquelle vous avez obtenu ce diplôme.
+                          </DialogDescription>
+                        </div>
+                        <div className="calendar-container w-full p-4">
+                          <Suspense fallback={<CalendarFallback />}>
+                            <Calendar 
+                              onChange={handleDateChange} 
+                              value={new Date(newDiploma.obtainedDate)} 
+                              locale="fr"
+                              maxDate={new Date()}
+                              minDetail="decade" 
+                              defaultView="decade"
+                              minDate={new Date(1940, 0, 1)}
+                              className="modern-calendar w-full"
+                              formatShortWeekday={(locale, date) => ['L', 'M', 'M', 'J', 'V', 'S', 'D'][date.getDay()]}
+                              navigationLabel={({ date }) => 
+                                date.toLocaleString('fr', { month: 'long', year: 'numeric' }).toLowerCase()
+                              }
+                              next2Label={<span className="text-lg text-[#0066ff]">»</span>}
+                              prev2Label={<span className="text-lg text-[#0066ff]">«</span>}
+                              nextLabel={<span className="text-lg text-[#0066ff]">›</span>}
+                              prevLabel={<span className="text-lg text-[#0066ff]">‹</span>}
+                              showNeighboringMonth={false}
+                              tileClassName={({ date, view }) => {
+                                // Vérifie si la date est dans le futur
+                                const today = new Date();
+                                today.setHours(0, 0, 0, 0);
+                                
+                                if (view === 'month' && date > today) {
+                                  return 'calendar-future-date';
+                                }
+                                
+                                return null;
+                              }}
+                            />
+                          </Suspense>
+                        </div>
+                        <div className="p-4 flex justify-end">
+                          <button 
+                            className="calendar-confirm-button"
+                            onClick={() => setCalendarOpen(false)}
+                          >
+                            Confirmer
+                          </button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
                 </div>
               </div>
               <div className="flex justify-end gap-3 mt-4">
