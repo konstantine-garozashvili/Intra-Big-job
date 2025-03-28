@@ -3,11 +3,12 @@
 namespace App\Controller;
 
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use App\Repository\CandidatureRepository;
 use App\Entity\UserSituationType;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route('/api')]
 class CandidatureController extends AbstractController
@@ -104,7 +105,7 @@ class CandidatureController extends AbstractController
             
             // Récupérer tous les profils étudiants avec ce type de situation
             $studentProfiles = $entityManager->createQuery(
-                'SELECT sp FROM App\Entity\StudentProfile sp
+                'SELECT sp FROM App\Domains\Student\Entity\StudentProfile sp
                 WHERE sp.situationType = :situationId'
             )->setParameter('situationId', $situationId)
              ->getResult();
