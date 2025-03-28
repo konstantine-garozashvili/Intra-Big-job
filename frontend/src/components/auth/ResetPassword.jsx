@@ -29,9 +29,16 @@ const ResetPassword = () => {
             setIsLoading(true);
             
             try {
-                console.log('Vérification du token:', token);
+                if (import.meta.env.DEV) {
+                    console.log('Vérification du token:', token);
+                }
+                
+                // Vérifier le token avec le backend
                 const response = await apiService.get(`/api/reset-password/verify/${token}`);
-                console.log('Réponse de vérification:', response);
+                
+                if (import.meta.env.DEV) {
+                    console.log('Réponse de vérification:', response);
+                }
                 
                 if (response.success) {
                     setIsValid(true);
@@ -71,13 +78,18 @@ const ResetPassword = () => {
         setIsSubmitting(true);
         
         try {
-            console.log('Envoi de la réinitialisation pour le token:', token);
+            if (import.meta.env.DEV) {
+                console.log('Envoi de la réinitialisation pour le token:', token);
+            }
             
+            // Envoyer la requête au backend
             const response = await apiService.post(`/api/reset-password/reset/${token}`, { 
                 password
             });
             
-            console.log('Réponse de réinitialisation:', response);
+            if (import.meta.env.DEV) {
+                console.log('Réponse de réinitialisation:', response);
+            }
             
             if (response.success) {
                 toast.success('Votre mot de passe a été réinitialisé avec succès');
@@ -217,12 +229,12 @@ const ResetPassword = () => {
                                 </div>
                             </div>
                             
-                            <Button
-                                type="submit"
+                            <Button 
+                                type="submit" 
                                 className="w-full"
                                 disabled={isSubmitting}
                             >
-                                {isSubmitting ? 'Mise à jour...' : 'Réinitialiser mon mot de passe'}
+                                {isSubmitting ? 'Traitement en cours...' : 'Réinitialiser le mot de passe'}
                             </Button>
                         </div>
                     </form>

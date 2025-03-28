@@ -62,10 +62,9 @@ class ResetPasswordController extends AbstractController
             // Traiter la demande via le service
             $result = $this->resetPasswordService->requestReset($data['email']);
             
-            // Pour le débogage, générer un token de test si aucun n'est retourné
+            // Générer un token de test pour le développement
             if (!isset($result['token']) || !$result['token']) {
                 $this->logger->info('Aucun token généré, création d\'un token de test');
-                // Générer un token de test pour le développement
                 $result['token'] = bin2hex(random_bytes(32));
             }
             
@@ -118,7 +117,7 @@ class ResetPasswordController extends AbstractController
         try {
             $this->logger->info('Vérification du token: ' . substr($token, 0, 8) . '...');
             
-            // Vérifier le token
+            // Vérifier le token dans la base de données
             $user = $this->resetPasswordService->validateToken($token);
             
             if (!$user) {
