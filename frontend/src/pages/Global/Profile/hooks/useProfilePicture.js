@@ -160,6 +160,12 @@ export function useProfilePicture() {
     };
   }, [componentId]);
 
+  const { data: userData } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => userDataManager.getCurrentUser(),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
   // Fonction pour récupérer la photo de profil en utilisant la coordination
   const fetchProfilePicture = useCallback(async () => {
     // Utiliser le système de coordination des requêtes
@@ -602,6 +608,8 @@ export function useProfilePicture() {
   // 1. API data if available
   // 2. Local cached URL otherwise
   const finalProfilePictureUrl = getProfilePictureUrl(profilePictureQuery.data) || cachedUrl;
+
+  const userId = userData?.id;
 
   return {
     // Profile picture data
