@@ -153,7 +153,18 @@ const FormationList = () => {
         return;
       }
       toast.success('Formation créée avec succès');
-      await loadFormations();
+      
+      // Au lieu de recharger toutes les formations, ajoutez simplement la nouvelle formation à l'état
+      // Assurez-vous que la structure de l'objet correspond à celle attendue par le composant
+      const newFormationWithStudents = {
+        ...response, // Contient déjà id, name, promotion, description de l'API
+        students: [] // Initialiser avec un tableau d'étudiants vide
+      };
+      
+      // Mettre à jour l'état des formations en ajoutant la nouvelle formation
+      setFormations(prevFormations => [...prevFormations, newFormationWithStudents]);
+      
+      // Fermer la modale
       closeCreateModal();
     } catch (error) {
       console.error('Erreur lors de la création de la formation:', error);
