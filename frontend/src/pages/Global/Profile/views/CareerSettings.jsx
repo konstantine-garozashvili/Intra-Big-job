@@ -6,6 +6,7 @@ import documentService from '../services/documentService';
 import { studentProfileService } from '@/lib/services';
 import { diplomaService } from '../services/diplomaService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { isStudent, isGuest } from '../utils/roleUtils'; // Importer les fonctions utilitaires
 
 // Import des composants liés à la carrière
 import { CVUpload, JobSeekingSettings, DiplomaManager } from '../components/settings';
@@ -42,11 +43,11 @@ const CareerSettings = () => {
 
   // Extraire et valider le rôle de l'utilisateur avec protection supplémentaire
   const userRole = currentUser?.roles?.[0] || null;
-  
+
   // Déterminer les rôles de façon sécurisée
-  const isStudent = userRole === 'ROLE_STUDENT';
-  const isGuest = userRole === 'ROLE_GUEST';
-  const hasValidRole = userStatus === 'success' && (isStudent || isGuest);
+  const userIsStudent = isStudent(userRole);
+  const userIsGuest = isGuest(userRole);
+  const hasValidRole = userStatus === 'success' && (userIsStudent || userIsGuest);
 
   // 2. REQUÊTE PROFIL ÉTUDIANT - Uniquement si l'utilisateur est un étudiant confirmé
   const {
