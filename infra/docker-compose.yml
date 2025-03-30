@@ -99,3 +99,4 @@ volumes:
   backend_var:
   jwt_keys:
   redis_data:
+  backend_nginx:

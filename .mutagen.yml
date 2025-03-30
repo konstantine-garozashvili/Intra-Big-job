@@ -1,0 +1,19 @@
+sync:
+  defaults:
+    mode: two-way-resolved
+    ignore:
+      vcs: true
+      paths:
+        - ".DS_Store"
+        - "._*"
+        - ".idea"
+        - "*.sw[a-p]"
+        - "*~"
+    symlink:
+      mode: posix-raw
+    permissions:
+      defaultFileMode: 0644
+      defaultDirectoryMode: 0755
+    watch:
+      mode: portable
+      pollingInterval: 1

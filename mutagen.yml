@@ -8,6 +8,10 @@ sync:
     permissions:
       defaultFileMode: 0644
       defaultDirectoryMode: 0755
+    watch:
+      mode: portable
+    probe:
+      interval: 5
 
   frontend:
     alpha: "./frontend"
@@ -28,3 +32,8 @@ sync:
         - .git
         - var/cache
         - var/log
+    permissions:
+      defaultFileMode: 0664
+      defaultDirectoryMode: 0775
+    watch:
+      pollingInterval: 2
