@@ -175,6 +175,105 @@ class ProfileDataController extends AbstractController
     }
 
     /**
+     * Get public profile data for a specific user
+     */
+    #[Route('/public/{id}', name: 'api_profile_public', methods: ['GET'])]
+    public function getPublicProfileData(int $id): JsonResponse
+    {
+        // Récupérer l'utilisateur avec toutes ses relations chargées
+        $user = $this->userRepository->findOneWithAllRelations($id);
+        
+        if (!$user) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Utilisateur non trouvé'
+            ], 404);
+        }
+        
+        // Préparer les données de base du profil
+        $userData = [
+            'user' => [
+                'id' => $user->getId(),
+                'firstName' => $user->getFirstName(),
+                'lastName' => $user->getLastName(),
+                'email' => $user->getEmail(),
+                'phoneNumber' => $user->getPhoneNumber(),
+                'linkedinUrl' => $user->getLinkedinUrl(),
+                'profilePicturePath' => $user->getProfilePicturePath(),
+                'birthDate' => $user->getBirthDate() ? $user->getBirthDate()->format('Y-m-d') : null,
+                'createdAt' => $user->getCreatedAt() ? $user->getCreatedAt()->format('Y-m-d H:i:s') : null,
+                'updatedAt' => $user->getUpdatedAt() ? $user->getUpdatedAt()->format('Y-m-d H:i:s') : null,
+                'isEmailVerified' => $user->isEmailVerified(),
+                'roles' => $this->getUserRolesAsArray($user),
+                'specialization' => $user->getSpecialization() ? [
+                    'id' => $user->getSpecialization()->getId(),
+                    'name' => $user->getSpecialization()->getName(),
+                    'domain' => $user->getSpecialization()->getDomain() ? [
+                        'id' => $user->getSpecialization()->getDomain()->getId(),
+                        'name' => $user->getSpecialization()->getDomain()->getName(),
+                    ] : null,
+                ] : null,
+            ]
+        ];
+        
+        // Ajouter les adresses si disponibles
+        $addresses = $user->getAddresses();
+        if (!$addresses->isEmpty()) {
+            $userData['user']['addresses'] = array_map(function($address) {
+                return [
+                    'id' => $address->getId(),
+                    'name' => $address->getName(),
+                    'complement' => $address->getComplement(),
+                    'postalCode' => $address->getPostalCode() ? [
+                        'id' => $address->getPostalCode()->getId(),
+                        'code' => $address->getPostalCode()->getCode(),
+                    ] : null,
+                    'city' => $address->getCity() ? [
+                        'id' => $address->getCity()->getId(),
+                        'name' => $address->getCity()->getName(),
+                    ] : null,
+                ];
+            }, $addresses->toArray());
+        }
+        
+        // Ajouter les diplômes si disponibles
+        $diplomas = $user->getUserDiplomas();
+        if (!$diplomas->isEmpty()) {
+            $userData['user']['diplomas'] = array_map(function($userDiploma) {
+                return [
+                    'id' => $userDiploma->getDiploma()->getId(),
+                    'name' => $userDiploma->getDiploma()->getName(),
+                    'obtainedAt' => $userDiploma->getDiploma()->getObtainedAt() ? $userDiploma->getDiploma()->getObtainedAt()->format('Y-m-d') : null,
+                    'institution' => $userDiploma->getDiploma()->getInstitution() ? $userDiploma->getDiploma()->getInstitution()->getName() : null,
+                    'location' => $userDiploma->getDiploma()->getLocation(),
+                ];
+            }, $diplomas->toArray());
+        }
+        
+        // Ajouter le profil étudiant si disponible
+        if ($user->getStudentProfile()) {
+            $userData['user']['studentProfile'] = [
+                'id' => $user->getStudentProfile()->getId(),
+                'isSeekingInternship' => $user->getStudentProfile()->isSeekingInternship(),
+                'isSeekingApprenticeship' => $user->getStudentProfile()->isSeekingApprenticeship(),
+                'portfolioUrl' => $user->getStudentProfile()->getPortfolioUrl(),
+                'currentInternshipCompany' => $user->getStudentProfile()->getCurrentInternshipCompany(),
+                'internshipStartDate' => $user->getStudentProfile()->getInternshipStartDate() ? $user->getStudentProfile()->getInternshipStartDate()->format('Y-m-d') : null,
+                'internshipEndDate' => $user->getStudentProfile()->getInternshipEndDate() ? $user->getStudentProfile()->getInternshipEndDate()->format('Y-m-d') : null,
+                'situationType' => $user->getStudentProfile()->getSituationType() ? [
+                    'id' => $user->getStudentProfile()->getSituationType()->getId(),
+                    'name' => $user->getStudentProfile()->getSituationType()->getName()
+                ] : null,
+            ];
+        }
+        
+        return $this->json([
+            'success' => true,
+            'data' => $userData
+        ]);
+    }
+
+    /**
      * Get user roles as array
      */
     private function getUserRolesAsArray(User $user): array

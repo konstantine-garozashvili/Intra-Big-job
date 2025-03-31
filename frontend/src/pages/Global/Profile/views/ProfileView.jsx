@@ -199,6 +199,16 @@ const ProfileView = () => {
   
   useEffect(() => {
     if (isPublicProfile && userId) {
+      // Get the current user's ID from the profile data
+      const currentUserId = currentProfileData?.id;
+      
+      // If we're viewing our own profile, don't fetch public profile data
+      if (currentUserId && currentUserId.toString() === userId) {
+        setPublicProfileData(currentProfileData);
+        setIsLoadingPublicProfile(false);
+        return;
+      }
+      
       setIsLoadingPublicProfile(true);
       
       const fetchPublicProfile = async () => {
@@ -219,7 +229,7 @@ const ProfileView = () => {
       
       fetchPublicProfile();
     }
-  }, [userId, isPublicProfile]);
+  }, [userId, isPublicProfile, currentProfileData]);
   
   const {
     profilePictureUrl,
