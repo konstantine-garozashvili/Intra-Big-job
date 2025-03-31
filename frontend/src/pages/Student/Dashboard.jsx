@@ -569,4 +569,4 @@ const StudentDashboard = () => {
   );
 };
 
-export default StudentDashboard;
+export { StudentDashboard as default };

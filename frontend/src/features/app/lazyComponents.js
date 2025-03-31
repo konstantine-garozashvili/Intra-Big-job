@@ -26,8 +26,8 @@ const CareerSettings = lazy(() => import('../../pages/Global/Profile/views/Caree
 const Dashboard = lazy(() => import('../../pages/Dashboard'));
 
 // Dashboards spécifiques par rôle
-const AdminDashboard = lazy(() => import('../../pages/Admin/Dashboard'));
-const StudentDashboard = lazy(() => import('../../pages/Student/Dashboard'));
+const AdminDashboard = lazy(() => import('../../pages/Admin/Dashboard').then(module => ({ default: module.default })));
+const StudentDashboard = lazy(() => import('../../pages/Student/Dashboard').then(module => ({ default: module.default })));
 const TeacherDashboard = lazy(() => import('../../pages/Teacher/Dashboard'));
 const HRDashboard = lazy(() => import('../../pages/HR/Dashboard'));
 const SuperAdminDashboard = lazy(() => import('../../pages/SuperAdmin/Dashboard'));
@@ -35,7 +35,7 @@ const GuestDashboard = lazy(() => import('../../pages/Guest/Dashboard'));
 const RecruiterDashboard = lazy(() => import('../../pages/Recruiter/Dashboard'));
 
 // Pages spécifiques aux étudiants
-const StudentSchedule = lazy(() => import('../../pages/Student/Schedule'));
+const StudentSchedule = lazy(() => import('../../pages/Student/Schedule').then(module => ({ default: module.default })));
 const StudentGrades = lazy(() => import('../../pages/Student/Grades'));
 const StudentAbsences = lazy(() => import('../../pages/Student/Absences'));
 const StudentProjects = lazy(() => import('../../pages/Student/Projects'));

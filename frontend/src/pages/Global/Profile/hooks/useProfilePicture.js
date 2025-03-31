@@ -131,8 +131,10 @@ export function useProfilePicture() {
     // Initialiser avec le cache existant au montage du composant
     return profilePictureCache.getFromCache();
   });
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(Date.now());
+  
+  // Créer un identifiant unique pour le composant
+  const componentIdRef = useRef(`profile_picture_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`);
   
   // Get current user data
   const { data: userData } = useQuery({
@@ -149,7 +151,7 @@ export function useProfilePicture() {
     try {
       const response = await userDataManager.coordinateRequest(
         '/api/profile/picture',
-        componentId,
+        componentIdRef.current,
         async () => {
           const result = await apiService.get('/api/profile/picture', { 
             params: { _t: Date.now() }, // Ajouter un timestamp pour éviter le cache du navigateur
@@ -246,10 +248,10 @@ export function useProfilePicture() {
         error: error.message
       };
     }
-  }, [componentId]);
+  }, [componentIdRef]);
 
   // Query for profile picture with enhanced debugging - Utiliser notre fonction de fetch coordonnée
-  const profilePictureQuery = useQuery({
+  const { data: profilePictureData, isLoading, isFetching, refetch: profilePictureRefetch } = useQuery({
     queryKey: PROFILE_QUERY_KEYS.profilePicture,
     queryFn: fetchProfilePicture,
     staleTime: 5 * 60 * 1000,
@@ -322,7 +324,7 @@ export function useProfilePicture() {
     console.log("Refreshing profile picture data");
     
     // Effectuer la requête
-    return profilePictureQuery.refetch()
+    return profilePictureRefetch()
       .then(response => {
         // Traiter la réponse
         const data = response.data?.data;
@@ -349,7 +351,7 @@ export function useProfilePicture() {
           isRefreshing.current = false;
         }, 1000);
       });
-  }, [profilePictureQuery, setCachedUrl]);
+  }, [profilePictureRefetch, setCachedUrl]);
 
   // Upload profile picture mutation
   const uploadProfilePictureMutation = useApiMutation(
