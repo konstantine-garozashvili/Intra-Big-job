@@ -73,23 +73,32 @@ docker exec -it infra-backend-1 composer require symfony/serializer
 Toutes ces commandes doivent être exécutées à l'intérieur du conteneur backend :
 
 # Lister toutes les commandes disponibles
+```bash
 php bin/console list
+```
 
 # Vider le cache
 
 # Créer un contrôleur
+```bash
 php bin/console make:controller NomDuController
+```
 
 # Créer une entité
+```bash
 php bin/console make:entity NomDeLaTable
+```
 
 # Créer une migration
+```bash
 php bin/console make:migration
-
+```
 # Exécuter les migrations
+```bash
 php bin/console doctrine:migrations:migrate
-
+```
 # Valider le schéma de la base de données
+```bash
 php bin/console doctrine:schema:validate
 ```
 
@@ -97,20 +106,21 @@ php bin/console doctrine:schema:validate
 
 Le projet utilise Doctrine ORM pour la gestion de la base de données. Voici le workflow typique pour créer/modifier des entités :
 
-1. **Créer ou modifier une entité**
-   ```bash
-   php bin/console make:entity NomDeLaTable
-   ```
+1. **Créer ou modifier une entité**  
+
+```bash
+php bin/console make:entity NomDeLaTable
+```
 
 2. **Générer une migration**
-   ```bash
-   php bin/console doctrine:migrations:diff
-   ```
+```bash
+php bin/console doctrine:migrations:diff
+```
 
 3. **Exécuter la migration**
-   ```bash
-   php bin/console doctrine:migrations:migrate
-   ```
+```bash
+php bin/console doctrine:migrations:migrate
+```
 
 ## 🔒 Sécurité et authentification
 
