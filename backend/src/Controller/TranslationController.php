@@ -26,25 +26,37 @@ class TranslationController extends AbstractController
     {
         $data = json_decode($request->getContent(), true);
         
-        if (!isset($data['text']) || !isset($data['targetLang'])) {
+        // Vérifier les paramètres avec support pour les deux formats de paramètres
+        if (!isset($data['text'])) {
             return $this->json([
                 'success' => false,
-                'message' => 'Les paramètres "text" et "targetLang" sont requis'
+                'message' => 'Le paramètre "text" est requis'
+            ], 400);
+        }
+        
+        // Support pour les deux formats de paramètres (targetLang/target_language)
+        $targetLang = $data['targetLang'] ?? $data['target_language'] ?? null;
+        if (!$targetLang) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Le paramètre "targetLang" ou "target_language" est requis'
             ], 400);
         }
 
         try {
-            $sourceLang = $data['sourceLang'] ?? null;
+            // Support pour les deux formats de paramètres (sourceLang/source_language)
+            $sourceLang = $data['sourceLang'] ?? $data['source_language'] ?? 'fr';
+            
             $translatedText = $this->translationService->translateText(
                 $data['text'], 
-                $data['targetLang'],
+                $targetLang,
                 $sourceLang
             );
             
             return $this->json([
                 'success' => true,
                 'translatedText' => $translatedText,
-                'sourceLang' => $sourceLang ?? 'auto'
+                'sourceLang' => $sourceLang ?? 'fr'
             ]);
         } catch (\Exception $e) {
             return $this->json([
@@ -57,30 +69,41 @@ class TranslationController extends AbstractController
     /**
      * Traduit un ensemble de textes
      */
-    #[Route('/translate-batch', name: 'api_translate_batch', methods: ['POST'])]
+    #[Route('/batch', name: 'api_translate_batch', methods: ['POST'])]
     public function translateBatch(Request $request): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
         
-        if (!isset($data['texts']) || !is_array($data['texts']) || !isset($data['targetLang'])) {
+        if (!isset($data['texts']) || !is_array($data['texts'])) {
             return $this->json([
                 'success' => false,
-                'message' => 'Les paramètres "texts" (tableau) et "targetLang" sont requis'
+                'message' => 'Le paramètre "texts" (tableau) est requis'
+            ], 400);
+        }
+        
+        // Support pour les deux formats de paramètres (targetLang/target_language)
+        $targetLang = $data['targetLang'] ?? $data['target_language'] ?? null;
+        if (!$targetLang) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Le paramètre "targetLang" ou "target_language" est requis'
             ], 400);
         }
 
         try {
-            $sourceLang = $data['sourceLang'] ?? null;
+            // Support pour les deux formats de paramètres (sourceLang/source_language)
+            $sourceLang = $data['sourceLang'] ?? $data['source_language'] ?? 'fr';
+            
             $translatedTexts = $this->translationService->translateBatch(
                 $data['texts'], 
-                $data['targetLang'],
+                $targetLang,
                 $sourceLang
             );
             
             return $this->json([
                 'success' => true,
-                'translatedTexts' => $translatedTexts,
-                'sourceLang' => $sourceLang ?? 'auto'
+                'translations' => $translatedTexts,
+                'sourceLang' => $sourceLang ?? 'fr'
             ]);
         } catch (\Exception $e) {
             return $this->json([
@@ -108,6 +131,11 @@ class TranslationController extends AbstractController
         try {
             $detectedLanguage = $this->translationService->detectLanguage($data['text']);
             
+            // Si la détection échoue ou est ambiguë, considérer le français par défaut
+            if (!$detectedLanguage) {
+                $detectedLanguage = 'fr';
+            }
+            
             return $this->json([
                 'success' => true,
                 'language' => $detectedLanguage
@@ -115,7 +143,8 @@ class TranslationController extends AbstractController
         } catch (\Exception $e) {
             return $this->json([
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
+                'language' => 'fr' // En cas d'erreur, considérer français par défaut
             ], 500);
         }
     }
@@ -127,7 +156,7 @@ class TranslationController extends AbstractController
     public function getLanguages(Request $request): JsonResponse
     {
         try {
-            $targetLang = $request->query->get('target');
+            $targetLang = $request->query->get('target', 'fr');
             $languages = $this->translationService->getAvailableLanguages($targetLang);
             
             return $this->json([

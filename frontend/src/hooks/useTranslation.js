@@ -142,6 +142,8 @@ export function useTranslation(options = {}) {
     
     // Si le texte est déjà dans la langue cible, le retourner tel quel
     const actualTargetLang = targetLang || currentLanguage;
+    // Définir explicitement le français comme langue source par défaut
+    const actualSourceLang = sourceLang || 'fr';
     
     // Vérifier le cache avant de faire une requête API
     const cachedTranslation = translationCache.getFromCache(text, actualTargetLang);
@@ -156,7 +158,7 @@ export function useTranslation(options = {}) {
       const translatedText = await translationService.translateText(
         text,
         actualTargetLang,
-        sourceLang
+        actualSourceLang  // Toujours passer une langue source
       );
       
       // Ajouter la traduction au cache

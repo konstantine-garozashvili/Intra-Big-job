@@ -35,10 +35,18 @@ class TranslationService {
    * @param {string} sourceLang - La langue source (code ISO, optionnel)
    * @returns {Promise<string>} - Le texte traduit
    */
-  async translateText(text, targetLang, sourceLang = null) {
+  async translateText(text, targetLang, sourceLang = 'fr') {
+    // Toujours utiliser le français comme langue source par défaut
+    const sourceLanguage = sourceLang || 'fr';
+    
     // Si le texte est vide, retourner une chaîne vide
     if (!text || text.trim() === '') {
       return '';
+    }
+    
+    // Si la langue source est identique à la langue cible, ne pas traduire
+    if (sourceLanguage === targetLang) {
+      return text;
     }
     
     // Si le texte contient uniquement des termes non-traduisibles, le retourner tel quel
@@ -52,12 +60,12 @@ class TranslationService {
       
       const response = await this.apiClient.post('/translation/translate', {
         text: preparedText,
-        target_language: targetLang,
-        source_language: sourceLang
+        targetLang: targetLang,
+        sourceLang: sourceLanguage  // Toujours envoyer une langue source explicite
       });
       
       // Restaurer les termes préservés
-      return restoreTerms(response.data.translation);
+      return restoreTerms(response.data.translatedText);
     } catch (error) {
       console.error('Erreur lors de la traduction:', error);
       return text; // En cas d'erreur, retourner le texte original
@@ -72,9 +80,17 @@ class TranslationService {
    * @param {string} sourceLang - La langue source (code ISO, optionnel)
    * @returns {Promise<string[]>} - Les textes traduits
    */
-  async translateBatch(texts, targetLang, sourceLang = null) {
+  async translateBatch(texts, targetLang, sourceLang = 'fr') {
+    // Toujours utiliser le français comme langue source par défaut
+    const sourceLanguage = sourceLang || 'fr';
+    
     if (!Array.isArray(texts) || texts.length === 0) {
       return [];
+    }
+    
+    // Si la langue source est identique à la langue cible, ne pas traduire
+    if (sourceLanguage === targetLang) {
+      return texts;
     }
     
     // Filtrer les textes vides ou nuls
@@ -90,8 +106,8 @@ class TranslationService {
       
       const response = await this.apiClient.post('/translation/batch', {
         texts: preparedTexts,
-        target_language: targetLang,
-        source_language: sourceLang
+        targetLang: targetLang,
+        sourceLang: sourceLanguage // Toujours envoyer une langue source explicite
       });
       
       // Restaurer les termes préservés pour chaque texte traduit

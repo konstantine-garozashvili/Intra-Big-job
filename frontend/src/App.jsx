@@ -16,6 +16,8 @@ import { queryClient } from './lib/services/queryClient'
 import ReactQueryHydration from './components/shared/ReactQueryHydration'
 import deduplicationService from './lib/services/deduplicationService'
 import apiService from './lib/services/apiService'
+import { TranslationProvider } from './context/TranslationContext'
+import CustomTranslationWidget from './components/shared/CustomTranslationWidget'
 
 // Export queryClient to be used elsewhere
 export { queryClient };
@@ -164,21 +166,26 @@ function App() {
       <QueryClientProvider client={queryClient}>
         {/* Composant pour gérer l'hydratation et la persistance du cache */}
         <ReactQueryHydration>
-          <AuthProvider>
-            <RoleProvider>
-              <Router>
-                {/* Initialisation des services de l'application */}
-                <AppInitializer />
-                
-                {/* Gestionnaire de préchargement */}
-                <PrefetchHandler />
-                
-                <Suspense>
-                  <AppContent />
-                </Suspense>
-              </Router>
-            </RoleProvider>
-          </AuthProvider>
+          <TranslationProvider>
+            <AuthProvider>
+              <RoleProvider>
+                <Router>
+                  {/* Initialisation des services de l'application */}
+                  <AppInitializer />
+                  
+                  {/* Gestionnaire de préchargement */}
+                  <PrefetchHandler />
+                  
+                  {/* Widget de traduction personnalisé */}
+                  <CustomTranslationWidget />
+                  
+                  <Suspense>
+                    <AppContent />
+                  </Suspense>
+                </Router>
+              </RoleProvider>
+            </AuthProvider>
+          </TranslationProvider>
         </ReactQueryHydration>
       </QueryClientProvider>
     </ErrorBoundary>

@@ -33,7 +33,7 @@ class TranslationService
      * @return string Le texte traduit
      * @throws \Exception
      */
-    public function translateText(string $text, string $targetLang, ?string $sourceLang = null): string
+    public function translateText(string $text, string $targetLang, ?string $sourceLang = 'fr'): string
     {
         // Vérification d'entrée
         if (empty($text) || trim($text) === '') {
@@ -46,7 +46,7 @@ class TranslationService
         }
 
         // Clé de cache unique pour cette traduction
-        $cacheKey = md5($text . '_' . $targetLang . '_' . ($sourceLang ?? 'auto'));
+        $cacheKey = md5($text . '_' . $targetLang . '_' . ($sourceLang ?? 'fr'));
 
         // Récupérer depuis le cache ou traduire si pas en cache
         return $this->cache->get($cacheKey, function (ItemInterface $item) use ($text, $targetLang, $sourceLang) {

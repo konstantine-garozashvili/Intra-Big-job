@@ -37,6 +37,7 @@ function getPreferredLanguage() {
  */
 const defaultOptions = {
   defaultLanguage: 'fr',
+  defaultSourceLanguage: 'fr',
   cacheInSession: true,
   availableLanguages: [
     { code: 'fr', name: 'Français' },
