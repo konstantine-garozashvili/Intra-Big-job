@@ -137,7 +137,6 @@ const PersonalInformation = ({
           handleCancelField={handleCancelField}
           handleInputChange={handleInputChange}
           onSave={onSave}
-          onUploadIdentity={onUploadIdentity}
         />
       </div>
 
