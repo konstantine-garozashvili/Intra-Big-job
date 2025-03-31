@@ -130,7 +130,7 @@ export const ProfessionalInfoSection = ({
         onChange={(value) => handleInputChange('linkedinUrl', value)}
       />
 
-      {isStudent && (
+      {isStudent ? (
         <EditableField
           field="portfolioUrl"
           label="Portfolio"
@@ -153,6 +153,12 @@ export const ProfessionalInfoSection = ({
           }}
           onChange={(value) => handleInputChange('portfolioUrl', value)}
           loading={loading}
+        />
+      ) : (
+        <StaticField 
+          label="Portfolio"
+          icon={<Globe className="h-4 w-4 mr-2 text-blue-500" />}
+          value={localPortfolioUrl || 'Non renseigné'}
         />
       )}
 
