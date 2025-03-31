@@ -310,11 +310,11 @@ const MenuBurger = memo(() => {
     
     // --- SECTION ADMINISTRATION ET GESTION (Regroupé par type d'utilisateur) ---
     {
-      key: 'admin_all_users',
-      label: 'Tous les utilisateurs',
-      icon: <Users className="w-5 h-5 mr-2 text-[#528eb2]" />,
-      roles: [ROLES.ADMIN, ROLES.SUPERADMIN],
-      to: '/admin/users',
+      key: 'trombinoscope',
+      label: 'Trombinoscope',
+      icon: <Camera className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.STUDENT, ROLES.RECRUITER],
+      to: '/trombinoscope',
     },
     {
       key: 'admin_teachers',

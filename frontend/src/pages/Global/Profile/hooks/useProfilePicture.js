@@ -126,39 +126,22 @@ function getProfilePictureUrl(data) {
  * @returns {Object} Profile picture data and operations
  */
 export function useProfilePicture() {
-  // Use the shared queryClient instead of creating a new one
-  const isMountedRef = useRef(true);
   const queryClient = useQueryClient();
-  
-  // Générer un ID unique pour ce composant
-  const [componentId] = useState(() => 
-    `profile_picture_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-  );
-  
   const [cachedUrl, setCachedUrl] = useState(() => {
-    const url = profilePictureCache.getFromCache();
-    return url;
+    // Initialiser avec le cache existant au montage du composant
+    return profilePictureCache.getFromCache();
   });
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState(Date.now());
   
-  // Reset isMountedRef on component mount/unmount
-  useEffect(() => {
-    isMountedRef.current = true;
-    
-    // Enregistrer ce composant comme utilisateur de la route au montage
-    userDataManager.requestRegistry.registerRouteUser('/api/profile/picture', componentId);
-    
-    // Check if we have a valid cached URL on mount
-    const url = profilePictureCache.getFromCache();
-    if (url) {
-      setCachedUrl(url);
-    }
-    
-    return () => {
-      isMountedRef.current = false;
-      // Désenregistrer ce composant comme utilisateur de la route au démontage
-      userDataManager.requestRegistry.unregisterRouteUser('/api/profile/picture', componentId);
-    };
-  }, [componentId]);
+  // Get current user data
+  const { data: userData } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => userDataManager.getCurrentUser(),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  const userId = userData?.id;
 
   // Fonction pour récupérer la photo de profil en utilisant la coordination
   const fetchProfilePicture = useCallback(async () => {
@@ -375,10 +358,8 @@ export function useProfilePicture() {
     PROFILE_QUERY_KEYS.profilePicture,
     {
       onMutate: async (formData) => {
-        // Cancel any outgoing refetches
         await queryClient.cancelQueries({ queryKey: PROFILE_QUERY_KEYS.profilePicture });
         
-        // Save previous state
         const previousData = queryClient.getQueryData(PROFILE_QUERY_KEYS.profilePicture);
         
         // Don't create a temporary URL for optimistic update - it causes issues
@@ -434,12 +415,10 @@ export function useProfilePicture() {
         
         // Notify all subscribers
         profilePictureEvents.notify();
-        
-        // Show success message
         toast.success('Photo de profil mise à jour avec succès');
         
-        // Force refresh to get latest picture
-        forceRefresh();
+        // Forcer le rafraîchissement
+        await forceRefresh(true);
       },
       onError: (error, variables, context) => {
         // Show error message based on the error type
@@ -471,13 +450,10 @@ export function useProfilePicture() {
     PROFILE_QUERY_KEYS.profilePicture,
     {
       onMutate: async () => {
-        // Cancel any outgoing refetches
         await queryClient.cancelQueries({ queryKey: PROFILE_QUERY_KEYS.profilePicture });
         
-        // Save previous state
         const previousData = queryClient.getQueryData(PROFILE_QUERY_KEYS.profilePicture);
         
-        // Update cache immediately with optimistic data
         queryClient.setQueryData(PROFILE_QUERY_KEYS.profilePicture, {
           success: true,
           data: {
@@ -486,39 +462,21 @@ export function useProfilePicture() {
           }
         });
         
-        // Clear the cached URL
         setCachedUrl(null);
         profilePictureCache.clearCache();
         
         return { previousData };
       },
       onSuccess: async () => {
-        // Notifier le gestionnaire de données utilisateur de l'invalidation
-        userDataManager.invalidateCache('profile_picture'); // Passer un type spécifique
-        
-        // Notify all subscribers
+        userDataManager.invalidateCache('profile_picture');
         profilePictureEvents.notify();
-        
-        // Clear local cache 
         profilePictureCache.clearCache();
-        
-        // Show success message
         toast.success('Photo de profil supprimée avec succès');
-        
-        // Force refresh to get latest picture status
-        forceRefresh();
+        await forceRefresh(true);
       },
       onError: (error, variables, context) => {
-        // Restore previous state on error
         if (context?.previousData) {
           queryClient.setQueryData(PROFILE_QUERY_KEYS.profilePicture, context.previousData);
-          
-          // Restore cached URL from previous data
-          const prevUrl = getProfilePictureUrl(context.previousData);
-          if (prevUrl) {
-            setCachedUrl(prevUrl);
-            profilePictureCache.saveToCache(prevUrl);
-          }
         }
       }
     }
@@ -601,15 +559,15 @@ export function useProfilePicture() {
   // Determine the profile picture URL to return, prioritizing:
   // 1. API data if available
   // 2. Local cached URL otherwise
-  const finalProfilePictureUrl = getProfilePictureUrl(profilePictureQuery.data) || cachedUrl;
+  const finalProfilePictureUrl = profilePictureData?.data?.profile_picture_url || cachedUrl;
 
   return {
     // Profile picture data
     profilePictureUrl: finalProfilePictureUrl,
-    isLoading: profilePictureQuery.isLoading && !cachedUrl, // Not loading if we have a cached URL
-    isFetching: profilePictureQuery.isFetching,
-    isError: profilePictureQuery.isError,
-    error: profilePictureQuery.error,
+    isLoading: isLoading && !cachedUrl, // Not loading if we have a cached URL
+    isFetching: isFetching,
+    isError: false,
+    error: null,
     
     // Operations
     refetch: forceRefresh,

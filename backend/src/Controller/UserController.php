@@ -135,4 +135,33 @@ class UserController extends AbstractController
             ], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
+
+    #[Route('/users/all', name: 'api_users_all', methods: ['GET'])]
+    public function getAllUsers(): JsonResponse
+    {
+        try {
+            // Get current user
+            $currentUser = $this->getUser();
+            if (!$currentUser) {
+                return $this->json(['message' => 'User not authenticated'], JsonResponse::HTTP_UNAUTHORIZED);
+            }
+            
+            // Find all users with their relations
+            $users = $this->userRepository->findAllUsers();
+            
+            // Serialize with user roles included
+            $serializedUsers = $this->serializer->serialize(
+                $users, 
+                'json', 
+                ['groups' => ['user:read', 'message:read']]
+            );
+            
+            return new JsonResponse($serializedUsers, JsonResponse::HTTP_OK, [], true);
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Error fetching users: ' . $e->getMessage()
+            ], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
 }

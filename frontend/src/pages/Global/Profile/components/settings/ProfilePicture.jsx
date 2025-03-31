@@ -163,10 +163,12 @@ const ProfilePicture = ({ userData, onProfilePictureChange, isLoading: externalL
       toast.error('Erreur lors de la mise à jour de la photo de profil');
     }
   };
-  
-  const confirmDeleteProfilePicture = async () => {
+
+  const handleDeleteProfilePicture = async () => {
+    setIsDeleting(true);
     try {
-      // Close dialog immediately for fluid interaction
+      await deleteProfilePicture();
+      toast.success('Photo de profil supprimée avec succès');
       setDeleteDialogOpen(false);
       
       setIsDeleting(true);
@@ -191,8 +193,8 @@ const ProfilePicture = ({ userData, onProfilePictureChange, isLoading: externalL
         }
       });
     } catch (error) {
+      console.error('Erreur lors de la suppression de la photo:', error);
       toast.error('Erreur lors de la suppression de la photo de profil');
-      // console.error('Error deleting profile picture:', error);
     } finally {
       setIsDeleting(false);
     }
@@ -282,51 +284,46 @@ const ProfilePicture = ({ userData, onProfilePictureChange, isLoading: externalL
             <Button
               variant="ghost"
               size="icon"
+              className="absolute top-0 right-0 rounded-full p-1 sm:p-1.5 md:p-2 bg-white dark:bg-gray-700 shadow-sm hover:bg-gray-100 dark:hover:bg-gray-600"
               onClick={() => setDeleteDialogOpen(true)}
               disabled={componentIsLoading}
-              className="absolute top-0 right-0 rounded-full p-1 sm:p-1.5 md:p-2 bg-white dark:bg-gray-700 shadow-sm hover:bg-red-50 hover:text-red-600 transition-colors"
             >
-              {deleteStatus.isPending ? (
-                <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 animate-spin" />
-              ) : (
-                <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5" />
-              )}
+              <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5" />
             </Button>
           )}
         </div>
-        
-        {/* Text integrated directly in the component */}
-        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1">Photo de profil</h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400">Mettre à jour votre photo</p>
       </div>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={(open) => !deleteStatus.isPending && setDeleteDialogOpen(open)}>
-        <DialogContent className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-hidden rounded-2xl border-0 shadow-xl">
-          <div className="overflow-y-auto max-h-[70vh] fade-in-up">
-            <DialogHeader>
-              <DialogTitle className="text-xl font-semibold">Confirmation de suppression</DialogTitle>
-              <DialogDescription className="text-base mt-2">
-                Êtes-vous sûr de vouloir supprimer votre photo de profil ? Cette action est irréversible.
-              </DialogDescription>
-            </DialogHeader>
-          </div>
-          <DialogFooter className="mt-6 flex justify-end space-x-2">
+      {/* Delete confirmation dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Supprimer la photo de profil</DialogTitle>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir supprimer votre photo de profil ? Cette action est irréversible.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
             <Button
               variant="outline"
               onClick={() => setDeleteDialogOpen(false)}
-              disabled={deleteStatus.isPending}
-              className="rounded-full border-2 hover:bg-gray-100 transition-all duration-200"
+              disabled={isDeleting}
             >
               Annuler
             </Button>
             <Button
               variant="destructive"
-              onClick={confirmDeleteProfilePicture}
-              disabled={deleteStatus.isPending}
-              className={`rounded-full bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 transition-all duration-200 ${deleteStatus.isPending ? 'opacity-80' : ''}`}
+              onClick={handleDeleteProfilePicture}
+              disabled={isDeleting}
             >
-              {deleteStatus.isPending ? "Suppression..." : "Supprimer"}
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Suppression...
+                </>
+              ) : (
+                'Supprimer'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

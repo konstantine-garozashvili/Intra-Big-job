@@ -12,6 +12,8 @@ import StudentRoute from './components/StudentRoute'
 import { Toaster } from './components/ui/sonner'
 import { ErrorBoundary } from "react-error-boundary"
 
+
+
 // Create a shared query client for the entire application
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -81,6 +83,8 @@ const UserRoleManager = lazy(() => import('./pages/Admin/components/UserRoleMana
 // Import du composant HomePage 
 const HomePage = lazy(() => import('./components/HomePage'))
 
+// Import de la page Trombinoscope
+const Trombinoscope = lazy(() => import('./pages/Global/Trombinoscope'))
 // Fonction optimisée pour le préchargement intelligent des pages
 // Ne charge que les pages pertinentes en fonction du contexte et du chemin actuel
 const useIntelligentPreload = () => {
@@ -548,7 +552,9 @@ const AppContent = () => {
                         <RecruiterDashboard />
                       </RoleGuard>
                     } />
-                  </Route>
+                    </Route>
+
+                    <Route path="/trombinoscope" element={<Trombinoscope />}/>
                   
                   {/* Redirection des routes inconnues vers la page d'accueil */}
                   <Route path="*" element={<Navigate to="/" replace />} />
