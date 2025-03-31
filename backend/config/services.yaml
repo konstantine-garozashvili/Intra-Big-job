@@ -115,3 +115,7 @@ services:
             $daysToKeep: 15  # Keep messages for 15 days
         tags:
             - { name: kernel.event_listener, event: kernel.terminate, method: onKernelTerminate }
+            
+    App\EventListener\UserRoleListener:
+        tags:
+            - { name: doctrine.orm.entity_listener, event: preUpdate, entity: App\Entity\User }

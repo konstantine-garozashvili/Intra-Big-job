@@ -77,6 +77,23 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     #[ORM\ManyToMany(targetEntity: Formation::class, mappedBy: 'students')]
     private Collection $formations;
 
+    /**
+ * Checks if the user has a specific role.
+ */
+public function hasRole(string $role): bool
+{
+    return $this->userRoles->exists(function (int $key, UserRole $userRole) use ($role) {
+        return $userRole->getRole()->getName() === $role;
+    });
+}
+
+/**
+ * Checks if the user's roles have changed.
+ */
+public function hasRoleChanged(string $role): bool
+{
+    return $this->hasRole($role);
+}
     #[ORM\OneToOne(mappedBy: 'user', targetEntity: StudentProfile::class, cascade: ['persist', 'remove'])]
     #[Groups(['user:read'])]
     private ?StudentProfile $studentProfile = null;
