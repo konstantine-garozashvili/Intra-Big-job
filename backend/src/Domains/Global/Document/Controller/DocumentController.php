@@ -463,4 +463,46 @@ class DocumentController extends AbstractController
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
+
+    /**
+     * Get a specific document by ID
+     */
+    #[Route('/{id}', name: 'app_document_get', methods: ['GET'])]
+    public function getDocumentById(int $id): JsonResponse
+    {
+        try {
+            $document = $this->documentRepository->find($id);
+            
+            if (!$document) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Document not found'
+                ], Response::HTTP_NOT_FOUND);
+            }
+            
+            // Check permissions
+            try {
+                $this->checkDocumentAccessPermission($document);
+            } catch (AccessDeniedHttpException $e) {
+                return $this->json([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                    'code' => 'ACCESS_DENIED'
+                ], Response::HTTP_FORBIDDEN);
+            }
+            
+            // Return document details
+            return $this->json([
+                'success' => true,
+                'data' => $document
+            ], Response::HTTP_OK, [], ['groups' => ['document:read']]);
+            
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Failed to fetch document: ' . $e->getMessage(),
+                'code' => 'SERVER_ERROR'
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
 } 
