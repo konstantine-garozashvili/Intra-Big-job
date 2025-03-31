@@ -105,6 +105,14 @@ const SuperAdminDashboard = () => {
   // Définir les cartes pour les accès rapides
   const quickAccessCards = [
     {
+      title: 'Gestion des utilisateurs',
+      description: 'Gérer les utilisateurs',
+      icon: Users,
+      color: 'from-blue-500 to-blue-600',
+      textColor: 'text-blue-50',
+      link: '/admin/users',
+    },
+    {
       title: 'Gestion des rôles',
       description: 'Gérer les rôles des étudiants invités',
       icon: Users,
