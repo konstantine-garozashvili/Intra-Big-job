@@ -73,6 +73,59 @@ const ProfileHeader = ({ userData, isPublicProfile = false, profilePictureUrl })
     return `${firstName} ${lastName}`.trim() || 'Utilisateur';
   };
 
+  // Extract city information from userData with better fallbacks
+  const getUserCity = () => {
+    // Check direct city property first
+    if (userData?.city) {
+      return userData.city;
+    }
+    
+    // Check city in user object
+    if (userData?.user?.city) {
+      return userData.user.city;
+    }
+    
+    // Try to extract from addresses in userData
+    if (userData?.addresses && Array.isArray(userData.addresses) && userData.addresses.length > 0) {
+      const address = userData.addresses[0];
+      if (address.city?.name) {
+        return address.city.name;
+      }
+      if (address.city) {
+        return address.city;
+      }
+    }
+    
+    // Try to extract from addresses in userData.user
+    if (userData?.user?.addresses && Array.isArray(userData.user.addresses) && userData.user.addresses.length > 0) {
+      const address = userData.user.addresses[0];
+      if (address.city?.name) {
+        return address.city.name;
+      }
+      if (address.city) {
+        return address.city;
+      }
+    }
+    
+    return 'Non renseignée';
+  };
+  
+  // Add an effect to listen for profile data refreshes
+  useEffect(() => {
+    const handleProfileDataRefresh = (event) => {
+      if (event.detail?.data?.city) {
+        // Force component re-render
+        setDomainData(prevData => ({ ...prevData }));
+      }
+    };
+    
+    window.addEventListener('profile-data-refreshed', handleProfileDataRefresh);
+    
+    return () => {
+      window.removeEventListener('profile-data-refreshed', handleProfileDataRefresh);
+    };
+  }, []);
+  
   const getMainRole = () => {
     const roles = getUserProperty('roles');
     
@@ -221,6 +274,17 @@ const ProfileHeader = ({ userData, isPublicProfile = false, profilePictureUrl })
                   </span>
                 </div>
               )}
+            </motion.div>
+            
+            {/* Localisation avec icône et style amélioré */}
+            <motion.div variants={itemVariants} className="mt-2 flex items-center justify-center sm:justify-start gap-1 text-sm text-muted-foreground">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <span className="text-sm">
+                {getUserCity()}
+              </span>
             </motion.div>
             
             {/* Badges de rôle avec le nouveau composant RoleBadge */}

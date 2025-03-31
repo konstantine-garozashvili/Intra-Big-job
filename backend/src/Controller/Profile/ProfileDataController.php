@@ -183,134 +183,81 @@ class ProfileDataController extends AbstractController
         /** @var User $user */
         $user = $this->security->getUser();
         
-        if (!$user) {
-            return $this->json([
-                'success' => false,
-                'message' => 'Utilisateur non authentifié'
-            ], 401);
-        }
-        
-        // Charger l'utilisateur avec toutes ses relations
-        $user = $this->userRepository->findOneWithAllRelations($user->getId());
-        
-        // Vérifier si l'utilisateur a un URL LinkedIn
-        $hasLinkedIn = !empty($user->getLinkedinUrl());
-        
-        // Vérifier si l'utilisateur a un CV
-        $hasCv = false;
-        
-        // Debugging
-        error_log('DEBUG ProfileDataController: Checking CV status for user ID: ' . $user->getId());
-        
-        // 1. Vérifier directement dans les documents si un CV existe
-        if (method_exists($user, 'getDocuments')) {
-            $documents = $user->getDocuments();
-            error_log('DEBUG ProfileDataController: User has ' . count($documents) . ' documents');
-            
-            foreach ($documents as $document) {
-                // Vérifier plusieurs façons dont un document peut être identifié comme CV
-                $documentType = $document->getDocumentType();
-                
-                // Debugger chaque document
-                error_log('DEBUG ProfileDataController: Document ID: ' . $document->getId() . 
-                         ', name: ' . $document->getName() . 
-                         ', type: ' . ($documentType ? $documentType->getCode() : 'null') .
-                         ', status: ' . $document->getStatus());
-                
-                // Vérifie le documentType.code
-                if ($documentType && ($documentType->getCode() === 'CV' || $documentType->getCode() === 'cv')) {
-                    error_log('DEBUG ProfileDataController: Found CV document by type code');
-                    $hasCv = true;
-                    break;
-                }
-                
-                // Vérifie le nom du document
-                $documentName = $document->getName();
-                if ($documentName && (
-                    strtolower($documentName) === 'cv' || 
-                    stripos($documentName, 'cv') !== false ||
-                    stripos($documentName, 'curriculum') !== false ||
-                    stripos($documentName, 'resume') !== false
-                )) {
-                    error_log('DEBUG ProfileDataController: Found CV document by name');
-                    $hasCv = true;
-                    break;
-                }
-                
-                // Vérifie le type MIME
-                $mimeType = $document->getMimeType();
-                if ($mimeType && $mimeType === 'application/pdf') {
-                    // Si c'est un PDF, vérifie aussi le nom de fichier
-                    $filename = $document->getFilename();
-                    error_log('DEBUG ProfileDataController: Checking PDF filename: ' . $filename);
-                    if ($filename && (
-                        stripos($filename, 'cv') !== false ||
-                        stripos($filename, 'curriculum') !== false ||
-                        stripos($filename, 'resume') !== false
-                    )) {
-                        error_log('DEBUG ProfileDataController: Found CV document by PDF filename');
-                        $hasCv = true;
-                        break;
-                    }
-                }
-            }
-        } else {
-            error_log('DEBUG ProfileDataController: User does not have getDocuments method');
-        }
-        
-        // 2. Si aucun document n'est trouvé, vérifier également le champ cvFilePath
-        if (!$hasCv && method_exists($user, 'getCvFilePath') && !empty($user->getCvFilePath())) {
-            error_log('DEBUG ProfileDataController: Found CV via getCvFilePath');
-            $hasCv = true;
-        }
-        
-        // 3. Direct database query as a fallback - this should catch ALL CV documents
-        if (!$hasCv) {
-            error_log('DEBUG ProfileDataController: No CV found yet, trying direct database query');
-            
-            try {
-                // Query all documents for this user_id from database
-                $stmt = $this->entityManager->getConnection()->prepare(
-                    'SELECT * FROM document WHERE user_id = :userId AND status = "APPROVED" AND 
-                    (document_type_id IN (SELECT id FROM document_type WHERE code = "CV") OR 
-                     name LIKE "%CV%" OR 
-                     name LIKE "%curriculum%" OR
-                     (mime_type = "application/pdf" AND filename LIKE "%cv%"))
-                    LIMIT 1'
-                );
-                $result = $stmt->executeQuery(['userId' => $user->getId()]);
-                $documents = $result->fetchAllAssociative();
-                
-                if (count($documents) > 0) {
-                    error_log('DEBUG ProfileDataController: Found CV document via direct SQL query: ' . json_encode($documents[0]));
-                    $hasCv = true;
-                } else {
-                    error_log('DEBUG ProfileDataController: No CV found via direct SQL query');
-                }
-            } catch (\Exception $e) {
-                error_log('ERROR ProfileDataController: Exception in CV document query: ' . $e->getMessage());
-            }
-        }
-        
-        // Vérifier si l'utilisateur a des diplômes
-        $hasDiploma = $user->getDiplomas()->count() > 0;
-        
-        // Calculer le pourcentage de complétion
-        $completedItems = ($hasLinkedIn ? 1 : 0) + ($hasCv ? 1 : 0) + ($hasDiploma ? 1 : 0);
-        $totalItems = 3;
-        $completionPercentage = ($completedItems / $totalItems) * 100;
-        
-        return $this->json([
+        $defaultResponse = [
             'success' => true,
             'data' => [
-                'hasLinkedIn' => $hasLinkedIn,
-                'hasCv' => $hasCv,
-                'hasDiploma' => $hasDiploma,
-                'completedItems' => $completedItems,
-                'totalItems' => $totalItems,
-                'completionPercentage' => $completionPercentage
+                'completionPercentage' => 0,
+                'hasLinkedIn' => false,
+                'hasCv' => false,
+                'hasDiploma' => false,
+                'isGuest' => true,
+                'completedItems' => 0,
+                'totalItems' => 3
             ]
-        ]);
+        ];
+        
+        if (!$user) {
+            return $this->json($defaultResponse);
+        }
+        
+        // Check if user is a guest user
+        $isGuest = false;
+        foreach ($user->getUserRoles() as $userRole) {
+            if ($userRole->getRole()->getName() === 'GUEST') {
+                $isGuest = true;
+                break;
+            }
+        }
+        
+        // Return default response for guest users
+        if ($isGuest) {
+            return $this->json($defaultResponse);
+        }
+        
+        try {
+            // Charger l'utilisateur avec toutes ses relations
+            $user = $this->userRepository->findOneWithAllRelations($user->getId());
+            
+            // Vérifier si l'utilisateur a un URL LinkedIn
+            $hasLinkedIn = !empty($user->getLinkedinUrl());
+            
+            // Vérifier si l'utilisateur a un CV
+            $hasCv = false;
+            try {
+                // Check if user has a CV file path
+                $hasCv = !empty($user->getCvFilePath());
+            } catch (\Exception $e) {
+                // Log error if needed but continue execution
+                $hasCv = false;
+            }
+            
+            // Vérifier si l'utilisateur a des diplômes
+            $hasDiploma = $user->getDiplomas()->count() > 0;
+            
+            // Calculer le pourcentage de complétion
+            $completedItems = ($hasLinkedIn ? 1 : 0) + ($hasCv ? 1 : 0) + ($hasDiploma ? 1 : 0);
+            $totalItems = 3;
+            $completionPercentage = ($completedItems / $totalItems) * 100;
+            
+            return $this->json([
+                'success' => true,
+                'data' => [
+                    'hasLinkedIn' => $hasLinkedIn,
+                    'hasCv' => $hasCv,
+                    'hasDiploma' => $hasDiploma,
+                    'completedItems' => $completedItems,
+                    'totalItems' => $totalItems,
+                    'completionPercentage' => $completionPercentage
+                ]
+            ]);
+        } catch (\Exception $e) {
+            // Return error response with details
+            return $this->json([
+                'success' => false,
+                'message' => 'Error checking profile completion: ' . $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ], 500);
+        }
     }
 
     /**

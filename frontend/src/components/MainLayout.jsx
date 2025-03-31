@@ -44,21 +44,28 @@ function isDashboardNavigation(previousPath, currentPath) {
          (previousPath && !previousPath.includes('/dashboard') && currentPath.includes('/dashboard'));
 }
 
+// Check if this is a navigation to the profile page
+function isProfileNavigation(previousPath, currentPath) {
+  return (!previousPath && currentPath.includes('/profile')) || 
+         (previousPath && !previousPath.includes('/profile') && currentPath.includes('/profile'));
+}
+
 // Function to check if we should refresh based on navigation and timing
 function shouldRefreshOnNavigation(previousPath, currentPath) {
   const now = Date.now();
   const timeSinceLastRefresh = now - locationHistory.lastRefreshTime;
   
-  // Check for navigation to dashboard
+  // Check for navigation to dashboard or profile
   const toDashboard = isDashboardNavigation(previousPath, currentPath);
+  const toProfile = isProfileNavigation(previousPath, currentPath);
   
   // Always set this flag for component state
   locationHistory.isDashboardNavigation = toDashboard;
   
-  // Only refresh if:
-  // 1. We're navigating to dashboard AND
-  // 2. It's been at least 10 seconds since last refresh 
-  if (toDashboard && timeSinceLastRefresh > 10000) {
+  // Refresh if:
+  // 1. We're navigating to dashboard OR profile AND
+  // 2. It's been at least 5 seconds since last refresh (reduced from 10s)
+  if ((toDashboard || toProfile) && timeSinceLastRefresh > 5000) {
     locationHistory.lastRefreshTime = now;
     return true;
   }
@@ -170,14 +177,14 @@ const MainLayout = () => {
     
     // Check if we should refresh profile based on navigation
     if (shouldRefreshOnNavigation(previousPath, currentPath)) {
-      console.log("Navigated to dashboard - refreshing profile data");
+      console.log("Navigated to dashboard or profile - refreshing profile data");
       
-      // When navigating to dashboard, force fresh profile data
+      // When navigating to dashboard or profile, force fresh profile data
       refreshProfileData({ 
         forceRefresh: true,
         bypassThrottle: true
       }).then(data => {
-        console.log("Profile data refreshed after dashboard navigation");
+        console.log("Profile data refreshed after dashboard or profile navigation");
         
         // Check if LinkedIn URL was found and save to session if present
         if (data && data.linkedinUrl) {
@@ -211,148 +218,132 @@ const MainLayout = () => {
 
   // Écouter les événements d'authentification
   useEffect(() => {
-    // Fonction pour récupérer les données utilisateur initiales
-    const fetchInitialUserData = async () => {
-      if (authService.isLoggedIn()) {
-        try {
-          // Essayer de récupérer les données minimales de l'utilisateur depuis le localStorage
-          const minimalUser = authService.getUser();
-          
-          if (minimalUser) {
-            // Mettre à jour l'état avec les données minimales
-            setUserData(minimalUser);
-            setLoadingState(LOADING_STATES.MINIMAL);
-            
-            // Si les données sont déjà complètes, ne pas les recharger
-            if (!minimalUser._minimal) {
-              setLoadingState(LOADING_STATES.COMPLETE);
-              
-              // Charger les données de profil quand même pour s'assurer d'avoir les dernières données
-              try {
-                const profileData = await profileService.getAllProfileData();
-                setProfileData(profileData);
-              } catch (profileError) {
-                console.warn('Error loading profile data with complete user:', profileError);
-              }
-            }
-          } else {
-            // Aucune donnée utilisateur disponible, charger depuis l'API
-            setLoadingState(LOADING_STATES.LOADING);
-            const userData = await authService.getCurrentUser();
-            setUserData(userData);
-            setLoadingState(LOADING_STATES.COMPLETE);
-          }
-          
-          // Attendre un court instant avant d'afficher le composant de progression
-          setTimeout(() => {
-            setShowProgress(true);
-          }, 300);
-        } catch (error) {
-          console.error('Error fetching initial user data:', error);
-          setLoadingState(LOADING_STATES.ERROR);
-          
-          // If error is related to authentication, clear local state
-          if (error.response?.status === 401 || error.response?.status === 403) {
-            console.warn('Authentication error, clearing local state');
-            // Don't automatically logout to avoid redirect loops
-            // Just clear userData to force re-authentication
-            setUserData(null);
-            setIsAuthenticated(false);
-            setProfileData(null);
-          }
-        }
-      } else {
-        // Clear any existing data if not logged in
-        setUserData(null);
-        setProfileData(null);
-        setLoadingState(LOADING_STATES.INITIAL);
-      }
-    };
-
-    // Add a function to check token validity on route changes
-    const checkTokenValidity = () => {
-      const isLoggedIn = authService.isLoggedIn();
-      // If auth state changed, update it
-      if (isLoggedIn !== isAuthenticated) {
-        setIsAuthenticated(isLoggedIn);
-        
-        // If logged out, clear data
-        if (!isLoggedIn) {
-          setUserData(null);
-          setProfileData(null);
-          setLoadingState(LOADING_STATES.INITIAL);
-        } else {
-          // If logged in but no data, fetch it
-          if (!userData) {
-            fetchInitialUserData();
-          }
-        }
-      }
-    };
-    
-    // Check auth state when route changes
-    checkTokenValidity();
-    
-    // Track route changes to check auth state
-    const unlisten = () => {}; // Empty function to satisfy ESLint
-    
-    // Run initial data load
-    if (isAuthenticated) {
-      fetchInitialUserData();
-    }
-
-    const handleMinimalDataReady = (event) => {
-      // Mise à jour immédiate avec les données minimales du token
-      if (event.detail && event.detail.user) {
-        setUserData(event.detail.user);
-        setLoadingState(LOADING_STATES.MINIMAL);
-      }
-    };
-
-    const handleUserDataUpdated = (event) => {
-      // Mise à jour avec les données complètes du profil
-      if (event.detail && event.detail.user) {
-        setUserData(event.detail.user);
-        setLoadingState(LOADING_STATES.COMPLETE);
-        
-        // Charger les données de profil complètes
-        profileService.getAllProfileData()
-          .then(profileData => {
-            setProfileData(profileData);
-          })
-          .catch(error => {
-            console.warn('Error loading profile data after update:', error);
-          });
-      }
-    };
-
     const handleLoginSuccess = () => {
-      // Update authentication state immediately
       setIsAuthenticated(true);
+      void fetchInitialUserData();
     };
 
     const handleLogoutSuccess = () => {
-      // Reset all states
       setIsAuthenticated(false);
       setUserData(null);
       setProfileData(null);
       setLoadingState(LOADING_STATES.INITIAL);
     };
+
+    const handleUserDataUpdated = async (event) => {
+      if (event.detail && event.detail.user) {
+        setUserData(event.detail.user);
+        setLoadingState(LOADING_STATES.COMPLETE);
+        
+        // Charger les données de profil quand même pour s'assurer d'avoir les dernières données
+        try {
+          const profileData = await profileService.getAllProfileData();
+          setProfileData(profileData);
+        } catch (profileError) {
+          console.warn('Error loading profile data after update:', profileError);
+        }
+      }
+    };
+
+    const handleLoginComplete = (event) => {
+      const { user } = event.detail;
+      if (user) {
+        // Force an immediate update with complete user data
+        setUserData(user);
+        console.log("Login complete with full user data in MainLayout:", user);
+      }
+    };
     
-    // Ajouter les écouteurs d'événements
-    document.addEventListener('auth:minimal-data-ready', handleMinimalDataReady);
-    document.addEventListener('user:data-updated', handleUserDataUpdated);
+    const handleForceProfileRefresh = (event) => {
+      // Force refresh profile data
+      console.log("Force profile refresh triggered in MainLayout:", event.detail);
+      void (async () => {
+        try {
+          const profileData = await profileService.getAllProfileData({ forceRefresh: true });
+          setProfileData(profileData);
+          if (profileData?.user) {
+            setUserData(profileData.user);
+          } else if (profileData) {
+            setUserData(profileData);
+          }
+        } catch (error) {
+          console.error("Error refreshing profile data:", error);
+        }
+      })();
+    };
+
     window.addEventListener('login-success', handleLoginSuccess);
     window.addEventListener('logout-success', handleLogoutSuccess);
+    document.addEventListener('user:data-updated', handleUserDataUpdated);
+    document.addEventListener('auth:login-complete', handleLoginComplete);
+    window.addEventListener('force-profile-refresh', handleForceProfileRefresh);
 
-    // Nettoyer les écouteurs d'événements
     return () => {
-      document.removeEventListener('auth:minimal-data-ready', handleMinimalDataReady);
-      document.removeEventListener('user:data-updated', handleUserDataUpdated);
       window.removeEventListener('login-success', handleLoginSuccess);
       window.removeEventListener('logout-success', handleLogoutSuccess);
+      document.removeEventListener('user:data-updated', handleUserDataUpdated);
+      document.removeEventListener('auth:login-complete', handleLoginComplete);
+      window.removeEventListener('force-profile-refresh', handleForceProfileRefresh);
     };
-  }, [calculateMinHeight]);
+  }, [userData]);
+
+  // Fonction pour récupérer les données utilisateur initiales
+  const fetchInitialUserData = async () => {
+    if (authService.isLoggedIn()) {
+      try {
+        // Essayer de récupérer les données minimales de l'utilisateur depuis le localStorage
+        const minimalUser = authService.getUser();
+        
+        if (minimalUser) {
+          // Mettre à jour l'état avec les données minimales
+          setUserData(minimalUser);
+          setLoadingState(LOADING_STATES.MINIMAL);
+          
+          // Si les données sont déjà complètes, ne pas les recharger
+          if (!minimalUser._minimal) {
+            setLoadingState(LOADING_STATES.COMPLETE);
+            
+            // Charger les données de profil quand même pour s'assurer d'avoir les dernières données
+            try {
+              const profileData = await profileService.getAllProfileData();
+              setProfileData(profileData);
+            } catch (profileError) {
+              console.warn('Error loading profile data with complete user:', profileError);
+            }
+          }
+        } else {
+          // Aucune donnée utilisateur disponible, charger depuis l'API
+          setLoadingState(LOADING_STATES.LOADING);
+          const userData = await authService.getCurrentUser();
+          setUserData(userData);
+          setLoadingState(LOADING_STATES.COMPLETE);
+        }
+        
+        // Attendre un court instant avant d'afficher le composant de progression
+        setTimeout(() => {
+          setShowProgress(true);
+        }, 300);
+      } catch (error) {
+        console.error('Error fetching initial user data:', error);
+        setLoadingState(LOADING_STATES.ERROR);
+        
+        // If error is related to authentication, clear local state
+        if (error.response?.status === 401 || error.response?.status === 403) {
+          console.warn('Authentication error, clearing local state');
+          // Don't automatically logout to avoid redirect loops
+          // Just clear userData to force re-authentication
+          setUserData(null);
+          setIsAuthenticated(false);
+          setProfileData(null);
+        }
+      }
+    } else {
+      // Clear any existing data if not logged in
+      setUserData(null);
+      setProfileData(null);
+      setLoadingState(LOADING_STATES.INITIAL);
+    }
+  };
 
   // Create a memoized context value to prevent unnecessary re-renders
   const profileContextValue = useMemo(() => {

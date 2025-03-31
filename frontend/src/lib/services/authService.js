@@ -71,8 +71,9 @@ export const authService = {
             roles: payload.roles,
             id: payload.id,
             email: payload.username,
-            firstName: payload.firstName,
-            lastName: payload.lastName,
+            firstName: payload.firstName || "",
+            lastName: payload.lastName || "",
+            city: "Chargement...", // Add a loading placeholder for city
             _extractedAt: Date.now(),
             _minimal: true
           };
@@ -89,7 +90,23 @@ export const authService = {
       window.dispatchEvent(new Event('login-success'));
       window.dispatchEvent(new Event('auth-state-change'));
       
-      this.lazyLoadUserData(true).catch(() => {});
+      // Load complete profile data immediately after login
+      try {
+        const fullProfileData = await this.lazyLoadUserData(true);
+        console.log("Full profile data loaded on login:", fullProfileData);
+        
+        // Dispatch a special event for login completion with full data
+        document.dispatchEvent(new CustomEvent('auth:login-complete', { 
+          detail: { user: fullProfileData } 
+        }));
+        
+        // Trigger an immediate profile data refresh in any components that need it
+        window.dispatchEvent(new CustomEvent('force-profile-refresh', {
+          detail: { source: 'login', data: fullProfileData }
+        }));
+      } catch (err) {
+        console.error("Error loading complete profile data:", err);
+      }
       
       return response;
     } catch (error) {
@@ -104,27 +121,66 @@ export const authService = {
     if (!cachedUser) return null;
     
     try {
-      // For guest users, we might not need to make API calls
+      // For guest users, we need to ensure we have complete profile data
       if (cachedUser.roles && cachedUser.roles.includes('ROLE_GUEST')) {
-        console.log('lazyLoadUserData - Using cached guest user data');
+        console.log('lazyLoadUserData - Loading guest user profile data');
         
-        // Just ensure the role information is stored properly
-        if (cachedUser.roles && cachedUser.roles.length > 0) {
-          localStorage.setItem('userRoles', JSON.stringify(cachedUser.roles));
+        // Even for guests, we should load profile data to get city information
+        try {
+          // First try to get consolidated profile data which includes city
+          const consolidatedResponse = await apiService.get('/profile/consolidated', { 
+            noCache: isInitialLoad, 
+            timeout: 8000, 
+            retries: 2 
+          });
+          
+          if (consolidatedResponse && (consolidatedResponse.data || consolidatedResponse.user)) {
+            const profileData = consolidatedResponse.data || consolidatedResponse;
+            const userData = profileData.user || profileData;
+            
+            // Enhance the cached user data with profile information
+            const enhancedUser = {
+              ...cachedUser,
+              firstName: userData.firstName || cachedUser.firstName || "",
+              lastName: userData.lastName || cachedUser.lastName || "",
+              city: userData.city || "Non renseignée",
+              email: userData.email || cachedUser.email,
+              _extractedAt: Date.now(),
+              _source: 'consolidated'
+            };
+            
+            // Update localStorage and query cache
+            localStorage.setItem('user', JSON.stringify(enhancedUser));
+            
+            const queryClient = getQueryClient();
+            if (queryClient) {
+              const sessionId = getSessionId();
+              queryClient.setQueryData(['user', 'current'], enhancedUser);
+              queryClient.setQueryData(['unified-user-data', '/profile/consolidated', sessionId], consolidatedResponse);
+            }
+            
+            // Dispatch events to update UI
+            document.dispatchEvent(new CustomEvent('user:data-updated', { detail: { user: enhancedUser } }));
+            window.dispatchEvent(new Event('user-data-loaded'));
+            
+            return enhancedUser;
+          }
+        } catch (consolidatedError) {
+          console.warn('Error loading consolidated profile for guest:', consolidatedError);
+          // Fall back to basic /api/me endpoint
         }
-        
-        // Dispatch events to update UI
-        document.dispatchEvent(new CustomEvent('user:data-updated', { detail: { user: cachedUser } }));
-        window.dispatchEvent(new Event('user-data-loaded'));
-        
-        return cachedUser;
       }
       
+      // Load profile data for all users (guest and regular)
       const profileResult = await this._loadProfileData();
       let enhancedUser = cachedUser;
       
       if (profileResult) {
-        enhancedUser = profileResult;
+        enhancedUser = {
+          ...profileResult,
+          city: profileResult.city || cachedUser.city || "Non renseignée",
+          _extractedAt: Date.now()
+        };
         localStorage.setItem('user', JSON.stringify(enhancedUser));
         
         const queryClient = getQueryClient();
@@ -139,6 +195,45 @@ export const authService = {
       sessionStorage.removeItem('login_in_progress');
       document.dispatchEvent(new CustomEvent('user:data-updated', { detail: { user: enhancedUser } }));
       window.dispatchEvent(new Event('user-data-loaded'));
+      
+      // Load additional profile data for complete information
+      if (isInitialLoad) {
+        try {
+          // Try to load consolidated profile data which includes more details like city
+          const consolidatedResponse = await apiService.get('/profile/consolidated', { 
+            noCache: true, 
+            timeout: 8000
+          });
+          
+          if (consolidatedResponse && (consolidatedResponse.data || consolidatedResponse.user)) {
+            const profileData = consolidatedResponse.data || consolidatedResponse;
+            if (profileData) {
+              const mergedUser = {
+                ...enhancedUser,
+                ...profileData,
+                city: profileData.city || enhancedUser.city || "Non renseignée",
+                _extractedAt: Date.now(),
+                _source: 'consolidated'
+              };
+              
+              localStorage.setItem('user', JSON.stringify(mergedUser));
+              const queryClient = getQueryClient();
+              if (queryClient) {
+                const sessionId = getSessionId();
+                queryClient.setQueryData(['user', 'current'], mergedUser);
+                queryClient.setQueryData(['unified-user-data', '/profile/consolidated', sessionId], consolidatedResponse);
+              }
+              
+              document.dispatchEvent(new CustomEvent('user:data-updated', { detail: { user: mergedUser } }));
+              window.dispatchEvent(new Event('user-data-loaded'));
+              
+              enhancedUser = mergedUser;
+            }
+          }
+        } catch (consolidatedError) {
+          console.warn('Error loading additional profile data:', consolidatedError);
+        }
+      }
       
       return enhancedUser;
     } catch (error) {

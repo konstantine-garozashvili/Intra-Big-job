@@ -52,6 +52,21 @@ class UserProfileService
             'isEmailVerified' => $user->isEmailVerified(),
             'linkedinUrl' => $user->getLinkedinUrl(),
             'pictureProfilePath' => $user->getProfilePicturePath(),
+            'addresses' => array_map(function($address) {
+                return [
+                    'id' => $address->getId(),
+                    'name' => $address->getName(),
+                    'complement' => $address->getComplement(),
+                    'city' => $address->getCity() ? [
+                        'id' => $address->getCity()->getId(),
+                        'name' => $address->getCity()->getName()
+                    ] : null,
+                    'postalCode' => $address->getPostalCode() ? [
+                        'id' => $address->getPostalCode()->getId(),
+                        'code' => $address->getPostalCode()->getCode()
+                    ] : null
+                ];
+            }, $user->getAddresses()->toArray()),
             'nationality' => $user->getNationality() ? [
                 'id' => $user->getNationality()->getId(),
                 'name' => $user->getNationality()->getName(),
@@ -243,4 +258,4 @@ class UserProfileService
             ];
         }
     }
-} 
+}

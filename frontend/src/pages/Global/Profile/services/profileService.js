@@ -152,6 +152,12 @@ class ProfileService {
         // Cas 1: La réponse est déjà normalisée avec une structure "user"
         if (response.user && typeof response.user === 'object') {
           normalizedData = response;
+          
+          // Extract city from addresses if present
+          if (Array.isArray(normalizedData.addresses) && normalizedData.addresses.length > 0) {
+            const firstAddress = normalizedData.addresses[0];
+            normalizedData.city = firstAddress.city?.name || firstAddress.city || normalizedData.city || 'Non renseignée';
+          }
         } 
         // Cas 2: La réponse contient directement les données utilisateur
         else if (response.id || response.email) {
@@ -165,6 +171,9 @@ class ProfileService {
             // Assurer que les collections sont des tableaux
             diplomas: Array.isArray(response.diplomas) ? response.diplomas : [],
             addresses: Array.isArray(response.addresses) ? response.addresses : [],
+            // Extract city from addresses or use existing city field
+            city: (response.city || (Array.isArray(response.addresses) && response.addresses.length > 0 ? 
+                  (response.addresses[0].city?.name || response.addresses[0].city) : 'Non renseignée')),
             // Assurer que stats existe
             stats: response.stats || { profile: { completionPercentage: 0 } }
           };
@@ -172,6 +181,21 @@ class ProfileService {
         // Cas 3: La réponse est dans un format API avec data ou success
         else if ((response.data && typeof response.data === 'object') || response.success) {
           const userData = response.data || {};
+          
+          // Format address data
+          const addresses = Array.isArray(userData.addresses) ? userData.addresses : [];
+          
+          // Get city from address if available
+          let city = userData.city || 'Non renseignée';
+          if (addresses.length > 0) {
+            const firstAddress = addresses[0];
+            if (firstAddress.city?.name) {
+              city = firstAddress.city.name;
+            } else if (firstAddress.city) {
+              city = firstAddress.city;
+            }
+          }
+          
           normalizedData = {
             ...userData,
             // Assurer que les champs essentiels existent
@@ -181,14 +205,35 @@ class ProfileService {
             profilePictureUrl: userData.profilePictureUrl || userData.profile_picture_url || "",
             // Assurer que les collections sont des tableaux
             diplomas: Array.isArray(userData.diplomas) ? userData.diplomas : [],
-            addresses: Array.isArray(userData.addresses) ? userData.addresses : [],
+            addresses: addresses,
+            // Set city value
+            city: city,
             // Assurer que stats existe
             stats: userData.stats || { profile: { completionPercentage: 0 } }
           };
+          
+          // If userData contains a user property with its own addresses, ensure they're processed
+          if (userData.user && Array.isArray(userData.user.addresses) && userData.user.addresses.length > 0) {
+            if (userData.user.addresses[0].city?.name) {
+              normalizedData.city = userData.user.addresses[0].city.name;
+            } else if (userData.user.addresses[0].city) {
+              normalizedData.city = userData.user.addresses[0].city;
+            }
+          }
+          
+          // Ensure we have a city if userData.user has one
+          if (userData.user && userData.user.city && !normalizedData.city) {
+            normalizedData.city = userData.user.city;
+          }
         }
         // Cas 4: Format inconnu, utiliser tel quel
         else {
           normalizedData = response;
+          
+          // Add placeholder city if not present
+          if (!normalizedData.city) {
+            normalizedData.city = 'Non renseignée';
+          }
         }
       } else {
         // Si pas de données, créer un objet vide mais avec la structure attendue
@@ -199,8 +244,14 @@ class ProfileService {
           profilePictureUrl: "",
           diplomas: [],
           addresses: [],
+          city: "Non renseignée",
           stats: { profile: { completionPercentage: 0 } }
         };
+      }
+      
+      // Logging to debug guest user city info
+      if (normalizedData.isGuest || (normalizedData.user && normalizedData.user.isGuest)) {
+        console.log("Guest user profile data loaded with city:", normalizedData.city);
       }
       
       // Mettre à jour le cache local pour la compatibilité

@@ -84,6 +84,9 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $profilePicturePath = null;
 
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $cvFilePath = null;
+
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
     #[Groups(['user:read'])]
@@ -492,6 +495,37 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
         return $this->groups;
     }
 
+    /**
+     * @return Collection<int, Document>
+     */
+    /**
+     * @return Collection<int, Document>
+     */
+    public function getDocuments(): Collection
+    {
+        return $this->userDiplomas->map(function (UserDiploma $userDiploma) {
+            return $userDiploma->getDiploma();
+        });
+    }
+
+    /**
+     * Get the CV document for this user
+     */
+    public function getCvDocument(): ?Document
+    {
+        if (!$this->cvFilePath) {
+            return null;
+        }
+
+        // Create a Document instance for the CV
+        $document = new Document();
+        $document->setFilePath($this->cvFilePath);
+        $document->setType('cv');
+        $document->setUser($this);
+
+        return $document;
+    }
+
     public function addGroup(Group $group): static
     {
         if (!$this->groups->contains($group)) {
@@ -664,6 +698,17 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     public function setProfilePicturePath(?string $profilePicturePath): self
     {
         $this->profilePicturePath = $profilePicturePath;
+        return $this;
+    }
+
+    public function getCvFilePath(): ?string
+    {
+        return $this->cvFilePath;
+    }
+
+    public function setCvFilePath(?string $cvFilePath): self
+    {
+        $this->cvFilePath = $cvFilePath;
         return $this;
     }
 

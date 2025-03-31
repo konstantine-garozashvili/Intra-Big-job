@@ -272,6 +272,84 @@ const ProfileView = () => {
     }
   }, [isPublicProfile, isLoading, error, data]);
   
+  // Add this useEffect to force fresh profile data when navigating to the profile page
+  useEffect(() => {
+    // Only run for personal profiles (not public profiles)
+    if (!isPublicProfile) {
+      console.log("ProfileView mounted - forcing immediate profile data refresh");
+      
+      // Force an immediate profile data refresh to get city and other information
+      const loadCompleteProfileData = async () => {
+        try {
+          // First try to get data from the local storage or cache
+          let profileData = currentProfileData;
+          
+          // If we don't have the city information, force a fresh data load
+          if (!profileData?.city || profileData.city === 'Non renseignée' || profileData.city === 'Chargement...') {
+            console.log("City information missing, loading fresh profile data");
+            
+            // Try to load from consolidated endpoint which includes city
+            try {
+              const response = await apiService.get('/profile/consolidated', { 
+                noCache: true, 
+                timeout: 5000
+              });
+              
+              if (response) {
+                // Update local state with the fresh data
+                const freshData = response.data || response;
+                
+                // Extract city information
+                let city = 'Non renseignée';
+                if (freshData.city) {
+                  city = freshData.city;
+                } else if (freshData.addresses && freshData.addresses.length > 0) {
+                  const firstAddress = freshData.addresses[0];
+                  city = firstAddress.city?.name || firstAddress.city || 'Non renseignée';
+                }
+                
+                // Create a merged profile with the fresh city data
+                const enhancedProfile = {
+                  ...profileData,
+                  ...freshData,
+                  city: city,
+                  _loadedAt: Date.now()
+                };
+                
+                // Update component state
+                if (setCurrentProfileData) {
+                  setCurrentProfileData(enhancedProfile);
+                }
+                
+                // Dispatch event to notify other components
+                window.dispatchEvent(new CustomEvent('profile-data-refreshed', {
+                  detail: { 
+                    data: enhancedProfile,
+                    source: 'profile-view'
+                  }
+                }));
+                
+                console.log("Profile data refreshed with city:", city);
+              }
+            } catch (error) {
+              console.error("Error loading fresh profile data:", error);
+            }
+          }
+        } catch (error) {
+          console.error("Error in profile initial data loading:", error);
+        }
+      };
+      
+      // Execute the data loading function
+      loadCompleteProfileData();
+      
+      // Also refetch current profile through the hook
+      if (refetchCurrentProfile) {
+        refetchCurrentProfile();
+      }
+    }
+  }, [isPublicProfile, refetchCurrentProfile, setCurrentProfileData, currentProfileData]);
+
   const pageVariants = {
     hidden: { opacity: 0 },
     visible: { 
