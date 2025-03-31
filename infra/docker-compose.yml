@@ -25,11 +25,8 @@ services:
       - jwt_keys:/var/www/symfony/config/jwt
     depends_on:
       - database
-      - redis
     networks:
       - app-network
-    environment:
-      REDIS_URL: redis://redis:6379
     command: bash -c "composer install --no-interaction && 
       sleep 15 && 
       php bin/console doctrine:database:create --if-not-exists --no-interaction && 
@@ -64,16 +61,6 @@ services:
     networks:
       - app-network
 
-  redis:
-    image: redis:alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - app-network
-    command: redis-server --appendonly yes
-
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
     ports:
@@ -98,5 +85,4 @@ volumes:
   backend_vendor:
   backend_var:
   jwt_keys:
-  redis_data:
   backend_nginx:
