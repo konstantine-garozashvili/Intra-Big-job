@@ -364,6 +364,9 @@ function AppContent() {
                       <RecruiterDashboard />
                     </RoleGuard>
                   } />
+                  
+                  {/* Route Trombinoscope */}
+                  <Route path="/trombinoscope" element={<Trombinoscope />} />
                 </Route>
                 
                 {/* Ticket routes - fix double MainLayout issue */}
