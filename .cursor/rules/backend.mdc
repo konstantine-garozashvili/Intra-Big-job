@@ -1,0 +1,40 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: 
+globs: .php
+alwaysApply: false
+---
+# Backend AI Interaction Rules
+
+## Code Organization
+- Follow Symfony 7 best practices
+- Organize code by domain (Admin, HR, Student, etc.)
+- Use proper service/repository patterns
+- Follow established folder structure
+
+## API Development
+- Use proper HTTP methods
+- Include proper validation
+- Implement proper error handling
+- Follow REST conventions
+- Document with OpenAPI/Swagger
+
+## Security
+- Follow CORS policies
+- Validate user permissions
+- Sanitize inputs
+
+## Database
+- Use Doctrine annotations/attributes correctly
+- Include proper database indexes
+- Follow naming conventions
+- Include migration files
