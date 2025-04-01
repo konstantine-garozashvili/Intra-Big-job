@@ -25,7 +25,8 @@ export function useUserData(options = {}) {
   } = options;
 
   const queryClient = useQueryClient();
-  const [isInitialLoading, setIsInitialLoading] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isLoadingData, setIsLoadingData] = useState(false);
   const sessionId = getSessionId();
   // Add isAuthenticated state
   const [isAuthenticated, setIsAuthenticated] = useState(() => authService.isLoggedIn());
@@ -133,9 +134,13 @@ export function useUserData(options = {}) {
   }, [routeKey, sessionId, localStorageUser, queryClient]);
 
   const fetchUserData = useCallback(async () => {
+    if (isLoadingData) return;
+    setIsLoadingData(true);
     setIsInitialLoading(true);
     
     try {
+      // Add cache-busting timestamp
+      const timestamp = Date.now();
       const response = await userDataManager.coordinateRequest(
         routeKey,
         componentId,
@@ -145,7 +150,8 @@ export function useUserData(options = {}) {
           return await apiService.get(routeKey, {
             noCache: true,
             retries: 2,
-            timeout: 12000
+            timeout: 12000,
+            params: { _: timestamp } // Cache-busting parameter
           });
         }
       );
@@ -210,8 +216,10 @@ export function useUserData(options = {}) {
     } catch (error) {
       setIsInitialLoading(false);
       throw error;
+    } finally {
+      setIsLoadingData(false);
     }
-  }, [routeKey, componentId, queryClient, sessionId]);
+  }, [routeKey, componentId, queryClient]);
 
   const {
     data: userData,
@@ -304,96 +312,33 @@ export function useUserData(options = {}) {
     );
   }, [userData, localStorageUser]);
 
-  // Add listener for auth state changes
-  useEffect(() => {
-    const handleAuthChange = () => {
-      const newAuthState = authService.isLoggedIn();
-      
-      if (newAuthState !== isAuthenticated) {
-        setIsAuthenticated(newAuthState);
-        
-        // We'll let the React Query hook handle the refetch based on auth state
-        // No direct refetch call here to avoid infinite loops
-      }
-    };
-    
-    // Check auth state immediately
-    handleAuthChange();
-    
-    // Listen for auth state changes
-    window.addEventListener('auth-state-change', handleAuthChange);
-    window.addEventListener('login-success', handleAuthChange);
-    
-    return () => {
-      window.removeEventListener('auth-state-change', handleAuthChange);
-      window.removeEventListener('login-success', handleAuthChange);
-    };
-  }, []); // Empty dependency array to ensure this only runs once
+  const handleCacheInvalidation = useCallback(() => {
+    // Clear all caches related to user data
+    queryClient.invalidateQueries(['unified-user-data']);
+    if (userDataManager && typeof userDataManager.clear === 'function') {
+      userDataManager.clear();
+    }
+    localStorage.removeItem('user');
+  }, [queryClient]);
 
-  // Améliorer la gestion des événements de mise à jour
   useEffect(() => {
-    if (!enabled) return () => {};
-    
-    // Variable pour limiter la fréquence des requêtes
-    let lastUpdateTime = Date.now();
-    const UPDATE_THROTTLE_MS = 2000; // 2 secondes minimum entre les mises à jour
-    let pendingUpdate = false;
-    
-    // S'abonner à l'événement de mise à jour avec contrôle de fréquence
-    const unsubscribe = userDataManager.subscribe(USER_DATA_EVENTS.UPDATED, (updateType) => {
-      // Si c'est une mise à jour de photo de profil uniquement, ne pas refetch toutes les données
-      if (updateType === 'profile_picture') {
-        return;
+    // Handle auth state changes using isLoggedIn()
+    const checkAuthState = () => {
+      const isAuth = authService.isLoggedIn();
+      if (!isAuth) {
+        handleCacheInvalidation();
       }
-      
-      // Vérifier si la route est partagée entre plusieurs composants
-      if (userDataManager.requestRegistry.isRouteShared(routeKey)) {
-        
-        // Si une requête est déjà en cours, ne pas en lancer une nouvelle
-        if (userDataManager.requestRegistry.getActiveRequest(routeKey)) {
-          return;
-        }
-      }
-      
-      // Vérifier si une mise à jour est déjà en attente ou si la dernière mise à jour est trop récente
-      const now = Date.now();
-      if (pendingUpdate || (now - lastUpdateTime < UPDATE_THROTTLE_MS)) {
-        
-        // Si aucune mise à jour n'est en attente, programmer une mise à jour différée
-        if (!pendingUpdate) {
-          pendingUpdate = true;
-          setTimeout(() => {
-            lastUpdateTime = Date.now();
-            pendingUpdate = false;
-            
-            if (updateType) {
-              // En cas de mise à jour avec type spécifique, invalider les données 
-              // mais ne pas forcer un refetch immédiat
-              queryClient.invalidateQueries(['unified-user-data', routeKey, sessionId]);
-            } else {
-              // Seulement pour les invalidations générales complètes
-              refetch();
-            }
-          }, UPDATE_THROTTLE_MS - (now - lastUpdateTime));
-        }
-        return;
-      }
-      
-      // Mettre à jour le timestamp de la dernière mise à jour
-      lastUpdateTime = now;
-      
-      if (updateType) {
-        // En cas de mise à jour avec type spécifique, invalider les données
-        // mais ne pas forcément refetch immédiatement pour éviter les boucles
-        queryClient.invalidateQueries(['unified-user-data', routeKey, sessionId]);
-      } else {
-        // Pour les invalidations générales, refetch toutes les données
-        refetch();
-      }
-    });
-    
-    return unsubscribe;
-  }, [enabled, routeKey, sessionId, queryClient, refetch]);
+    };
+
+    // Check auth state on mount and when token changes
+    checkAuthState();
+    const tokenListener = () => checkAuthState();
+    window.addEventListener('storage', tokenListener);
+
+    return () => {
+      window.removeEventListener('storage', tokenListener);
+    };
+  }, [handleCacheInvalidation]);
 
   // Données dérivées basées sur le rôle de l'utilisateur
   const derivedData = useMemo(() => {
@@ -527,12 +472,12 @@ export function useUserData(options = {}) {
   // Retourner tout ce dont les composants pourraient avoir besoin
   return {
     user: normalizedUser,
-    isLoading: (isQueryLoading || isInitialLoading) && !localStorageUser, // Ne pas afficher loading si on a des données locales
-    isInitialLoading: isInitialLoading && !localStorageUser,
-    isError,
+    isLoading: isInitialLoading || isLoadingData,
+    isInitialLoading: isInitialLoading && !localStorageUser, // Ne pas afficher loading si on a des données locales
+    isError: !!error,
     error,
-    refetch,
-    forceRefresh,
+    refetch: fetchUserData,
+    forceRefresh: fetchUserData,
     hasRole,
     ...derivedData
   };
