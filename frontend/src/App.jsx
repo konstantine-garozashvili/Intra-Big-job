@@ -218,8 +218,6 @@ function AppContent() {
                   <Route path="/reset-password" element={<ResetPasswordRequest />} />
                   <Route path="/reset-password/confirmation" element={<ResetPasswordConfirmation />} />
                   <Route path="/reset-password/:token" element={<ResetPassword />} />
-                  
-         
                 </Route>
                 
                 <Route element={<ProtectedRoute />}>
