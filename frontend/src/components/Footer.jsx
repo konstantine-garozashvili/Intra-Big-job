@@ -75,8 +75,8 @@ const Footer = () => {
                   links: [
                     { name: "À propos de nous", href: "/about" },
                     { name: "Nos formations", href: "/formations" },
-                    { name: "Mentions légales", href: "/mentions-legales" },
-                    { name: "CGU", href: "/cgu" },
+                    { name: "Mentions légales", href: "/mentionlegales" },
+                    
                   ],
                 },
                 {

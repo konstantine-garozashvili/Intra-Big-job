@@ -40,6 +40,8 @@ const CareerSettings = lazy(() => import('./pages/Global/Profile/views/CareerSet
 const ProfileView = lazy(() => import('./pages/Global/Profile/views/ProfileView'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 
+const Mentionslegales = lazy(() => import('./pages/Mentionslegales'))
+
 // Dashboards spécifiques par rôle
 const AdminDashboard = lazy(() => import('./pages/Admin/Dashboard'))
 const StudentDashboard = lazy(() => import('./pages/Student/Dashboard'))
@@ -73,6 +75,8 @@ const TicketDetail = lazy(() => import('./components/TicketDetail'))
 // Import the TicketServiceList component
 const TicketServiceList = lazy(() => import('./components/admin/TicketServiceList'))
 
+// Import de la page Trombinoscope
+const Trombinoscope = lazy(() => import('./pages/Global/Trombinoscope'))
 // Fonction optimisée pour le préchargement intelligent des pages
 // Ne charge que les pages pertinentes en fonction du contexte et du chemin actuel
 function useIntelligentPreload() {

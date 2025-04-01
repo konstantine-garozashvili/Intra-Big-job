@@ -185,11 +185,11 @@ const MenuBurger = memo(() => {
       to: '/notifications',
     },
     {
-      key: 'messagerie',
-      label: 'Messagerie',
-      icon: <MessageCircle className="w-5 h-5 mr-2 text-[#528eb2]" />,
-      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.STUDENT, ROLES.RECRUITER],
-      to: '/messagerie',
+      key: 'roles_management',
+      label: 'Gestion des rôles',
+      icon: <UserPlus className="w-5 h-5 mr-2 text-white" />,
+      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.RECRUITER],
+      to: '/recruiter/guest-student-roles',
     },
     {
       key: 'trombinoscope',
@@ -247,10 +247,10 @@ const MenuBurger = memo(() => {
     
     // --- SECTION PLANIFICATION ---
     {
-      key: 'plannings',
-      label: 'Plannings',
-      icon: <Calendar className="w-5 h-5 mr-2 text-[#528eb2]" />,
-      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.HR, ROLES.STUDENT],
+      key: 'admins',
+      label: 'Administration',
+      icon: <Shield className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.SUPERADMIN, ROLES.ADMIN],
       links: [
         { name: 'Évènements', to: '/plannings/evenements', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.HR, ROLES.STUDENT] },
         { name: 'Agenda', to: '/plannings/agenda', roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.HR, ROLES.STUDENT] },
@@ -311,11 +311,11 @@ const MenuBurger = memo(() => {
     
     // --- SECTION ADMINISTRATION ET GESTION (Regroupé par type d'utilisateur) ---
     {
-      key: 'admin_all_users',
-      label: 'Tous les utilisateurs',
-      icon: <Users className="w-5 h-5 mr-2 text-[#528eb2]" />,
-      roles: [ROLES.ADMIN, ROLES.SUPERADMIN],
-      to: '/admin/users',
+      key: 'trombinoscope',
+      label: 'Trombinoscope',
+      icon: <Camera className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.STUDENT, ROLES.RECRUITER],
+      to: '/trombinoscope',
     },
     {
       key: 'admin_teachers',
@@ -372,7 +372,7 @@ const MenuBurger = memo(() => {
       ],
     },
     {
-      key: 'roles_management',
+      key: 'roles_management_admin',
       label: 'Gestion des rôles',
       icon: <UserPlus className="w-5 h-5 mr-2 text-[#528eb2]" />,
       roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.RECRUITER],
@@ -394,7 +394,7 @@ const MenuBurger = memo(() => {
       ],
     },
     {
-      key: 'admins',
+      key: 'admin_system',
       label: 'Administration',
       icon: <Shield className="w-5 h-5 mr-2 text-[#528eb2]" />,
       roles: [ROLES.SUPERADMIN, ROLES.ADMIN],
@@ -455,6 +455,8 @@ const MenuBurger = memo(() => {
         { name: 'Actualités', to: '/guest/news', roles: [ROLES.GUEST] },
       ],
     },
+    
+    // --- GENERAL ITEMS ---
     {
       key: 'contact',
       label: 'Contact & Support',

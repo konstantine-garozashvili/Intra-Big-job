@@ -371,4 +371,38 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
             ->getQuery()
             ->getResult();
     }
+    public function findAllUsersWithCity(): array
+    {
+        // 1. Fetch all users with their associations via DQL / QueryBuilder
+        $users = $this->createQueryBuilder('u')
+            ->select('u', 'n', 't', 'ur', 'r')
+            ->leftJoin('u.nationality', 'n')
+            ->leftJoin('u.theme', 't')
+            ->leftJoin('u.userRoles', 'ur')
+            ->leftJoin('ur.role', 'r')
+            ->orderBy('u.firstName', 'ASC')
+            ->addOrderBy('u.lastName', 'ASC')
+            ->getQuery()
+            ->getResult();
+    
+        // 2. Get repositories for Adress and City (now mapped as entities)
+        $addressRepository = $this->getEntityManager()->getRepository(\App\entity\Address::class);
+        $cityRepository = $this->getEntityManager()->getRepository(\App\Entity\City::class);
+    
+        // 3. Loop through each user, fetch the address and then the city
+        foreach ($users as $user) {
+            $address = $addressRepository->findOneBy(['user' => $user]);
+            if ($address) {
+                $city = $cityRepository->findOneBy(['id' => $address->getCity()->getId()]);
+                if ($city) {
+                    $user->setCity($city);
+                    $user->setCityName($city->getName());
+                } else {
+                    
+                }
+            }
+        }
+    
+        return $users;
+    }
 }

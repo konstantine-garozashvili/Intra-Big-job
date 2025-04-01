@@ -326,4 +326,4 @@ const Schedule = () => {
     );
 };
 
-export default Schedule; 
+export { Schedule as default }; 
