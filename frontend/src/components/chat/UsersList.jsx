@@ -11,14 +11,17 @@ const UsersList = ({ users, loading, onStartPrivateChat }) => {
     const teachersAndStudents = users.filter(user => {
       if (!user.userRoles || user.userRoles.length === 0) return false;
       
-      // Check if the user has a teacher or student role
+      // Check if the user has a teacher, student, or guest role
       return user.userRoles.some(userRole => 
         userRole.role.name.toLowerCase() === 'teacher' || 
         userRole.role.name.toLowerCase() === 'student' ||
         userRole.role.name.toLowerCase() === 'enseignant' || 
         userRole.role.name.toLowerCase() === 'étudiant' ||
         userRole.role.name.toLowerCase() === 'professeur' ||
-        userRole.role.name.toLowerCase() === 'élève'
+        userRole.role.name.toLowerCase() === 'élève' ||
+        userRole.role.name.toLowerCase() === 'guest' ||
+        userRole.role.name.toLowerCase() === 'invité' ||
+        userRole.role.name.toLowerCase() === 'invite'
       );
     });
 
@@ -114,8 +117,8 @@ const UsersList = ({ users, loading, onStartPrivateChat }) => {
         ) : (
           <div className="text-center p-4 text-gray-500">
             {searchTerm 
-              ? "Aucun enseignant ou étudiant ne correspond à votre recherche" 
-              : "Aucun enseignant ou étudiant disponible pour le chat"}
+              ? "Aucun enseignant, étudiant ou invité ne correspond à votre recherche" 
+              : "Aucun enseignant, étudiant ou invité disponible pour le chat"}
           </div>
         )}
       </div>
