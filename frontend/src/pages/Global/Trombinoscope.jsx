@@ -6,6 +6,8 @@ import usersListService from './UsersList/services/usersListService';
 import { getProfilePictureUrl } from '@/lib/utils/profileUtils';
 import documentService from './Profile/services/documentService';
 import { toast } from 'sonner';
+import { useRoles, ROLES } from '../../features/roles/roleContext';
+import { useSearchRoles } from '../../lib/hooks/useSearchRoles';
 
 const getRoleIconColor = (role) => {
   const colors = {
@@ -44,6 +46,10 @@ const getRoleColor = (role) => {
     'GUEST': 'bg-blue-50 text-blue-300 hover:bg-blue-100 dark:bg-blue-800 dark:text-blue-200 dark:hover:bg-blue-700'
   };
   return colors[role] || 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+};
+
+const isAdminRole = (role) => {
+  return ['ADMIN', 'SUPER_ADMIN'].includes(role);
 };
 
 const RoleDropdown = ({ selectedRole, setSelectedRole, uniqueRoles }) => {
@@ -471,6 +477,10 @@ const UsersList = () => {
   const [layout, setLayout] = useState('card');
   const [sortOption, setSortOption] = useState('nameAsc');
 
+  // Get current user's roles and permissions
+  const { roles: userRoles, hasRole, hasAnyRole } = useRoles();
+  const { allowedSearchRoles } = useSearchRoles();
+
   const { data: users, isLoading, error } = useQuery({
     queryKey: ['users', 'all'],
     queryFn: usersListService.getAllUsers
@@ -478,10 +488,20 @@ const UsersList = () => {
 
   const uniqueRoles = useMemo(() => {
     if (!users) return [];
-    return [...new Set(users.flatMap(user => 
-      user.userRoles?.map(ur => ur.role.name).filter(role => role !== 'GUEST')
-    ) || [])];
-  }, [users]);
+    
+    // Filter roles based on allowedSearchRoles
+    const roles = users.flatMap(user => 
+      user.userRoles?.map(ur => ur.role.name).filter(role => {
+        // Always show GUEST role
+        if (role === 'GUEST') return true;
+        
+        // Check if role is in allowedSearchRoles
+        return allowedSearchRoles.includes(role);
+      })
+    );
+    
+    return [...new Set(roles) || []];
+  }, [users, allowedSearchRoles]);
 
   const filteredUsers = useMemo(() => {
     if (!users) return [];
@@ -500,8 +520,59 @@ const UsersList = () => {
       return user.userRoles?.some(ur => ur.role.name === selectedRole);
     };
 
-    return users.filter(user => matchesSearch(user) && matchesRole(user));
-  }, [users, searchTerm, selectedRole]);
+    // Filter users based on search and role
+    const filtered = users.filter(user => matchesSearch(user) && matchesRole(user));
+
+    // Apply role-based filtering based on user's permissions
+    if (!hasRole(ROLES.ADMIN) && !hasRole(ROLES.SUPERADMIN)) {
+      return filtered.filter(user => {
+        // Get user's roles
+        const userRoles = user.userRoles?.map(ur => ur.role.name) || [];
+        
+        // Students can only see TEACHER, STUDENT, RECRUITER, and HR
+        if (hasRole(ROLES.STUDENT)) {
+          return userRoles.some(role => 
+            ['TEACHER', 'STUDENT', 'RECRUITER', 'HR'].includes(role)
+          );
+        }
+        
+        // HR can only see TEACHER, STUDENT, and RECRUITER
+        if (hasRole(ROLES.HR)) {
+          return userRoles.some(role => 
+            ['TEACHER', 'STUDENT', 'RECRUITER'].includes(role)
+          );
+        }
+        
+        // Recruiters can only see TEACHER and STUDENT
+        if (hasRole(ROLES.RECRUITER)) {
+          return userRoles.some(role => 
+            ['TEACHER', 'STUDENT'].includes(role)
+          );
+        }
+        
+        // Teachers can only see STUDENT and HR
+        if (hasRole(ROLES.TEACHER)) {
+          return userRoles.some(role => 
+            ['STUDENT', 'HR'].includes(role)
+          );
+        }
+        
+        // Guests can only see RECRUITER
+        if (hasRole(ROLES.GUEST)) {
+          return userRoles.some(role => 
+            ['RECRUITER'].includes(role)
+          );
+        }
+        
+        // Default case - show all non-admin users
+        return !userRoles.some(role => 
+          ['ADMIN', 'SUPERADMIN', 'SUPER_ADMIN'].includes(role)
+        );
+      });
+    }
+
+    return filtered;
+  }, [users, searchTerm, selectedRole, hasRole, hasAnyRole]);
 
   const sortedUsers = useMemo(() => {
     if (!filteredUsers) return [];

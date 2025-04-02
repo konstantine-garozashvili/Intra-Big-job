@@ -146,8 +146,27 @@ class UserController extends AbstractController
                 return $this->json(['message' => 'User not authenticated'], JsonResponse::HTTP_UNAUTHORIZED);
             }
             
+            // Get current user's roles
+            $currentRoles = $currentUser->getRoles();
+            $isAdmin = in_array('ROLE_ADMIN', $currentRoles) || in_array('ROLE_SUPER_ADMIN', $currentRoles);
+            
             // Find all users with their relations
-            $users = $this->userRepository->findAllUsers();
+            $qb = $this->userRepository->createQueryBuilder('u')
+                ->select('u', 'n', 't', 'ur', 'r', 's')
+                ->leftJoin('u.nationality', 'n')
+                ->leftJoin('u.theme', 't')
+                ->leftJoin('u.userRoles', 'ur')
+                ->leftJoin('ur.role', 'r')
+                ->leftJoin('u.specialization', 's');
+            
+            // Filter out admin users if current user is not admin
+            if (!$isAdmin) {
+                $qb->andWhere('r.name NOT IN (:adminRoles)')
+                   ->setParameter('adminRoles', ['ADMIN', 'SUPERADMIN']);
+            }
+            
+            // Execute query
+            $users = $qb->getQuery()->getResult();
             
             // Serialize with user roles included
             $serializedUsers = $this->serializer->serialize(
