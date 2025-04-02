@@ -14,7 +14,8 @@ const getRoleIconColor = (role) => {
     'HR': 'text-purple-500',
     'ADMIN': 'text-amber-500',
     'SUPER_ADMIN': 'text-red-500',
-    'RECRUITER': 'text-pink-500'
+    'RECRUITER': 'text-pink-500',
+    'GUEST': 'text-blue-300'
   };
   return colors[role] || 'text-gray-500';
 };
@@ -26,9 +27,23 @@ const getRoleLabel = (role) => {
     'HR': 'RH',
     'ADMIN': 'Administrateur',
     'SUPER_ADMIN': 'Super Admin',
-    'RECRUITER': 'Recruteur'
+    'RECRUITER': 'Recruteur',
+    'GUEST': 'Invité'
   };
   return labels[role] || role;
+};
+
+const getRoleColor = (role) => {
+  const colors = {
+    'STUDENT': 'bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-800 dark:text-blue-200 dark:hover:bg-blue-700',
+    'TEACHER': 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300',
+    'HR': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300',
+    'ADMIN': 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300',
+    'SUPER_ADMIN': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+    'RECRUITER': 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-300',
+    'GUEST': 'bg-blue-50 text-blue-300 hover:bg-blue-100 dark:bg-blue-800 dark:text-blue-200 dark:hover:bg-blue-700'
+  };
+  return colors[role] || 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
 };
 
 const RoleDropdown = ({ selectedRole, setSelectedRole, uniqueRoles }) => {
@@ -40,7 +55,8 @@ const RoleDropdown = ({ selectedRole, setSelectedRole, uniqueRoles }) => {
     'HR': 'RH',
     'ADMIN': 'Administrateur',
     'SUPER_ADMIN': 'Super Admin',
-    'RECRUITER': 'Recruteur'
+    'RECRUITER': 'Recruteur',
+    'GUEST': 'Invité'
   };
 
   const roleColors = {
@@ -49,7 +65,8 @@ const RoleDropdown = ({ selectedRole, setSelectedRole, uniqueRoles }) => {
     'HR': 'bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900 dark:text-purple-200 dark:hover:bg-purple-800',
     'ADMIN': 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900 dark:text-amber-200 dark:hover:bg-amber-800',
     'SUPER_ADMIN': 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900 dark:text-red-200 dark:hover:bg-red-800',
-    'RECRUITER': 'bg-pink-100 text-pink-700 hover:bg-pink-200 dark:bg-pink-900 dark:text-pink-200 dark:hover:bg-pink-800'
+    'RECRUITER': 'bg-pink-100 text-pink-700 hover:bg-pink-200 dark:bg-pink-900 dark:text-pink-200 dark:hover:bg-pink-800',
+    'GUEST': 'bg-blue-50 text-blue-300 hover:bg-blue-100 dark:bg-blue-800 dark:text-blue-200 dark:hover:bg-blue-700'
   };
 
   const roleIconColors = {
@@ -58,7 +75,8 @@ const RoleDropdown = ({ selectedRole, setSelectedRole, uniqueRoles }) => {
     'HR': 'text-purple-600',
     'ADMIN': 'text-amber-600',
     'SUPER_ADMIN': 'text-red-600',
-    'RECRUITER': 'text-pink-600'
+    'RECRUITER': 'text-pink-600',
+    'GUEST': 'text-blue-300'
   };
 
   const getRoleColor = (role) => {
@@ -352,6 +370,7 @@ const UserModal = ({ user, onClose }) => {
                       role === 'ADMIN' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' :
                       role === 'SUPER_ADMIN' || role === 'SUPERADMIN' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
                       role === 'RECRUITER' ? 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200' :
+                      role === 'GUEST' ? 'bg-blue-50 text-blue-300 dark:bg-blue-800 dark:text-blue-200' :
                       'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
                     }`}
                   >
@@ -362,6 +381,7 @@ const UserModal = ({ user, onClose }) => {
                       role === 'ADMIN' ? 'text-amber-500' :
                       role === 'SUPER_ADMIN' || role === 'SUPERADMIN' ? 'text-red-500' :
                       role === 'RECRUITER' ? 'text-pink-500' :
+                      role === 'GUEST' ? 'text-blue-300' :
                       'text-gray-500'
                     }`} />
                     {getRoleLabel(role)}
@@ -420,6 +440,7 @@ const UserCard = ({ user, onClick }) => {
                   role === 'ADMIN' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' :
                   role === 'SUPER_ADMIN' || role === 'SUPERADMIN' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
                   role === 'RECRUITER' ? 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200' :
+                  role === 'GUEST' ? 'bg-blue-50 text-blue-300 dark:bg-blue-800 dark:text-blue-200' :
                   'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
                 }`}
               >
@@ -430,6 +451,7 @@ const UserCard = ({ user, onClick }) => {
                   role === 'ADMIN' ? 'text-amber-500' :
                   role === 'SUPER_ADMIN' || role === 'SUPERADMIN' ? 'text-red-500' :
                   role === 'RECRUITER' ? 'text-pink-500' :
+                  role === 'GUEST' ? 'text-blue-300' :
                   'text-gray-500'
                 }`} />
                 {getRoleLabel(role)}
@@ -601,9 +623,10 @@ const UsersList = () => {
       'HR': 'bg-purple-100 text-purple-800 hover:bg-purple-200 dark:bg-purple-900 dark:text-purple-200 dark:hover:bg-purple-800',
       'ADMIN': 'bg-amber-100 text-amber-800 hover:bg-amber-200 dark:bg-amber-900 dark:text-amber-200 dark:hover:bg-amber-800',
       'SUPER_ADMIN': 'bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-900 dark:text-red-200 dark:hover:bg-red-800',
-      'RECRUITER': 'bg-pink-100 text-pink-800 hover:bg-pink-200 dark:bg-pink-900 dark:text-pink-200 dark:hover:bg-pink-800'
+      'RECRUITER': 'bg-pink-100 text-pink-800 hover:bg-pink-200 dark:bg-pink-900 dark:text-pink-200 dark:hover:bg-pink-800',
+      'GUEST': 'bg-blue-50 text-blue-300 hover:bg-blue-100 dark:bg-blue-800 dark:text-blue-200 dark:hover:bg-blue-700'
     };
-    return colors[role] || 'bg-blue-50 bg-blue-600 hover:bg-blue-600 dark:bg-blue-900 dark:text-blue-200 dark:hover:bg-blue-800';
+    return colors[role] || 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
   };
 
   if (isLoading) {
