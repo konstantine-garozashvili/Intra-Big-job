@@ -225,14 +225,16 @@ const UserMenu = ({ onLogout, userData, setLogoutDialogOpen }) => {
               </div>
               <div className="ml-3">
                 <h3 className="font-medium text-sm">
-                  {userData?.firstName && userData?.lastName 
+                  {userData?.firstName && userData?.lastName
                     ? `${userData.firstName} ${userData.lastName}`
                     : userData?.user?.firstName && userData?.user?.lastName
                       ? `${userData.user.firstName} ${userData.user.lastName}`
-                      : 'Utilisateur'}
+                      : userData?.data?.firstName && userData?.data?.lastName
+                        ? `${userData.data.firstName} ${userData.data.lastName}`
+                        : 'Utilisateur'}
                 </h3>
                 <p className="text-xs text-gray-300">
-                  {userData?.email || userData?.user?.email || 'utilisateur@example.com'}
+                  {userData?.email || userData?.user?.email || userData?.data?.email || 'utilisateur@example.com'}
                 </p>
               </div>
             </div>

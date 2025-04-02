@@ -117,6 +117,9 @@ export const authService = {
     
     try {
       // For guest users, we need to ensure we have complete profile data
+      // REMOVED: Eager loading of consolidated profile for guests.
+      // Basic user info from token/localStorage should be sufficient initially.
+      /*
       if (cachedUser.roles && cachedUser.roles.includes('ROLE_GUEST')) {
         console.log('lazyLoadUserData - Loading guest user profile data');
         
@@ -165,6 +168,7 @@ export const authService = {
           // Fall back to basic /api/me endpoint
         }
       }
+      */
       
       // Load profile data for all users (guest and regular)
       const profileResult = await this._loadProfileData();
@@ -190,45 +194,6 @@ export const authService = {
       sessionStorage.removeItem('login_in_progress');
       document.dispatchEvent(new CustomEvent('user:data-updated', { detail: { user: enhancedUser } }));
       window.dispatchEvent(new Event('user-data-loaded'));
-      
-      // Load additional profile data for complete information
-      if (isInitialLoad) {
-        try {
-          // Try to load consolidated profile data which includes more details like city
-          const consolidatedResponse = await apiService.get('/api/profile/consolidated', { 
-            noCache: true, 
-            timeout: 8000
-          });
-          
-          if (consolidatedResponse && (consolidatedResponse.data || consolidatedResponse.user)) {
-            const profileData = consolidatedResponse.data || consolidatedResponse;
-            if (profileData) {
-              const mergedUser = {
-                ...enhancedUser,
-                ...profileData,
-                city: profileData.city || enhancedUser.city || "Non renseignée",
-                _extractedAt: Date.now(),
-                _source: 'consolidated'
-              };
-              
-              localStorage.setItem('user', JSON.stringify(mergedUser));
-              const queryClient = getQueryClient();
-              if (queryClient) {
-                const sessionId = getSessionId();
-                queryClient.setQueryData(['user', 'current'], mergedUser);
-                queryClient.setQueryData(['unified-user-data', '/api/profile/consolidated', sessionId], consolidatedResponse);
-              }
-              
-              document.dispatchEvent(new CustomEvent('user:data-updated', { detail: { user: mergedUser } }));
-              window.dispatchEvent(new Event('user-data-loaded'));
-              
-              enhancedUser = mergedUser;
-            }
-          }
-        } catch (consolidatedError) {
-          console.warn('Error loading additional profile data:', consolidatedError);
-        }
-      }
       
       return enhancedUser;
     } catch (error) {

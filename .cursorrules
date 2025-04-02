@@ -117,3 +117,30 @@ Intra-Bigjob-Group-5/
 - Services et hooks partagés
 
 Ce projet suit une architecture moderne séparant clairement le backend (API Symfony) et le frontend (application React), reliés via des appels API. L'infrastructure est configurée avec Docker pour garantir un environnement de développement cohérent. 
+
+---
+description: Core Project Configuration & Dependency Rules
+globs: ["**/*"] # Apply to all files
+alwaysApply: true
+---
+# Core Project Configuration & Dependency Rules
+
+## Configuration Awareness
+- Always consider the settings in root `.env`, `backend/.env`, `frontend/.env`, and `frontend/vite.config.js` when dealing with environment variables, API URLs, proxies, or build configurations.
+- Explicitly mention if a change might require modification in these configuration files.
+
+## Dependency Management
+- Prioritize using libraries already listed in `backend/composer.json` and `frontend/package.json`.
+- Before suggesting a new dependency, confirm if existing libraries can fulfill the requirement.
+- When adding dependencies, specify the correct command (e.g., `composer require vendor/package` or `npm install package-name`).
+
+## Import Validation
+- Before adding an `import` (JS/TS) or `use` (PHP) statement:
+    - Verify the target file/module exists within the project structure.
+    - Double-check that the import path is correct relative to the current file and follows the project's aliasing rules (e.g., `@/components` in frontend) or PSR-4 autoloading (backend).
+    - If unsure about a path, use file search or list directory tools before generating the import.
+
+## API Route Usage
+- When making frontend API calls (e.g., using Axios or TanStack Query), refer to the backend routes listed in `memory.md` or use `debug:router` if needed.
+- Ensure the correct HTTP method (GET, POST, PUT, DELETE, etc.) is used for the target endpoint.
+- Construct API URLs based on the established pattern (relative `/api/...` in dev, `import.meta.env.VITE_API_URL` in production build context).

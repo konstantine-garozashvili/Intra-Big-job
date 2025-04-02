@@ -232,9 +232,13 @@ const MainLayout = () => {
 
     const handleUserDataUpdated = async (event) => {
       if (event.detail && event.detail.user) {
-        setUserData(event.detail.user);
+        console.log("MainLayout: Handling user:data-updated event.");
+        setUserData(event.detail.user); // Update state with basic user data
         setLoadingState(LOADING_STATES.COMPLETE);
-        
+
+        // REMOVED: Unnecessary immediate fetch of consolidated profile data here.
+        // Let navigation effects or component needs handle loading full profile data.
+        /*
         // Charger les données de profil quand même pour s'assurer d'avoir les dernières données
         try {
           const profileData = await profileService.getAllProfileData();
@@ -242,6 +246,7 @@ const MainLayout = () => {
         } catch (profileError) {
           console.warn('Error loading profile data after update:', profileError);
         }
+        */
       }
     };
 
@@ -299,17 +304,25 @@ const MainLayout = () => {
           setUserData(minimalUser);
           setLoadingState(LOADING_STATES.MINIMAL);
           
-          // Si les données sont déjà complètes, ne pas les recharger
+          // If the data from localStorage/token is already complete, don't reload it eagerly
+          // Let navigation or specific component needs trigger the consolidated load.
           if (!minimalUser._minimal) {
             setLoadingState(LOADING_STATES.COMPLETE);
-            
-            // Charger les données de profil quand même pour s'assurer d'avoir les dernières données
+            // REMOVED: Eager loading of consolidated profile data even when basic data exists.
+            /*
+            // Load profile data anyway to ensure we have the latest data
             try {
               const profileData = await profileService.getAllProfileData();
               setProfileData(profileData);
             } catch (profileError) {
               console.warn('Error loading profile data with complete user:', profileError);
             }
+            */
+          } else {
+             // If minimal user data was found, initiate background fetch for consolidated data
+             // but don't await it here to keep initial load fast.
+             console.log("Minimal user data found, triggering background profile load.");
+             profileService.getAllProfileData({ background: true, silent: true });
           }
         } else {
           // Aucune donnée utilisateur disponible, charger depuis l'API
