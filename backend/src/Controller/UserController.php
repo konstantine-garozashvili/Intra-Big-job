@@ -167,6 +167,8 @@ class UserController extends AbstractController
             
             // Execute query
             $users = $qb->getQuery()->getResult();
+            // Find all users with their relations
+            $users = $this->userRepository->findAllUsers();
             
             // Serialize with user roles included
             $serializedUsers = $this->serializer->serialize(
