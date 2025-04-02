@@ -230,14 +230,19 @@ const ProfileHeader = ({ userData, isPublicProfile = false, profilePictureUrl })
             >
               <AnimatePresence>
                 {(() => {
-                  // Récupérer les rôles de manière sécurisée
+                  // Get roles securely, checking multiple possible structures
                   let roles = [];
-                  if (userData.user?.roles && Array.isArray(userData.user.roles)) {
-                    roles = userData.user.roles;
-                  } else if (userData.roles && Array.isArray(userData.roles)) {
+                  if (userData?.roles && Array.isArray(userData.roles)) {
+                    // Check 1: roles directly on userData (e.g., from consolidated)
                     roles = userData.roles;
+                  } else if (userData?.user?.roles && Array.isArray(userData.user.roles)) {
+                    // Check 2: roles nested under user (e.g., from older structures?)
+                    roles = userData.user.roles;
+                  } else if (userData?.data?.roles && Array.isArray(userData.data.roles)) {
+                    // Check 3: roles nested under data (e.g., from /api/me)
+                    roles = userData.data.roles;
                   }
-                  
+
                   if (roles.length > 0) {
                     return roles.map((role, index) => {
                       // Déterminer le nom du rôle en fonction de la structure
