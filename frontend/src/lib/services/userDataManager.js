@@ -438,55 +438,46 @@ const userDataManager = {
    * @param {boolean} options.bypassThrottle - Ignorer les règles de limitation de fréquence
    * @returns {Promise<Object>} - Données utilisateur
    */
-  getUserData(options = {}) {
-    // Valeurs par défaut
-    const {
-      routeKey = '/api/me',      // Route API à utiliser
-      componentId = 'global',    // Identifiant du composant demandeur
-      forceRefresh = false,      // Force une nouvelle requête
-      useCache = true,           // Utilise le cache si disponible
-      bypassThrottle = false     // Ignorer les règles de limitation de fréquence
-    } = options;
+  async getUserData(options = {}) {
+    console.group('UserDataManager - getUserData');
+    console.log('Options:', options);
     
-    // Log the request
-    this._log(`getUserData request for route ${routeKey}. Options: forceRefresh=${forceRefresh}, useCache=${useCache}, bypassThrottle=${bypassThrottle}`);
-    
-    // Si le cache est autorisé et non forcé à rafraîchir
-    if (useCache && !forceRefresh) {
-      try {
-        // Essayer d'abord d'utiliser le cache - avec une vérification défensive
-        let cachedData = null;
-        
-        // Vérifier si la méthode get existe sur l'objet cache
-        if (this.cache && typeof this.cache.get === 'function') {
-          cachedData = this.cache.get(routeKey);
-        } else {
-          // Fallback: utiliser directement les données du cache
-          cachedData = this.cache?.data || null;
+    try {
+      const { routeKey, forceRefresh, bypassThrottle, useCache } = options;
+      
+      // Check cache first if allowed
+      if (!forceRefresh && useCache) {
+        const cachedData = this.getCachedUserData();
+        if (cachedData && cachedData._timestamp) {
+          const age = Date.now() - cachedData._timestamp;
+          if (age < 300000) { // 5 minutes
+            console.log('Returning cached user data, age:', age);
+            console.groupEnd();
+            return cachedData;
+          }
         }
-        
-        if (cachedData) {
-          this._debugCounters.cacheHits++;
-          return Promise.resolve(cachedData);
-        }
-      } catch (error) {
-        console.warn(`Error retrieving data from cache for ${routeKey}:`, error);
-        // Continuer en cas d'erreur de cache
       }
+
+      console.log('Fetching fresh user data');
+      const response = await this.coordinateRequest(routeKey, 'user_data_manager', 
+        () => apiService.get(routeKey, { 
+          bypassThrottle,
+          noCache: forceRefresh 
+        })
+      );
+
+      console.log('Response received:', {
+        hasData: !!response,
+        dataType: response?.data ? 'data' : (response?.user ? 'user' : 'unknown')
+      });
+      
+      console.groupEnd();
+      return response;
+    } catch (error) {
+      console.error('Error in getUserData:', error);
+      console.groupEnd();
+      throw error;
     }
-    
-    // Check if we should throttle this request (unless bypass is requested)
-    if (!bypassThrottle && requestRegistry.shouldThrottleRequest(routeKey)) {
-      this._log(`Request throttled for route ${routeKey}`, 'warn');
-      return this.getCachedUserData() || Promise.resolve(null);
-    }
-    
-    return this._loadUserData(componentId, {
-      routeKey,
-      forceRefresh,
-      useCache,
-      bypassThrottle
-    });
   },
 
   /**
@@ -854,129 +845,43 @@ const userDataManager = {
    * @param {Function} requestFn - Fonction qui effectue la requête API
    * @returns {Promise} - Promesse de la requête
    */
-  coordinateRequest(route, componentId, requestFn) {
-    // Enregistrer le composant comme utilisateur de la route
-    this.requestRegistry.registerRouteUser(route, componentId);
+  async coordinateRequest(routeKey, serviceId, requestFn) {
+    console.group(`UserDataManager - coordinateRequest: ${routeKey}`);
+    console.log('ServiceId:', serviceId);
     
-    // Special handling for /api/me - use aggressive caching
-    if (route.includes('/api/me')) {
-      const now = Date.now();
-      const cachedData = this.getCachedUserData();
-      
-      // If we have fresh cached data (less than 30 seconds old), use it
-      if (cachedData && userDataCache.timestamp && (now - userDataCache.timestamp < 30000)) {
-        this._debugCounters.cacheHits++;
-        this._log('Using cached user data (less than 30s old)');
-        return Promise.resolve(cachedData);
-      }
-      
-      // If there's an active request for this route, reuse it
-      const activeRequest = this.requestRegistry.getActiveRequest(route);
+    try {
+      // Check if request is already in progress
+      const activeRequest = this.requestRegistry.getActiveRequest(routeKey);
       if (activeRequest) {
-        this._log('Reusing active request', 'info', true);
+        console.log('Request already in progress, returning existing promise');
+        console.groupEnd();
         return activeRequest;
       }
+
+      // Register the new request
+      const requestPromise = requestFn();
+      this.requestRegistry.registerRequest(routeKey, requestPromise);
       
-      // Otherwise, make a new request and register it
-      this._debugCounters.apiCalls++;
-      this._log('Making new API request', 'info', true);
+      console.log('New request registered and started');
       
-      // Safely handle the request function
-      let request;
       try {
-        const result = requestFn();
-        
-        // Ensure result is a proper Promise
-        if (result && typeof result === 'object' && typeof result.then === 'function') {
-          request = result.then(response => {
-            // Store the response in our cache
-            userDataCache.data = response;
-            userDataCache.timestamp = Date.now();
-            
-            // Also update localStorage
-            try {
-              localStorage.setItem('user', JSON.stringify(response));
-            } catch (e) {
-              console.warn('Error storing user data in localStorage:', e);
-            }
-            
-            return response;
-          });
-        } else {
-          console.warn('Request function did not return a Promise for /api/me route, wrapping result');
-          request = Promise.resolve(result).then(response => {
-            if (response) {
-              userDataCache.data = response;
-              userDataCache.timestamp = Date.now();
-              
-              try {
-                localStorage.setItem('user', JSON.stringify(response));
-              } catch (e) {
-                console.warn('Error storing user data in localStorage:', e);
-              }
-            }
-            return response;
-          });
-        }
-      } catch (error) {
-        console.error('Error executing request function for /api/me:', error);
-        request = Promise.reject(error);
+        const result = await requestPromise;
+        console.log('Request completed successfully:', {
+          routeKey,
+          hasData: !!result,
+          dataType: result?.data ? 'data' : (result?.user ? 'user' : 'unknown')
+        });
+        return result;
+      } finally {
+        this.requestRegistry.unregisterRequest(routeKey);
+        console.log('Request unregistered');
+        console.groupEnd();
       }
-      
-      this.requestRegistry.registerActiveRequest(route, request);
-      return request;
+    } catch (error) {
+      console.error('Error in coordinateRequest:', error);
+      console.groupEnd();
+      throw error;
     }
-    
-    // Prioritize other critical user data routes
-    const isCriticalRoute = route.includes('/profile') || 
-                           route.includes('/user-roles') || 
-                           route.includes('/user');
-    
-    // Skip throttling for critical routes
-    if (isCriticalRoute) {
-      // If there's an active request for this critical route, reuse it
-      const activeRequest = this.requestRegistry.getActiveRequest(route);
-      if (activeRequest) {
-        return activeRequest;
-      }
-      
-      // Otherwise, make a new request and register it
-      let request;
-      try {
-        const result = requestFn();
-        
-        // Ensure result is a proper Promise
-        if (result && typeof result === 'object' && typeof result.then === 'function') {
-          request = result;
-        } else {
-          console.warn(`Request function did not return a Promise for critical route ${route}, wrapping result`);
-          request = Promise.resolve(result);
-        }
-      } catch (error) {
-        console.error(`Error executing request function for critical route ${route}:`, error);
-        request = Promise.reject(error);
-      }
-      
-      this.requestRegistry.registerActiveRequest(route, request);
-      return request;
-    }
-    
-    // For non-critical routes, apply normal throttling
-    if (this.requestRegistry.shouldThrottleRequest(route)) {
-      
-      // Si une requête est déjà active, la réutiliser
-      const activeRequest = this.requestRegistry.getActiveRequest(route);
-      if (activeRequest) {
-        return activeRequest;
-      }
-      
-      // Sinon, créer une promesse résolue pour éviter de faire une nouvelle requête
-      this._log('Request throttled, using cached data', 'warn', true);
-      return Promise.resolve(null);
-    }
-    
-    // Coordonner la requête via le registre
-    return this.requestRegistry.coordinateRequest(route, requestFn);
   }
 };
 

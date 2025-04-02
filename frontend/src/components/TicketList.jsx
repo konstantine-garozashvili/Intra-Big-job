@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import apiService from '@/lib/services/apiService';
 import { toast } from 'sonner';
 
 // Status badge colors based on status name
@@ -63,20 +63,11 @@ export default function TicketList() {
   useEffect(() => {
     const fetchStatuses = async () => {
       try {
-        const token = localStorage.getItem('token');
-        if (!token) return;
-        
-        const response = await axios.get('/api/tickets/status', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        if (response.data && response.data.statuses) {
-          setStatuses(response.data.statuses);
-        }
+        const response = await apiService.get('/tickets/status');
+        setStatuses(response.data);
       } catch (error) {
         console.error('Error fetching statuses:', error);
+        toast.error('Erreur lors du chargement des statuts');
       }
     };
     
@@ -87,18 +78,11 @@ export default function TicketList() {
   useEffect(() => {
     const fetchServices = async () => {
       try {
-        const token = localStorage.getItem('token');
-        if (!token) return;
-        
-        const response = await axios.get('/api/ticket-services', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
+        const response = await apiService.get('/ticket-services');
         setServices(response.data);
       } catch (error) {
         console.error('Error fetching services:', error);
+        toast.error('Erreur lors du chargement des services');
       }
     };
     
@@ -115,12 +99,7 @@ export default function TicketList() {
           return;
         }
         
-        const response = await axios.get('/api/tickets', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
+        const response = await apiService.get('/tickets');
         setTickets(response.data.tickets);
         setLoading(false);
       } catch (error) {

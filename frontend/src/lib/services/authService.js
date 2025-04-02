@@ -27,7 +27,7 @@ const getCurrentUserState = {
 export const authService = {
   async register(userData) {
     try {
-      const response = await apiService.post('/register', userData);
+      const response = await apiService.post('/api/register', userData);
       if (response?.token) localStorage.setItem('token', response.token);
       return { status: response.status || 201, data: response };
     } catch (error) {
@@ -52,7 +52,7 @@ export const authService = {
       localStorage.setItem('session_id', currentSessionId);
       showGlobalLoader();
       
-      const response = await apiService.post('/login_check', {
+      const response = await apiService.post('/api/login_check', {
         username: email,
         password,
         device_id: deviceId,
@@ -73,7 +73,7 @@ export const authService = {
             email: payload.username,
             firstName: payload.firstName || "",
             lastName: payload.lastName || "",
-            city: "Chargement...", // Add a loading placeholder for city
+            city: "Non renseignée",
             _extractedAt: Date.now(),
             _minimal: true
           };
@@ -90,17 +90,12 @@ export const authService = {
       window.dispatchEvent(new Event('login-success'));
       window.dispatchEvent(new Event('auth-state-change'));
       
-      // Load complete profile data immediately after login
       try {
         const fullProfileData = await this.lazyLoadUserData(true);
-        console.log("Full profile data loaded on login:", fullProfileData);
-        
-        // Dispatch a special event for login completion with full data
         document.dispatchEvent(new CustomEvent('auth:login-complete', { 
           detail: { user: fullProfileData } 
         }));
         
-        // Trigger an immediate profile data refresh in any components that need it
         window.dispatchEvent(new CustomEvent('force-profile-refresh', {
           detail: { source: 'login', data: fullProfileData }
         }));
@@ -128,7 +123,7 @@ export const authService = {
         // Even for guests, we should load profile data to get city information
         try {
           // First try to get consolidated profile data which includes city
-          const consolidatedResponse = await apiService.get('/profile/consolidated', { 
+          const consolidatedResponse = await apiService.get('/api/profile/consolidated', { 
             noCache: isInitialLoad, 
             timeout: 8000, 
             retries: 2 
@@ -156,7 +151,7 @@ export const authService = {
             if (queryClient) {
               const sessionId = getSessionId();
               queryClient.setQueryData(['user', 'current'], enhancedUser);
-              queryClient.setQueryData(['unified-user-data', '/profile/consolidated', sessionId], consolidatedResponse);
+              queryClient.setQueryData(['unified-user-data', '/api/profile/consolidated', sessionId], consolidatedResponse);
             }
             
             // Dispatch events to update UI
@@ -200,7 +195,7 @@ export const authService = {
       if (isInitialLoad) {
         try {
           // Try to load consolidated profile data which includes more details like city
-          const consolidatedResponse = await apiService.get('/profile/consolidated', { 
+          const consolidatedResponse = await apiService.get('/api/profile/consolidated', { 
             noCache: true, 
             timeout: 8000
           });
@@ -221,7 +216,7 @@ export const authService = {
               if (queryClient) {
                 const sessionId = getSessionId();
                 queryClient.setQueryData(['user', 'current'], mergedUser);
-                queryClient.setQueryData(['unified-user-data', '/profile/consolidated', sessionId], consolidatedResponse);
+                queryClient.setQueryData(['unified-user-data', '/api/profile/consolidated', sessionId], consolidatedResponse);
               }
               
               document.dispatchEvent(new CustomEvent('user:data-updated', { detail: { user: mergedUser } }));
@@ -267,7 +262,7 @@ export const authService = {
       if (!refreshToken) throw new Error('No refresh token available');
       
       const { deviceName, deviceType } = getDeviceInfo();
-      const response = await apiService.post('/token/refresh', {
+      const response = await apiService.post('/api/token/refresh', {
         refresh_token: refreshToken,
         device_id: localStorage.getItem('device_id'),
         device_name: deviceName,
@@ -330,7 +325,7 @@ export const authService = {
 
   async logoutAllDevices() {
     try {
-      await apiService.post('/token/revoke-all');
+      await apiService.post('/api/token/revoke-all');
       localStorage.removeItem('token');
       localStorage.removeItem('refresh_token');
       localStorage.removeItem('user');
@@ -343,7 +338,7 @@ export const authService = {
 
   async getDevices() {
     try {
-      return await apiService.get('/token/devices');
+      return await apiService.get('/api/token/devices');
     } catch (error) {
       throw error;
     }

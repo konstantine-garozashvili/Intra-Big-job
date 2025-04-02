@@ -89,7 +89,7 @@ class DocumentService {
     }
     
     try {
-      const response = await apiService.get('/documents');
+      const response = await apiService.get('/api/documents');
       
       const documents = response.data || [];
       
@@ -153,7 +153,7 @@ class DocumentService {
         withCredentials: false // Set to false to avoid requiring Access-Control-Allow-Credentials header
       };
       
-      console.log('DocumentService.uploadCV - Sending request to:', '/documents/upload/cv');
+      console.log('DocumentService.uploadCV - Sending request to:', '/api/documents/upload/cv');
       
       let response;
       
@@ -161,7 +161,7 @@ class DocumentService {
         // First try direct axios call with full URL to avoid any CORS issues
         response = await axios({
           method: 'post',
-          url: `${API_URL}/documents/upload/cv`, // Remove duplicated /api/ since API_URL already contains it
+          url: `${API_URL}/api/documents/upload/cv`, // Remove duplicated /api/ since API_URL already contains it
           data: formData,
           headers: {
             'Authorization': `Bearer ${authService.getToken()}`,
@@ -178,7 +178,7 @@ class DocumentService {
           console.log('CORS error detected, trying alternative upload method...');
           
           // Fall back to using apiService
-          response = await apiService.post('/documents/upload/cv', formData, {
+          response = await apiService.post('/api/documents/upload/cv', formData, {
             raw: true,
             headers: {
               'Content-Type': 'multipart/form-data'
@@ -257,7 +257,7 @@ class DocumentService {
       };
       
       // Use apiService instead of direct axios call
-      const response = await apiService.post(`/documents/upload/cv/${studentId}`, formData, config);
+      const response = await apiService.post(`/api/documents/upload/cv/${studentId}`, formData, config);
       
       documentCache.clear();
       
@@ -290,7 +290,7 @@ class DocumentService {
       
       // Use direct axios call with correct URL (no duplicate /api)
       const response = await axios.get(
-        `${API_URL}/documents/${documentId}/download`,
+        `${API_URL}/api/documents/${documentId}/download`,
         config
       );
       
@@ -313,7 +313,7 @@ class DocumentService {
       // Notify subscribers about the update
       documentEvents.notify();
       
-      const response = await apiService.delete(`/documents/${documentId}`);
+      const response = await apiService.delete(`/api/documents/${documentId}`);
       
       // Clear the cache after deletion
       documentCache.clear();
@@ -345,7 +345,7 @@ class DocumentService {
     }
     
     try {
-      const response = await apiService.get(`/documents/type/${normalizedType}`);
+      const response = await apiService.get(`/api/documents/type/${normalizedType}`);
       
       const documents = response.data || [];
       
@@ -366,6 +366,88 @@ class DocumentService {
     documentCache.clear();
     documentEvents.notify();
   }
+
+  async getAllDocuments() {
+    try {
+      const response = await apiService.get('/api/documents');
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async getDocumentById(id) {
+    try {
+      const response = await apiService.get(`/api/documents/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async getDocumentByType(type) {
+    try {
+      const response = await apiService.get(`/api/documents/type/${type}`);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async uploadDocument(file, type, metadata = {}) {
+    try {
+      const formData = new FormData();
+      formData.append('document', file);
+      formData.append('type', type);
+      formData.append('metadata', JSON.stringify(metadata));
+
+      const response = await apiService.post('/api/documents/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async uploadCV(file) {
+    try {
+      const formData = new FormData();
+      formData.append('document', file);
+
+      const response = await apiService.post('/api/documents/upload/cv', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async deleteDocument(id) {
+    try {
+      const response = await apiService.delete(`/api/documents/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async updateDocument(id, data) {
+    try {
+      const response = await apiService.put(`/api/documents/${id}`, data);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  }
 }
 
-export default new DocumentService(); 
+const documentService = new DocumentService();
+export default documentService; 

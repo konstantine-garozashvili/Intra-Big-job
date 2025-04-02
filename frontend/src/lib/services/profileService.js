@@ -11,7 +11,7 @@ export const profileService = {
    */
   async getProfileData(options = {}) {
     try {
-      const response = await apiService.get('/profile', options);
+      const response = await apiService.get('/api/profile', options);
       
       // Debug: check for linkedinUrl in response
       console.log('profileService.getProfileData - Response data:', {
@@ -46,10 +46,108 @@ export const profileService = {
       }
       
       const data = { [field]: value };
-      const response = await apiService.put('/profile', data);
+      const response = await apiService.put('/api/profile', data);
       return response.data;
     } catch (error) {
       console.error(`Error updating profile field ${field}:`, error);
+      throw error;
+    }
+  },
+
+  async getProfile(options = {}) {
+    try {
+      const response = await apiService.get('/api/profile', options);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async updateProfile(data = {}) {
+    try {
+      const response = await apiService.put('/api/profile', data);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async getProfilePicture() {
+    try {
+      const response = await apiService.get('/api/profile/picture');
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async uploadProfilePicture(file) {
+    try {
+      const formData = new FormData();
+      formData.append('profile_picture', file);
+      
+      const response = await apiService.post('/api/profile/picture', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async deleteProfilePicture() {
+    try {
+      const response = await apiService.delete('/api/profile/picture');
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async getProfileStats() {
+    try {
+      const response = await apiService.get('/api/profile/stats');
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async getProfileDiplomas() {
+    try {
+      const response = await apiService.get('/api/profile/diplomas');
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async getProfileAddresses() {
+    try {
+      const response = await apiService.get('/api/profile/addresses');
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async updateProfileAddress(addressData) {
+    try {
+      const response = await apiService.put('/api/profile/address', addressData);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async getConsolidatedProfile() {
+    try {
+      const response = await apiService.get('/api/profile/consolidated');
+      return response.data;
+    } catch (error) {
       throw error;
     }
   },

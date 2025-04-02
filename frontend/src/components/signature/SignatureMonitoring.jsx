@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { CheckCircle, XCircle, AlertCircle, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import apiService from '@/lib/services/apiService';
 
 const SignatureMonitoring = () => {
   const [signatures, setSignatures] = useState([]);
@@ -16,17 +17,8 @@ const SignatureMonitoring = () => {
     const fetchSignatures = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/api/signatures', {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch signatures');
-        }
-
-        const data = await response.json();
+        const response = await apiService.get('/signatures');
+        const data = await response.data;
         setSignatures(data.signatures);
         setError(null);
       } catch (err) {

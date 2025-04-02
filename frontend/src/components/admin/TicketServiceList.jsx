@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import apiService from '@/lib/services/apiService';
 import { toast } from 'sonner';
 
 export default function TicketServiceList() {
@@ -20,25 +20,13 @@ export default function TicketServiceList() {
 
   const fetchServices = async () => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        setError('Authentication required');
-        setLoading(false);
-        return;
-      }
-      
-      const response = await axios.get('/api/ticket-services', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
+      const response = await apiService.get('/ticket-services');
       setServices(response.data);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching services:', error);
       setError('Failed to load services');
-      toast.error('Failed to load services');
+      toast.error('Erreur lors du chargement des services');
       setLoading(false);
     }
   };
@@ -75,12 +63,6 @@ export default function TicketServiceList() {
     setIsSubmitting(true);
     
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        toast.error('Authentication required');
-        return;
-      }
-      
       const data = {
         name: name.trim(),
         description: description.trim() || null
@@ -90,22 +72,15 @@ export default function TicketServiceList() {
       
       if (editingId) {
         // Update existing service
-        response = await axios.put(`/api/ticket-services/${editingId}`, data, {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        response = await apiService.put(`/ticket-services/${editingId}`, data);
         toast.success('Service mis à jour avec succès');
       } else {
         // Create new service
-        response = await axios.post('/api/ticket-services', data, {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        toast.success('Service créé avec succès');
+        response = await apiService.post('/ticket-services', data);
+        if (response.data.success) {
+          toast.success('Service créé avec succès');
+          fetchServices();
+        }
       }
       
       // Reset form and refresh services
@@ -113,7 +88,6 @@ export default function TicketServiceList() {
       setEditingId(null);
       setName('');
       setDescription('');
-      fetchServices();
     } catch (error) {
       console.error('Error saving service:', error);
       toast.error(error.response?.data?.message || 'Échec de l\'opération');
@@ -128,18 +102,7 @@ export default function TicketServiceList() {
     }
     
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        toast.error('Authentication required');
-        return;
-      }
-      
-      await axios.delete(`/api/ticket-services/${id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
+      await apiService.delete(`/ticket-services/${id}`);
       toast.success('Service supprimé avec succès');
       fetchServices();
     } catch (error) {

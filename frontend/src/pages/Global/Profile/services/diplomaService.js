@@ -26,23 +26,9 @@ class DiplomaService {
    */
   async getAvailableDiplomas() {
     try {
-      // console.log('Calling API for available diplomas');
       const response = await apiService.get('/api/user-diplomas/available');
-      // console.log('API response for available diplomas:', response);
-      // console.log('API response type:', typeof response);
-      // console.log('Is array?', Array.isArray(response));
-      
-      if (response && typeof response === 'object') {
-        // console.log('Response keys:', Object.keys(response));
-        if (response.data) {
-          // console.log('Response.data type:', typeof response.data);
-          // console.log('Response.data is array?', Array.isArray(response.data));
-        }
-      }
-      
       return response.data;
     } catch (error) {
-      // console.error('Error in getAvailableDiplomas:', error);
       throw error;
     }
   }
@@ -67,7 +53,7 @@ class DiplomaService {
    * @param {string} diplomaData.obtainedDate - The date the diploma was obtained (YYYY-MM-DD)
    * @returns {Promise<Object>} The response data
    */
-  async addUserDiploma(diplomaData) {
+  async addDiploma(diplomaData) {
     try {
       const response = await apiService.post('/api/user-diplomas', diplomaData);
       
@@ -81,11 +67,26 @@ class DiplomaService {
   }
 
   /**
+   * Update a user diploma
+   * @param {number} id - The ID of the user diploma
+   * @param {Object} diplomaData - The updated diploma data
+   * @returns {Promise<Object>} The response data
+   */
+  async updateDiploma(id, diplomaData) {
+    try {
+      const response = await apiService.put(`/api/user-diplomas/${id}`, diplomaData);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
    * Delete a user diploma
    * @param {number} id - The ID of the user diploma
    * @returns {Promise<Object>} The response data
    */
-  async deleteUserDiploma(id) {
+  async deleteDiploma(id) {
     try {
       const response = await apiService.delete(`/api/user-diplomas/${id}`);
       
@@ -99,4 +100,6 @@ class DiplomaService {
   }
 }
 
-export const diplomaService = new DiplomaService(); 
+const diplomaService = new DiplomaService();
+export { diplomaService };
+export default diplomaService; 

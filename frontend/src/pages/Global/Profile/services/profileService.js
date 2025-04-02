@@ -18,8 +18,8 @@ const SERVICE_ID = `profile_service_${Date.now()}`;
 class ProfileService {
   constructor() {
     // Enregistrer le service comme utilisateur des routes qu'il utilise fréquemment
-    userDataManager.requestRegistry.registerRouteUser('/profile/picture', SERVICE_ID);
-    userDataManager.requestRegistry.registerRouteUser('/profile/consolidated', SERVICE_ID);
+    userDataManager.requestRegistry.registerRouteUser('/api/profile/picture', SERVICE_ID);
+    userDataManager.requestRegistry.registerRouteUser('/api/profile/consolidated', SERVICE_ID);
   }
 
   async getUserProfile() {
@@ -33,9 +33,9 @@ class ProfileService {
       
       // Utiliser le système de coordination pour éviter les requêtes dupliquées
       const response = await userDataManager.coordinateRequest(
-        '/profile/user-data',
+        '/api/profile/user-data',
         SERVICE_ID,
-        () => apiService.get('/profile/user-data')
+        () => apiService.get('/api/profile/user-data')
       );
       
       // Mettre en cache les données
@@ -52,7 +52,7 @@ class ProfileService {
     try {
       // If portfolioUrl is present, use the student profile endpoint
       if (profileData.portfolioUrl !== undefined) {
-        const response = await apiService.put('/student/profile/portfolio-url', {
+        const response = await apiService.put('/api/student/profile/portfolio-url', {
           portfolioUrl: profileData.portfolioUrl
         });
         
@@ -63,7 +63,7 @@ class ProfileService {
       }
       
       // Otherwise use the regular profile update endpoint
-      const response = await apiService.put('/profile', profileData);
+      const response = await apiService.put('/api/profile', profileData);
       
       // Invalider le cache après une mise à jour
       this.invalidateCache('profile_data');
@@ -76,7 +76,7 @@ class ProfileService {
 
   async getDiplomas() {
     try {
-      const response = await apiService.get('/profile/diplomas');
+      const response = await apiService.get('/api/profile/diplomas');
       return response.data;
     } catch (error) {
       throw error;
@@ -85,7 +85,7 @@ class ProfileService {
 
   async getAddresses() {
     try {
-      const response = await apiService.get('/profile/addresses');
+      const response = await apiService.get('/api/profile/addresses');
       return response.data;
     } catch (error) {
       throw error;
@@ -94,7 +94,7 @@ class ProfileService {
 
   async getStats() {
     try {
-      const response = await apiService.get('/profile/stats');
+      const response = await apiService.get('/api/profile/stats');
       return response.data;
     } catch (error) {
       throw error;
@@ -110,6 +110,9 @@ class ProfileService {
    */
   async getAllProfileData(options = {}) {
     try {
+      console.group('ProfileService - getAllProfileData');
+      console.log('Options:', options);
+      
       // Clear cache if force refresh is requested
       if (options.forceRefresh) {
         profileCache.consolidatedData = null;
@@ -117,184 +120,74 @@ class ProfileService {
         console.log("Profile cache cleared due to force refresh");
       }
       
-      // Check if a request is already active for this route and not forcing refresh
-      if (userDataManager.requestRegistry.getActiveRequest('/profile/consolidated') && !options.forceRefresh) {
-        const activeRequest = userDataManager.requestRegistry.getActiveRequest('/profile/consolidated');
-        if (activeRequest) {
-          return activeRequest;
-        }
-      }
-      
-      // Check if we have valid data in local cache
+      // Check cache status
       const now = Date.now();
       if (!options.forceRefresh && 
           profileCache.consolidatedData && 
           (now - profileCache.consolidatedDataTimestamp) < profileCache.cacheDuration) {
+        console.log('Returning cached profile data:', profileCache.consolidatedData);
+        console.groupEnd();
         return profileCache.consolidatedData;
       }
       
+      console.log('Fetching fresh profile data...');
       // Use the centralized user data manager with coordination
       const response = await userDataManager.coordinateRequest(
-        '/profile/consolidated',
+        '/api/profile/consolidated',
         SERVICE_ID,
         () => userDataManager.getUserData({
-          routeKey: '/profile/consolidated',
+          routeKey: '/api/profile/consolidated',
           forceRefresh: options.forceRefresh,
           bypassThrottle: options.bypassThrottle,
           useCache: !options.forceRefresh
         })
       );
       
+      console.log('Raw response from consolidated:', response);
+
       // Normaliser les données pour assurer une structure cohérente
       let normalizedData;
       
       if (response) {
-        // Cas 1: La réponse est déjà normalisée avec une structure "user"
-        if (response.user && typeof response.user === 'object') {
-          normalizedData = response;
-          
-          // Extract city from addresses if present
-          if (Array.isArray(normalizedData.addresses) && normalizedData.addresses.length > 0) {
-            const firstAddress = normalizedData.addresses[0];
-            normalizedData.city = firstAddress.city?.name || firstAddress.city || normalizedData.city || 'Non renseignée';
-          }
-        } 
-        // Cas 2: La réponse contient directement les données utilisateur
-        else if (response.id || response.email) {
+        if (response.data) {
+          console.log('Processing response.data structure');
           normalizedData = {
-            ...response,
-            // Assurer que les champs essentiels existent
-            firstName: response.firstName || response.first_name || "",
-            lastName: response.lastName || response.last_name || "",
-            email: response.email || "",
-            profilePictureUrl: response.profilePictureUrl || response.profile_picture_url || "",
-            // Assurer que les collections sont des tableaux
-            diplomas: Array.isArray(response.diplomas) ? response.diplomas : [],
-            addresses: Array.isArray(response.addresses) ? response.addresses : [],
-            // Extract city from addresses or use existing city field
-            city: (response.city || (Array.isArray(response.addresses) && response.addresses.length > 0 ? 
-                  (response.addresses[0].city?.name || response.addresses[0].city) : 'Non renseignée')),
-            // Assurer que stats existe
-            stats: response.stats || { profile: { completionPercentage: 0 } }
+            ...response.data,
+            // Ensure we preserve the roles from the original data
+            roles: response.data.roles || (response.user ? response.user.roles : []),
+            // Ensure we have the correct city
+            city: response.data.city || 
+                  (response.data.addresses && response.data.addresses[0] ? 
+                   response.data.addresses[0].city.name : 'Non renseignée'),
+            // Preserve other important fields
+            addresses: response.data.addresses || [],
+            _dataSource: 'consolidated',
+            _timestamp: Date.now()
           };
-        }
-        // Cas 3: La réponse est dans un format API avec data ou success
-        else if ((response.data && typeof response.data === 'object') || response.success) {
-          const userData = response.data || {};
-          
-          // Format address data
-          const addresses = Array.isArray(userData.addresses) ? userData.addresses : [];
-          
-          // Get city from address if available
-          let city = userData.city || 'Non renseignée';
-          if (addresses.length > 0) {
-            const firstAddress = addresses[0];
-            if (firstAddress.city?.name) {
-              city = firstAddress.city.name;
-            } else if (firstAddress.city) {
-              city = firstAddress.city;
-            }
-          }
-          
+        } else if (response.user) {
+          console.log('Processing response.user structure');
           normalizedData = {
-            ...userData,
-            // Assurer que les champs essentiels existent
-            firstName: userData.firstName || userData.first_name || "",
-            lastName: userData.lastName || userData.last_name || "",
-            email: userData.email || "",
-            profilePictureUrl: userData.profilePictureUrl || userData.profile_picture_url || "",
-            // Assurer que les collections sont des tableaux
-            diplomas: Array.isArray(userData.diplomas) ? userData.diplomas : [],
-            addresses: addresses,
-            // Set city value
-            city: city,
-            // Assurer que stats existe
-            stats: userData.stats || { profile: { completionPercentage: 0 } }
+            ...response.user,
+            _dataSource: 'user',
+            _timestamp: Date.now()
           };
-          
-          // If userData contains a user property with its own addresses, ensure they're processed
-          if (userData.user && Array.isArray(userData.user.addresses) && userData.user.addresses.length > 0) {
-            if (userData.user.addresses[0].city?.name) {
-              normalizedData.city = userData.user.addresses[0].city.name;
-            } else if (userData.user.addresses[0].city) {
-              normalizedData.city = userData.user.addresses[0].city;
-            }
-          }
-          
-          // Ensure we have a city if userData.user has one
-          if (userData.user && userData.user.city && !normalizedData.city) {
-            normalizedData.city = userData.user.city;
-          }
-        }
-        // Cas 4: Format inconnu, utiliser tel quel
-        else {
-          normalizedData = response;
-          
-          // Add placeholder city if not present
-          if (!normalizedData.city) {
-            normalizedData.city = 'Non renseignée';
-          }
-        }
-      } else {
-        // Si pas de données, créer un objet vide mais avec la structure attendue
-        normalizedData = {
-          firstName: "",
-          lastName: "",
-          email: "",
-          profilePictureUrl: "",
-          diplomas: [],
-          addresses: [],
-          city: "Non renseignée",
-          stats: { profile: { completionPercentage: 0 } }
-        };
-      }
-      
-      // Logging to debug guest user city info
-      if (normalizedData.isGuest || (normalizedData.user && normalizedData.user.isGuest)) {
-        console.log("Guest user profile data loaded with city:", normalizedData.city);
-      }
-      
-      // Mettre à jour le cache local pour la compatibilité
-      profileCache.consolidatedData = normalizedData;
-      profileCache.consolidatedDataTimestamp = now;
-      
-      // Mettre à jour également le localStorage pour une persistance plus longue
-      try {
-        localStorage.setItem('user', JSON.stringify(normalizedData));
-      } catch (e) {
-        // Ignorer l'erreur silencieusement
-      }
-      
-      return normalizedData;
-    } catch (error) {
-      // FALLBACK: Essayer d'utiliser les données en cache local si disponibles
-      if (profileCache.consolidatedData) {
-        return profileCache.consolidatedData;
-      }
-      
-      // Sinon, récupérer les données depuis localStorage
-      try {
-        // Utiliser directement la méthode getCachedUserData de userDataManager
-        const cachedData = userDataManager.getCachedUserData();
-        if (cachedData) {
-          return cachedData;
         }
         
-        // Dernier recours: essayer de récupérer directement depuis localStorage
-        const storedData = localStorage.getItem('user');
-        if (storedData) {
-          try {
-            const parsedData = JSON.parse(storedData);
-            return parsedData;
-          } catch (e) {
-            // Ignorer l'erreur silencieusement
-          }
-        }
-      } catch (e) {
-        // Ignorer l'erreur silencieusement
+        console.log('Normalized data:', normalizedData);
       }
-      
-      // Si tout échoue, lancer l'erreur
+
+      // Update cache
+      if (normalizedData) {
+        profileCache.consolidatedData = normalizedData;
+        profileCache.consolidatedDataTimestamp = now;
+        console.log('Updated cache with new data');
+      }
+
+      console.groupEnd();
+      return normalizedData;
+    } catch (error) {
+      console.error('Error in getAllProfileData:', error);
+      console.groupEnd();
       throw error;
     }
   }
@@ -306,7 +199,7 @@ class ProfileService {
     }
     
     try {
-      const response = await apiService.get(`/profile/public/${userId}`);
+      const response = await apiService.get(`/api/profile/public/${userId}`);
       return response.data;
     } catch (error) {
       throw error;
@@ -321,7 +214,7 @@ class ProfileService {
         '/api/profile/picture',
         SERVICE_ID,
         async () => {
-          const result = await apiService.get('/profile/picture', {
+          const result = await apiService.get('/api/profile/picture', {
             params: { _t: Date.now() }, // Éviter le cache navigateur
             timeout: 5000 // Timeout court pour les images
           });
@@ -420,7 +313,7 @@ class ProfileService {
       const formData = new FormData();
       formData.append('profile_picture', file);
       
-      const response = await apiService.post('/profile/picture', formData, {
+      const response = await apiService.post('/api/profile/picture', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -442,7 +335,7 @@ class ProfileService {
     try {
       // Ajouter un timestamp pour éviter les problèmes de cache
       const timestamp = new Date().getTime();
-      const response = await apiService.delete(`/profile/picture?t=${timestamp}`);
+      const response = await apiService.delete(`/api/profile/picture?t=${timestamp}`);
       
       // Invalider le cache après une mise à jour
       this.invalidateCache('profile_picture');
@@ -458,7 +351,7 @@ class ProfileService {
   
   async updateAddress(addressData) {
     try {
-      const response = await apiService.put('/profile/address', addressData);
+      const response = await apiService.put('/api/profile/address', addressData);
       
       // Invalider le cache après une mise à jour
       this.invalidateCache('address');

@@ -1,44 +1,35 @@
 <?php
 
-namespace App\Controller;
+namespace App\Controller\User;
 
 use App\Entity\User;
-use App\Repository\UserRepository;
-use App\Service\UserProfileService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Bundle\SecurityBundle\Security;
-use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
-#[Route('/api')]
-class UserProfileController extends AbstractController
+#[Route('/api/users')]
+class UserMeController extends AbstractController
 {
     private $security;
-    private $serializer;
-    private $userRepository;
-    private $userProfileService;
+    private $entityManager;
     
     public function __construct(
         Security $security,
-        SerializerInterface $serializer,
-        UserRepository $userRepository,
-        UserProfileService $userProfileService
+        EntityManagerInterface $entityManager
     ) {
         $this->security = $security;
-        $this->serializer = $serializer;
-        $this->userRepository = $userRepository;
-        $this->userProfileService = $userProfileService;
+        $this->entityManager = $entityManager;
     }
     
     /**
-     * Récupère le profil complet de l'utilisateur connecté
+     * Récupère les données basiques de l'utilisateur connecté
      */
-    #[Route('/profile', name: 'api_user_profile', methods: ['GET'])]
-    public function getUserProfile(): JsonResponse
+    #[Route('/me', name: 'api_user_me', methods: ['GET'])]
+    public function getMe(): JsonResponse
     {
         /** @var User $user */
         $user = $this->security->getUser();
@@ -50,23 +41,26 @@ class UserProfileController extends AbstractController
             ], 401);
         }
         
-        $userData = $this->userProfileService->getUserProfileData($user);
-        
+        // Retourner uniquement les données basiques
         return $this->json([
             'success' => true,
-            'data' => $userData
+            'data' => [
+                'id' => $user->getId(),
+                'firstName' => $user->getFirstName(),
+                'lastName' => $user->getLastName(),
+                'email' => $user->getEmail(),
+                'roles' => $this->getUserRolesAsArray($user),
+                'profilePicturePath' => $user->getProfilePicturePath()
+            ]
         ]);
     }
     
     /**
-     * Met à jour le profil de l'utilisateur connecté
+     * Met à jour les données basiques de l'utilisateur connecté
      */
-    #[Route('/profile', name: 'api_user_profile_update', methods: ['PUT'])]
-    public function updateUserProfile(
-        Request $request,
-        EntityManagerInterface $entityManager,
-        ValidatorInterface $validator
-    ): JsonResponse {
+    #[Route('/me', name: 'api_user_me_update', methods: ['PUT'])]
+    public function updateMe(Request $request, ValidatorInterface $validator): JsonResponse
+    {
         /** @var User $user */
         $user = $this->security->getUser();
         
@@ -87,7 +81,7 @@ class UserProfileController extends AbstractController
             ], 400);
         }
         
-        // Mettre à jour les champs de base de l'utilisateur
+        // Mise à jour uniquement des données basiques autorisées
         if (isset($data['firstName'])) {
             $user->setFirstName($data['firstName']);
         }
@@ -96,28 +90,14 @@ class UserProfileController extends AbstractController
             $user->setLastName($data['lastName']);
         }
         
-        if (isset($data['phoneNumber'])) {
-            $user->setPhoneNumber($data['phoneNumber']);
-        }
-        
-        if (isset($data['birthDate']) && $data['birthDate']) {
-            try {
-                $birthDate = new \DateTimeImmutable($data['birthDate']);
-                $user->setBirthDate($birthDate);
-            } catch (\Exception $e) {
-                return $this->json([
-                    'success' => false,
-                    'message' => 'Format de date de naissance invalide'
-                ], 400);
-            }
-        }
-        
-        if (isset($data['linkedinUrl'])) {
-            $user->setLinkedinUrl($data['linkedinUrl']);
+        if (isset($data['email']) && $this->isGranted('ROLE_ADMIN')) {
+            $user->setEmail($data['email']);
         }
         
         // Mettre à jour la date de modification
-        $user->setUpdatedAt(new \DateTimeImmutable());
+        if (method_exists($user, 'setUpdatedAt')) {
+            $user->setUpdatedAt(new \DateTimeImmutable());
+        }
         
         // Valider l'entité
         $errors = $validator->validate($user);
@@ -136,15 +116,30 @@ class UserProfileController extends AbstractController
         }
         
         // Persister les changements
-        $entityManager->flush();
+        $this->entityManager->flush();
         
         // Retourner les données mises à jour
-        $userData = $this->userProfileService->getUserProfileData($user);
-        
         return $this->json([
             'success' => true,
-            'message' => 'Profil mis à jour avec succès',
-            'data' => $userData
+            'message' => 'Données utilisateur mises à jour avec succès',
+            'data' => [
+                'id' => $user->getId(),
+                'firstName' => $user->getFirstName(),
+                'lastName' => $user->getLastName(),
+                'email' => $user->getEmail(),
+                'roles' => $this->getUserRolesAsArray($user),
+                'profilePicturePath' => $user->getProfilePicturePath()
+            ]
         ]);
+    }
+    
+    /**
+     * Get user roles as array
+     */
+    private function getUserRolesAsArray(User $user): array
+    {
+        return array_map(function($role) {
+            return is_string($role) ? $role : $role->getName();
+        }, $user->getRoles());
     }
 } 

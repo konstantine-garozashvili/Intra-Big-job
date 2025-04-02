@@ -44,7 +44,7 @@ export function useUserData(options = {}) {
     return null;
   });
 
-  const routeKey = preferComprehensiveData ? '/profile/consolidated' : '/api/me';
+  const routeKey = preferComprehensiveData ? '/api/profile/consolidated' : '/api/me';
   
   // Add a ref to track the last time we fetched data to prevent too frequent refreshes
   const [lastFetchTime, setLastFetchTime] = useState(0);
@@ -161,13 +161,11 @@ export function useUserData(options = {}) {
     setIsInitialLoading(true);
     
     try {
-      // Check token first for guest accounts which might not have an API endpoint
       const token = localStorage.getItem('token');
       let tokenData = null;
       
       if (token) {
         try {
-          // Extract user data from token
           const base64Url = token.split('.')[1];
           const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
           const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(c => {
@@ -175,24 +173,15 @@ export function useUserData(options = {}) {
           }).join(''));
           
           tokenData = JSON.parse(jsonPayload);
-          console.log("useUserData - Token data:", tokenData);
-          
-          // If this is a guest user, we might not need to make the API call
-          if (tokenData.roles && tokenData.roles.includes('ROLE_GUEST')) {
-            console.log("useUserData - Guest user detected in token");
-          }
         } catch (tokenError) {
           console.error("useUserData - Error parsing token:", tokenError);
         }
       }
       
-      // Attempt to get data from API
       const response = await userDataManager.coordinateRequest(
         routeKey,
         componentId,
         async () => {
-          const existingCache = queryClient.getQueryData(['unified-user-data', routeKey, sessionId]);
-          
           return await apiService.get(routeKey, {
             noCache: true,
             retries: 2,
@@ -201,61 +190,36 @@ export function useUserData(options = {}) {
         }
       );
       
-      console.log("useUserData - API response:", response);
-      
       let normalizedData;
       
-      // If API response is empty but we have token data, use that
       if ((!response || Object.keys(response).length === 0) && tokenData) {
-        console.log("useUserData - Using token data as fallback");
         normalizedData = {
           id: tokenData.id || tokenData.userId || "",
           email: tokenData.username || tokenData.email || "",
           firstName: tokenData.firstName || tokenData.first_name || "",
           lastName: tokenData.lastName || tokenData.last_name || "",
           roles: tokenData.roles || [],
-          // Add other defaults
           profilePictureUrl: "",
           diplomas: [],
           addresses: [],
           stats: { profile: { completionPercentage: 0 } },
-          _source: "token" // Mark the source for debugging
+          _source: "token"
         };
       } else if (response) {
         if (response.user && typeof response.user === 'object') {
-          normalizedData = response;
-        } 
-        else if (response.id || response.email) {
+          normalizedData = {
+            ...response.user,
+            city: response.user.city || (response.user.addresses?.[0]?.city?.name || response.user.addresses?.[0]?.city) || "Non renseignée"
+          };
+        } else if (response.data?.user) {
+          normalizedData = {
+            ...response.data.user,
+            city: response.data.user.city || (response.data.user.addresses?.[0]?.city?.name || response.data.user.addresses?.[0]?.city) || "Non renseignée"
+          };
+        } else {
           normalizedData = {
             ...response,
-            firstName: response.firstName || response.first_name || "",
-            lastName: response.lastName || response.last_name || "",
-            email: response.email || "",
-            profilePictureUrl: response.profilePictureUrl || response.profile_picture_url || "",
-            diplomas: Array.isArray(response.diplomas) ? response.diplomas : [],
-            addresses: Array.isArray(response.addresses) ? response.addresses : [],
-            stats: response.stats || { profile: { completionPercentage: 0 } },
-            _source: "direct" // Mark the source for debugging
-          };
-        }
-        else if ((response.data && typeof response.data === 'object') || response.success) {
-          const userData = response.data || {};
-          normalizedData = {
-            ...userData,
-            firstName: userData.firstName || userData.first_name || "",
-            lastName: userData.lastName || userData.last_name || "",
-            email: userData.email || "",
-            profilePictureUrl: userData.profilePictureUrl || userData.profile_picture_url || "",
-            diplomas: Array.isArray(userData.diplomas) ? userData.diplomas : [],
-            addresses: Array.isArray(userData.addresses) ? userData.addresses : [],
-            stats: userData.stats || { profile: { completionPercentage: 0 } },
-            _source: "wrapped" // Mark the source for debugging
-          };
-        }
-        else {
-          normalizedData = {
-            ...response,
-            _source: "unknown" // Mark the source for debugging
+            city: response.city || (response.addresses?.[0]?.city?.name || response.addresses?.[0]?.city) || "Non renseignée"
           };
         }
       } else {
@@ -266,8 +230,9 @@ export function useUserData(options = {}) {
           profilePictureUrl: "",
           diplomas: [],
           addresses: [],
+          city: "Non renseignée",
           stats: { profile: { completionPercentage: 0 } },
-          _source: "empty" // Mark the source for debugging
+          _source: "empty"
         };
       }
       
@@ -286,7 +251,7 @@ export function useUserData(options = {}) {
       setIsInitialLoading(false);
       throw error;
     }
-  }, [routeKey, componentId, queryClient, sessionId]);
+  }, [routeKey, componentId]);
 
   const {
     data: userData,

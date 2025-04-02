@@ -86,14 +86,14 @@ axios.interceptors.request.use(request => {
   // Identifier les requêtes d'authentification
   let isAuthRequest = false;
   if (request.url) {
-    isAuthRequest = request.url.includes('/login_check') || 
-                   request.url.includes('/token/refresh') ||
-                   request.url.includes('/token/revoke');
+    isAuthRequest = request.url.includes('/api/login_check') || 
+                   request.url.includes('/api/token/refresh') ||
+                   request.url.includes('/api/register');
   }
   
   // Set default timeout based on performance mode
   if (!request.timeout) {
-    const isProfileRequest = request.url && (request.url.includes('/profile/') || request.url.includes('/me'));
+    const isProfileRequest = request.url && (request.url.includes('/api/profile/') || request.url.includes('/api/me'));
     request.timeout = getDefaultTimeout(isProfileRequest);
   }
   
@@ -115,9 +115,9 @@ axios.interceptors.response.use(response => {
   // Identifier les réponses d'authentification
   let isAuthResponse = false;
   if (response.config?.url) {
-    isAuthResponse = response.config.url.includes('/login_check') || 
-                    response.config.url.includes('/token/refresh') ||
-                    response.config.url.includes('/token/revoke');
+    isAuthResponse = response.config.url.includes('/api/login_check') || 
+                    response.config.url.includes('/api/token/refresh') ||
+                    response.config.url.includes('/api/register');
   }
   
   return response;
@@ -226,29 +226,13 @@ const cleanupCache = () => {
  * @returns {string} - L'URL complète normalisée
  */
 export const normalizeApiUrl = (path) => {
-  // Handle null or undefined paths
-  if (!path) return '/api';
-  
-  // Remove trailing slashes for consistency
-  const trimmedPath = path.replace(/\/+$/, '');
-  
-  // If the path starts with http:// or https://, it's an absolute URL - return it as is
-  if (trimmedPath.match(/^https?:\/\//)) {
-    return trimmedPath;
+  // Si le chemin commence déjà par /api, le retourner tel quel
+  if (path.startsWith('/api/')) {
+    return path;
   }
   
-  // Check if the path already has the /api prefix
-  if (trimmedPath.startsWith('/api/')) {
-    return trimmedPath;
-  }
-  
-  // Simplify handling of the /api prefix
-  // Add /api prefix if it's not already there
-  if (trimmedPath.startsWith('/')) {
-    return `/api${trimmedPath}`;
-  } else {
-    return `/api/${trimmedPath}`;
-  }
+  // Sinon, ajouter le préfixe /api
+  return `/api${path.startsWith('/') ? path : `/${path}`}`;
 };
 
 /**
@@ -280,8 +264,8 @@ const apiService = {
       const requestKey = `${path}${JSON.stringify(options.params || {})}`;
       
       // Identify if this is a profile request for special handling
-      const isProfileRequest = path.includes('/profile') || path.includes('/me');
-      const isStaticRequest = path.includes('/static') || path.includes('/config');
+      const isProfileRequest = path.includes('/api/profile') || path.includes('/api/me');
+      const isStaticRequest = path.includes('/api/static') || path.includes('/api/config');
       
       // For profile requests, use more aggressive caching
       if (isProfileRequest && !options.noCache && !options.background) {
@@ -349,8 +333,8 @@ const apiService = {
       }
 
       // Identifier le type de requête pour optimiser les timeouts
-      const isMessagesRequest = path.includes('/messages');
-      const isCriticalRequest = path.includes('/auth') || options.critical === true;
+      const isMessagesRequest = path.includes('/api/messages');
+      const isCriticalRequest = path.includes('/api/auth') || options.critical === true;
       
       // Définir les timeouts de base selon le type de requête
       // Reduced timeout for profile requests to fail faster and use cache
@@ -595,12 +579,12 @@ const apiService = {
     
     try {
       // Essayons d'abord avec la méthode /api/users-by-role endpoint
-      return await this.get(`/users-by-role/${formattedRoleName}`);
+      return await this.get(`/api/users-by-role/${formattedRoleName}`);
     } catch (error) {
-      console.warn(`L'API /users-by-role/${formattedRoleName} a échoué, tentative avec /users`);
+      console.warn(`L'API /api/users-by-role/${formattedRoleName} a échoué, tentative avec /api/users`);
       
       // Si ça échoue, récupérons tous les utilisateurs et filtrons côté client
-      const response = await this.get('/users');
+      const response = await this.get('/api/users');
       
       if (response.success && response.data) {
         // Filtrer manuellement les utilisateurs par rôle
@@ -626,7 +610,7 @@ const apiService = {
   async getAllRoles() {
     try {
       // Tenter d'obtenir les rôles depuis l'API
-      return await this.get('/user-roles/roles');
+      return await this.get('/api/user-roles/roles');
     } catch (error) {
       console.warn("Erreur lors de la récupération des rôles depuis l'API, utilisation des rôles prédéfinis", error);
       
@@ -654,7 +638,7 @@ const apiService = {
    * @returns {Promise<Object>} - API response
    */
   async changeUserRole(userId, oldRoleName, newRoleName) {
-    return this.post('/user-roles/change-role', {
+    return this.post('/api/user-roles/change-role', {
       userId,
       oldRoleName,
       newRoleName
@@ -668,7 +652,7 @@ const apiService = {
    * @returns {Promise<Object>} - API response
    */
   async updateUser(userId, userData) {
-    return this.put(`/users/${userId}`, userData);
+    return this.put(`/api/users/${userId}`, userData);
   },
   
   /**
@@ -705,7 +689,7 @@ const apiService = {
    */
   invalidateProfileCache() {
     // Logique d'invalidation du cache spécifique au profil
-    this.invalidateCache('/profile');
+    this.invalidateCache('/api/profile');
     this.invalidateCache('/api/me');
   },
 
@@ -714,7 +698,7 @@ const apiService = {
    */
   invalidateDocumentCache() {
     // Logique d'invalidation du cache spécifique aux documents
-    this.invalidateCache('/documents');
+    this.invalidateCache('/api/documents');
   },
 
   /**
@@ -795,7 +779,7 @@ const apiService = {
     }
     
     // Use optimized get method with profile-specific settings
-    return this.get('/me', {
+    return this.get('/api/me', {
       headers: {
         'X-Request-Type': 'profile',
         'X-Cache-Priority': 'high'
@@ -1033,7 +1017,7 @@ const originalGet = apiService.get;
 
 apiService.get = function(url, options = {}) {
   // Add special handling for profile routes
-  if (url === '/profile') {
+  if (url === '/api/profile') {
     console.log(`[API] Making request to ${url} with options:`, options);
     
     return originalGet.call(this, url, options)

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import apiService from '@/lib/services/apiService';
 import { toast } from 'sonner';
 
 export default function TicketForm() {
@@ -48,17 +48,13 @@ export default function TicketForm() {
           return;
         }
         
-        const response = await axios.get('/api/ticket-services', {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
+        const response = await apiService.get('/ticket-services');
         
         setServices(response.data);
         setIsLoading(false);
       } catch (error) {
         console.error('Error fetching services:', error);
-        toast.error('Failed to load services');
+        toast.error('Erreur lors du chargement des services');
         setIsLoading(false);
       }
     };
@@ -102,22 +98,16 @@ export default function TicketForm() {
         return;
       }
       
-      const response = await axios.post('/api/tickets', {
+      const formData = {
         title: title.trim(),
         description: description.trim(),
         serviceId: parseInt(serviceId)
-      }, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      };
       
-      toast.success('Ticket créé avec succès');
-      // Navigate based on user role
-      if (response.data.isAdmin) {
-        navigate('/admin/tickets');
-      } else {
+      const response = await apiService.post('/tickets', formData);
+      
+      if (response.data.success) {
+        toast.success('Ticket créé avec succès');
         navigate('/tickets');
       }
     } catch (error) {

@@ -175,15 +175,8 @@ export const useProfileCompletionStatus = (options = {}) => {
     queryKey: profileKeys.completion(),
     queryFn: async () => {
       try {
-        // Direct request to Symfony backend endpoint
-        // Using '/api/profile/completion-status' would cause a double prefix issue 
-        // when using axiosInstance which already has 'http://localhost:8000/api' as baseURL
-        // So we just use the relative path '/profile/completion-status' here
-        const response = await axiosInstance.get('/profile/completion-status');
+        const response = await axiosInstance.get('/api/profile/completion-status');
         
-        console.log("Profile completion status response:", response);
-        
-        // Ensure we return a valid object with the expected structure
         if (!response || !response.data) {
           throw new Error('Empty response');
         }
@@ -201,10 +194,7 @@ export const useProfileCompletionStatus = (options = {}) => {
           message: "Empty response data"
         };
         
-        // IMPORTANT: Cache successful results with longer expiration
-        // This ensures data remains consistent between page navigations
         if (completionData.success && completionData.data) {
-          // Cache in localStorage for extra persistence
           try {
             localStorage.setItem('profile_completion_data', JSON.stringify({
               data: completionData,
@@ -219,14 +209,11 @@ export const useProfileCompletionStatus = (options = {}) => {
       } catch (error) {
         console.warn("Failed to fetch profile completion status:", error);
         
-        // Try to get cached data from localStorage
         try {
           const cachedData = localStorage.getItem('profile_completion_data');
           if (cachedData) {
             const parsed = JSON.parse(cachedData);
-            // Use cached data if it's less than 5 minutes old
             if (parsed && parsed.timestamp && (Date.now() - parsed.timestamp < 5 * 60 * 1000)) {
-              console.info('Using cached profile completion data from localStorage');
               return parsed.data;
             }
           }
@@ -234,7 +221,6 @@ export const useProfileCompletionStatus = (options = {}) => {
           console.warn('Failed to retrieve cached profile completion data', e);
         }
         
-        // Return a fallback object instead of throwing
         return {
           success: false,
           data: {
@@ -249,26 +235,18 @@ export const useProfileCompletionStatus = (options = {}) => {
         };
       }
     },
-    // Very short stale time to refresh frequently
-    staleTime: 20 * 1000, // 20 seconds
-    // Enable refetch on window focus to refresh when switching tabs/pages
+    staleTime: 20 * 1000,
     refetchOnWindowFocus: true,
-    // Enable refetch on mount to refresh when navigating between pages
     refetchOnMount: 'always',
-    // Cache time should be longer than stale time
-    cacheTime: 10 * 60 * 1000, // 10 minutes
-    // Retry on failure
+    cacheTime: 10 * 60 * 1000,
     retry: 1,
     ...options,
-    // Initialize with data from localStorage if available
     initialData: () => {
       try {
         const cachedData = localStorage.getItem('profile_completion_data');
         if (cachedData) {
           const parsed = JSON.parse(cachedData);
-          // Use cached data if it's less than 5 minutes old
           if (parsed && parsed.timestamp && (Date.now() - parsed.timestamp < 5 * 60 * 1000)) {
-            console.info('Using cached profile completion data for initial render');
             return parsed.data;
           }
         }
@@ -289,29 +267,23 @@ export const useSpecificCVDocument = () => {
     queryKey: ['specificCVDocument'],
     queryFn: async () => {
       try {
-        // Using just '/documents/type/CV' because axiosInstance already has baseURL set to 
-        // 'http://localhost:8000/api' so the complete URL will be correct
-        const cvResponse = await axiosInstance.get('/documents/type/CV');
+        const cvResponse = await axiosInstance.get('/api/documents/type/CV');
         
         if (cvResponse?.data?.success && Array.isArray(cvResponse?.data?.data) && 
             cvResponse.data.data.length > 0) {
           
-          console.log("Found CV documents by type:", cvResponse.data.data);
-          
-          // Check if our specific document with ID 9 is in the results
           const targetDocument = cvResponse.data.data.find(doc => doc.id === 9);
           if (targetDocument) {
             console.log("Found our specific CV document (ID 9):", targetDocument);
           }
           
-          // Force the profile completion data to be updated in localStorage
           try {
             const completionData = {
               success: true,
               data: {
-                hasLinkedIn: true, // We know LinkedIn is working
-                hasCv: true,       // Force CV to be detected
-                hasDiploma: false,  // Let the regular detection handle this
+                hasLinkedIn: true,
+                hasCv: true,
+                hasDiploma: false,
                 completedItems: 2,
                 totalItems: 3,
                 completionPercentage: 66.67
@@ -335,13 +307,10 @@ export const useSpecificCVDocument = () => {
           }
         }
         
-        // If we didn't find documents by type, try the general documents endpoint
-        const allDocsResponse = await axiosInstance.get('/documents');
+        const allDocsResponse = await axiosInstance.get('/api/documents');
         if (allDocsResponse?.data?.success && Array.isArray(allDocsResponse?.data?.data)) {
           const documents = allDocsResponse.data.data;
-          console.log("Found all documents:", documents);
           
-          // Look for CV documents in all documents
           const cvDocs = documents.filter(doc => 
             (doc.documentType && doc.documentType.code === 'CV') ||
             (doc.name && doc.name.toLowerCase().includes('cv')) ||
@@ -350,9 +319,6 @@ export const useSpecificCVDocument = () => {
           );
           
           if (cvDocs.length > 0) {
-            console.log("Found CV documents in all documents:", cvDocs);
-            
-            // Force the profile completion data
             localStorage.setItem('profile_completion_data', JSON.stringify({
               data: {
                 success: true,
@@ -378,7 +344,6 @@ export const useSpecificCVDocument = () => {
           }
         }
         
-        // Last resort: direct check for CV detection
         return {
           success: false,
           data: null,
@@ -393,7 +358,6 @@ export const useSpecificCVDocument = () => {
         };
       }
     },
-    // Only run once per session to avoid unnecessary requests
     staleTime: Infinity,
     cacheTime: Infinity,
     retry: false

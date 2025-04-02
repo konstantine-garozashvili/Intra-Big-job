@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import documentService, { documentEvents } from '../services/documentService';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import apiService from '@/lib/services/apiService';
 
 /**
  * Hook personnalisé pour gérer les documents CV
@@ -93,9 +94,10 @@ export function useDocuments(type = 'CV') {
       const formData = new FormData();
       formData.append('document', file);
       
-      const response = await fetch('/api/documents/cv', {
-        method: 'POST',
-        body: formData,
+      const response = await apiService.post('/documents/cv', formData, {
+        headers: {
+          'Accept': 'application/pdf'
+        }
       });
       
       if (!response.ok) {
