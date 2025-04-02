@@ -57,6 +57,7 @@ const ProfileView = lazy(() => import('./pages/Global/Profile/views/ProfileView'
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 
 const Mentionslegales = lazy(() => import('./pages/Mentionslegales'))
+const CandidatureList = lazy(() => import('./pages/Admin/CandidatureList'))
 
 // Dashboards spécifiques par rôle
 const AdminDashboard = lazy(() => import('./pages/Admin/Dashboard'))
@@ -409,7 +410,6 @@ const AppContent = () => {
                   
                   {/* Routes publiques - Accès interdit aux utilisateurs authentifiés */}
                   <Route element={<PublicRoute />}>
-
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
                     <Route path="/registration-success" element={<RegistrationSuccess />} />
@@ -419,7 +419,6 @@ const AppContent = () => {
                     <Route path="/reset-password" element={<ResetPasswordRequest />} />
                     <Route path="/reset-password/confirmation" element={<ResetPasswordConfirmation />} />
                     <Route path="/reset-password/:token" element={<ResetPassword />} />
-
                   </Route>
                   
                   <Route element={<ProtectedRoute />}>
@@ -552,10 +551,20 @@ const AppContent = () => {
                         <RecruiterDashboard />
                       </RoleGuard>
                     } />
-                    </Route>
-
+                    
                     <Route path="/trombinoscope" element={<Trombinoscope />}/>
-                  
+                    
+                    {/* Routes Candidatures */}
+                    <Route path="/candidatures" element={
+                      <RoleGuard 
+                        roles={[ROLES.RECRUITER, ROLES.ADMIN, ROLES.SUPERADMIN]} 
+                        fallback={<Navigate to="/dashboard" replace />}
+                      >
+                        <CandidatureList />
+                      </RoleGuard>
+                    } />
+                  </Route>
+
                   {/* Redirection des routes inconnues vers la page d'accueil */}
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Route>
