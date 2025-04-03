@@ -1,0 +1,3212 @@
+From 3b85c849614bd812518ea96cbcc9f31d96c2e5a7 Mon Sep 17 00:00:00 2001
+From: Diomande Adama <168726585+Diomande225@users.noreply.github.com>
+Date: Wed, 26 Mar 2025 11:52:18 +0100
+Subject: [PATCH 1/3] Add notification routes and enhance document
+ approval/rejection features
+
+- Introduced new notification routes in routes.yaml for better organization.
+- Updated DocumentController to include notification service for user alerts on document upload, approval, and rejection.
+- Implemented document approval and rejection methods with appropriate status checks and notifications for document owners.
+- Enhanced frontend components to support notification features, including a new NotificationsPage and integration of notification service in CVUpload for user feedback.
+- Improved Navbar to include a dropdown for accessing notifications directly.
+---
+ backend/config/routes.yaml                    |   3 +
+ backend/config/routes/notification.yaml       |   4 +
+ .../Controller/TestNotificationController.php |  30 ++
+ .../Controller/DocumentController.php         | 148 ++++++-
+ .../Controller/NotificationController.php     | 148 +++++++
+ .../Notification/Entity/Notification.php      | 183 ++++++++
+ .../Repository/NotificationRepository.php     | 108 +++++
+ .../Service/NotificationService.php           | 265 ++++++++++++
+ frontend/src/App.jsx                          |  34 ++
+ frontend/src/components/Navbar.jsx            |  18 +-
+ frontend/src/components/NotificationBadge.jsx |  66 +++
+ .../src/components/NotificationDropdown.jsx   | 309 ++++++++++++++
+ frontend/src/lib/services/apiService.js       |   1 +
+ .../src/lib/services/notificationService.js   | 401 ++++++++++++++++++
+ .../Notifications/NotificationsPage.jsx       | 357 ++++++++++++++++
+ .../Profile/components/settings/CVUpload.jsx  |  37 +-
+ 16 files changed, 2103 insertions(+), 9 deletions(-)
+ create mode 100644 backend/config/routes/notification.yaml
+ create mode 100644 backend/src/Controller/TestNotificationController.php
+ create mode 100644 backend/src/Domains/Global/Notification/Controller/NotificationController.php
+ create mode 100644 backend/src/Domains/Global/Notification/Entity/Notification.php
+ create mode 100644 backend/src/Domains/Global/Notification/Repository/NotificationRepository.php
+ create mode 100644 backend/src/Domains/Global/Notification/Service/NotificationService.php
+ create mode 100644 frontend/src/components/NotificationBadge.jsx
+ create mode 100644 frontend/src/components/NotificationDropdown.jsx
+ create mode 100644 frontend/src/lib/services/notificationService.js
+ create mode 100644 frontend/src/pages/Global/Notifications/NotificationsPage.jsx
+
+diff --git a/backend/config/routes.yaml b/backend/config/routes.yaml
+index 55fa294..b9c8a2f 100644
+--- a/backend/config/routes.yaml
++++ b/backend/config/routes.yaml
+@@ -29,3 +29,6 @@ api_token_devices:
+ 
+ document_routes:
+     resource: './routes/document.yaml'
++
++notification_routes:
++    resource: './routes/notification.yaml'
+diff --git a/backend/config/routes/notification.yaml b/backend/config/routes/notification.yaml
+new file mode 100644
+index 0000000..3e19fe9
+--- /dev/null
++++ b/backend/config/routes/notification.yaml
+@@ -0,0 +1,4 @@
++notification_routes:
++    resource: '../../src/Domains/Global/Notification/Controller/'
++    type: attribute
++    prefix: /api 
+\ No newline at end of file
+diff --git a/backend/src/Controller/TestNotificationController.php b/backend/src/Controller/TestNotificationController.php
+new file mode 100644
+index 0000000..8043d50
+--- /dev/null
++++ b/backend/src/Controller/TestNotificationController.php
+@@ -0,0 +1,30 @@
++<?php
++
++namespace App\Controller;
++
++use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
++use Symfony\Component\HttpFoundation\JsonResponse;
++use Symfony\Component\Routing\Attribute\Route;
++
++#[Route('/api')]
++class TestNotificationController extends AbstractController
++{
++    #[Route('/test-notification', name: 'app_test_notification', methods: ['GET'])]
++    public function testNotification(): JsonResponse
++    {
++        return $this->json([
++            'success' => true,
++            'message' => 'Test notification route works!',
++            'timestamp' => new \DateTime()
++        ]);
++    }
++    
++    #[Route('/test-notification-count', name: 'app_test_notification_count', methods: ['GET'])]
++    public function testNotificationCount(): JsonResponse
++    {
++        return $this->json([
++            'count' => 5,
++            'success' => true
++        ]);
++    }
++} 
+\ No newline at end of file
+diff --git a/backend/src/Domains/Global/Document/Controller/DocumentController.php b/backend/src/Domains/Global/Document/Controller/DocumentController.php
+index a84e16f..390412f 100644
+--- a/backend/src/Domains/Global/Document/Controller/DocumentController.php
++++ b/backend/src/Domains/Global/Document/Controller/DocumentController.php
+@@ -7,6 +7,8 @@ use App\Domains\Global\Document\Entity\DocumentType;
+ use App\Domains\Global\Document\Entity\DocumentHistory;
+ use App\Domains\Global\Document\Repository\DocumentRepository;
+ use App\Domains\Global\Document\Repository\DocumentTypeRepository;
++use App\Domains\Global\Notification\Service\NotificationService;
++use App\Domains\Global\Notification\Entity\Notification;
+ use App\Entity\User;
+ use App\Enum\DocumentStatus;
+ use App\Enum\DocumentAction;
+@@ -37,7 +39,8 @@ class DocumentController extends AbstractController
+         private UserRepository $userRepository,
+         private SluggerInterface $slugger,
+         private string $documentDirectory,
+-        private DocumentStorageFactory $storageFactory
++        private DocumentStorageFactory $storageFactory,
++        private ?NotificationService $notificationService = null
+     ) {
+         // The $documentDirectory will need to be configured in services.yaml
+     }
+@@ -260,6 +263,12 @@ class DocumentController extends AbstractController
+             
+             $this->entityManager->flush();
+             
++            // Send notification to the user about successful CV upload
++            if ($this->notificationService) {
++                // Create a notification for the user about their CV upload
++                $this->notificationService->notifyUserDocumentUploaded($document);
++            }
++            
+             return $this->json([
+                 'success' => true,
+                 'message' => 'CV uploaded successfully',
+@@ -463,4 +472,141 @@ class DocumentController extends AbstractController
+             ], Response::HTTP_INTERNAL_SERVER_ERROR);
+         }
+     }
++
++    /**
++     * Approve a document
++     */
++    #[Route('/{id}/approve', name: 'app_document_approve', methods: ['POST'])]
++    #[IsGranted('ROLE_ADMIN')]
++    public function approveDocument(int $id, Request $request): JsonResponse
++    {
++        $document = $this->documentRepository->find($id);
++        
++        if (!$document) {
++            throw new NotFoundHttpException('Document not found');
++        }
++        
++        // Only documents in PENDING status can be approved
++        if ($document->getStatus() !== DocumentStatus::PENDING) {
++            return $this->json([
++                'success' => false,
++                'message' => 'Only pending documents can be approved',
++                'code' => 'INVALID_STATUS'
++            ], Response::HTTP_BAD_REQUEST);
++        }
++        
++        try {
++            // Update document status
++            $document->setStatus(DocumentStatus::APPROVED);
++            $document->setValidatedAt(new \DateTime());
++            $document->setValidatedBy($this->getUser());
++            
++            // Add comment if provided
++            $data = json_decode($request->getContent(), true);
++            if (!empty($data['comment'])) {
++                $document->setComment($data['comment']);
++            }
++            
++            // Create history entry
++            $history = new DocumentHistory();
++            $history->setDocument($document);
++            $history->setUser($this->getUser());
++            $history->setAction(DocumentAction::VALIDATED);
++            $history->setDetails([
++                'comment' => $document->getComment(),
++                'previousStatus' => DocumentStatus::PENDING->value
++            ]);
++            
++            $this->entityManager->persist($history);
++            $this->entityManager->flush();
++            
++            // Send notification to document owner
++            if ($this->notificationService) {
++                $this->notificationService->notifyDocumentApproved($document);
++            }
++            
++            return $this->json([
++                'success' => true,
++                'message' => 'Document approved successfully',
++                'document' => $document
++            ], Response::HTTP_OK, [], ['groups' => ['document:read']]);
++        } catch (\Exception $e) {
++            return $this->json([
++                'success' => false,
++                'message' => 'Failed to approve document: ' . $e->getMessage(),
++                'code' => 'SERVER_ERROR'
++            ], Response::HTTP_INTERNAL_SERVER_ERROR);
++        }
++    }
++    
++    /**
++     * Reject a document
++     */
++    #[Route('/{id}/reject', name: 'app_document_reject', methods: ['POST'])]
++    #[IsGranted('ROLE_ADMIN')]
++    public function rejectDocument(int $id, Request $request): JsonResponse
++    {
++        $document = $this->documentRepository->find($id);
++        
++        if (!$document) {
++            throw new NotFoundHttpException('Document not found');
++        }
++        
++        // Only documents in PENDING status can be rejected
++        if ($document->getStatus() !== DocumentStatus::PENDING) {
++            return $this->json([
++                'success' => false,
++                'message' => 'Only pending documents can be rejected',
++                'code' => 'INVALID_STATUS'
++            ], Response::HTTP_BAD_REQUEST);
++        }
++        
++        // Comment is required for rejection
++        $data = json_decode($request->getContent(), true);
++        if (empty($data['comment'])) {
++            return $this->json([
++                'success' => false,
++                'message' => 'Comment is required when rejecting a document',
++                'code' => 'MISSING_COMMENT'
++            ], Response::HTTP_BAD_REQUEST);
++        }
++        
++        try {
++            // Update document status
++            $document->setStatus(DocumentStatus::REJECTED);
++            $document->setValidatedAt(new \DateTime());
++            $document->setValidatedBy($this->getUser());
++            $document->setComment($data['comment']);
++            
++            // Create history entry
++            $history = new DocumentHistory();
++            $history->setDocument($document);
++            $history->setUser($this->getUser());
++            $history->setAction(DocumentAction::REJECTED);
++            $history->setDetails([
++                'comment' => $document->getComment(),
++                'previousStatus' => DocumentStatus::PENDING->value
++            ]);
++            
++            $this->entityManager->persist($history);
++            $this->entityManager->flush();
++            
++            // Send notification to document owner
++            if ($this->notificationService) {
++                $this->notificationService->notifyDocumentRejected($document);
++            }
++            
++            return $this->json([
++                'success' => true,
++                'message' => 'Document rejected successfully',
++                'document' => $document
++            ], Response::HTTP_OK, [], ['groups' => ['document:read']]);
++        } catch (\Exception $e) {
++            return $this->json([
++                'success' => false,
++                'message' => 'Failed to reject document: ' . $e->getMessage(),
++                'code' => 'SERVER_ERROR'
++            ], Response::HTTP_INTERNAL_SERVER_ERROR);
++        }
++    }
+ } 
+\ No newline at end of file
+diff --git a/backend/src/Domains/Global/Notification/Controller/NotificationController.php b/backend/src/Domains/Global/Notification/Controller/NotificationController.php
+new file mode 100644
+index 0000000..30ce211
+--- /dev/null
++++ b/backend/src/Domains/Global/Notification/Controller/NotificationController.php
+@@ -0,0 +1,148 @@
++<?php
++
++namespace App\Domains\Global\Notification\Controller;
++
++use App\Domains\Global\Notification\Entity\Notification;
++use App\Domains\Global\Notification\Service\NotificationService;
++use App\Entity\User;
++use Doctrine\ORM\EntityManagerInterface;
++use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
++use Symfony\Component\HttpFoundation\JsonResponse;
++use Symfony\Component\HttpFoundation\Request;
++use Symfony\Component\HttpFoundation\Response;
++use Symfony\Component\Routing\Attribute\Route;
++use Symfony\Component\Security\Http\Attribute\CurrentUser;
++use Symfony\Component\Security\Http\Attribute\IsGranted;
++use Symfony\Component\Serializer\SerializerInterface;
++
++#[Route('/api/notifications')]
++class NotificationController extends AbstractController
++{
++    public function __construct(
++        private NotificationService $notificationService,
++        private EntityManagerInterface $entityManager,
++        private SerializerInterface $serializer
++    ) {
++    }
++
++    /**
++     * Get user notifications
++     */
++    #[Route('', name: 'app_notifications_list', methods: ['GET'])]
++    #[IsGranted('ROLE_USER')]
++    public function list(Request $request, #[CurrentUser] User $user): JsonResponse
++    {
++        $page = max(1, (int) $request->query->get('page', 1));
++        $limit = min(50, max(1, (int) $request->query->get('limit', 10)));
++        $includeRead = filter_var($request->query->get('include_read', 'true'), FILTER_VALIDATE_BOOLEAN);
++
++        $result = $this->notificationService->getUserNotifications($user, $page, $limit, $includeRead);
++
++        return $this->json([
++            'notifications' => $result['notifications'],
++            'pagination' => $result['pagination'],
++            'unread_count' => $this->notificationService->getUnreadCount($user)
++        ], Response::HTTP_OK, [], ['groups' => ['notification:read']]);
++    }
++
++    /**
++     * Get unread notification count
++     */
++    #[Route('/unread-count', name: 'app_notifications_unread_count', methods: ['GET'])]
++    #[IsGranted('ROLE_USER')]
++    public function unreadCount(#[CurrentUser] User $user): JsonResponse
++    {
++        $count = $this->notificationService->getUnreadCount($user);
++
++        return $this->json([
++            'count' => $count
++        ]);
++    }
++
++    /**
++     * Mark notifications as read
++     */
++    #[Route('/mark-read', name: 'app_notifications_mark_read', methods: ['POST'])]
++    #[IsGranted('ROLE_USER')]
++    public function markAsRead(Request $request, #[CurrentUser] User $user): JsonResponse
++    {
++        $data = json_decode($request->getContent(), true);
++        $notificationIds = $data['notification_ids'] ?? null;
++
++        // Validate notification IDs if provided
++        if ($notificationIds !== null) {
++            if (!is_array($notificationIds)) {
++                return $this->json([
++                    'message' => 'Le paramètre notification_ids doit être un tableau.'
++                ], Response::HTTP_BAD_REQUEST);
++            }
++
++            // Check if all notifications belong to the user
++            if (count($notificationIds) > 0) {
++                $notifications = $this->entityManager->getRepository(Notification::class)
++                    ->findBy(['id' => $notificationIds]);
++
++                foreach ($notifications as $notification) {
++                    if ($notification->getUser()->getId() !== $user->getId()) {
++                        return $this->json([
++                            'message' => 'Accès non autorisé à une notification.'
++                        ], Response::HTTP_FORBIDDEN);
++                    }
++                }
++            }
++        }
++
++        $updated = $this->notificationService->markAsRead($user, $notificationIds);
++
++        return $this->json([
++            'success' => true,
++            'updated' => $updated,
++            'unread_count' => $this->notificationService->getUnreadCount($user)
++        ]);
++    }
++
++    /**
++     * Mark a specific notification as read
++     */
++    #[Route('/{id}/mark-read', name: 'app_notification_mark_read', methods: ['POST'])]
++    #[IsGranted('ROLE_USER')]
++    public function markOneAsRead(Notification $notification, #[CurrentUser] User $user): JsonResponse
++    {
++        // Check if the notification belongs to the user
++        if ($notification->getUser()->getId() !== $user->getId()) {
++            return $this->json([
++                'message' => 'Accès non autorisé à cette notification.'
++            ], Response::HTTP_FORBIDDEN);
++        }
++
++        // Mark as read if not already
++        if (!$notification->isRead()) {
++            $notification->setIsRead(true);
++            $notification->setReadAt(new \DateTime());
++            $this->entityManager->flush();
++        }
++
++        return $this->json([
++            'success' => true,
++            'notification' => $notification,
++            'unread_count' => $this->notificationService->getUnreadCount($user)
++        ], Response::HTTP_OK, [], ['groups' => ['notification:read']]);
++    }
++
++    /**
++     * Get a single notification
++     */
++    #[Route('/{id}', name: 'app_notification_get', methods: ['GET'])]
++    #[IsGranted('ROLE_USER')]
++    public function getNotification(Notification $notification, #[CurrentUser] User $user): JsonResponse
++    {
++        // Check if the notification belongs to the user
++        if ($notification->getUser()->getId() !== $user->getId()) {
++            return $this->json([
++                'message' => 'Accès non autorisé à cette notification.'
++            ], Response::HTTP_FORBIDDEN);
++        }
++
++        return $this->json($notification, Response::HTTP_OK, [], ['groups' => ['notification:read']]);
++    }
++} 
+\ No newline at end of file
+diff --git a/backend/src/Domains/Global/Notification/Entity/Notification.php b/backend/src/Domains/Global/Notification/Entity/Notification.php
+new file mode 100644
+index 0000000..b86919c
+--- /dev/null
++++ b/backend/src/Domains/Global/Notification/Entity/Notification.php
+@@ -0,0 +1,183 @@
++<?php
++
++namespace App\Domains\Global\Notification\Entity;
++
++use App\Entity\User;
++use App\Domains\Global\Notification\Repository\NotificationRepository;
++use Doctrine\DBAL\Types\Types;
++use Doctrine\ORM\Mapping as ORM;
++use Symfony\Component\Serializer\Annotation\Groups;
++
++#[ORM\Entity(repositoryClass: NotificationRepository::class)]
++#[ORM\HasLifecycleCallbacks]
++class Notification
++{
++    public const TYPE_DOCUMENT_APPROVED = 'document_approved';
++    public const TYPE_DOCUMENT_REJECTED = 'document_rejected';
++    public const TYPE_DOCUMENT_UPLOADED = 'document_uploaded';
++    public const TYPE_SYSTEM = 'system';
++    public const TYPE_ANNOUNCEMENT = 'announcement';
++
++    #[ORM\Id]
++    #[ORM\GeneratedValue]
++    #[ORM\Column]
++    #[Groups(['notification:read'])]
++    private ?int $id = null;
++
++    #[ORM\ManyToOne(targetEntity: User::class)]
++    #[ORM\JoinColumn(nullable: false)]
++    #[Groups(['notification:read'])]
++    private ?User $user = null;
++
++    #[ORM\Column(length: 50)]
++    #[Groups(['notification:read'])]
++    private ?string $type = null;
++
++    #[ORM\Column(length: 255)]
++    #[Groups(['notification:read'])]
++    private ?string $title = null;
++
++    #[ORM\Column(type: Types::TEXT)]
++    #[Groups(['notification:read'])]
++    private ?string $message = null;
++
++    #[ORM\Column(type: Types::JSON, nullable: true)]
++    #[Groups(['notification:read'])]
++    private ?array $data = null;
++
++    #[ORM\Column]
++    #[Groups(['notification:read'])]
++    private bool $isRead = false;
++
++    #[ORM\Column(type: Types::DATETIME_MUTABLE)]
++    #[Groups(['notification:read'])]
++    private ?\DateTimeInterface $createdAt = null;
++
++    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
++    #[Groups(['notification:read'])]
++    private ?\DateTimeInterface $readAt = null;
++
++    #[ORM\Column(length: 255, nullable: true)]
++    #[Groups(['notification:read'])]
++    private ?string $targetUrl = null;
++
++    public function __construct()
++    {
++        $this->createdAt = new \DateTime();
++    }
++
++    #[ORM\PrePersist]
++    public function prePersist(): void
++    {
++        if (!$this->createdAt) {
++            $this->createdAt = new \DateTime();
++        }
++    }
++
++    public function getId(): ?int
++    {
++        return $this->id;
++    }
++
++    public function getUser(): ?User
++    {
++        return $this->user;
++    }
++
++    public function setUser(?User $user): self
++    {
++        $this->user = $user;
++        return $this;
++    }
++
++    public function getType(): ?string
++    {
++        return $this->type;
++    }
++
++    public function setType(string $type): self
++    {
++        $this->type = $type;
++        return $this;
++    }
++
++    public function getTitle(): ?string
++    {
++        return $this->title;
++    }
++
++    public function setTitle(string $title): self
++    {
++        $this->title = $title;
++        return $this;
++    }
++
++    public function getMessage(): ?string
++    {
++        return $this->message;
++    }
++
++    public function setMessage(string $message): self
++    {
++        $this->message = $message;
++        return $this;
++    }
++
++    public function getData(): ?array
++    {
++        return $this->data;
++    }
++
++    public function setData(?array $data): self
++    {
++        $this->data = $data;
++        return $this;
++    }
++
++    public function isRead(): bool
++    {
++        return $this->isRead;
++    }
++
++    public function setIsRead(bool $isRead): self
++    {
++        $this->isRead = $isRead;
++        if ($isRead && !$this->readAt) {
++            $this->readAt = new \DateTime();
++        }
++        return $this;
++    }
++
++    public function getCreatedAt(): ?\DateTimeInterface
++    {
++        return $this->createdAt;
++    }
++
++    public function setCreatedAt(\DateTimeInterface $createdAt): self
++    {
++        $this->createdAt = $createdAt;
++        return $this;
++    }
++
++    public function getReadAt(): ?\DateTimeInterface
++    {
++        return $this->readAt;
++    }
++
++    public function setReadAt(?\DateTimeInterface $readAt): self
++    {
++        $this->readAt = $readAt;
++        return $this;
++    }
++
++    public function getTargetUrl(): ?string
++    {
++        return $this->targetUrl;
++    }
++
++    public function setTargetUrl(?string $targetUrl): self
++    {
++        $this->targetUrl = $targetUrl;
++        return $this;
++    }
++} 
+\ No newline at end of file
+diff --git a/backend/src/Domains/Global/Notification/Repository/NotificationRepository.php b/backend/src/Domains/Global/Notification/Repository/NotificationRepository.php
+new file mode 100644
+index 0000000..a9d2251
+--- /dev/null
++++ b/backend/src/Domains/Global/Notification/Repository/NotificationRepository.php
+@@ -0,0 +1,108 @@
++<?php
++
++namespace App\Domains\Global\Notification\Repository;
++
++use App\Domains\Global\Notification\Entity\Notification;
++use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
++use Doctrine\Persistence\ManagerRegistry;
++
++/**
++ * @extends ServiceEntityRepository<Notification>
++ *
++ * @method Notification|null find($id, $lockMode = null, $lockVersion = null)
++ * @method Notification|null findOneBy(array $criteria, array $orderBy = null)
++ * @method Notification[]    findAll()
++ * @method Notification[]    findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
++ */
++class NotificationRepository extends ServiceEntityRepository
++{
++    public function __construct(ManagerRegistry $registry)
++    {
++        parent::__construct($registry, Notification::class);
++    }
++
++    /**
++     * Find notifications by user
++     *
++     * @param int $userId The user ID
++     * @param int|null $limit Optional limit
++     * @param bool $includeRead Whether to include read notifications
++     * @return Notification[] Returns an array of Notification objects
++     */
++    public function findByUser(int $userId, ?int $limit = null, bool $includeRead = true): array
++    {
++        $qb = $this->createQueryBuilder('n')
++            ->andWhere('n.user = :userId')
++            ->setParameter('userId', $userId)
++            ->orderBy('n.createdAt', 'DESC');
++
++        if (!$includeRead) {
++            $qb->andWhere('n.isRead = :isRead')
++                ->setParameter('isRead', false);
++        }
++
++        if ($limit !== null) {
++            $qb->setMaxResults($limit);
++        }
++
++        return $qb->getQuery()->getResult();
++    }
++
++    /**
++     * Find unread notifications by user
++     *
++     * @param int $userId The user ID
++     * @param int|null $limit Optional limit
++     * @return Notification[] Returns an array of unread Notification objects
++     */
++    public function findUnreadByUser(int $userId, ?int $limit = null): array
++    {
++        return $this->findByUser($userId, $limit, false);
++    }
++
++    /**
++     * Count unread notifications for a user
++     *
++     * @param int $userId The user ID
++     * @return int Number of unread notifications
++     */
++    public function countUnreadByUser(int $userId): int
++    {
++        return $this->createQueryBuilder('n')
++            ->select('COUNT(n.id)')
++            ->andWhere('n.user = :userId')
++            ->andWhere('n.isRead = :isRead')
++            ->setParameter('userId', $userId)
++            ->setParameter('isRead', false)
++            ->getQuery()
++            ->getSingleScalarResult();
++    }
++
++    /**
++     * Mark notifications as read for a user
++     *
++     * @param int $userId The user ID
++     * @param array|null $notificationIds Optional array of notification IDs to mark as read
++     * @return int Number of updated notifications
++     */
++    public function markAsRead(int $userId, ?array $notificationIds = null): int
++    {
++        $qb = $this->getEntityManager()->createQueryBuilder()
++            ->update(Notification::class, 'n')
++            ->set('n.isRead', ':isRead')
++            ->set('n.readAt', ':readAt')
++            ->where('n.user = :userId')
++            ->andWhere('n.isRead = :notRead')
++            ->setParameter('isRead', true)
++            ->setParameter('readAt', new \DateTime())
++            ->setParameter('userId', $userId)
++            ->setParameter('notRead', false);
++
++        if ($notificationIds !== null && count($notificationIds) > 0) {
++            $qb->andWhere('n.id IN (:ids)')
++                ->setParameter('ids', $notificationIds);
++        }
++
++        return $qb->getQuery()->execute();
++    }
++} 
+\ No newline at end of file
+diff --git a/backend/src/Domains/Global/Notification/Service/NotificationService.php b/backend/src/Domains/Global/Notification/Service/NotificationService.php
+new file mode 100644
+index 0000000..9f4c23a
+--- /dev/null
++++ b/backend/src/Domains/Global/Notification/Service/NotificationService.php
+@@ -0,0 +1,265 @@
++<?php
++
++namespace App\Domains\Global\Notification\Service;
++
++use App\Domains\Global\Document\Entity\Document;
++use App\Domains\Global\Notification\Entity\Notification;
++use App\Domains\Global\Notification\Repository\NotificationRepository;
++use App\Entity\User;
++use Doctrine\ORM\EntityManagerInterface;
++use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
++
++class NotificationService
++{
++    public function __construct(
++        private EntityManagerInterface $entityManager,
++        private NotificationRepository $notificationRepository,
++        private UrlGeneratorInterface $urlGenerator
++    ) {
++    }
++
++    /**
++     * Create a new notification
++     */
++    public function createNotification(
++        User $user,
++        string $type,
++        string $title,
++        string $message,
++        ?array $data = null,
++        ?string $targetUrl = null
++    ): Notification {
++        $notification = new Notification();
++        $notification->setUser($user);
++        $notification->setType($type);
++        $notification->setTitle($title);
++        $notification->setMessage($message);
++        $notification->setData($data);
++        $notification->setTargetUrl($targetUrl);
++
++        $this->entityManager->persist($notification);
++        $this->entityManager->flush();
++
++        return $notification;
++    }
++
++    /**
++     * Create a notification for document approval
++     */
++    public function notifyDocumentApproved(Document $document): Notification
++    {
++        $user = $document->getUser();
++        $documentType = $document->getDocumentType();
++        $title = 'Document approuvé';
++        $message = sprintf(
++            'Votre document "%s" (%s) a été approuvé.',
++            $document->getName(),
++            $documentType->getName()
++        );
++
++        // Generate target URL for the document detail page
++        $targetUrl = '/documents/' . $document->getId();
++
++        // Additional data for frontend
++        $data = [
++            'documentId' => $document->getId(),
++            'documentName' => $document->getName(),
++            'documentType' => $documentType->getCode(),
++            'approvedAt' => $document->getValidatedAt()?->format('Y-m-d H:i:s'),
++            'approvedBy' => $document->getValidatedBy()?->getId()
++        ];
++
++        return $this->createNotification(
++            $user,
++            Notification::TYPE_DOCUMENT_APPROVED,
++            $title,
++            $message,
++            $data,
++            $targetUrl
++        );
++    }
++
++    /**
++     * Create a notification for document rejection
++     */
++    public function notifyDocumentRejected(Document $document): Notification
++    {
++        $user = $document->getUser();
++        $documentType = $document->getDocumentType();
++        $title = 'Document refusé';
++        $message = sprintf(
++            'Votre document "%s" (%s) a été refusé.',
++            $document->getName(),
++            $documentType->getName()
++        );
++
++        if ($document->getComment()) {
++            $message .= ' Raison: ' . $document->getComment();
++        }
++
++        // Generate target URL for the document detail page
++        $targetUrl = '/documents/' . $document->getId();
++
++        // Additional data for frontend
++        $data = [
++            'documentId' => $document->getId(),
++            'documentName' => $document->getName(),
++            'documentType' => $documentType->getCode(),
++            'rejectedAt' => $document->getUpdatedAt()?->format('Y-m-d H:i:s'),
++            'rejectedBy' => $document->getValidatedBy()?->getId(),
++            'comment' => $document->getComment()
++        ];
++
++        return $this->createNotification(
++            $user,
++            Notification::TYPE_DOCUMENT_REJECTED,
++            $title,
++            $message,
++            $data,
++            $targetUrl
++        );
++    }
++
++    /**
++     * Create a notification for new document upload (for admins/teachers)
++     */
++    public function notifyDocumentUploaded(Document $document, User $recipient): Notification
++    {
++        $uploader = $document->getUser();
++        $documentType = $document->getDocumentType();
++        $title = 'Nouveau document à valider';
++        $message = sprintf(
++            '%s %s a téléchargé un nouveau document "%s" (%s) qui nécessite une validation.',
++            $uploader->getFirstName(),
++            $uploader->getLastName(),
++            $document->getName(),
++            $documentType->getName()
++        );
++
++        // Generate target URL for the document validation page
++        $targetUrl = '/admin/documents/validation/' . $document->getId();
++
++        // Additional data for frontend
++        $data = [
++            'documentId' => $document->getId(),
++            'documentName' => $document->getName(),
++            'documentType' => $documentType->getCode(),
++            'uploadedAt' => $document->getUploadedAt()?->format('Y-m-d H:i:s'),
++            'uploaderId' => $uploader->getId(),
++            'uploaderName' => $uploader->getFirstName() . ' ' . $uploader->getLastName()
++        ];
++
++        return $this->createNotification(
++            $recipient,
++            Notification::TYPE_DOCUMENT_UPLOADED,
++            $title,
++            $message,
++            $data,
++            $targetUrl
++        );
++    }
++
++    /**
++     * Create a notification for the user when they upload a document
++     */
++    public function notifyUserDocumentUploaded(Document $document): Notification
++    {
++        $user = $document->getUser();
++        $documentType = $document->getDocumentType();
++        $title = 'Document téléchargé avec succès';
++        $message = sprintf(
++            'Votre document "%s" (%s) a été téléchargé avec succès.',
++            $document->getName(),
++            $documentType->getName()
++        );
++
++        // Si c'est un CV, ajouter des informations spécifiques
++        if ($documentType->getCode() === 'CV') {
++            $message .= ' Il est maintenant disponible pour consultation par les recruteurs.';
++        }
++
++        // Generate target URL for the document detail page
++        $targetUrl = '/documents/' . $document->getId();
++
++        // Additional data for frontend
++        $data = [
++            'documentId' => $document->getId(),
++            'documentName' => $document->getName(),
++            'documentType' => $documentType->getCode(),
++            'uploadedAt' => $document->getUploadedAt()?->format('Y-m-d H:i:s')
++        ];
++
++        return $this->createNotification(
++            $user,
++            Notification::TYPE_DOCUMENT_UPLOADED,
++            $title,
++            $message,
++            $data,
++            $targetUrl
++        );
++    }
++
++    /**
++     * Get user notifications with pagination
++     */
++    public function getUserNotifications(User $user, int $page = 1, int $limit = 10, bool $includeRead = true): array
++    {
++        $offset = ($page - 1) * $limit;
++        
++        $qb = $this->entityManager->createQueryBuilder()
++            ->select('n')
++            ->from(Notification::class, 'n')
++            ->where('n.user = :userId')
++            ->setParameter('userId', $user->getId())
++            ->orderBy('n.createdAt', 'DESC')
++            ->setMaxResults($limit)
++            ->setFirstResult($offset);
++            
++        if (!$includeRead) {
++            $qb->andWhere('n.isRead = :isRead')
++               ->setParameter('isRead', false);
++        }
++        
++        $notifications = $qb->getQuery()->getResult();
++        
++        // Get total count for pagination
++        $countQb = $this->entityManager->createQueryBuilder()
++            ->select('COUNT(n.id)')
++            ->from(Notification::class, 'n')
++            ->where('n.user = :userId')
++            ->setParameter('userId', $user->getId());
++            
++        if (!$includeRead) {
++            $countQb->andWhere('n.isRead = :isRead')
++                   ->setParameter('isRead', false);
++        }
++        
++        $total = $countQb->getQuery()->getSingleScalarResult();
++        
++        return [
++            'notifications' => $notifications,
++            'pagination' => [
++                'total' => $total,
++                'page' => $page,
++                'limit' => $limit,
++                'pages' => ceil($total / $limit)
++            ]
++        ];
++    }
++
++    /**
++     * Mark notifications as read
++     */
++    public function markAsRead(User $user, ?array $notificationIds = null): int
++    {
++        return $this->notificationRepository->markAsRead($user->getId(), $notificationIds);
++    }
++
++    /**
++     * Get unread count for user
++     */
++    public function getUnreadCount(User $user): int
++    {
++        return $this->notificationRepository->countUnreadByUser($user->getId());
++    }
++} 
+\ No newline at end of file
+diff --git a/frontend/src/App.jsx b/frontend/src/App.jsx
+index cbbc783..518ff7f 100644
+--- a/frontend/src/App.jsx
++++ b/frontend/src/App.jsx
+@@ -11,6 +11,7 @@ import ProfileLayout from '@/layouts/ProfileLayout'
+ import StudentRoute from './components/StudentRoute'
+ import { Toaster } from './components/ui/sonner'
+ import { ErrorBoundary } from "react-error-boundary"
++import { notificationService } from './lib/services/notificationService'
+ 
+ // Create a shared query client for the entire application
+ const queryClient = new QueryClient({
+@@ -53,6 +54,7 @@ const NotificationSettings = lazy(() => import('./pages/Global/Profile/views/Not
+ const CareerSettings = lazy(() => import('./pages/Global/Profile/views/CareerSettings'))
+ const ProfileView = lazy(() => import('./pages/Global/Profile/views/ProfileView'))
+ const Dashboard = lazy(() => import('./pages/Dashboard'))
++const NotificationsPage = lazy(() => import('./pages/Global/Notifications/NotificationsPage'))
+ 
+ // Dashboards spécifiques par rôle
+ const AdminDashboard = lazy(() => import('./pages/Admin/Dashboard'))
+@@ -418,6 +420,7 @@ const AppContent = () => {
+                       <Route path="/settings/career" element={<CareerSettings />} />
+                       <Route path="/settings/security" element={<SecuritySettings />} />
+                       <Route path="/settings/notifications" element={<NotificationSettings />} />
++                      <Route path="/notifications" element={<NotificationsPage />} />
+                     </Route>
+                     
+                     {/* Routes pour la gestion des formations - accessible par teachers, admins, superadmins et recruiters */}
+@@ -561,8 +564,39 @@ const ErrorFallback = () => (
+   </div>
+ );
+ 
++// Function to start the app services
++const startAppServices = () => {
++  // Start notification polling if the user is logged in
++  if (localStorage.getItem('token')) {
++    notificationService.startPolling();
++  }
++};
++
+ // Composant App principal qui configure le Router
+ const App = () => {
++  useEffect(() => {
++    // Initialize app services
++    startAppServices();
++    
++    // Listen for auth changes to start/stop services
++    const handleAuthChange = () => {
++      if (localStorage.getItem('token')) {
++        notificationService.startPolling();
++      } else {
++        notificationService.stopPolling();
++        notificationService.resetCache();
++      }
++    };
++    
++    window.addEventListener('auth-change', handleAuthChange);
++    
++    // Cleanup
++    return () => {
++      window.removeEventListener('auth-change', handleAuthChange);
++      notificationService.stopPolling();
++    };
++  }, []);
++
+   return (
+     <ErrorBoundary FallbackComponent={ErrorFallback}>
+       <QueryClientProvider client={queryClient}>
+diff --git a/frontend/src/components/Navbar.jsx b/frontend/src/components/Navbar.jsx
+index 2c0eb13..6ace046 100644
+--- a/frontend/src/components/Navbar.jsx
++++ b/frontend/src/components/Navbar.jsx
+@@ -35,6 +35,7 @@ import { SearchBar } from "./SearchBar";
+ import { useRolePermissions } from "../features/roles/useRolePermissions";
+ import { Skeleton } from './ui/skeleton';
+ import { ThemeToggle } from './ui/theme-toggle';
++import NotificationDropdown from './NotificationDropdown';
+ 
+ // Style personnalisé pour le menu dropdown et le bouton burger
+ const customStyles = `
+@@ -237,13 +238,8 @@ const UserMenu = ({ onLogout, userData, setLogoutDialogOpen }) => {
+ 
+   return (
+     <div className="flex items-center">
+-      {/* Notification icon (placeholder) */}
+-      <Button
+-        variant="ghost"
+-        className="rounded-full w-10 h-10 p-0 bg-transparent text-gray-200 hover:bg-[#02284f]/80 hover:text-white mr-2 dark:text-[#78b9dd] dark:hover:bg-[#78b9dd]/20"
+-      >
+-        <Bell className="h-5 w-5" />
+-      </Button>
++      {/* Utiliser le composant NotificationDropdown à la place du bouton */}
++      <NotificationDropdown />
+ 
+       {/* Dropdown menu */}
+       <DropdownMenu modal={true}>
+@@ -301,6 +297,14 @@ const UserMenu = ({ onLogout, userData, setLogoutDialogOpen }) => {
+               <span>Paramètres</span>
+             </DropdownMenuItem>
+             
++            <DropdownMenuItem 
++              className="navbar-dropdown-item"
++              onClick={() => navigate('/notifications')}
++            >
++              <Bell className="mr-2 h-4 w-4 text-[#528eb2] dark:text-[#78b9dd]" />
++              <span>Notifications</span>
++            </DropdownMenuItem>
++            
+             <DropdownMenuSeparator className="my-1 bg-gray-100 dark:bg-gray-700" />
+             
+             <DropdownMenuItem 
+diff --git a/frontend/src/components/NotificationBadge.jsx b/frontend/src/components/NotificationBadge.jsx
+new file mode 100644
+index 0000000..3a26cb2
+--- /dev/null
++++ b/frontend/src/components/NotificationBadge.jsx
+@@ -0,0 +1,66 @@
++import React, { useState, useEffect } from 'react';
++import { useNavigate } from 'react-router-dom';
++import { notificationService } from '@/lib/services/notificationService';
++import { cn } from '@/lib/utils';
++
++/**
++ * Badge affichant le nombre de notifications non lues
++ */
++const NotificationBadge = ({ className, limit = 99, onClick }) => {
++  const [unreadCount, setUnreadCount] = useState(0);
++  const navigate = useNavigate();
++
++  useEffect(() => {
++    // Charger le compteur initial
++    notificationService.getUnreadCount()
++      .then(count => setUnreadCount(count))
++      .catch(error => console.error('Error loading notification count:', error));
++
++    // S'abonner aux mises à jour
++    const unsubscribe = notificationService.subscribe(data => {
++      setUnreadCount(data.unreadCount);
++    });
++
++    // Démarrer le polling
++    notificationService.startPolling();
++
++    // Nettoyer à la désinscription
++    return () => {
++      unsubscribe();
++    };
++  }, []);
++
++  const handleClick = (e) => {
++    e.stopPropagation(); // Empêcher la propagation du clic au parent
++    if (onClick) {
++      onClick(e);
++    } else {
++      // Si aucun gestionnaire de clic n'est fourni, naviguer vers la page des notifications
++      navigate('/notifications');
++    }
++  };
++
++  if (unreadCount === 0) {
++    return null;
++  }
++
++  const displayCount = unreadCount > limit ? `${limit}+` : unreadCount;
++
++  return (
++    <div
++      className={cn(
++        "absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-xs font-bold text-white cursor-pointer hover:bg-red-600 transition-colors duration-200",
++        className
++      )}
++      aria-label={`${unreadCount} notifications non lues`}
++      onClick={handleClick}
++      role="button"
++      tabIndex={0}
++      onKeyDown={(e) => e.key === 'Enter' && handleClick(e)}
++    >
++      {displayCount}
++    </div>
++  );
++};
++
++export default NotificationBadge; 
+\ No newline at end of file
+diff --git a/frontend/src/components/NotificationDropdown.jsx b/frontend/src/components/NotificationDropdown.jsx
+new file mode 100644
+index 0000000..73cc0e2
+--- /dev/null
++++ b/frontend/src/components/NotificationDropdown.jsx
+@@ -0,0 +1,309 @@
++import React, { useState, useEffect, useCallback } from 'react';
++import { useNavigate } from 'react-router-dom';
++import { Bell, Check, X, Calendar, File, FileCheck, FileX, Info, Clock } from 'lucide-react';
++import { format, formatDistanceToNow } from 'date-fns';
++import { fr } from 'date-fns/locale';
++import { notificationService } from '@/lib/services/notificationService';
++import { Button } from '@/components/ui/button';
++import {
++  DropdownMenu,
++  DropdownMenuContent,
++  DropdownMenuItem,
++  DropdownMenuTrigger,
++  DropdownMenuSeparator,
++} from '@/components/ui/dropdown-menu';
++import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
++import NotificationBadge from './NotificationBadge';
++import { Skeleton } from '@/components/ui/skeleton';
++import { cn } from '@/lib/utils';
++
++const NotificationIcon = ({ type }) => {
++  switch (type) {
++    case 'document_approved':
++      return <FileCheck className="h-4 w-4 text-green-500" />;
++    case 'document_rejected':
++      return <FileX className="h-4 w-4 text-red-500" />;
++    case 'document_uploaded':
++      return <File className="h-4 w-4 text-blue-500" />;
++    case 'system':
++      return <Info className="h-4 w-4 text-gray-500" />;
++    case 'announcement':
++      return <Calendar className="h-4 w-4 text-purple-500" />;
++    default:
++      return <Bell className="h-4 w-4 text-gray-500" />;
++  }
++};
++
++const NotificationItem = ({ notification, onRead }) => {
++  const navigate = useNavigate();
++  const [isHovering, setIsHovering] = useState(false);
++  
++  const handleClick = async () => {
++    try {
++      // Marquer comme lu avant la navigation
++      if (!notification.isRead) {
++        await notificationService.markAsRead(notification.id);
++      }
++      
++      // Toujours naviguer vers la page de notifications
++      navigate('/notifications');
++      
++      // Appeler le callback après la navigation
++      if (onRead) {
++        onRead(notification);
++      }
++    } catch (error) {
++      console.error('Error handling notification click:', error);
++    }
++  };
++  
++  return (
++    <DropdownMenuItem
++      className={cn(
++        "flex flex-col items-start py-3 px-4 gap-1 border-b last:border-b-0 dark:border-gray-700 cursor-pointer",
++        !notification.isRead ? "bg-blue-50/50 dark:bg-blue-900/10" : ""
++      )}
++      onMouseEnter={() => setIsHovering(true)}
++      onMouseLeave={() => setIsHovering(false)}
++      onClick={handleClick}
++    >
++      <div className="flex items-center w-full">
++        <span className="mr-2">
++          <NotificationIcon type={notification.type} />
++        </span>
++        <span className="font-medium flex-grow truncate">
++          {notification.title}
++        </span>
++        <span className="text-xs text-gray-500 dark:text-gray-400 ml-2 whitespace-nowrap">
++          {formatDistanceToNow(new Date(notification.createdAt), { 
++            addSuffix: true, 
++            locale: fr 
++          })}
++        </span>
++      </div>
++      <div className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2 pl-6">
++        {notification.message}
++      </div>
++      
++      {isHovering && (
++        <div className="pl-6 text-xs text-blue-600 dark:text-blue-400 mt-1">
++          Cliquer pour voir toutes les notifications
++        </div>
++      )}
++    </DropdownMenuItem>
++  );
++};
++
++const EmptyNotifications = () => (
++  <div className="px-4 py-8 text-center">
++    <Bell className="h-8 w-8 text-gray-400 mx-auto mb-2" />
++    <h3 className="text-sm font-medium text-gray-600 dark:text-gray-300">Pas de notification</h3>
++    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
++      Vous n'avez aucune notification pour le moment
++    </p>
++  </div>
++);
++
++const NotificationSkeleton = () => (
++  <div className="px-4 py-3 border-b last:border-b-0 dark:border-gray-700">
++    <div className="flex items-center w-full">
++      <Skeleton className="h-4 w-4 rounded-full mr-2" />
++      <Skeleton className="h-4 flex-grow" />
++      <Skeleton className="h-3 w-16 ml-2" />
++    </div>
++    <div className="pl-6 mt-1">
++      <Skeleton className="h-3 w-full mt-1" />
++      <Skeleton className="h-3 w-3/4 mt-1" />
++    </div>
++  </div>
++);
++
++const NotificationDropdown = () => {
++  const [open, setOpen] = useState(false);
++  const [notifications, setNotifications] = useState([]);
++  const [unreadCount, setUnreadCount] = useState(0);
++  const [loading, setLoading] = useState(false);
++  
++  // Fonction pour charger les notifications
++  const loadNotifications = useCallback(async () => {
++    if (open) {
++      setLoading(true);
++      try {
++        const result = await notificationService.getNotifications(1, 5, true, true);
++        
++        if (result && result.notifications) {
++          setNotifications(result.notifications);
++          setUnreadCount(result.unread_count || 0);
++        } else {
++          // Fallback pour s'assurer que nous avons au moins un tableau vide
++          setNotifications([]);
++        }
++      } catch (error) {
++        console.error('Error loading notifications:', error);
++        setNotifications([]);
++      } finally {
++        setLoading(false);
++      }
++    }
++  }, [open]);
++  
++  // Charger les notifications quand le menu est ouvert
++  useEffect(() => {
++    loadNotifications();
++  }, [open, loadNotifications]);
++  
++  // S'abonner aux changements de notifications
++  useEffect(() => {
++    const unsubscribe = notificationService.subscribe(data => {
++      if (!open) {
++        // Mettre à jour uniquement le compteur si le menu est fermé
++        setUnreadCount(data.unreadCount);
++      } else {
++        // Si le menu est ouvert, mettre à jour les notifications également
++        if (data.notifications && Array.isArray(data.notifications)) {
++          setNotifications(data.notifications);
++          setUnreadCount(data.unreadCount);
++        }
++      }
++    });
++    
++    // Nettoyage lors du démontage
++    return () => unsubscribe();
++  }, [open]);
++  
++  // Gérer la fermeture du menu
++  const handleOpenChange = useCallback((isOpen) => {
++    setOpen(isOpen);
++    
++    // Si le menu se ferme, recharger le compteur de notifications
++    if (!isOpen) {
++      notificationService.getUnreadCount(true)
++        .catch(err => console.warn('Failed to refresh notification count:', err));
++    }
++  }, []);
++  
++  const handleMarkAllAsRead = async (e) => {
++    e.stopPropagation();
++    try {
++      await notificationService.markAllAsRead();
++      
++      // Forcer le rechargement des notifications
++      await loadNotifications();
++    } catch (error) {
++      console.error('Error marking all as read:', error);
++    }
++  };
++  
++  const handleNotificationRead = useCallback(async (notification) => {
++    // Le menu sera fermé car on navigue ailleurs
++    setOpen(false);
++    
++    // Forcer le rechargement du compteur
++    try {
++      await notificationService.getUnreadCount(true);
++    } catch (error) {
++      console.warn('Failed to refresh notification count:', error);
++    }
++  }, []);
++  
++  const navigate = useNavigate();
++  
++  const goToAllNotifications = (e) => {
++    e.stopPropagation();
++    setOpen(false);
++    navigate('/notifications');
++  };
++  
++  return (
++    <DropdownMenu open={open} onOpenChange={handleOpenChange}>
++      <DropdownMenuTrigger asChild>
++        <Button
++          variant="ghost"
++          className="relative rounded-full w-10 h-10 p-0 bg-transparent text-gray-200 hover:bg-[#02284f]/80 hover:text-white mr-2 dark:text-[#78b9dd] dark:hover:bg-[#78b9dd]/20"
++          aria-label="Notifications"
++        >
++          <Bell className="h-5 w-5" />
++          <NotificationBadge onClick={(e) => {
++            e.stopPropagation();  // Empêcher la propagation pour éviter de déclencher le Trigger
++            handleOpenChange(true); // Ouvrir manuellement le menu
++          }} />
++        </Button>
++      </DropdownMenuTrigger>
++      
++      <DropdownMenuContent 
++        align="end" 
++        className="w-80 p-0 max-h-[80vh] overflow-hidden"
++        sideOffset={5}
++      >
++        {/* Header */}
++        <div className="flex items-center justify-between bg-gradient-to-r from-[#02284f] to-[#03386b] p-3 text-white dark:from-[#01111e] dark:to-[#001f3d] dark:border-b dark:border-[#78b9dd]/20">
++          <div className="flex items-center">
++            <Bell className="h-4 w-4 mr-2" />
++            <h3 className="font-medium text-sm">Notifications</h3>
++            {unreadCount > 0 && (
++              <span className="ml-2 text-xs bg-red-500 rounded-full px-2 py-0.5">
++                {unreadCount}
++              </span>
++            )}
++          </div>
++          
++          <div className="flex items-center gap-1">
++            {unreadCount > 0 && (
++              <TooltipProvider>
++                <Tooltip>
++                  <TooltipTrigger asChild>
++                    <Button
++                      variant="ghost"
++                      size="icon"
++                      className="h-7 w-7 rounded-full hover:bg-white/20 text-white"
++                      onClick={handleMarkAllAsRead}
++                    >
++                      <Check className="h-4 w-4" />
++                    </Button>
++                  </TooltipTrigger>
++                  <TooltipContent side="bottom">
++                    <p className="text-xs">Tout marquer comme lu</p>
++                  </TooltipContent>
++                </Tooltip>
++              </TooltipProvider>
++            )}
++          </div>
++        </div>
++        
++        {/* Notification List */}
++        <div className="overflow-y-auto max-h-[350px]">
++          {loading ? (
++            <>
++              <NotificationSkeleton />
++              <NotificationSkeleton />
++              <NotificationSkeleton />
++            </>
++          ) : notifications.length > 0 ? (
++            notifications.map(notification => (
++              <NotificationItem 
++                key={notification.id} 
++                notification={notification} 
++                onRead={handleNotificationRead}
++              />
++            ))
++          ) : (
++            <EmptyNotifications />
++          )}
++        </div>
++        
++        {/* Footer */}
++        <div className="p-2 bg-gray-50 dark:bg-gray-800/50 border-t dark:border-gray-700">
++          <Button 
++            variant="ghost" 
++            className="w-full text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50"
++            onClick={goToAllNotifications}
++          >
++            Voir toutes les notifications
++          </Button>
++        </div>
++      </DropdownMenuContent>
++    </DropdownMenu>
++  );
++};
++
++export default NotificationDropdown; 
+\ No newline at end of file
+diff --git a/frontend/src/lib/services/apiService.js b/frontend/src/lib/services/apiService.js
+index 431ca8b..9e0e28b 100644
+--- a/frontend/src/lib/services/apiService.js
++++ b/frontend/src/lib/services/apiService.js
+@@ -497,4 +497,5 @@ const apiService = {
+   }
+ };
+ 
++// Exporter le service API pour utilisation dans d'autres modules
+ export default apiService; 
+\ No newline at end of file
+diff --git a/frontend/src/lib/services/notificationService.js b/frontend/src/lib/services/notificationService.js
+new file mode 100644
+index 0000000..3d58ecc
+--- /dev/null
++++ b/frontend/src/lib/services/notificationService.js
+@@ -0,0 +1,401 @@
++import apiService from './apiService';
++import { authService } from './authService';
++import { toast } from 'sonner';
++
++/**
++ * Service for managing user notifications
++ */
++class NotificationService {
++  constructor() {
++    // Initialiser le cache avec des valeurs vides
++    this.cache = {
++      notifications: {
++        notifications: [], // Tableau vide initial pour les notifications
++        pagination: {
++          total: 0,
++          page: 1,
++          limit: 10,
++          pages: 1
++        },
++        unread_count: 0
++      },
++      unreadCount: 0, // Compteur à zéro initialement
++      lastFetch: null,
++      fetchPromise: null
++    };
++    this.subscribers = [];
++    this.pollingInterval = null;
++    this.pollingDelay = 60000; // 1 minute
++  }
++
++  /**
++   * Get notifications with optional pagination
++   */
++  async getNotifications(page = 1, limit = 10, includeRead = true, refresh = false) {
++    try {
++      // If we have a fetch in progress, wait for it
++      if (this.cache.fetchPromise) {
++        await this.cache.fetchPromise;
++      }
++
++      // Return cache if available and not forcing refresh
++      if (!refresh && this.cache.notifications && this.cache.lastFetch) {
++        const now = new Date();
++        const cacheAge = now - this.cache.lastFetch;
++        
++        // Use cache if it's less than 30 seconds old
++        if (cacheAge < 30000) {
++          return this.cache.notifications;
++        }
++      }
++
++      try {
++        // Essayez d'abord d'utiliser l'API réelle
++        this.cache.fetchPromise = apiService.get(`/api/notifications?page=${page}&limit=${limit}&include_read=${includeRead}`);
++        const response = await this.cache.fetchPromise;
++        
++        // Si la réponse est réussie, utilisez les données réelles
++        this.cache.notifications = response.data;
++        this.cache.unreadCount = response.data.unread_count || 0;
++        this.cache.lastFetch = new Date();
++        
++        // Notify subscribers
++        this.notifySubscribers();
++        
++        // Clear the fetch promise
++        this.cache.fetchPromise = null;
++        
++        return response.data;
++      } catch (error) {
++        // Si l'API échoue, utilisez les données mockées
++        console.log("Using cached notifications data due to API error");
++        
++        // Assurez-vous que les notifications du cache sont utilisées si disponibles
++        if (this.cache.notifications && this.cache.notifications.notifications && 
++            this.cache.notifications.notifications.length > 0) {
++          return this.cache.notifications;
++        }
++        
++        // Créer un cache vide sans notification de test
++        const emptyData = {
++          notifications: [],
++          pagination: {
++            total: 0,
++            page: 1,
++            limit: 10,
++            pages: 1
++          },
++          unread_count: 0
++        };
++        
++        // Cache the empty results
++        this.cache.notifications = emptyData;
++        this.cache.unreadCount = 0;
++        this.cache.lastFetch = new Date();
++        
++        // Notify subscribers
++        this.notifySubscribers();
++        
++        // Clear the fetch promise
++        this.cache.fetchPromise = null;
++        
++        return emptyData;
++      }
++    } catch (error) {
++      this.cache.fetchPromise = null;
++      console.error('Error fetching notifications:', error);
++      throw error;
++    }
++  }
++
++  /**
++   * Get the current unread notification count
++   */
++  async getUnreadCount(refresh = false) {
++    try {
++      // Return from cache if available and not refreshing
++      if (!refresh && this.cache.lastFetch) {
++        const now = new Date();
++        const cacheAge = now - this.cache.lastFetch;
++        
++        // Use cache if it's less than 30 seconds old
++        if (cacheAge < 30000) {
++          return this.cache.unreadCount;
++        }
++      }
++
++      try {
++        // Essayez d'abord d'utiliser l'API réelle
++        const response = await apiService.get('/api/notifications/unread-count');
++        this.cache.unreadCount = response.data.count || 0;
++        this.cache.lastFetch = new Date();
++        
++        // Notify subscribers
++        this.notifySubscribers();
++        
++        return this.cache.unreadCount;
++      } catch (error) {
++        // Si l'accès à l'API échoue, utilisez le comptage des notifications non lues dans le cache
++        let unreadCount = 0;
++        
++        if (this.cache.notifications && this.cache.notifications.notifications) {
++          unreadCount = this.cache.notifications.notifications.filter(n => !n.isRead).length;
++        }
++        
++        this.cache.unreadCount = unreadCount;
++        this.cache.lastFetch = new Date();
++        
++        // Notify subscribers
++        this.notifySubscribers();
++        
++        return unreadCount;
++      }
++    } catch (error) {
++      console.error('Error fetching unread notification count:', error);
++      return 0; // Toujours retourner 0 par défaut en cas d'erreur
++    }
++  }
++
++  /**
++   * Mark notification as read locally in cache
++   */
++  markNotificationAsReadLocally(notificationId) {
++    if (!this.cache.notifications || !this.cache.notifications.notifications) {
++      return false;
++    }
++    
++    const notification = this.cache.notifications.notifications.find(n => n.id === notificationId);
++    if (notification && !notification.isRead) {
++      notification.isRead = true;
++      notification.readAt = new Date().toISOString();
++      this.cache.unreadCount = Math.max(0, this.cache.unreadCount - 1);
++      this.notifySubscribers();
++      return true;
++    }
++    
++    return false;
++  }
++
++  /**
++   * Mark all notifications as read locally in cache
++   */
++  markAllNotificationsAsReadLocally() {
++    if (!this.cache.notifications || !this.cache.notifications.notifications) {
++      return false;
++    }
++    
++    let changed = false;
++    this.cache.notifications.notifications.forEach(notification => {
++      if (!notification.isRead) {
++        notification.isRead = true;
++        notification.readAt = new Date().toISOString();
++        changed = true;
++      }
++    });
++    
++    if (changed) {
++      this.cache.unreadCount = 0;
++      this.notifySubscribers();
++    }
++    
++    return changed;
++  }
++
++  /**
++   * Start polling for new notifications
++   */
++  startPolling() {
++    if (this.pollingInterval) {
++      this.stopPolling();
++    }
++    
++    // Set up polling interval
++    this.pollingInterval = setInterval(async () => {
++      if (authService.isLoggedIn()) {
++        try {
++          await this.getUnreadCount(true);
++        } catch (error) {
++          console.warn('Error during notification polling:', error);
++        }
++      } else {
++        this.stopPolling();
++      }
++    }, this.pollingDelay);
++    
++    // Fetch initial data
++    if (authService.isLoggedIn()) {
++      this.getUnreadCount(true).catch(console.error);
++    }
++  }
++
++  /**
++   * Stop polling for new notifications
++   */
++  stopPolling() {
++    if (this.pollingInterval) {
++      clearInterval(this.pollingInterval);
++      this.pollingInterval = null;
++    }
++  }
++
++  /**
++   * Subscribe to notification updates
++   */
++  subscribe(callback) {
++    if (typeof callback !== 'function') {
++      console.warn('Notification subscriber must be a function');
++      return;
++    }
++    
++    this.subscribers.push(callback);
++    
++    // Return unsubscribe function
++    return () => {
++      this.subscribers = this.subscribers.filter(cb => cb !== callback);
++    };
++  }
++
++  /**
++   * Notify all subscribers of changes
++   */
++  notifySubscribers() {
++    this.subscribers.forEach(callback => {
++      try {
++        callback({
++          unreadCount: this.cache.unreadCount,
++          notifications: this.cache.notifications?.notifications || []
++        });
++      } catch (error) {
++        console.error('Error in notification subscriber:', error);
++      }
++    });
++  }
++
++  /**
++   * Reset cache
++   */
++  resetCache() {
++    // Réinitialiser le cache avec des valeurs vides
++    this.cache = {
++      notifications: {
++        notifications: [], // Tableau vide pour les notifications
++        pagination: {
++          total: 0,
++          page: 1,
++          limit: 10,
++          pages: 1
++        },
++        unread_count: 0
++      },
++      unreadCount: 0, // Compteur à zéro
++      lastFetch: null,
++      fetchPromise: null
++    };
++    
++    // Informer les abonnés que le cache a été réinitialisé
++    this.notifySubscribers();
++  }
++
++  /**
++   * Mark a specific notification as read
++   */
++  async markAsRead(notificationId) {
++    try {
++      try {
++        // Essayez d'utiliser l'API réelle
++        const response = await apiService.post(`/api/notifications/${notificationId}/mark-read`);
++        
++        // Update cache
++        this.cache.unreadCount = response.data.unread_count || 0;
++        
++        // Update notification in cache if available
++        if (this.cache.notifications && this.cache.notifications.notifications) {
++          const notification = this.cache.notifications.notifications.find(n => n.id === notificationId);
++          if (notification) {
++            notification.isRead = true;
++            notification.readAt = new Date().toISOString();
++          }
++        }
++        
++        // Notify subscribers
++        this.notifySubscribers();
++        
++        return response.data;
++      } catch (error) {
++        // Si l'API échoue, utilisez le marquage local
++        console.log("Using local notification marking due to API error");
++        
++        // Marquer la notification comme lue localement
++        this.markNotificationAsReadLocally(notificationId);
++        
++        // Simule une réponse API
++        return {
++          success: true,
++          notification: this.cache.notifications?.notifications?.find(n => n.id === notificationId) || null,
++          unread_count: this.cache.unreadCount
++        };
++      }
++    } catch (error) {
++      console.error('Error marking notification as read:', error);
++      // En cas d'erreur complète, essayez quand même de marquer localement
++      this.markNotificationAsReadLocally(notificationId);
++      return {
++        success: false,
++        error: error.message,
++        unread_count: this.cache.unreadCount
++      };
++    }
++  }
++
++  /**
++   * Mark all notifications as read
++   */
++  async markAllAsRead() {
++    try {
++      try {
++        // Essayez d'utiliser l'API réelle
++        const response = await apiService.post('/api/notifications/mark-read');
++        
++        // Update cache
++        this.cache.unreadCount = 0;
++        
++        // Update notifications in cache if available
++        if (this.cache.notifications && this.cache.notifications.notifications) {
++          this.cache.notifications.notifications.forEach(notification => {
++            notification.isRead = true;
++            notification.readAt = new Date().toISOString();
++          });
++        }
++        
++        // Notify subscribers
++        this.notifySubscribers();
++        
++        return response.data;
++      } catch (error) {
++        // Si l'API échoue, utilisez le marquage local
++        console.log("Using local notification marking due to API error");
++        
++        // Marquer toutes les notifications comme lues localement
++        this.markAllNotificationsAsReadLocally();
++        
++        // Simule une réponse API
++        return {
++          success: true,
++          updated: this.cache.notifications?.notifications?.length || 0,
++          unread_count: 0
++        };
++      }
++    } catch (error) {
++      console.error('Error marking all notifications as read:', error);
++      // En cas d'erreur complète, essayez quand même de marquer localement
++      this.markAllNotificationsAsReadLocally();
++      return {
++        success: false,
++        error: error.message,
++        unread_count: this.cache.unreadCount
++      };
++    }
++  }
++}
++
++export const notificationService = new NotificationService(); 
+\ No newline at end of file
+diff --git a/frontend/src/pages/Global/Notifications/NotificationsPage.jsx b/frontend/src/pages/Global/Notifications/NotificationsPage.jsx
+new file mode 100644
+index 0000000..a9436c0
+--- /dev/null
++++ b/frontend/src/pages/Global/Notifications/NotificationsPage.jsx
+@@ -0,0 +1,357 @@
++import React, { useState, useEffect } from 'react';
++import { useNavigate } from 'react-router-dom';
++import { Bell, FileCheck, FileX, File, Info, Calendar, Check, Undo, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
++import { format, formatDistanceToNow } from 'date-fns';
++import { fr } from 'date-fns/locale';
++import { notificationService } from '@/lib/services/notificationService';
++import { Button } from '@/components/ui/button';
++import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
++import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
++import { Skeleton } from '@/components/ui/skeleton';
++import {
++  DropdownMenu,
++  DropdownMenuContent,
++  DropdownMenuItem,
++  DropdownMenuTrigger,
++  DropdownMenuSeparator,
++} from '@/components/ui/dropdown-menu';
++import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
++import { cn } from '@/lib/utils';
++import NotificationBadge from '@/components/NotificationBadge';
++
++// Composant pour afficher une icône en fonction du type de notification
++const NotificationIcon = ({ type, className }) => {
++  switch (type) {
++    case 'document_approved':
++      return <FileCheck className={cn("h-5 w-5 text-green-500", className)} />;
++    case 'document_rejected':
++      return <FileX className={cn("h-5 w-5 text-red-500", className)} />;
++    case 'document_uploaded':
++      return <File className={cn("h-5 w-5 text-blue-500", className)} />;
++    case 'system':
++      return <Info className={cn("h-5 w-5 text-gray-500", className)} />;
++    case 'announcement':
++      return <Calendar className={cn("h-5 w-5 text-purple-500", className)} />;
++    default:
++      return <Bell className={cn("h-5 w-5 text-gray-500", className)} />;
++  }
++};
++
++// Composant pour une notification individuelle
++const NotificationItem = ({ notification, onRead }) => {
++  const navigate = useNavigate();
++  const [isHovering, setIsHovering] = useState(false);
++  
++  const formattedDate = format(new Date(notification.createdAt), 'dd MMM yyyy, HH:mm', { locale: fr });
++  const relativeTime = formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true, locale: fr });
++  
++  const handleClick = async () => {
++    try {
++      if (!notification.isRead) {
++        await notificationService.markAsRead(notification.id);
++      }
++      if (notification.targetUrl) {
++        navigate(notification.targetUrl);
++      }
++      if (onRead) {
++        onRead(notification);
++      }
++    } catch (error) {
++      console.error('Error handling notification click:', error);
++    }
++  };
++  
++  return (
++    <Card 
++      className={cn(
++        "cursor-pointer mb-3 transition-shadow hover:shadow-md",
++        !notification.isRead ? "border-l-4 border-l-blue-500 dark:border-l-blue-400" : ""
++      )}
++      onMouseEnter={() => setIsHovering(true)}
++      onMouseLeave={() => setIsHovering(false)}
++      onClick={handleClick}
++    >
++      <CardContent className="p-4">
++        <div className="flex items-start">
++          <div className="mr-3 mt-1">
++            <NotificationIcon type={notification.type} />
++          </div>
++          <div className="flex-grow">
++            <div className="flex justify-between items-start">
++              <h3 className={cn(
++                "text-base font-medium",
++                !notification.isRead ? "text-gray-900 dark:text-white" : "text-gray-700 dark:text-gray-300"
++              )}>
++                {notification.title}
++              </h3>
++              <div className="flex flex-col items-end">
++                <span className="text-xs text-gray-500 dark:text-gray-400">
++                  {relativeTime}
++                </span>
++                <span className="text-[10px] text-gray-400 dark:text-gray-500">
++                  {formattedDate}
++                </span>
++              </div>
++            </div>
++            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
++              {notification.message}
++            </p>
++            
++            {isHovering && notification.targetUrl && (
++              <div className="mt-2 text-xs text-blue-600 dark:text-blue-400">
++                Cliquer pour voir les détails
++              </div>
++            )}
++          </div>
++        </div>
++      </CardContent>
++    </Card>
++  );
++};
++
++// Composant de squelette pour le chargement
++const NotificationSkeleton = () => (
++  <Card className="mb-3">
++    <CardContent className="p-4">
++      <div className="flex items-start">
++        <Skeleton className="h-5 w-5 rounded-full mr-3 mt-1" />
++        <div className="flex-grow">
++          <div className="flex justify-between items-start">
++            <Skeleton className="h-5 w-40" />
++            <div className="flex flex-col items-end">
++              <Skeleton className="h-3 w-24 mb-1" />
++              <Skeleton className="h-2 w-16" />
++            </div>
++          </div>
++          <Skeleton className="h-4 w-full mt-2" />
++          <Skeleton className="h-4 w-3/4 mt-1" />
++        </div>
++      </div>
++    </CardContent>
++  </Card>
++);
++
++// Composant pour aucune notification
++const EmptyNotifications = () => (
++  <div className="text-center p-8">
++    <Bell className="h-10 w-10 text-gray-400 mx-auto mb-4" />
++    <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300">Pas de notification</h3>
++    <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 max-w-md mx-auto">
++      Vous n'avez aucune notification pour le moment. Les notifications apparaîtront ici lorsque vous recevrez des mises à jour importantes.
++    </p>
++  </div>
++);
++
++// Page principale des notifications
++const NotificationsPage = () => {
++  const [notifications, setNotifications] = useState([]);
++  const [loading, setLoading] = useState(true);
++  const [error, setError] = useState(null);
++  const [pagination, setPagination] = useState({
++    page: 1,
++    limit: 10,
++    total: 0,
++    pages: 1
++  });
++  const [activeTab, setActiveTab] = useState('all');
++  
++  // Fonction pour charger les notifications
++  const loadNotifications = async (page = 1, includeRead = true) => {
++    setLoading(true);
++    try {
++      const result = await notificationService.getNotifications(
++        page, 
++        pagination.limit, 
++        includeRead,
++        true
++      );
++      setNotifications(result.notifications || []);
++      setPagination({
++        page: page,
++        limit: pagination.limit,
++        total: result.pagination?.total || 0,
++        pages: result.pagination?.pages || 1
++      });
++      setError(null);
++    } catch (error) {
++      console.error('Error loading notifications:', error);
++      setError('Erreur lors du chargement des notifications. Veuillez réessayer.');
++    } finally {
++      setLoading(false);
++    }
++  };
++  
++  // Charger les notifications au chargement de la page
++  useEffect(() => {
++    const includeRead = activeTab === 'all';
++    loadNotifications(1, includeRead);
++  }, [activeTab]);
++  
++  // Gérer le changement de page
++  const handlePageChange = (newPage) => {
++    if (newPage >= 1 && newPage <= pagination.pages) {
++      const includeRead = activeTab === 'all';
++      loadNotifications(newPage, includeRead);
++    }
++  };
++  
++  // Gérer le marquage de toutes les notifications comme lues
++  const handleMarkAllAsRead = async () => {
++    try {
++      await notificationService.markAllAsRead();
++      
++      // Mise à jour de l'UI sans recharger
++      setNotifications(notifications.map(notification => ({
++        ...notification,
++        isRead: true,
++        readAt: new Date().toISOString()
++      })));
++      
++      // Si on est sur l'onglet "non lues", recharger pour les retirer
++      if (activeTab === 'unread') {
++        loadNotifications(1, false);
++      }
++    } catch (error) {
++      console.error('Error marking all as read:', error);
++      setError('Erreur lors du marquage des notifications comme lues.');
++    }
++  };
++  
++  // Gestion des onglets
++  const handleTabChange = (value) => {
++    setActiveTab(value);
++  };
++  
++  // Rendu des notifications ou des états alternatifs
++  const renderNotifications = () => {
++    if (loading) {
++      return (
++        <div className="space-y-3">
++          <NotificationSkeleton />
++          <NotificationSkeleton />
++          <NotificationSkeleton />
++          <NotificationSkeleton />
++          <NotificationSkeleton />
++        </div>
++      );
++    }
++    
++    if (error) {
++      return (
++        <div className="text-center p-8">
++          <p className="text-red-500 dark:text-red-400">{error}</p>
++          <Button 
++            onClick={() => loadNotifications(pagination.page, activeTab === 'all')}
++            variant="outline"
++            className="mt-4"
++          >
++            <Undo className="h-4 w-4 mr-2" />
++            Réessayer
++          </Button>
++        </div>
++      );
++    }
++    
++    if (notifications.length === 0) {
++      return <EmptyNotifications />;
++    }
++    
++    return (
++      <div className="space-y-3">
++        {notifications.map(notification => (
++          <NotificationItem 
++            key={notification.id} 
++            notification={notification} 
++            onRead={() => {
++              // Rafraîchir la liste si on est dans l'onglet non lues
++              if (activeTab === 'unread') {
++                loadNotifications(pagination.page, false);
++              }
++            }} 
++          />
++        ))}
++      </div>
++    );
++  };
++  
++  return (
++    <div className="container max-w-4xl px-4 py-8">
++      <div className="flex items-center justify-between mb-6">
++        <div className="flex items-center">
++          <Bell className="h-6 w-6 text-blue-600 dark:text-blue-400 mr-2" />
++          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Notifications</h1>
++          {activeTab === 'unread' && pagination.total > 0 && (
++            <div className="ml-2 flex items-center">
++              <div className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300">
++                {pagination.total}
++              </div>
++            </div>
++          )}
++        </div>
++        
++        {pagination.total > 0 && (
++          <Button 
++            variant="outline" 
++            size="sm"
++            onClick={handleMarkAllAsRead}
++            className="flex items-center"
++          >
++            <Check className="h-4 w-4 mr-2" />
++            <span>Tout marquer comme lu</span>
++          </Button>
++        )}
++      </div>
++      
++      <Tabs defaultValue="all" value={activeTab} onValueChange={handleTabChange}>
++        <TabsList className="mb-4">
++          <TabsTrigger value="all">Toutes</TabsTrigger>
++          <TabsTrigger value="unread" className="relative">
++            Non lues
++            {activeTab !== 'unread' && pagination.total > 0 && (
++              <span className="ml-1.5 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-blue-600 rounded-full">
++                {pagination.total > 99 ? '99+' : pagination.total}
++              </span>
++            )}
++          </TabsTrigger>
++        </TabsList>
++        
++        <TabsContent value="all" className="pt-2">
++          {renderNotifications()}
++        </TabsContent>
++        
++        <TabsContent value="unread" className="pt-2">
++          {renderNotifications()}
++        </TabsContent>
++      </Tabs>
++      
++      {/* Pagination */}
++      {pagination.pages > 1 && (
++        <div className="flex items-center justify-center space-x-2 mt-8">
++          <Button
++            variant="outline"
++            size="sm"
++            onClick={() => handlePageChange(pagination.page - 1)}
++            disabled={pagination.page <= 1}
++          >
++            <ChevronLeft className="h-4 w-4" />
++          </Button>
++          
++          <span className="text-sm text-gray-700 dark:text-gray-300">
++            Page {pagination.page} sur {pagination.pages}
++          </span>
++          
++          <Button
++            variant="outline"
++            size="sm"
++            onClick={() => handlePageChange(pagination.page + 1)}
++            disabled={pagination.page >= pagination.pages}
++          >
++            <ChevronRight className="h-4 w-4" />
++          </Button>
++        </div>
++      )}
++    </div>
++  );
++};
++
++export default NotificationsPage; 
+\ No newline at end of file
+diff --git a/frontend/src/pages/Global/Profile/components/settings/CVUpload.jsx b/frontend/src/pages/Global/Profile/components/settings/CVUpload.jsx
+index 1596b3f..f19c8b9 100644
+--- a/frontend/src/pages/Global/Profile/components/settings/CVUpload.jsx
++++ b/frontend/src/pages/Global/Profile/components/settings/CVUpload.jsx
+@@ -15,6 +15,7 @@ import {
+ 
+ // Importer le service documentService directement dans le composant
+ import documentService from '../../services/documentService';
++import { notificationService } from '@/lib/services/notificationService';
+ 
+ const CVUpload = memo(({ userData, onUpdate }) => {
+   const [cvFile, setCvFile] = useState(null);
+@@ -43,12 +44,46 @@ const CVUpload = memo(({ userData, onUpdate }) => {
+     isPending: isUploading
+   } = useApiMutation('/api/documents/upload/cv', 'post', 'userCVDocument', {
+     onSuccess: () => {
+-      toast.success('CV uploaded successfully');
++      toast.success('CV téléchargé avec succès');
+       setCvFile(null);
+       refetchCV();
+       
+       if (onUpdate) onUpdate();
+       
++      // Créer une notification locale pour l'utilisateur
++      const mockNotification = {
++        id: Date.now(),
++        title: 'CV téléchargé avec succès',
++        message: 'Votre CV a été téléchargé avec succès et est prêt à être consulté par les recruteurs.',
++        type: 'document_uploaded',
++        isRead: false,
++        createdAt: new Date().toISOString(),
++        targetUrl: '/documents'
++      };
++      
++      // Ajouter la notification directement dans le cache du service 
++      if (notificationService.cache.notifications && notificationService.cache.notifications.notifications) {
++        // Insérer au début du tableau
++        notificationService.cache.notifications.notifications.unshift(mockNotification);
++        
++        // Mettre à jour le compteur de notifications non lues
++        notificationService.cache.unreadCount = (notificationService.cache.unreadCount || 0) + 1;
++        
++        // Mettre à jour le compteur dans les données de pagination
++        if (notificationService.cache.notifications.pagination) {
++          notificationService.cache.notifications.pagination.total += 1;
++        }
++        
++        // Notifier les abonnés du changement
++        notificationService.notifySubscribers();
++        
++        // Forcer le rafraîchissement du compteur 
++        setTimeout(() => {
++          notificationService.getUnreadCount(true)
++            .catch(console.error);
++        }, 300);
++      }
++      
+       // Reset file input
+       const fileInput = document.getElementById('cv-upload');
+       if (fileInput) fileInput.value = '';
+-- 
+2.45.2.windows.1
+
+
+From 9fffa9d8002f9ebfa2eb019c2b552d03792f482a Mon Sep 17 00:00:00 2001
+From: Diomande Adama <168726585+Diomande225@users.noreply.github.com>
+Date: Wed, 26 Mar 2025 13:27:55 +0100
+Subject: [PATCH 2/3] Implement mock backend support and enhance notification
+ handling
+
+- Added a `useMockBackend` flag to the NotificationService to simulate backend responses when the API is unavailable.
+- Updated the `getNotifications` method to utilize cached data or mock data based on the new flag, improving user experience during API failures.
+- Introduced a `createTestNotification` method to allow the creation of local test notifications.
+- Enhanced the NotificationsPage component to handle simulated mode, including UI updates and error handling.
+- Improved notification item rendering by using `readAt` for consistency in marking notifications as read.
+- Added a MockModeBanner to inform users when the application is in simulated mode.
+---
+ frontend/src/components/MockModeBanner.jsx    |  30 +++
+ .../src/lib/services/notificationService.js   | 201 ++++++++++++--
+ .../Notifications/NotificationsPage.jsx       | 247 ++++++++++++++----
+ 3 files changed, 402 insertions(+), 76 deletions(-)
+ create mode 100644 frontend/src/components/MockModeBanner.jsx
+
+diff --git a/frontend/src/components/MockModeBanner.jsx b/frontend/src/components/MockModeBanner.jsx
+new file mode 100644
+index 0000000..fd3ba95
+--- /dev/null
++++ b/frontend/src/components/MockModeBanner.jsx
+@@ -0,0 +1,30 @@
++import React from 'react';
++import { AlertCircle } from 'lucide-react';
++
++/**
++ * Bannière pour indiquer que l'application fonctionne en mode simulé
++ * lorsque le backend n'est pas disponible
++ */
++const MockModeBanner = ({ className = '' }) => {
++  return (
++    <div className={`bg-blue-50 border-l-4 border-blue-400 p-4 mb-4 rounded ${className}`}>
++      <div className="flex items-start">
++        <div className="flex-shrink-0">
++          <AlertCircle className="h-5 w-5 text-blue-500" />
++        </div>
++        <div className="ml-3">
++          <h3 className="text-sm font-medium text-blue-800">Mode simulé actif</h3>
++          <div className="mt-1 text-sm text-blue-700">
++            <p>
++              L'application fonctionne actuellement avec des données générées localement car le
++              backend n'est pas accessible. Les données affichées sont simulées et ne seront pas
++              sauvegardées sur le serveur.
++            </p>
++          </div>
++        </div>
++      </div>
++    </div>
++  );
++};
++
++export default MockModeBanner; 
+\ No newline at end of file
+diff --git a/frontend/src/lib/services/notificationService.js b/frontend/src/lib/services/notificationService.js
+index 3d58ecc..ab331ef 100644
+--- a/frontend/src/lib/services/notificationService.js
++++ b/frontend/src/lib/services/notificationService.js
+@@ -26,6 +26,7 @@ class NotificationService {
+     this.subscribers = [];
+     this.pollingInterval = null;
+     this.pollingDelay = 60000; // 1 minute
++    this.useMockBackend = false; // Added for the new getNotifications method
+   }
+ 
+   /**
+@@ -33,24 +34,76 @@ class NotificationService {
+    */
+   async getNotifications(page = 1, limit = 10, includeRead = true, refresh = false) {
+     try {
++      // Si le backend n'est pas disponible, utiliser les données simulées
++      if (this.useMockBackend) {
++        console.log('Using mock notifications data (backend unavailable)');
++        
++        // Simuler un léger délai pour l'expérience utilisateur
++        await new Promise(resolve => setTimeout(resolve, 300));
++        
++        if (this.cache.notifications && this.cache.notifications.notifications) {
++          // Filtrer les notifications selon les paramètres
++          let notifications = [...this.cache.notifications.notifications];
++          
++          // Filtrer selon includeRead
++          if (!includeRead) {
++            notifications = notifications.filter(n => !n.isRead);
++          }
++          
++          // Trier par date décroissante
++          notifications.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
++          
++          // Calculer la pagination
++          const total = notifications.length;
++          const pages = Math.max(1, Math.ceil(total / limit));
++          const startIndex = (page - 1) * limit;
++          const paginatedNotifications = notifications.slice(startIndex, startIndex + limit);
++          
++          // Créer un objet de réponse simulée
++          const result = {
++            notifications: paginatedNotifications,
++            pagination: {
++              total: total,
++              page: page,
++              limit: limit,
++              pages: pages
++            },
++            unread_count: notifications.filter(n => !n.isRead).length
++          };
++          
++          // Mettre à jour le cache
++          this.cache.notifications = result;
++          this.cache.unreadCount = result.unread_count;
++          this.cache.lastFetch = new Date();
++          
++          // Notifier les abonnés
++          this.notifySubscribers();
++          
++          return result;
++        }
++      }
++      
+       // If we have a fetch in progress, wait for it
+       if (this.cache.fetchPromise) {
+-        await this.cache.fetchPromise;
++        try {
++          await this.cache.fetchPromise;
++        } catch (error) {
++          // Ignorer l'erreur ici car on va vérifier le cache après
++          console.log("Waiting for fetch promise failed, checking cache next");
++        }
+       }
+ 
+       // Return cache if available and not forcing refresh
+-      if (!refresh && this.cache.notifications && this.cache.lastFetch) {
+-        const now = new Date();
+-        const cacheAge = now - this.cache.lastFetch;
+-        
+-        // Use cache if it's less than 30 seconds old
+-        if (cacheAge < 30000) {
+-          return this.cache.notifications;
+-        }
++      // Utiliser toujours le cache si disponible, même s'il est ancien
++      // Cela évite d'afficher des erreurs inutiles à l'utilisateur
++      if (!refresh && this.cache.notifications && this.cache.notifications.notifications) {
++        console.log("Using cached notifications data (immediate response)");
++        return this.cache.notifications;
+       }
+ 
+       try {
+         // Essayez d'abord d'utiliser l'API réelle
++        console.log("Fetching fresh notifications data from API");
+         this.cache.fetchPromise = apiService.get(`/api/notifications?page=${page}&limit=${limit}&include_read=${includeRead}`);
+         const response = await this.cache.fetchPromise;
+         
+@@ -67,16 +120,21 @@ class NotificationService {
+         
+         return response.data;
+       } catch (error) {
+-        // Si l'API échoue, utilisez les données mockées
++        // Si l'API échoue, utilisez les données du cache
+         console.log("Using cached notifications data due to API error");
+         
+-        // Assurez-vous que les notifications du cache sont utilisées si disponibles
+-        if (this.cache.notifications && this.cache.notifications.notifications && 
+-            this.cache.notifications.notifications.length > 0) {
++        // Vérifier si nous avons des données en cache que nous pouvons utiliser
++        if (this.cache.notifications && this.cache.notifications.notifications) {
++          // Si nous avons des données en cache, les utiliser au lieu d'échouer
++          console.log("Returning cached notification data due to API error");
++          
++          // Clear the fetch promise
++          this.cache.fetchPromise = null;
++          
+           return this.cache.notifications;
+         }
+         
+-        // Créer un cache vide sans notification de test
++        // Créer un cache vide sans notification
+         const emptyData = {
+           notifications: [],
+           pagination: {
+@@ -104,7 +162,24 @@ class NotificationService {
+     } catch (error) {
+       this.cache.fetchPromise = null;
+       console.error('Error fetching notifications:', error);
+-      throw error;
++      
++      // En cas d'erreur, retournez le cache existant au lieu d'échouer
++      if (this.cache.notifications && this.cache.notifications.notifications) {
++        console.log("Returning cached notification data in catch block");
++        return this.cache.notifications;
++      }
++      
++      // Si pas de cache, retournez un objet vide
++      return {
++        notifications: [],
++        pagination: {
++          total: 0,
++          page: 1,
++          limit: 10,
++          pages: 1
++        },
++        unread_count: 0
++      };
+     }
+   }
+ 
+@@ -135,11 +210,12 @@ class NotificationService {
+         
+         return this.cache.unreadCount;
+       } catch (error) {
+-        // Si l'accès à l'API échoue, utilisez le comptage des notifications non lues dans le cache
++        // Si l'accès à l'API échoue, calculez le nombre de notifications non lues dans le cache
++        // en utilisant la propriété readAt de manière cohérente
+         let unreadCount = 0;
+         
+         if (this.cache.notifications && this.cache.notifications.notifications) {
+-          unreadCount = this.cache.notifications.notifications.filter(n => !n.isRead).length;
++          unreadCount = this.cache.notifications.notifications.filter(n => !n.readAt).length;
+         }
+         
+         this.cache.unreadCount = unreadCount;
+@@ -165,9 +241,14 @@ class NotificationService {
+     }
+     
+     const notification = this.cache.notifications.notifications.find(n => n.id === notificationId);
+-    if (notification && !notification.isRead) {
+-      notification.isRead = true;
++    if (notification && !notification.readAt) {
++      // Marquer comme lu de manière cohérente - utiliser readAt
+       notification.readAt = new Date().toISOString();
++      
++      // Pour maintenir la compatibilité avec le code existant
++      notification.isRead = true;
++      
++      // Mettre à jour le compteur
+       this.cache.unreadCount = Math.max(0, this.cache.unreadCount - 1);
+       this.notifySubscribers();
+       return true;
+@@ -186,9 +267,13 @@ class NotificationService {
+     
+     let changed = false;
+     this.cache.notifications.notifications.forEach(notification => {
+-      if (!notification.isRead) {
+-        notification.isRead = true;
++      if (!notification.readAt) {
++        // Marquer comme lu de manière cohérente - utiliser readAt
+         notification.readAt = new Date().toISOString();
++        
++        // Pour maintenir la compatibilité avec le code existant
++        notification.isRead = true;
++        
+         changed = true;
+       }
+     });
+@@ -312,8 +397,11 @@ class NotificationService {
+         if (this.cache.notifications && this.cache.notifications.notifications) {
+           const notification = this.cache.notifications.notifications.find(n => n.id === notificationId);
+           if (notification) {
+-            notification.isRead = true;
++            // Marquer comme lu de manière cohérente - utiliser readAt
+             notification.readAt = new Date().toISOString();
++            
++            // Pour maintenir la compatibilité avec le code existant
++            notification.isRead = true;
+           }
+         }
+         
+@@ -362,8 +450,11 @@ class NotificationService {
+         // Update notifications in cache if available
+         if (this.cache.notifications && this.cache.notifications.notifications) {
+           this.cache.notifications.notifications.forEach(notification => {
+-            notification.isRead = true;
++            // Marquer comme lu de manière cohérente - utiliser readAt
+             notification.readAt = new Date().toISOString();
++            
++            // Pour maintenir la compatibilité avec le code existant
++            notification.isRead = true;
+           });
+         }
+         
+@@ -396,6 +487,70 @@ class NotificationService {
+       };
+     }
+   }
++
++  /**
++   * Create a test notification when backend is not available
++   * @param {string} type - Type of notification (document, system, etc.)
++   * @param {string} targetUrl - Target URL to navigate to when notification is clicked
++   */
++  async createTestNotification(type = 'document', targetUrl = '/dashboard') {
++    try {
++      // D'abord essayer d'utiliser l'API réelle si disponible
++      try {
++        const response = await apiService.post('/api/notifications/test', { type, targetUrl });
++        
++        // Si la réponse est réussie, rafraîchir les données
++        await this.getNotifications(1, 10, true, true);
++        
++        return response.data;
++      } catch (error) {
++        console.log("API not available, creating local test notification");
++        
++        // Basculer en mode simulation si l'API n'est pas disponible
++        this.useMockBackend = true;
++
++        // Créer une notification locale simulée
++        const now = new Date();
++        const newNotification = {
++          id: `local-${now.getTime()}`,
++          title: `Test Notification (${type})`,
++          message: `Ceci est une notification de test de type "${type}" créée localement`,
++          type: type,
++          targetUrl: targetUrl,
++          createdAt: now.toISOString(),
++          readAt: null,
++          isRead: false
++        };
++        
++        // Ajouter la notification au cache
++        if (!this.cache.notifications.notifications) {
++          this.cache.notifications.notifications = [];
++        }
++        
++        this.cache.notifications.notifications.unshift(newNotification);
++        this.cache.unreadCount += 1;
++        
++        // Si nous avons des informations de pagination, mettre à jour
++        if (this.cache.notifications.pagination) {
++          this.cache.notifications.pagination.total += 1;
++        }
++        
++        // Notifier les abonnés
++        this.notifySubscribers();
++        
++        return {
++          success: true,
++          notification: newNotification
++        };
++      }
++    } catch (error) {
++      console.error('Error creating test notification:', error);
++      return {
++        success: false,
++        error: error.message
++      };
++    }
++  }
+ }
+ 
+ export const notificationService = new NotificationService(); 
+\ No newline at end of file
+diff --git a/frontend/src/pages/Global/Notifications/NotificationsPage.jsx b/frontend/src/pages/Global/Notifications/NotificationsPage.jsx
+index a9436c0..e46a62b 100644
+--- a/frontend/src/pages/Global/Notifications/NotificationsPage.jsx
++++ b/frontend/src/pages/Global/Notifications/NotificationsPage.jsx
+@@ -1,4 +1,4 @@
+-import React, { useState, useEffect } from 'react';
++import React, { useState, useEffect, useRef } from 'react';
+ import { useNavigate } from 'react-router-dom';
+ import { Bell, FileCheck, FileX, File, Info, Calendar, Check, Undo, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
+ import { format, formatDistanceToNow } from 'date-fns';
+@@ -18,6 +18,8 @@ import {
+ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+ import { cn } from '@/lib/utils';
+ import NotificationBadge from '@/components/NotificationBadge';
++import { toast } from 'sonner';
++import MockModeBanner from '@/components/MockModeBanner';
+ 
+ // Composant pour afficher une icône en fonction du type de notification
+ const NotificationIcon = ({ type, className }) => {
+@@ -38,38 +40,21 @@ const NotificationIcon = ({ type, className }) => {
+ };
+ 
+ // Composant pour une notification individuelle
+-const NotificationItem = ({ notification, onRead }) => {
+-  const navigate = useNavigate();
++const NotificationItem = ({ notification, onRead, onClick }) => {
+   const [isHovering, setIsHovering] = useState(false);
+   
+   const formattedDate = format(new Date(notification.createdAt), 'dd MMM yyyy, HH:mm', { locale: fr });
+   const relativeTime = formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true, locale: fr });
+   
+-  const handleClick = async () => {
+-    try {
+-      if (!notification.isRead) {
+-        await notificationService.markAsRead(notification.id);
+-      }
+-      if (notification.targetUrl) {
+-        navigate(notification.targetUrl);
+-      }
+-      if (onRead) {
+-        onRead(notification);
+-      }
+-    } catch (error) {
+-      console.error('Error handling notification click:', error);
+-    }
+-  };
+-  
+   return (
+     <Card 
+       className={cn(
+         "cursor-pointer mb-3 transition-shadow hover:shadow-md",
+-        !notification.isRead ? "border-l-4 border-l-blue-500 dark:border-l-blue-400" : ""
++        !notification.readAt ? "border-l-4 border-l-blue-500 dark:border-l-blue-400" : ""
+       )}
+       onMouseEnter={() => setIsHovering(true)}
+       onMouseLeave={() => setIsHovering(false)}
+-      onClick={handleClick}
++      onClick={() => onClick(notification)}
+     >
+       <CardContent className="p-4">
+         <div className="flex items-start">
+@@ -80,7 +65,7 @@ const NotificationItem = ({ notification, onRead }) => {
+             <div className="flex justify-between items-start">
+               <h3 className={cn(
+                 "text-base font-medium",
+-                !notification.isRead ? "text-gray-900 dark:text-white" : "text-gray-700 dark:text-gray-300"
++                !notification.readAt ? "text-gray-900 dark:text-white" : "text-gray-700 dark:text-gray-300"
+               )}>
+                 {notification.title}
+               </h3>
+@@ -154,28 +139,76 @@ const NotificationsPage = () => {
+     pages: 1
+   });
+   const [activeTab, setActiveTab] = useState('all');
++  const hasFetchedRef = useRef(false);
++  const navigate = useNavigate();
++  
++  // État pour suivre si nous sommes en mode simulé
++  const [isSimulatedMode, setIsSimulatedMode] = useState(false);
+   
+   // Fonction pour charger les notifications
+   const loadNotifications = async (page = 1, includeRead = true) => {
++    // Si nous sommes déjà en train de charger, ne pas relancer
++    if (loading && hasFetchedRef.current) return;
++    
+     setLoading(true);
+     try {
++      // Essayer de récupérer d'abord depuis le cache pour avoir une réponse immédiate
++      const cachedData = notificationService.cache.notifications;
++      if (cachedData && cachedData.notifications && cachedData.notifications.length > 0) {
++        console.log("Using cached data for immediate display");
++        
++        // Afficher d'abord les données du cache
++        setNotifications(cachedData.notifications || []);
++        setPagination({
++          page: cachedData.pagination?.page || page,
++          limit: cachedData.pagination?.limit || 10,
++          total: cachedData.pagination?.total || 0,
++          pages: cachedData.pagination?.pages || 1
++        });
++        setError(null);
++        
++        // Mettre à jour le mode simulé
++        setIsSimulatedMode(notificationService.useMockBackend);
++        
++        // Réduire le temps de chargement affiché
++        setTimeout(() => setLoading(false), 100);
++      }
++      
++      // Ensuite, faire l'appel API réel
++      console.log("Fetching fresh notifications data");
+       const result = await notificationService.getNotifications(
+         page, 
+         pagination.limit, 
+         includeRead,
+-        true
++        !hasFetchedRef.current // Forcer le rafraîchissement seulement au premier chargement
+       );
+-      setNotifications(result.notifications || []);
+-      setPagination({
+-        page: page,
+-        limit: pagination.limit,
+-        total: result.pagination?.total || 0,
+-        pages: result.pagination?.pages || 1
+-      });
++      
++      // Ne mettre à jour que si les données sont différentes
++      if (JSON.stringify(result.notifications) !== JSON.stringify(notifications)) {
++        setNotifications(result.notifications || []);
++        setPagination({
++          page: page,
++          limit: pagination.limit,
++          total: result.pagination?.total || 0,
++          pages: result.pagination?.pages || 1
++        });
++      }
++      
++      // Mettre à jour le mode simulé
++      setIsSimulatedMode(notificationService.useMockBackend);
++      
+       setError(null);
++      hasFetchedRef.current = true;
+     } catch (error) {
+       console.error('Error loading notifications:', error);
+-      setError('Erreur lors du chargement des notifications. Veuillez réessayer.');
++      
++      // Ne pas montrer d'erreur si nous avons déjà des données à afficher
++      if (notifications.length === 0) {
++        setError('Erreur lors du chargement des notifications. Veuillez réessayer.');
++      }
++      
++      // Mettre à jour le mode simulé
++      setIsSimulatedMode(notificationService.useMockBackend);
+     } finally {
+       setLoading(false);
+     }
+@@ -203,7 +236,6 @@ const NotificationsPage = () => {
+       // Mise à jour de l'UI sans recharger
+       setNotifications(notifications.map(notification => ({
+         ...notification,
+-        isRead: true,
+         readAt: new Date().toISOString()
+       })));
+       
+@@ -222,6 +254,61 @@ const NotificationsPage = () => {
+     setActiveTab(value);
+   };
+   
++  // Fonction pour créer une notification de test
++  const createTestNotification = async (type = 'document', targetUrl = '/dashboard') => {
++    try {
++      await notificationService.createTestNotification(type, targetUrl);
++      toast.success(`Notification de test (${type}) créée avec succès`);
++      
++      // Forcer un rafraîchissement complet du cache
++      notificationService.resetCache();
++      hasFetchedRef.current = false;
++      
++      // Recharger les notifications avec une légère pause pour laisser le temps au service de se réinitialiser
++      setTimeout(() => {
++        loadNotifications(1, activeTab === 'all');
++      }, 100);
++    } catch (error) {
++      console.error('Error creating test notification:', error);
++      toast.error(`Erreur lors de la création de la notification: ${error.message || 'Erreur inconnue'}`);
++    }
++  };
++  
++  // Fonction pour marquer une notification comme lue et naviguer vers sa cible
++  const handleClick = async (notification) => {
++    try {
++      if (!notification.readAt) {
++        // Mettre à jour l'interface immédiatement pour un retour visuel instantané
++        const updatedNotifications = notifications.map(n => 
++          n.id === notification.id ? { ...n, readAt: new Date().toISOString() } : n
++        );
++        setNotifications(updatedNotifications);
++        
++        // Effectuer la requête API en arrière-plan
++        await notificationService.markAsRead(notification.id);
++        console.log('Notification marked as read:', notification.id);
++        
++        // Forcer la mise à jour du compteur de notifications non lues
++        notificationService.getUnreadCount(true);
++      }
++      
++      // Vérifier si l'URL cible est valide avant de rediriger
++      if (notification.targetUrl && notification.targetUrl.startsWith('/')) {
++        navigate(notification.targetUrl);
++      } else {
++        // Si l'URL n'est pas valide, rester sur la page des notifications
++        console.warn('Invalid targetUrl in notification:', notification.targetUrl);
++      }
++    } catch (error) {
++      console.error('Error marking notification as read:', error);
++      // Ne pas afficher de message d'erreur à l'utilisateur pour ne pas perturber l'expérience
++      // La navigation doit quand même se faire même si le marquage échoue
++      if (notification.targetUrl && notification.targetUrl.startsWith('/')) {
++        navigate(notification.targetUrl);
++      }
++    }
++  };
++  
+   // Rendu des notifications ou des états alternatifs
+   const renderNotifications = () => {
+     if (loading) {
+@@ -239,15 +326,33 @@ const NotificationsPage = () => {
+     if (error) {
+       return (
+         <div className="text-center p-8">
+-          <p className="text-red-500 dark:text-red-400">{error}</p>
+-          <Button 
+-            onClick={() => loadNotifications(pagination.page, activeTab === 'all')}
+-            variant="outline"
+-            className="mt-4"
+-          >
+-            <Undo className="h-4 w-4 mr-2" />
+-            Réessayer
+-          </Button>
++          <p className={isSimulatedMode ? "text-blue-500" : "text-red-500"}>
++            {isSimulatedMode 
++              ? "Le serveur n'est pas disponible. Les données sont simulées localement." 
++              : error}
++          </p>
++          
++          {!isSimulatedMode && (
++            <Button 
++              onClick={() => loadNotifications(pagination.page, activeTab === 'all')}
++              variant="outline"
++              className="mt-4"
++            >
++              <Undo className="h-4 w-4 mr-2" />
++              Réessayer
++            </Button>
++          )}
++          
++          {isSimulatedMode && (
++            <Button 
++              onClick={() => createTestNotification()}
++              variant="outline"
++              className="mt-4"
++            >
++              <Bell className="h-4 w-4 mr-2" />
++              Créer une notification de test
++            </Button>
++          )}
+         </div>
+       );
+     }
+@@ -265,9 +370,13 @@ const NotificationsPage = () => {
+             onRead={() => {
+               // Rafraîchir la liste si on est dans l'onglet non lues
+               if (activeTab === 'unread') {
+-                loadNotifications(pagination.page, false);
++                // Ajouter un petit délai pour que l'effet visuel soit visible
++                setTimeout(() => {
++                  loadNotifications(pagination.page, false);
++                }, 300);
+               }
+             }} 
++            onClick={handleClick}
+           />
+         ))}
+       </div>
+@@ -289,19 +398,51 @@ const NotificationsPage = () => {
+           )}
+         </div>
+         
+-        {pagination.total > 0 && (
+-          <Button 
+-            variant="outline" 
+-            size="sm"
+-            onClick={handleMarkAllAsRead}
+-            className="flex items-center"
+-          >
+-            <Check className="h-4 w-4 mr-2" />
+-            <span>Tout marquer comme lu</span>
+-          </Button>
+-        )}
++        <div className="flex items-center gap-2">
++          {pagination.total > 0 && (
++            <Button 
++              variant="outline" 
++              size="sm"
++              onClick={handleMarkAllAsRead}
++              className="flex items-center"
++            >
++              <Check className="h-4 w-4 mr-2" />
++              <span>Tout marquer comme lu</span>
++            </Button>
++          )}
++          
++          {isSimulatedMode && (
++            <DropdownMenu>
++              <DropdownMenuTrigger asChild>
++                <Button variant="outline" size="sm">
++                  <span>Créer notification test</span>
++                </Button>
++              </DropdownMenuTrigger>
++              <DropdownMenuContent align="end">
++                <DropdownMenuItem onClick={() => createTestNotification('document_uploaded', '/documents')}>
++                  Document déposé
++                </DropdownMenuItem>
++                <DropdownMenuItem onClick={() => createTestNotification('document_approved', '/documents')}>
++                  Document approuvé
++                </DropdownMenuItem>
++                <DropdownMenuItem onClick={() => createTestNotification('document_rejected', '/documents')}>
++                  Document rejeté
++                </DropdownMenuItem>
++                <DropdownMenuSeparator />
++                <DropdownMenuItem onClick={() => createTestNotification('system', '/dashboard')}>
++                  Message système
++                </DropdownMenuItem>
++                <DropdownMenuItem onClick={() => createTestNotification('announcement', '/events')}>
++                  Annonce
++                </DropdownMenuItem>
++              </DropdownMenuContent>
++            </DropdownMenu>
++          )}
++        </div>
+       </div>
+       
++      {isSimulatedMode && <MockModeBanner />}
++      
+       <Tabs defaultValue="all" value={activeTab} onValueChange={handleTabChange}>
+         <TabsList className="mb-4">
+           <TabsTrigger value="all">Toutes</TabsTrigger>
+-- 
+2.45.2.windows.1
+
+
+From 94b0f5d153682f96bea3a7ed11a446c6b4303de7 Mon Sep 17 00:00:00 2001
+From: Diomande Adama <168726585+Diomande225@users.noreply.github.com>
+Date: Wed, 26 Mar 2025 13:39:18 +0100
+Subject: [PATCH 3/3] Enhance notification handling and pagination updates
+
+- Added immediate notification updates for unread count when refreshing notifications in NotificationService.
+- Improved cache management for unread notifications, ensuring accurate counts during read actions.
+- Implemented subscription to notification updates in NotificationsPage to dynamically adjust pagination based on unread count.
+- Reset unread count in pagination when notifications are marked as read, enhancing user experience.
+---
+ .../src/lib/services/notificationService.js   | 31 ++++++++++++++++--
+ .../Notifications/NotificationsPage.jsx       | 32 ++++++++++++++++++-
+ 2 files changed, 59 insertions(+), 4 deletions(-)
+
+diff --git a/frontend/src/lib/services/notificationService.js b/frontend/src/lib/services/notificationService.js
+index ab331ef..1cb95ed 100644
+--- a/frontend/src/lib/services/notificationService.js
++++ b/frontend/src/lib/services/notificationService.js
+@@ -188,6 +188,20 @@ class NotificationService {
+    */
+   async getUnreadCount(refresh = false) {
+     try {
++      // Si nous forçons un rafraîchissement, notifions immédiatement les abonnés
++      // avec le compteur actuel pour une interface réactive
++      if (refresh) {
++        // Calculer le compteur actuel basé sur les notifications en cache
++        let currentCount = 0;
++        if (this.cache.notifications && this.cache.notifications.notifications) {
++          currentCount = this.cache.notifications.notifications.filter(n => !n.readAt).length;
++          // Mettre à jour le cache immédiatement
++          this.cache.unreadCount = currentCount;
++          // Notifier les abonnés immédiatement avec le compteur à jour
++          this.notifySubscribers();
++        }
++      }
++      
+       // Return from cache if available and not refreshing
+       if (!refresh && this.cache.lastFetch) {
+         const now = new Date();
+@@ -390,18 +404,24 @@ class NotificationService {
+         // Essayez d'utiliser l'API réelle
+         const response = await apiService.post(`/api/notifications/${notificationId}/mark-read`);
+         
+-        // Update cache
++        // Update cache unread count immediately
+         this.cache.unreadCount = response.data.unread_count || 0;
+         
+         // Update notification in cache if available
+         if (this.cache.notifications && this.cache.notifications.notifications) {
++          // Mettre à jour la notification spécifique
+           const notification = this.cache.notifications.notifications.find(n => n.id === notificationId);
+-          if (notification) {
++          if (notification && !notification.readAt) {
+             // Marquer comme lu de manière cohérente - utiliser readAt
+             notification.readAt = new Date().toISOString();
+             
+             // Pour maintenir la compatibilité avec le code existant
+             notification.isRead = true;
++            
++            // Mettre à jour le compteur dans l'objet de réponse
++            if (this.cache.notifications.unread_count !== undefined) {
++              this.cache.notifications.unread_count = Math.max(0, this.cache.notifications.unread_count - 1);
++            }
+           }
+         }
+         
+@@ -444,7 +464,7 @@ class NotificationService {
+         // Essayez d'utiliser l'API réelle
+         const response = await apiService.post('/api/notifications/mark-read');
+         
+-        // Update cache
++        // Update cache - Set unread count to zero immediately
+         this.cache.unreadCount = 0;
+         
+         // Update notifications in cache if available
+@@ -456,6 +476,11 @@ class NotificationService {
+             // Pour maintenir la compatibilité avec le code existant
+             notification.isRead = true;
+           });
++          
++          // Mettre à jour le compteur dans l'objet de réponse
++          if (this.cache.notifications.unread_count !== undefined) {
++            this.cache.notifications.unread_count = 0;
++          }
+         }
+         
+         // Notify subscribers
+diff --git a/frontend/src/pages/Global/Notifications/NotificationsPage.jsx b/frontend/src/pages/Global/Notifications/NotificationsPage.jsx
+index e46a62b..6fcb80c 100644
+--- a/frontend/src/pages/Global/Notifications/NotificationsPage.jsx
++++ b/frontend/src/pages/Global/Notifications/NotificationsPage.jsx
+@@ -220,6 +220,22 @@ const NotificationsPage = () => {
+     loadNotifications(1, includeRead);
+   }, [activeTab]);
+   
++  // Surveiller les modifications du compteur de notifications non lues
++  useEffect(() => {
++    // S'abonner aux mises à jour des notifications
++    const unsubscribe = notificationService.subscribe(data => {
++      // Mettre à jour le compteur de pagination dans l'onglet des non lues
++      if (activeTab === 'unread' || data.unreadCount === 0) {
++        setPagination(prev => ({
++          ...prev,
++          total: data.unreadCount
++        }));
++      }
++    });
++    
++    return () => unsubscribe();
++  }, [activeTab]);
++  
+   // Gérer le changement de page
+   const handlePageChange = (newPage) => {
+     if (newPage >= 1 && newPage <= pagination.pages) {
+@@ -239,6 +255,12 @@ const NotificationsPage = () => {
+         readAt: new Date().toISOString()
+       })));
+       
++      // Réinitialiser le compteur de notifications non lues
++      setPagination(prev => ({
++        ...prev,
++        total: 0
++      }));
++      
+       // Si on est sur l'onglet "non lues", recharger pour les retirer
+       if (activeTab === 'unread') {
+         loadNotifications(1, false);
+@@ -284,12 +306,20 @@ const NotificationsPage = () => {
+         );
+         setNotifications(updatedNotifications);
+         
++        // Mettre à jour le compteur de pagination si nous sommes dans l'onglet de toutes les notifications
++        if (activeTab === 'all') {
++          setPagination(prev => ({
++            ...prev,
++            total: prev.total > 0 ? prev.total - 1 : 0
++          }));
++        }
++        
+         // Effectuer la requête API en arrière-plan
+         await notificationService.markAsRead(notification.id);
+         console.log('Notification marked as read:', notification.id);
+         
+         // Forcer la mise à jour du compteur de notifications non lues
+-        notificationService.getUnreadCount(true);
++        await notificationService.getUnreadCount(true);
+       }
+       
+       // Vérifier si l'URL cible est valide avant de rediriger
+-- 
+2.45.2.windows.1

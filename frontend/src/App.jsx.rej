@@ -1,0 +1,57 @@
+diff a/frontend/src/App.jsx b/frontend/src/App.jsx	(rejected hunks)
+@@ -11,6 +11,7 @@ import ProfileLayout from '@/layouts/ProfileLayout'
+ import StudentRoute from './components/StudentRoute'
+ import { Toaster } from './components/ui/sonner'
+ import { ErrorBoundary } from "react-error-boundary"
++import { notificationService } from './lib/services/notificationService'
+ 
+ // Create a shared query client for the entire application
+ const queryClient = new QueryClient({
+@@ -418,6 +420,7 @@ const AppContent = () => {
+                       <Route path="/settings/career" element={<CareerSettings />} />
+                       <Route path="/settings/security" element={<SecuritySettings />} />
+                       <Route path="/settings/notifications" element={<NotificationSettings />} />
++                      <Route path="/notifications" element={<NotificationsPage />} />
+                     </Route>
+                     
+                     {/* Routes pour la gestion des formations - accessible par teachers, admins, superadmins et recruiters */}
+@@ -561,8 +564,39 @@ const ErrorFallback = () => (
+   </div>
+ );
+ 
++// Function to start the app services
++const startAppServices = () => {
++  // Start notification polling if the user is logged in
++  if (localStorage.getItem('token')) {
++    notificationService.startPolling();
++  }
++};
++
+ // Composant App principal qui configure le Router
+ const App = () => {
++  useEffect(() => {
++    // Initialize app services
++    startAppServices();
++    
++    // Listen for auth changes to start/stop services
++    const handleAuthChange = () => {
++      if (localStorage.getItem('token')) {
++        notificationService.startPolling();
++      } else {
++        notificationService.stopPolling();
++        notificationService.resetCache();
++      }
++    };
++    
++    window.addEventListener('auth-change', handleAuthChange);
++    
++    // Cleanup
++    return () => {
++      window.removeEventListener('auth-change', handleAuthChange);
++      notificationService.stopPolling();
++    };
++  }, []);
++
+   return (
+     <ErrorBoundary FallbackComponent={ErrorFallback}>
+       <QueryClientProvider client={queryClient}>

@@ -39,6 +39,7 @@ const NotificationSettings = lazy(() => import('./pages/Global/Profile/views/Not
 const CareerSettings = lazy(() => import('./pages/Global/Profile/views/CareerSettings'))
 const ProfileView = lazy(() => import('./pages/Global/Profile/views/ProfileView'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
+const NotificationsPage = lazy(() => import('./pages/Global/Notifications/NotificationsPage'))
 
 // Dashboards spécifiques par rôle
 const AdminDashboard = lazy(() => import('./pages/Admin/Dashboard'))

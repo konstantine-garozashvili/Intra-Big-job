@@ -15,6 +15,7 @@ import {
 
 // Importer le service documentService directement dans le composant
 import documentService from '../../services/documentService';
+import { notificationService } from '@/lib/services/notificationService';
 
 const CVUpload = memo(({ userData, onUpdate }) => {
   const [cvFile, setCvFile] = useState(null);

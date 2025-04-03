@@ -1,0 +1,8 @@
+diff a/frontend/src/lib/services/apiService.js b/frontend/src/lib/services/apiService.js	(rejected hunks)
+@@ -497,4 +497,5 @@ const apiService = {
+   }
+ };
+ 
++// Exporter le service API pour utilisation dans d'autres modules
+ export default apiService; 
+\ No newline at end of file
