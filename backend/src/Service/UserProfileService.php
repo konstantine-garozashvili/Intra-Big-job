@@ -4,10 +4,13 @@ namespace App\Service;
 
 use App\Entity\User;
 use App\Repository\UserRepository;
+use App\Domains\Global\Document\Repository\DocumentRepository;
+use App\Domains\Global\Document\Repository\DocumentTypeRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Serializer\SerializerInterface;
+use Psr\Log\LoggerInterface;
 
 /**
  * Service to centralize common user profile operations
@@ -18,17 +21,26 @@ class UserProfileService
     private $userRepository;
     private $serializer;
     private $documentStorageFactory;
+    private $documentRepository;
+    private $documentTypeRepository;
+    private $logger;
     
     public function __construct(
         EntityManagerInterface $entityManager,
         UserRepository $userRepository,
         SerializerInterface $serializer,
-        DocumentStorageFactory $documentStorageFactory
+        DocumentStorageFactory $documentStorageFactory,
+        DocumentRepository $documentRepository,
+        DocumentTypeRepository $documentTypeRepository,
+        LoggerInterface $logger
     ) {
         $this->entityManager = $entityManager;
         $this->userRepository = $userRepository;
         $this->serializer = $serializer;
         $this->documentStorageFactory = $documentStorageFactory;
+        $this->documentRepository = $documentRepository;
+        $this->documentTypeRepository = $documentTypeRepository;
+        $this->logger = $logger;
     }
     
     /**
@@ -36,10 +48,41 @@ class UserProfileService
      */
     public function getUserProfileData(User $user): array
     {
+        $this->logger->info('Fetching profile data for user ID: ' . $user->getId());
         // Récupérer l'utilisateur avec toutes ses relations chargées
         $user = $this->userRepository->findOneWithAllRelations($user->getId());
+
+        // Check for CV Document
+        $cvExists = false;
+        try {
+            $this->logger->info('Looking for DocumentType with code: CV');
+            $cvType = $this->documentTypeRepository->findOneBy(['code' => 'CV']);
+            
+            if ($cvType) {
+                $this->logger->info('Found DocumentType "CV" with ID: ' . $cvType->getId());
+                $this->logger->info('Looking for Document with user ID: ' . $user->getId() . ' and type ID: ' . $cvType->getId());
+                
+                $cvDocument = $this->documentRepository->findOneBy([
+                    'user' => $user,
+                    'documentType' => $cvType
+                ]);
+                
+                if ($cvDocument) {
+                    $this->logger->info('Found CV Document with ID: ' . $cvDocument->getId());
+                    $cvExists = true;
+                } else {
+                    $this->logger->warning('CV Document NOT found for user ID: ' . $user->getId() . ' and type ID: ' . $cvType->getId());
+                }
+            } else {
+                $this->logger->warning('DocumentType with code "CV" NOT found.');
+            }
+        } catch (\Exception $e) {
+            $this->logger->error('Exception during CV check: ' . $e->getMessage());
+        }
         
-        // Récupérer les données utilisateur avec les relations
+        $this->logger->info('Final cvExists value: ' . ($cvExists ? 'true' : 'false'));
+
+        // Récupérer les données utilisateur avec les relations    
         $userData = [
             'id' => $user->getId(),
             'firstName' => $user->getFirstName(),
@@ -52,16 +95,48 @@ class UserProfileService
             'isEmailVerified' => $user->isEmailVerified(),
             'linkedinUrl' => $user->getLinkedinUrl(),
             'pictureProfilePath' => $user->getProfilePicturePath(),
+            'roles' => $user->getRoles(),
+            'addresses' => array_map(function($address) {
+                return [
+                    'id' => $address->getId(),
+                    'name' => $address->getName(),
+                    'complement' => $address->getComplement(),     
+                    'city' => $address->getCity() ? [
+                        'id' => $address->getCity()->getId(),      
+                        'name' => $address->getCity()->getName()   
+                    ] : null,
+                    'postalCode' => $address->getPostalCode() ? [  
+                        'id' => $address->getPostalCode()->getId(),
+                        'code' => $address->getPostalCode()->getCode()
+                    ] : null
+                ];
+            }, $user->getAddresses()->toArray()),
             'nationality' => $user->getNationality() ? [
                 'id' => $user->getNationality()->getId(),
-                'name' => $user->getNationality()->getName(),
+                'name' => $user->getNationality()->getName(),      
             ] : null,
             'theme' => $user->getTheme() ? [
                 'id' => $user->getTheme()->getId(),
                 'name' => $user->getTheme()->getName(),
             ] : null,
             'profilePicture' => null,
+            'hasCvDocument' => $cvExists,
         ];
+
+        // Ajouter les diplômes de l'utilisateur
+        $userDiplomas = $user->getUserDiplomas();
+        $userData['diplomas'] = array_map(function($userDiploma) {
+            $diploma = $userDiploma->getDiploma();
+            return [
+                'id' => $userDiploma->getId(),
+                'diploma' => [
+                    'id' => $diploma->getId(),
+                    'name' => $diploma->getName(),
+                    'institution' => $diploma->getInstitution(),
+                ],
+                'obtainedDate' => $userDiploma->getObtainedDate() ? $userDiploma->getObtainedDate()->format('Y-m-d') : null,
+            ];
+        }, $userDiplomas->toArray());
 
         // Ajouter le profile étudiant
         if ($user->getStudentProfile()) {
@@ -70,6 +145,7 @@ class UserProfileService
                 'id' => $studentProfile->getId(),
                 'isSeekingInternship' => $studentProfile->isSeekingInternship(),
                 'isSeekingApprenticeship' => $studentProfile->isSeekingApprenticeship(),
+                'portfolioUrl' => $studentProfile->getPortfolioUrl(),
             ];
         } else {
             $userData['studentProfile'] = null;

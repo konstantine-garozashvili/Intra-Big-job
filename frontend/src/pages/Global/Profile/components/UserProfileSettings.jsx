@@ -57,10 +57,10 @@ const UserProfileSettings = () => {
     error: profileError,
     forceRefresh: refetchProfile
   } = useUserDataCentralized({
-    preferComprehensiveData: true, // Utiliser la route '/profile/consolidated'
-    refetchOnWindowFocus: false,
-    staleTime: 5 * 60 * 1000, // 5 minutes - only refetch after 5 minutes
-    cacheTime: 10 * 60 * 1000, // 10 minutes - keep in cache for 10 minutes
+    refetchOnWindowFocus: true,    // Enable refetching when window focus changes
+    refetchOnMount: true,          // Enable refetching when component mounts
+    staleTime: 0,                  // Consider data stale immediately
+    cacheTime: 5 * 60 * 1000,      // Keep in cache for 5 minutes
     onError: (error) => {
       toast.error('Failed to load profile data: ' + (error.message || 'Unknown error'));
     }
@@ -242,27 +242,24 @@ const UserProfileSettings = () => {
         }
       }
       
-      // Apply optimistic update immediately
+      // Use the service to update the profile
+      await profileService.updateProfile({ [field]: value });
+      
+      // Optimistically update the local state
       updateLocalState(field, value);
       
-      // Prepare data for saving
-      const dataToSave = { [field]: value === '' ? null : value };
+      // Exit edit mode for this field
+      setEditMode(prev => ({
+        ...prev,
+        [field]: false,
+      }));
       
-      // Make the API call in the background
-      if (field === 'portfolioUrl' && isStudent) {
-        await updatePortfolioUrl({ portfolioUrl: value });
-        toast.success('Mise à jour réussie');
-      } else {
-        await updatePersonalInfo(dataToSave);
-        toast.success('Mise à jour réussie');
-      }
-      
-      // If we're updating birthDate, calculate and update the age
-      if (field === 'birthDate' && value) {
-        userData.age = calculateAge(value);
-      }
-      
+      // Dispatch event to notify other components like ProfileProgress
+      document.dispatchEvent(new CustomEvent('user:data-updated'));
+
+      toast.success(`${field} mis à jour avec succès`);
     } catch (error) {
+      // console.error(`Error updating ${field}:`, error);
       // Revert optimistic update on error
       if (field === 'portfolioUrl' && isStudent) {
         updateLocalState('portfolioUrl', profileData?.data?.studentProfile?.portfolioUrl || null);

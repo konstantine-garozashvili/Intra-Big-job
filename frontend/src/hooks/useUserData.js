@@ -10,7 +10,6 @@ import apiService from '@/lib/services/apiService';
  * Remplace différents hooks dispersés dans l'application
  * @param {Object} options - Options du hook
  * @param {boolean} options.enabled - Active ou désactive la requête
- * @param {boolean} options.preferComprehensiveData - Préfère les données complètes (profile/consolidated)
  * @param {function} options.onSuccess - Callback appelé en cas de succès
  * @param {function} options.onError - Callback appelé en cas d'erreur
  * @returns {Object} - Données et fonctions utilisateur
@@ -18,7 +17,6 @@ import apiService from '@/lib/services/apiService';
 export function useUserData(options = {}) {
   const {
     enabled = true,
-    preferComprehensiveData = false,
     onSuccess,
     onError,
     ...queryOptions
@@ -41,7 +39,7 @@ export function useUserData(options = {}) {
   // Get the actual user data from the parsed localStorage
   const user = parsedData?.user || null;
 
-  const routeKey = preferComprehensiveData ? '/profile/consolidated' : '/api/me';
+  const routeKey = '/api/profile'; // Define routeKey directly
   
   // Add a ref to track the last time we fetched data to prevent too frequent refreshes
   const [lastFetchTime, setLastFetchTime] = useState(0);
@@ -49,18 +47,10 @@ export function useUserData(options = {}) {
   useEffect(() => {
     userDataManager.requestRegistry.registerRouteUser(routeKey, componentId);
     
-    if (preferComprehensiveData) {
-      userDataManager.requestRegistry.registerRouteUser('/api/profile/picture', componentId);
-    }
-    
     return () => {
       userDataManager.requestRegistry.unregisterRouteUser(routeKey, componentId);
-      
-      if (preferComprehensiveData) {
-        userDataManager.requestRegistry.unregisterRouteUser('/api/profile/picture', componentId);
-      }
     };
-  }, [routeKey, componentId, preferComprehensiveData]);
+  }, [routeKey, componentId]);
   
   useEffect(() => {
     if (!enabled || !sessionId) return;

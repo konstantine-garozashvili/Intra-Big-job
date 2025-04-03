@@ -263,19 +263,27 @@ const ProfileHeader = ({ userData, isPublicProfile = false, profilePictureUrl })
             >
               <AnimatePresence>
                 {(() => {
-                  // Get roles securely, checking multiple possible structures
+                  // Get roles securely, prioritizing the structure passed by ProfileView
                   let roles = [];
-                  if (userData?.roles && Array.isArray(userData.roles)) {
-                    // Check 1: roles directly on userData (e.g., from consolidated)
-                    roles = userData.roles;
-                  } else if (userData?.user?.roles && Array.isArray(userData.user.roles)) {
-                    // Check 2: roles nested under user (e.g., from older structures?)
+                  if (!isPublicProfile && userData?.user?.roles && Array.isArray(userData.user.roles)) {
+                    // Check 1: For own profile, ProfileView nests data under 'user'
                     roles = userData.user.roles;
+                  } else if (isPublicProfile && userData?.roles && Array.isArray(userData.roles)) {
+                    // Check 2: For public profile, data might be directly on userData
+                    roles = userData.roles;
                   } else if (userData?.data?.roles && Array.isArray(userData.data.roles)) {
-                    // Check 3: roles nested under data (e.g., from /api/me)
+                    // Check 3: Fallback for /api/me structure (if somehow passed directly)
                     roles = userData.data.roles;
+                  } else if (Array.isArray(userData)) {
+                    // Check 4: Handle if userData itself is the roles array (less likely)
+                    roles = userData;
                   }
 
+                  // Ensure roles is always an array
+                  if (!Array.isArray(roles)) {
+                      roles = [];
+                  }
+                  
                   if (roles.length > 0) {
                     return roles.map((role, index) => {
                       // Déterminer le nom du rôle en fonction de la structure

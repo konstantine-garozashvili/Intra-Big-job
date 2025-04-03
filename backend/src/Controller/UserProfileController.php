@@ -17,21 +17,12 @@ use Symfony\Component\Serializer\SerializerInterface;
 #[Route('/api')]
 class UserProfileController extends AbstractController
 {
-    private $security;
-    private $serializer;
-    private $userRepository;
-    private $userProfileService;
-    
     public function __construct(
-        Security $security,
-        SerializerInterface $serializer,
-        UserRepository $userRepository,
-        UserProfileService $userProfileService
+        private readonly Security $security,
+        private readonly SerializerInterface $serializer,
+        private readonly UserRepository $userRepository,
+        private readonly UserProfileService $userProfileService,
     ) {
-        $this->security = $security;
-        $this->serializer = $serializer;
-        $this->userRepository = $userRepository;
-        $this->userProfileService = $userProfileService;
     }
     
     /**
@@ -147,4 +138,5 @@ class UserProfileController extends AbstractController
             'data' => $userData
         ]);
     }
-} 
+
+}
