@@ -62,30 +62,29 @@ export const authService = {
         console.log('[authService] Inscription réussie');
       }
       
-      // Si la réponse contient un token (certaines API peuvent fournir un token immédiatement)
-      if (response && response.token) {
-        localStorage.setItem('token', response.token);
+      // Automatically log in after successful registration
+      try {
+        await this.login(userData.email, userData.password);
+      } catch (loginError) {
+        console.error('[authService] Erreur lors de la connexion automatique après inscription:', loginError.message);
+        // Don't block registration if auto-login fails
       }
       
-      // Envoyer un email de bienvenue à l'utilisateur avec toutes les informations d'inscription
+      // Send welcome email
       try {
         if (import.meta.env.DEV) {
           console.log('[authService] Envoi de l\'email de bienvenue...');
         }
         
-        // Récupérer les données utilisateur depuis la réponse de l'API ou utiliser les données d'origine
         const userDataForEmail = response.data?.userData || userData;
         
-        // Préparer les données pour l'email
         const emailData = {
           email: userDataForEmail.email || userData.email,
           firstName: userDataForEmail.firstName || userData.firstName,
           lastName: userDataForEmail.lastName || userData.lastName,
-          // Informations personnelles (partie 2)
           birthDate: userData.birthDate,
           nationality: userData.nationality,
           phoneNumber: userData.phoneNumber,
-          // Informations d'adresse (partie 3)
           address: userData.address
         };
         
@@ -96,10 +95,8 @@ export const authService = {
         }
       } catch (emailError) {
         console.error('[authService] Erreur lors de l\'envoi de l\'email de bienvenue:', emailError.message);
-        // Ne pas bloquer l'inscription si l'envoi de l'email échoue
       }
       
-      // Retourner une réponse formatée avec un status 201 si l'API ne renvoie pas de statut
       return {
         status: response.status || 201,
         data: response
