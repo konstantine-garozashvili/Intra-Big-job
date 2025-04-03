@@ -223,9 +223,9 @@ function AppContent() {
                   {/* Regular protected routes */}
                   <Route path="/dashboard" element={<RoleDashboardRedirect />} />
                   
-                  {/* Profile view route */}
+                  {/* Profile routes */}
                   <Route path="/profile" element={<ProfileView />} />
-                  <Route path="/profile/:userId" element={<PublicProfileView />} />
+                  <Route path="/public-profile/:userId" element={<PublicProfileView />} />
                   
                   {/* Settings routes avec ProfileLayout */}
                   <Route element={<ProfileLayout />}>

@@ -284,12 +284,13 @@ const apiService = {
       const requestKey = `${path}${JSON.stringify(options.params || {})}`;
       
       // Identify if this is a profile request for special handling
-      const isProfileRequest = path.includes('/profile') || path.includes('/me');
+      const isPublicProfileRequest = path.includes('/profile/public/');
+      const isPersonalProfileRequest = path === '/profile' || path === '/me' || path === '/api/me';
+      const isProfileRequest = isPublicProfileRequest || isPersonalProfileRequest;
       const isStaticRequest = path.includes('/static') || path.includes('/config');
       
-      // For profile requests, use more aggressive caching
-      if (isProfileRequest && !options.noCache && !options.background) {
-        // Check localStorage first for fastest possible response
+      // For personal profile requests only, use more aggressive caching
+      if (isPersonalProfileRequest && !options.noCache && !options.background) {
         try {
           const cachedUser = localStorage.getItem('user');
           if (cachedUser) {
@@ -297,7 +298,6 @@ const apiService = {
             const cacheTime = userData._extractedAt || 0;
             const cacheAge = Date.now() - cacheTime;
             
-            // Use very fresh cache immediately (under 30 seconds old)
             if (cacheAge < 30000) {
               return Promise.resolve(userData);
             }
@@ -820,52 +820,71 @@ const apiService = {
     }
   },
 
-  async getPublicProfile(userId) {
+  async getPublicProfile(userId, options = {}) {
     if (!userId) {
       throw new Error('User ID is required to fetch public profile');
     }
 
     const cacheKey = `${PUBLIC_PROFILE_CACHE_KEY}-${userId}`;
+    console.log('Attempting to fetch public profile for userId:', userId);
     
     try {
-      // Vérifier le cache d'abord
-      const cached = apiCache.get(cacheKey);
-      if (cached && cached.expiry > Date.now()) {
-        return cached.data;
+      // Vérifier le cache seulement si pas de signal d'abort
+      if (!options.signal) {
+        const cached = apiCache.get(cacheKey);
+        if (cached && cached.expiry > Date.now()) {
+          console.log('Returning cached profile data');
+          return cached.data;
+        }
       }
 
+      console.log('Making API request to:', `/profile/public/${userId}`);
       const response = await this.get(`/profile/public/${userId}`, {
+        ...options,
+        noCache: true, // Force disable personal profile cache
         headers: {
+          ...options.headers,
           'X-Request-Type': 'public-profile',
-          'X-Cache-Priority': 'normal'
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
         },
-        timeout: 10000, // Augmenter le timeout à 10s
-        retries: 2     // Permettre 2 tentatives
+        timeout: getAdaptiveTimeout(5000, true)
       });
+      console.log('Raw API response:', response);
 
-      // Vérification plus souple de la structure
       if (response) {
+        // Normaliser la réponse
         const formattedResponse = {
           success: true,
           data: {
             user: response.data?.user || response.data || response
           }
         };
+        console.log('Formatted response:', formattedResponse);
 
-        // Mettre en cache
-        apiCache.set(cacheKey, {
-          data: formattedResponse,
-          timestamp: Date.now(),
-          expiry: Date.now() + PUBLIC_PROFILE_CACHE_TTL
-        });
+        // Ne pas mettre en cache si un signal d'abort est présent
+        if (!options.signal) {
+          console.log('Caching formatted response');
+          apiCache.set(cacheKey, {
+            data: formattedResponse,
+            timestamp: Date.now(),
+            expiry: Date.now() + PUBLIC_PROFILE_CACHE_TTL
+          });
+        }
         
         return formattedResponse;
       }
 
+      console.error('No response received from server');
       throw new Error('No response received from server');
     } catch (error) {
+      console.error('Error in getPublicProfile:', error);
       if (error.code === 'ECONNABORTED') {
         throw new Error('La requête a pris trop de temps, veuillez réessayer');
+      }
+      if (error.response) {
+        console.error('Server response error:', error.response.data);
+        throw new Error(error.response.data.message || 'Erreur lors de la récupération du profil public');
       }
       throw error;
     }
@@ -873,9 +892,10 @@ const apiService = {
 
   clearPublicProfileCache(userId) {
     if (userId) {
-      apiCache.delete(`${PUBLIC_PROFILE_CACHE_KEY}-${userId}`);
+      const cacheKey = `${PUBLIC_PROFILE_CACHE_KEY}-${userId}`;
+      apiCache.delete(cacheKey);
     } else {
-      // Nettoyer tous les caches de profils publics
+      // Si pas d'userId, nettoyer tous les caches de profils publics
       for (const [key] of apiCache.entries()) {
         if (key.startsWith(PUBLIC_PROFILE_CACHE_KEY)) {
           apiCache.delete(key);

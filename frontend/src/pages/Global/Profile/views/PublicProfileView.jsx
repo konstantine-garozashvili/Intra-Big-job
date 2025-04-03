@@ -13,26 +13,43 @@ const PublicProfileView = () => {
   const [error, setError] = useState(null);
   
   useEffect(() => {
+    // Réinitialiser les états à chaque changement de userId
+    setProfileData(null);
+    setIsLoading(true);
+    setError(null);
+    
     const controller = new AbortController();
     
     const fetchPublicProfile = async () => {
       try {
-        setIsLoading(true);
-        const response = await apiService.getPublicProfile(userId);
+        // Nettoyer le cache avant de charger le nouveau profil
+        apiService.clearPublicProfileCache(userId);
+        
+        console.log('Fetching profile for userId:', userId);
+        const response = await apiService.getPublicProfile(userId, {
+          signal: controller.signal
+        });
+        console.log('API Response:', response);
         
         if (response?.data?.user) {
+          console.log('Setting profile data from response.data.user:', response.data.user);
           setProfileData(response.data.user);
         } else if (response?.data) {
+          console.log('Setting profile data from response.data:', response.data);
           setProfileData(response.data);
         } else if (response) {
+          console.log('Setting profile data from direct response:', response);
           setProfileData(response);
         } else {
+          console.error('Invalid response structure:', response);
           setError('Données du profil non disponibles');
         }
       } catch (error) {
         if (error.name === 'AbortError') {
+          console.log('Request aborted');
           return;
         }
+        console.error('Error in fetchPublicProfile:', error);
         setError(error.message || 'Erreur lors de la récupération du profil');
       } finally {
         setIsLoading(false);
@@ -41,7 +58,11 @@ const PublicProfileView = () => {
     
     fetchPublicProfile();
     
-    return () => controller.abort();
+    return () => {
+      controller.abort();
+      // Nettoyer le cache lors du démontage du composant
+      apiService.clearPublicProfileCache(userId);
+    };
   }, [userId]);
 
   const pageVariants = {
@@ -61,6 +82,11 @@ const PublicProfileView = () => {
       <div className="w-full max-w-7xl mx-auto px-4 py-6 space-y-8" data-testid="public-profile-loading">
         <div className="w-full bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 rounded-lg shadow-md overflow-hidden">
           <Skeleton className="h-64 w-full" />
+          <div className="p-6 space-y-4">
+            <Skeleton className="h-8 w-1/3" />
+            <Skeleton className="h-4 w-2/3" />
+            <Skeleton className="h-4 w-1/2" />
+          </div>
         </div>
       </div>
     );
