@@ -84,7 +84,7 @@ The BigProject project follows a modern client-server architecture with:
 ### API and Cross-Origin Resource Sharing
 - **nelmio/cors-bundle**: 2.5+
 
-### Template Engine
+### Template for mails
 - **Twig**: 2.12+ or 3.0+
 - **twig/extra-bundle**: 2.12+ or 3.0+
 
@@ -107,7 +107,7 @@ The BigProject project follows a modern client-server architecture with:
   - Character Set: utf8mb4
 
 ## Development Tools
-- **DBeaver**: Database management tool for MySQL
+- **PHPmyAdmin**
 
 ## Notes
 - The project uses environment variables for configuration
@@ -118,4 +118,4 @@ The BigProject project follows a modern client-server architecture with:
 
 ---
 
-*Last updated: February 26, 2025*
+*Last updated: April 01, 2025*
