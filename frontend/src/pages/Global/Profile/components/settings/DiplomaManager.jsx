@@ -90,6 +90,9 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
         
         setDiplomas(updatedDiplomas);
         
+        // Dispatch event to notify MainLayout about the update
+        document.dispatchEvent(new CustomEvent('user:data-updated'));
+        
         // Reset form
         setNewDiploma({
           diplomaId: '',
@@ -143,6 +146,9 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
         // Remove the diploma from the list using the setDiplomas prop
         setDiplomas(diplomas.filter(diploma => diploma.id !== variables));
         setDiplomaToDelete(null);
+        
+        // Dispatch event to notify MainLayout about the update
+        document.dispatchEvent(new CustomEvent('user:data-updated'));
       },
       onError: (error) => {
         toast.error('Erreur lors de la suppression du diplôme');

@@ -281,30 +281,24 @@ const UserProfileSettings = () => {
         }
       }
       
-      // Apply optimistic update immediately
+      // Use the service to update the profile
+      await profileService.updateProfile({ [field]: value });
+      
+      // Optimistically update the local state
       updateLocalState(field, value);
       
-      // Prepare data for saving
-      const dataToSave = { [field]: value === '' ? null : value };
+      // Exit edit mode for this field
+      setEditMode(prev => ({
+        ...prev,
+        [field]: false,
+      }));
       
-      // Make the API call in the background
-      if (field === 'portfolioUrl' && isStudent) {
-        await updatePortfolioUrl({ portfolioUrl: value });
-        
-        // Force a refresh after updating the portfolio URL
-        await queryClient.invalidateQueries({ queryKey: ['unified-user-data'] });
-        setTimeout(() => refetchProfile(), 300);
-      } else {
-        await updatePersonalInfo(dataToSave);
-        toast.success('Mise à jour réussie');
-      }
-      
-      // If we're updating birthDate, calculate and update the age
-      if (field === 'birthDate' && value) {
-        userData.age = calculateAge(value);
-      }
-      
+      // Dispatch event to notify other components like ProfileProgress
+      document.dispatchEvent(new CustomEvent('user:data-updated'));
+
+      toast.success(`${field} mis à jour avec succès`);
     } catch (error) {
+      // console.error(`Error updating ${field}:`, error);
       // Revert optimistic update on error
       if (field === 'portfolioUrl' && isStudent) {
         updateLocalState('portfolioUrl', profileData?.data?.studentProfile?.portfolioUrl || null);

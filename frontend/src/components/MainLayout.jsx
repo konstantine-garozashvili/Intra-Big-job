@@ -73,8 +73,8 @@ const MainLayout = () => {
     if (authService.isLoggedIn()) {
       try {
         setLoadingState(LOADING_STATES.LOADING);
-        // Only fetch profile data since we already have basic user data
-        const newProfileData = await profileService.getAllProfileData();
+        // Fetch profile data, forcing a refresh to bypass cache
+        const newProfileData = await profileService.getAllProfileData({ forceRefresh: true });
         // S'assurer que les données sont bien mises à jour avant de les retourner
         setProfileData(newProfileData);
         setLoadingState(LOADING_STATES.COMPLETE);
