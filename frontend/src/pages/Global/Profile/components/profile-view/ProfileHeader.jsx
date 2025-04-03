@@ -232,9 +232,6 @@ const ProfileHeader = ({ userData, isPublicProfile = false, profilePictureUrl })
                 {(() => {
                   // Get roles securely, prioritizing the structure passed by ProfileView
                   let roles = [];
-                  // --- DEBUG LOGGING START ---
-                  console.log("ProfileHeader received userData:", JSON.stringify(userData)); 
-                  // --- DEBUG LOGGING END ---
                   if (!isPublicProfile && userData?.user?.roles && Array.isArray(userData.user.roles)) {
                     // Check 1: For own profile, ProfileView nests data under 'user'
                     roles = userData.user.roles;
@@ -253,9 +250,6 @@ const ProfileHeader = ({ userData, isPublicProfile = false, profilePictureUrl })
                   if (!Array.isArray(roles)) {
                       roles = [];
                   }
-                  // --- DEBUG LOGGING START ---
-                  console.log("ProfileHeader determined roles:", JSON.stringify(roles));
-                  // --- DEBUG LOGGING END ---
                   
                   if (roles.length > 0) {
                     return roles.map((role, index) => {
@@ -276,9 +270,6 @@ const ProfileHeader = ({ userData, isPublicProfile = false, profilePictureUrl })
                       );
                     });
                   } else {
-                    // --- DEBUG LOGGING START ---
-                    console.log("ProfileHeader falling back to default USER role badge.");
-                    // --- DEBUG LOGGING END ---
                     return (
                       <RoleBadge 
                         key="default-user" 

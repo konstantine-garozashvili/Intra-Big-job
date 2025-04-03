@@ -57,7 +57,7 @@ const CareerSettings = () => {
   } = useQuery({
     queryKey: ['studentProfile'],
     queryFn: studentProfileService.getMyProfile,
-    enabled: isStudent && userStatus === 'success',
+    enabled: userStatus === 'success' && !!currentUser?.roles?.includes('ROLE_STUDENT'),
     staleTime: 30 * 1000, // Réduit à 30 secondes au lieu de 5 minutes
     refetchOnMount: true, // Toujours refetch quand le composant est monté
     refetchOnWindowFocus: true, // Refetch quand la fenêtre reprend le focus
