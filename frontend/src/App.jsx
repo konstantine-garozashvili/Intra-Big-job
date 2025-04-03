@@ -7,10 +7,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import './index.css'
 import ProtectedRoute from './components/ProtectedRoute'
 import PublicRoute from './components/PublicRoute'
-import ProfileLayout from '@/layouts/ProfileLayout'
+import ProfileLayout from './layouts/ProfileLayout'
 import StudentRoute from './components/StudentRoute'
 import { Toaster } from './components/ui/sonner'
 import { ErrorBoundary } from "react-error-boundary"
+import { ThemeProvider } from './context/ThemeContext';
 
 // Create a shared query client for the entire application
 const queryClient = new QueryClient({
@@ -35,51 +36,53 @@ const queryClient = new QueryClient({
 export { queryClient };
 
 // Import différé des pages pour améliorer les performances
-const Login = lazy(() => import('./pages/Login'))
-const Register = lazy(() => import('./pages/Register'))
-const RegistrationSuccess = lazy(() => import('./pages/RegistrationSuccess'))
-const VerificationSuccess = lazy(() => import('./pages/VerificationSuccess'))
-const VerificationError = lazy(() => import('./pages/VerificationError'))
+const Home = lazy(() => import('./pages/Home'));
+const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
+const RegistrationSuccess = lazy(() => import('./pages/RegistrationSuccess'));
+const VerificationSuccess = lazy(() => import('./pages/VerificationSuccess'));
+const VerificationError = lazy(() => import('./pages/VerificationError'));
+const ResetPasswordRequest = lazy(() => import('./components/Auth/ResetPasswordRequest'));
+const ResetPasswordConfirmation = lazy(() => import('./components/Auth/ResetPasswordConfirmation'));
+const ResetPassword = lazy(() => import('./components/Auth/ResetPassword'));
+const StudentDashboard = lazy(() => import('./pages/Student/Dashboard'));
+const TeacherDashboard = lazy(() => import('./pages/Teacher/Dashboard'));
+const RecruiterDashboard = lazy(() => import('./pages/Recruiter/Dashboard'));
+const AdminDashboard = lazy(() => import('./pages/Admin/Dashboard'));
+const SuperAdminDashboard = lazy(() => import('./pages/SuperAdmin/Dashboard'));
+const GuestDashboard = lazy(() => import('./pages/Guest/Dashboard'));
+const HRDashboard = lazy(() => import('./pages/HR/Dashboard'));
+const ProfileView = lazy(() => import('./pages/Global/Profile/views/ProfileView'));
+const SettingsProfile = lazy(() => import('./pages/Global/Profile/views/SettingsProfile'));
+const CareerSettings = lazy(() => import('./pages/Global/Profile/views/CareerSettings'));
+const SecuritySettings = lazy(() => import('./pages/Global/Profile/views/SecuritySettings'));
+const NotificationSettings = lazy(() => import('./pages/Global/Profile/views/NotificationSettings'));
+const FormationList = lazy(() => import('./pages/FormationList'));
+const GuestStudentRoleManager = lazy(() => import('./pages/Recruiter/GuestStudentRoleManager'));
+const Games = lazy(() => import('./pages/Games'));
+const VisualConcept = lazy(() => import('./pages/VisualConcept'));
+const FormationFinder = lazy(() => import('./pages/FormationFinder'));
 
-// Lazy loading pour la réinitialisation de mot de passe
-const ResetPasswordRequest = lazy(() => import('./components/auth/ResetPasswordRequest'))
-const ResetPasswordConfirmation = lazy(() => import('./components/auth/ResetPasswordConfirmation'))
-const ResetPassword = lazy(() => import('./components/auth/ResetPassword'))
+// Formation pages
+const WebDevelopment = lazy(() => import('./pages/formations/WebDevelopment'));
+const Cybersecurity = lazy(() => import('./pages/formations/Cybersecurity'));
+const ArtificialIntelligence = lazy(() => import('./pages/formations/ArtificialIntelligence'));
+const DataScience = lazy(() => import('./pages/formations/DataScience'));
+const MobileDevelopment = lazy(() => import('./pages/formations/MobileDevelopment'));
+const GameDevelopment = lazy(() => import('./pages/formations/GameDevelopment'));
+const AllFormations = lazy(() => import('./pages/AllFormations'));
+const FormationThemeWrapper = lazy(() => import('./components/formations/FormationThemeWrapper'));
 
-// Lazy loading pour le Profil et Dashboard
-const SettingsProfile = lazy(() => import('./pages/Global/Profile/views/SettingsProfile'))
-const SecuritySettings = lazy(() => import('./pages/Global/Profile/views/SecuritySettings'))
-const NotificationSettings = lazy(() => import('./pages/Global/Profile/views/NotificationSettings'))
-const CareerSettings = lazy(() => import('./pages/Global/Profile/views/CareerSettings'))
-const ProfileView = lazy(() => import('./pages/Global/Profile/views/ProfileView'))
-const Dashboard = lazy(() => import('./pages/Dashboard'))
+// Lazy load student components
+const StudentSchedule = lazy(() => import('./pages/Student/Schedule'));
+const StudentGrades = lazy(() => import('./pages/Student/Grades'));
+const StudentAbsences = lazy(() => import('./pages/Student/Absences'));
+const StudentProjects = lazy(() => import('./pages/Student/Projects'));
+const StudentAttendance = lazy(() => import('./pages/Student/Attendance'));
 
-// Dashboards spécifiques par rôle
-const AdminDashboard = lazy(() => import('./pages/Admin/Dashboard'))
-const StudentDashboard = lazy(() => import('./pages/Student/Dashboard'))
-// Pages étudiantes
-const StudentSchedule = lazy(() => import('./pages/Student/Schedule'))
-const StudentGrades = lazy(() => import('./pages/Student/Grades'))
-const StudentAbsences = lazy(() => import('./pages/Student/Absences'))
-const StudentProjects = lazy(() => import('./pages/Student/Projects'))
-const StudentAttendance = lazy(() => import('./pages/Student/Attendance'))
-const TeacherDashboard = lazy(() => import('./pages/Teacher/Dashboard'))
-const TeacherSignatureMonitoring = lazy(() => import('./pages/Teacher/SignatureMonitoring'))
-const TeacherAttendance = lazy(() => import('./pages/Teacher/Attendance'))
-const HRDashboard = lazy(() => import('./pages/HR/Dashboard'))
-const SuperAdminDashboard = lazy(() => import('./pages/SuperAdmin/Dashboard'))
-const GuestDashboard = lazy(() => import('./pages/Guest/Dashboard'))
-const RecruiterDashboard = lazy(() => import('./pages/Recruiter/Dashboard'))
-
-// Nouvelles pages à importer
-const FormationList = lazy(() => import('./pages/FormationList'))
-const GuestStudentRoleManager = lazy(() => import('./pages/Recruiter/GuestStudentRoleManager'))
-
-// Import du composant Home à la place de HomePage 
-const Home = lazy(() => import('./pages/Home'))
-
-// Visual Concept standalone page
-const VisualConcept = lazy(() => import('./pages/VisualConcept'))
+// Lazy load teacher components
+const TeacherAttendance = lazy(() => import('./pages/Teacher/Attendance'));
+const TeacherSignatureMonitoring = lazy(() => import('./pages/Teacher/SignatureMonitoring'));
 
 // Fonction optimisée pour le préchargement intelligent des pages
 // Ne charge que les pages pertinentes en fonction du contexte et du chemin actuel
@@ -97,10 +100,9 @@ const useIntelligentPreload = () => {
     // Préchargement basé sur le chemin actuel
     if (currentPath.includes('/login') || currentPath === '/') {
       // Sur la page de login, précharger le dashboard et l'enregistrement
-      preloadComponent(() => import('./pages/Dashboard'));
       preloadComponent(() => import('./pages/Register'));
       // Précharger les composants de réinitialisation de mot de passe
-      preloadComponent(() => import('./components/auth/ResetPasswordRequest'));
+      preloadComponent(() => import('./components/Auth/ResetPasswordRequest'));
     } 
     else if (currentPath.includes('/register')) {
       // Sur la page d'enregistrement, précharger la confirmation
@@ -109,9 +111,9 @@ const useIntelligentPreload = () => {
     else if (currentPath.includes('/reset-password')) {
       // Précharger les composants de réinitialisation de mot de passe
       if (currentPath === '/reset-password') {
-        preloadComponent(() => import('./components/auth/ResetPasswordConfirmation'));
+        preloadComponent(() => import('./components/Auth/ResetPasswordConfirmation'));
       } else if (currentPath.includes('/reset-password/confirmation')) {
-        preloadComponent(() => import('./components/auth/ResetPassword'));
+        preloadComponent(() => import('./components/Auth/ResetPassword'));
       }
     }
     else if (currentPath.includes('/profile')) {
@@ -391,7 +393,34 @@ const AppContent = () => {
                 {/* Route racine avec Home rendu indépendamment sans MainLayout */}
                 <Route path="/" element={<Home />} />
                 
-                {/* Structure révisée: MainLayout englobe toutes les routes pour préserver la navbar */}
+                {/* Route pour la page des jeux */}
+                <Route path="/games" element={<Games />} />
+                
+                {/* Formation pages - No authentication required */}
+                <Route path="/formations/web" element={
+                  <FormationThemeWrapper Component={WebDevelopment} />
+                } />
+                <Route path="/formations/data-science" element={
+                  <FormationThemeWrapper Component={DataScience} />
+                } />
+                <Route path="/formations/ai" element={
+                  <FormationThemeWrapper Component={ArtificialIntelligence} />
+                } />
+                <Route path="/formations/cybersecurity" element={
+                  <FormationThemeWrapper Component={Cybersecurity} />
+                } />
+                <Route path="/formations/mobile" element={
+                  <FormationThemeWrapper Component={MobileDevelopment} />
+                } />
+                <Route path="/formations/game" element={
+                  <FormationThemeWrapper Component={GameDevelopment} />
+                } />
+                <Route path="/formations/all" element={<AllFormations />} />
+                <Route path="/formations/finder" element={<FormationFinder />} />
+                
+                {/* Standalone Visual Concept page - No authentication required */}
+                <Route path="/visual-concept" element={<VisualConcept />} />
+                
                 <Route element={<MainLayout />}>
                   {/* Routes publiques - Accès interdit aux utilisateurs authentifiés */}
                   <Route element={<PublicRoute />}>
@@ -405,9 +434,6 @@ const AppContent = () => {
                     <Route path="/reset-password/confirmation" element={<ResetPasswordConfirmation />} />
                     <Route path="/reset-password/:token" element={<ResetPassword />} />
                   </Route>
-                  
-                  {/* Standalone Visual Concept page - No authentication required */}
-                  <Route path="/visual-concept" element={<VisualConcept />} />
                   
                   <Route element={<ProtectedRoute />}>
                     {/* Regular protected routes */}
@@ -571,23 +597,25 @@ const ErrorFallback = () => (
 const App = () => {
   return (
     <ErrorBoundary FallbackComponent={ErrorFallback}>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <RoleProvider>
-            <Router>
-              {/* Initialisation des services de l'application */}
-              <AppInitializer />
-              
-              {/* Gestionnaire de préchargement */}
-              <PrefetchHandler />
-              
-              <Suspense>
-                <AppContent />
-              </Suspense>
-            </Router>
-          </RoleProvider>
-        </AuthProvider>
-      </QueryClientProvider>
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <RoleProvider>
+              <Router>
+                {/* Initialisation des services de l'application */}
+                <AppInitializer />
+                
+                {/* Gestionnaire de préchargement */}
+                <PrefetchHandler />
+                
+                <Suspense>
+                  <AppContent />
+                </Suspense>
+              </Router>
+            </RoleProvider>
+          </AuthProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 };

@@ -1,31 +1,31 @@
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
-import { Checkbox } from "@/components/ui/checkbox";
-import { useAddress, useValidation } from "../RegisterContext";
+import { useUserData, useValidation } from "../RegisterContext";
+import { motion } from "framer-motion";
 
 const Step3Form = ({ goToPrevStep, onSubmit }) => {
   const {
     addressName, setAddressName,
+    addressCity, setAddressCity,
+    addressPostalCode, setAddressPostalCode,
     addressComplement, setAddressComplement,
-    city, setCity,
-    postalCode, setPostalCode,
-    acceptTerms,
-    handleTermsChange,
-    handleAddressSelect,
-  } = useAddress();
+  } = useUserData();
 
   const {
-    isSubmitting,
-    registerSuccess,
+    setStep3Tried,
+    setErrors
   } = useValidation();
 
-  // État local pour les erreurs et validation
-  const [localErrors, setLocalErrors] = React.useState({});
-  const [step3Tried, setStep3Tried] = React.useState(false);
+  // État local pour les erreurs et le chargement
+  const [localErrors, setLocalErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Validation de l'étape 3
   const validateStep3 = () => {
+    setStep3Tried(true);
+    
+    // Effacer les erreurs du contexte
+    setErrors({});
     
     const newErrors = {};
     let valid = true;
@@ -37,23 +37,17 @@ const Step3Form = ({ goToPrevStep, onSubmit }) => {
     }
     
     // Valider ville
-    if (!city || city.trim() === "") {
-      newErrors.city = "La ville est requise";
+    if (!addressCity || addressCity.trim() === "") {
+      newErrors.addressCity = "La ville est requise";
       valid = false;
     }
     
     // Valider code postal
-    if (!postalCode || postalCode.trim() === "") {
-      newErrors.postalCode = "Le code postal est requis";
+    if (!addressPostalCode || addressPostalCode.trim() === "") {
+      newErrors.addressPostalCode = "Le code postal est requis";
       valid = false;
-    } else if (!/^[0-9]{5}$/.test(postalCode.replace(/\s/g, ''))) {
-      newErrors.postalCode = "Veuillez entrer un code postal valide (5 chiffres)";
-      valid = false;
-    }
-    
-    // Valider conditions d'utilisation
-    if (!acceptTerms) {
-      newErrors.acceptTerms = "Vous devez accepter les conditions d'utilisation";
+    } else if (!/^\d{5}$/.test(addressPostalCode)) {
+      newErrors.addressPostalCode = "Le code postal doit contenir 5 chiffres";
       valid = false;
     }
     
@@ -62,47 +56,24 @@ const Step3Form = ({ goToPrevStep, onSubmit }) => {
     return valid;
   };
 
-  // Fonction de soumission du formulaire
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setStep3Tried(true);
-    
+  // Fonction pour soumettre le formulaire après validation
+  const handleSubmit = async () => {
     const isValid = validateStep3();
     if (isValid) {
+      setIsSubmitting(true);
       try {
-      onSubmit(e);
+        await onSubmit();
       } catch (error) {
-        setLocalErrors({
-          ...localErrors,
-          addressName: "Erreur lors de la validation de l'adresse. Veuillez réessayer."
-        });
+        console.error("Erreur lors de l'inscription:", error);
+      } finally {
+        setIsSubmitting(false);
       }
     }
   };
 
-  // Validation manuelle de l'adresse si nécessaire
-  const manuallyValidateAddress = () => {
-    if (!addressName || !city || !postalCode) {
-      return false;
-    }
-    return true;
-  };
-  
-  // Gestion spécifique pour la sélection d'adresse
-  const onAddressSelected = (addressData) => {
-    handleAddressSelect(addressData);
-    // Vérifier si nous avons tous les champs nécessaires
-    setLocalErrors({
-      ...localErrors,
-      addressName: null,
-      city: null,
-      postalCode: null
-    });
-  };
-
   // Vérifier si une erreur doit être affichée
   const shouldShowError = (fieldName) => {
-    return step3Tried && localErrors[fieldName];
+    return localErrors[fieldName];
   };
 
   // Récupérer le message d'erreur
@@ -111,157 +82,128 @@ const Step3Form = ({ goToPrevStep, onSubmit }) => {
   };
 
   return (
-    <div className="space-y-6">
-      <form onSubmit={handleSubmit}>
-        {/* Afficher un message si l'inscription est en cours ou réussie */}
-        {isSubmitting && !registerSuccess && (
-          <div className="bg-blue-50 p-4 rounded-md mb-6">
-            <div className="flex items-center">
-              <div className="w-6 h-6 border-t-2 border-b-2 border-blue-500 rounded-full animate-spin mr-3"></div>
-              <p className="text-blue-700 font-medium">Inscription en cours, veuillez patienter...</p>
-            </div>
-          </div>
+    <motion.div 
+      className="space-y-6"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.4 }}
+    >
+      {/* Adresse */}
+      <div>
+        <label htmlFor="addressName" className="block text-sm font-medium text-blue-300 mb-1">
+          Adresse
+        </label>
+        <input
+          id="addressName"
+          type="text"
+          className={`w-full px-4 py-3 rounded-md border bg-gray-800/50 text-white placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500 ${shouldShowError('addressName') ? 'border-red-500' : 'border-gray-700'}`}
+          value={addressName}
+          onChange={(e) => setAddressName(e.target.value)}
+          placeholder="123 rue de la République"
+        />
+        {shouldShowError('addressName') && (
+          <p className="text-red-400 text-xs mt-1">{getErrorMessage('addressName')}</p>
         )}
-        
-        {registerSuccess && (
-          <div className="bg-green-50 p-4 rounded-md mb-6">
-            <div className="flex items-center">
-              <svg className="w-6 h-6 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-              </svg>
-              <p className="text-green-700 font-medium">Inscription réussie ! Redirection vers la page de connexion...</p>
-            </div>
-          </div>
-        )}
-        
-        {/* Adresse complète */}
+      </div>
+      
+      {/* Complément d'adresse (optionnel) */}
+      <div>
+        <label htmlFor="addressComplement" className="block text-sm font-medium text-blue-300 mb-1">
+          Complément d'adresse <span className="text-blue-400 text-xs">(optionnel)</span>
+        </label>
+        <input
+          id="addressComplement"
+          type="text"
+          className="w-full px-4 py-3 rounded-md border border-gray-700 bg-gray-800/50 text-white placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500"
+          value={addressComplement}
+          onChange={(e) => setAddressComplement(e.target.value)}
+          placeholder="Appartement, étage, etc."
+        />
+      </div>
+      
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        {/* Ville */}
         <div>
-          <label htmlFor="addressName" className="block text-sm font-medium text-gray-700 mb-1">
-            Adresse postale
-          </label>
-          <AddressAutocomplete
-            id="addressName"
-            value={addressName}
-            onChange={(e) => setAddressName(e.target.value)}
-            onAddressSelect={(data) => {
-              handleAddressSelect(data);
-              // Nettoyer les erreurs après sélection d'une adresse valide
-              setLocalErrors({
-                ...localErrors,
-                addressName: null,
-                city: null,
-                postalCode: null
-              });
-            }}
-            error={shouldShowError('addressName') ? getErrorMessage('addressName') : null}
-            className=""
-            inputClassName={`w-full px-4 py-3 rounded-md border ${shouldShowError('addressName') ? 'border-red-500' : 'border-gray-300'}`}
-          />
-        </div>
-        
-        {/* Complément d'adresse */}
-        <div>
-          <label htmlFor="addressComplement" className="block text-sm font-medium text-gray-700 mb-1">
-            Complément d'adresse (optionnel)
+          <label htmlFor="addressCity" className="block text-sm font-medium text-blue-300 mb-1">
+            Ville
           </label>
           <input
-            id="addressComplement"
+            id="addressCity"
             type="text"
-            className="w-full px-4 py-3 rounded-md border border-gray-300"
-            value={addressComplement}
-            onChange={(e) => setAddressComplement(e.target.value)}
-            placeholder="Appartement, étage, bâtiment..."
+            className={`w-full px-4 py-3 rounded-md border bg-gray-800/50 text-white placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500 ${shouldShowError('addressCity') ? 'border-red-500' : 'border-gray-700'}`}
+            value={addressCity}
+            onChange={(e) => setAddressCity(e.target.value)}
+            placeholder="Paris"
           />
+          {shouldShowError('addressCity') && (
+            <p className="text-red-400 text-xs mt-1">{getErrorMessage('addressCity')}</p>
+          )}
         </div>
         
-        {/* Ville et code postal */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          {/* Ville */}
-          <div>
-            <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
-              Ville
-            </label>
-            <input
-              id="city"
-              type="text"
-              className={`w-full px-4 py-3 rounded-md border ${shouldShowError('city') ? 'border-red-500' : 'border-gray-300'}`}
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-            />
-            {shouldShowError('city') && (
-              <p className="text-red-500 text-xs mt-1">{getErrorMessage('city')}</p>
-            )}
-          </div>
-          
-          {/* Code postal */}
-          <div>
-            <label htmlFor="postalCode" className="block text-sm font-medium text-gray-700 mb-1">
-              Code postal
-            </label>
-            <input
-              id="postalCode"
-              type="text"
-              className={`w-full px-4 py-3 rounded-md border ${shouldShowError('postalCode') ? 'border-red-500' : 'border-gray-300'}`}
-              value={postalCode}
-              onChange={(e) => setPostalCode(e.target.value)}
-            />
-            {shouldShowError('postalCode') && (
-              <p className="text-red-500 text-xs mt-1">{getErrorMessage('postalCode')}</p>
-            )}
-          </div>
-        </div>
-
-        {/* Conditions d'utilisation */}
-        <div className="flex items-start space-x-2 py-2">
-          <Checkbox 
-            id="terms" 
-            checked={acceptTerms}
-            onCheckedChange={handleTermsChange}
-            className={shouldShowError('acceptTerms') ? "border-red-500" : ""}
-          />
-          <label
-            htmlFor="terms"
-            className="text-sm font-medium leading-tight peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-          >
-            J'accepte les <a href="/terms" className="text-[#528eb2] hover:underline">conditions d'utilisation</a>
+        {/* Code postal */}
+        <div>
+          <label htmlFor="addressPostalCode" className="block text-sm font-medium text-blue-300 mb-1">
+            Code postal
           </label>
+          <input
+            id="addressPostalCode"
+            type="text"
+            className={`w-full px-4 py-3 rounded-md border bg-gray-800/50 text-white placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500 ${shouldShowError('addressPostalCode') ? 'border-red-500' : 'border-gray-700'}`}
+            value={addressPostalCode}
+            onChange={(e) => setAddressPostalCode(e.target.value)}
+            placeholder="75001"
+            maxLength={5}
+          />
+          {shouldShowError('addressPostalCode') && (
+            <p className="text-red-400 text-xs mt-1">{getErrorMessage('addressPostalCode')}</p>
+          )}
         </div>
-        {shouldShowError('acceptTerms') && (
-          <p className="text-red-500 text-xs mt-1">{getErrorMessage('acceptTerms')}</p>
-        )}
+      </div>
+      
+      {/* Boutons de navigation */}
+      <div className="flex justify-between mt-6">
+        <motion.button
+          type="button"
+          className="h-12 bg-gray-700/50 hover:bg-gray-700 text-white px-6 rounded-md flex items-center justify-center border border-gray-600"
+          onClick={goToPrevStep}
+          disabled={isSubmitting}
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          Retour
+        </motion.button>
         
-        {/* Boutons de navigation */}
-        <div className="flex space-x-4 mt-8">
-          <Button 
-            type="button"
-            variant="outline"
-            className="flex-1 h-12 bg-white text-[#02284f] border-[#02284f] hover:bg-gray-50"
-            onClick={goToPrevStep}
-          >
-            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            Retour
-          </Button>
-          
-          <Button 
-            type="submit"
-            className="flex-1 h-12 bg-[#528eb2] hover:bg-[#528eb2]/90 text-white"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <div className="flex items-center justify-center">
-                <div className="w-5 h-5 border-t-2 border-b-2 border-white rounded-full animate-spin mr-2"></div>
-                Inscription en cours...
-              </div>
-            ) : (
-              "Créer mon compte"
-            )}
-          </Button>
-        </div>
-      </form>
-    </div>
+        <motion.button
+          type="button"
+          className="h-12 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-6 rounded-md flex items-center justify-center shadow-lg shadow-blue-900/20"
+          onClick={handleSubmit}
+          disabled={isSubmitting}
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          {isSubmitting ? (
+            <>
+              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Traitement...
+            </>
+          ) : (
+            <>
+              S'inscrire
+              <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </>
+          )}
+        </motion.button>
+      </div>
+    </motion.div>
   );
 };
 
-export default Step3Form; 
+export default Step3Form;

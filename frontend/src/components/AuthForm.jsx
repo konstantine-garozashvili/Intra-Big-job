@@ -265,13 +265,13 @@ export function AuthForm() {
   }, [])
 
   return (
-    <div className="w-full bg-white p-8 rounded-lg shadow-lg mx-auto">
+    <div className="w-full backdrop-blur-sm rounded-lg mx-auto">
       <div className="text-center mb-8">
-        <h2 className="text-3xl font-extrabold text-gray-900 mb-2">
+        <h2 className="text-3xl font-extrabold text-blue-300 mb-2">
           Connexion
         </h2>
-        <p className="text-sm text-gray-600">
-          Accédez à votre espace <span className="font-bold text-[#02284f]">Big<span className="text-[#528eb2]">Project</span></span>
+        <p className="text-sm text-blue-200">
+          Accédez à votre espace <span className="font-bold text-blue-400">Big<span className="text-indigo-400">Project</span></span>
         </p>
       </div>
 
@@ -279,35 +279,41 @@ export function AuthForm() {
       <QuickLoginButtons onQuickLogin={quickLogin} />
 
       {errors.auth && (
-        <div className="p-3 mb-5 text-red-700 bg-red-100 border border-red-400 rounded">
+        <div className="p-3 mb-5 text-red-400 bg-red-900/30 border border-red-700 rounded">
           {errors.auth}
         </div>
       )}
 
       <form className="space-y-6" onSubmit={handleSubmit}>
-        <FormInput
-          id="email"
-          name="email"
-          label="Adresse email"
-          type="email"
-          autoComplete="email"
-          required
-          value={formState.email}
-          onChange={handleInputChange}
-          error={errors.email}
-        />
+        <div className="relative">
+          <FormInput
+            id="email"
+            name="email"
+            label="Adresse email"
+            type="email"
+            autoComplete="email"
+            required
+            value={formState.email}
+            onChange={handleInputChange}
+            error={errors.email}
+          />
+          <div className="absolute -right-2 -top-2 w-10 h-10 bg-blue-500 rounded-full filter blur-xl opacity-20"></div>
+        </div>
 
-        <FormInput
-          id="password"
-          name="password"
-          label="Mot de passe"
-          type="password"
-          autoComplete="current-password"
-          required
-          value={formState.password}
-          onChange={handleInputChange}
-          error={errors.password}
-        />
+        <div className="relative">
+          <FormInput
+            id="password"
+            name="password"
+            label="Mot de passe"
+            type="password"
+            autoComplete="current-password"
+            required
+            value={formState.password}
+            onChange={handleInputChange}
+            error={errors.password}
+          />
+          <div className="absolute -left-2 -bottom-2 w-10 h-10 bg-purple-500 rounded-full filter blur-xl opacity-20"></div>
+        </div>
 
         <div className="flex items-center justify-between">
           <div className="flex items-center">
@@ -317,15 +323,15 @@ export function AuthForm() {
               type="checkbox"
               checked={formState.rememberMe}
               onChange={handleInputChange}
-              className="h-4 w-4 text-[#528eb2] focus:ring-[#528eb2] border-gray-300 rounded"
+              className="h-4 w-4 text-blue-500 focus:ring-blue-500 border-gray-700 rounded bg-gray-800"
             />
-            <label htmlFor="rememberMe" className="block ml-2 text-sm text-gray-700">
+            <label htmlFor="rememberMe" className="block ml-2 text-sm text-gray-300">
               Se souvenir de moi
             </label>
           </div>
 
           <div className="text-sm">
-            <Link to="/reset-password" className="font-medium text-[#528eb2] hover:text-[#02284f]">
+            <Link to="/reset-password" className="font-medium text-blue-400 hover:text-blue-300">
               Mot de passe oublié?
             </Link>
           </div>
@@ -335,16 +341,19 @@ export function AuthForm() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#528eb2] hover:bg-[#528eb2]/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#528eb2] transition-all transform hover:scale-105 disabled:opacity-70 disabled:cursor-not-allowed"
+            className="relative w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all transform hover:scale-105 disabled:opacity-70 disabled:cursor-not-allowed overflow-hidden group"
           >
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Connexion en cours...
-              </>
-            ) : (
-              "Se connecter"
-            )}
+            <span className="relative z-10">
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Connexion en cours...
+                </>
+              ) : (
+                "Se connecter"
+              )}
+            </span>
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
           </button>
         </div>
       </form>
@@ -352,10 +361,10 @@ export function AuthForm() {
       <div className="mt-8">
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-300"></div>
+            <div className="w-full border-t border-gray-700"></div>
           </div>
           <div className="relative flex justify-center text-sm">
-            <span className="px-2 text-gray-500 bg-white">
+            <span className="px-2 text-gray-400 bg-gray-900">
               Vous n'avez pas encore de compte?
             </span>
           </div>
@@ -364,9 +373,10 @@ export function AuthForm() {
         <div className="mt-6">
           <Link
             to="/register"
-            className="w-full flex justify-center py-3 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#528eb2]"
+            className="relative w-full flex justify-center py-3 px-4 border border-gray-700 rounded-md shadow-sm text-sm font-medium text-gray-300 bg-gray-800/50 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all transform hover:scale-105 overflow-hidden group"
           >
-            S'inscrire
+            <span className="relative z-10">S'inscrire</span>
+            <div className="absolute inset-0 bg-gradient-to-r from-gray-800 via-blue-900/30 to-gray-800 opacity-0 group-hover:opacity-100 transition-opacity"></div>
           </Link>
         </div>
       </div>

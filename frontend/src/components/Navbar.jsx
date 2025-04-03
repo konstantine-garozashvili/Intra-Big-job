@@ -149,13 +149,13 @@ const AuthButtons = () => (
   <>
     <Link
       to="/login"
-      className="px-4 py-2 text-gray-200 transition-colors rounded-md hover:text-white"
+      className="px-4 py-2 bg-indigo-800 text-white font-medium rounded-full hover:bg-indigo-700 transition-all transform hover:scale-105 shadow-md"
     >
       Connexion
     </Link>
     <Link
       to="/register"
-      className="ml-2 px-4 py-2 bg-[#528eb2] rounded-md text-white font-medium hover:bg-[#528eb2]/90 transition-all transform hover:scale-105"
+      className="ml-2 px-4 py-2 bg-transparent border border-indigo-600 text-indigo-300 font-medium rounded-full hover:bg-indigo-900/50 hover:text-white transition-all transform hover:scale-105 shadow-md"
     >
       Inscription
     </Link>
