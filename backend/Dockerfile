@@ -33,6 +33,13 @@ RUN mkdir -p config/jwt && chmod -R 777 config/jwt
 RUN sed -i 's/\r$//' bin/console && \
     php bin/console lexik:jwt:generate-keypair --overwrite --no-interaction
 
+# Copy php.ini
+COPY php.ini /usr/local/etc/php/conf.d/app.ini
+
+# Set PHP configuration
+RUN echo "upload_max_filesize = 10M" > /usr/local/etc/php/conf.d/uploads.ini && \
+    echo "post_max_size = 10M" >> /usr/local/etc/php/conf.d/uploads.ini
+
 EXPOSE 9000
 
 CMD ["php-fpm"]
