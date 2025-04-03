@@ -34,15 +34,12 @@ export function useUserData(options = {}) {
     `user_data_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
   );
   
-  const [localStorageUser, setLocalStorageUser] = useState(() => {
-    try {
-      const stored = localStorage.getItem('user');
-      if (stored) return JSON.parse(stored);
-    } catch (e) {
-      // Error parsing user from localStorage
-    }
-    return null;
-  });
+  // Get user data from localStorage
+  const localStorageUser = localStorage.getItem('user');
+  const parsedData = localStorageUser ? JSON.parse(localStorageUser) : null;
+  
+  // Get the actual user data from the parsed localStorage
+  const user = parsedData?.user || null;
 
   const routeKey = preferComprehensiveData ? '/profile/consolidated' : '/api/me';
   
@@ -95,7 +92,6 @@ export function useUserData(options = {}) {
           
           try {
             localStorage.setItem('user', JSON.stringify(freshData));
-            setLocalStorageUser(freshData);
           } catch (e) {
             // Error saving to localStorage
           }
@@ -199,7 +195,6 @@ export function useUserData(options = {}) {
       if (normalizedData) {
         try {
           localStorage.setItem('user', JSON.stringify(normalizedData));
-          setLocalStorageUser(normalizedData);
         } catch (e) {
           // Error saving user data to localStorage
         }
@@ -236,7 +231,6 @@ export function useUserData(options = {}) {
       if (data) {
         try {
           localStorage.setItem('user', JSON.stringify(data));
-          setLocalStorageUser(data);
         } catch (e) {
           // Error saving user data to localStorage
         }
@@ -275,7 +269,6 @@ export function useUserData(options = {}) {
       if (freshData) {
         try {
           localStorage.setItem('user', JSON.stringify(freshData));
-          setLocalStorageUser(freshData);
         } catch (e) {
           // Error saving user data to localStorage
         }
@@ -526,6 +519,15 @@ export function useUserData(options = {}) {
     
     return normalizedObj;
   }, [userData, localStorageUser]);
+
+  console.log('useUserData hook:', {
+    userData,
+    isLoading: (isQueryLoading || isInitialLoading) && !localStorageUser,
+    error,
+    localStorageUser: localStorage.getItem('user') // Check if user exists in localStorage
+  });
+
+  console.log('Raw localStorage:', localStorage.getItem('user'));
 
   // Retourner tout ce dont les composants pourraient avoir besoin
   return {
