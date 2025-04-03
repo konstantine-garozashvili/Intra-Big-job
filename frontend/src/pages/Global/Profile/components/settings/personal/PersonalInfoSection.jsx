@@ -1,121 +1,182 @@
-import React from 'react';
-import { User, Calendar, Globe, FileBox } from 'lucide-react';
-import EditableField from '../personal/EditableField';
-import { StaticField } from './StaticField';
+import { useState } from 'react';
+import { Button } from '../../../../../components/ui/button';
+import { Calendar, Gift, Upload, User, Users } from 'lucide-react';
+import { EditableField } from './EditableField';
 import { formatDate } from './utils';
-import { Button } from '@/components/ui/button';
+import PropTypes from 'prop-types';
 
-export const PersonalInfoSection = ({ 
-  userData, 
-  editedData, 
-  editMode, 
-  isFieldEditable, 
-  toggleFieldEdit, 
-  handleCancelField, 
-  handleInputChange, 
+/**
+ * Section d'informations personnelles dans les paramètres de profil
+ * 
+ * @param {Object} props - Les propriétés du composant
+ * @returns {JSX.Element} - Section d'informations personnelles
+ */
+export const PersonalInfoSection = ({
+  userData,
+  editedData,
+  editMode,
+  isFieldEditable,
+  toggleFieldEdit,
+  handleCancelField,
+  handleInputChange,
   onSave,
   onUploadIdentity
 }) => {
+  const [uploadingIdentity, setUploadingIdentity] = useState(false);
+  
+  // Gérer le téléversement de document d'identité
+  const handleUploadIdentity = async (e) => {
+    e.preventDefault();
+    
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    try {
+      setUploadingIdentity(true);
+      await onUploadIdentity(file);
+    } finally {
+      setUploadingIdentity(false);
+      e.target.value = null; // Réinitialiser l'input pour permettre un nouveau téléversement du même fichier
+    }
+  };
+  
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 md:gap-6">
-      {/* First Name */}
-      {isFieldEditable('firstName') ? (
-        <EditableField
-          field="firstName"
-          label="Prénom"
-          icon={<User className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 text-gray-500" />}
-          value={userData.firstName}
-          editedValue={editedData.personal.firstName}
-          isEditing={editMode.firstName}
-          isEditable={true}
-          onEdit={() => toggleFieldEdit('firstName')}
-          onSave={onSave}
-          onCancel={() => handleCancelField('firstName')}
-          onChange={(value) => handleInputChange('firstName', value)}
-        />
-      ) : (
-        <StaticField 
-          label="Prénom"
-          icon={<User className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 text-gray-500" />}
-          value={userData.firstName || 'Non renseigné'}
-        />
-      )}
-
-      {/* Last Name */}
-      {isFieldEditable('lastName') ? (
-        <EditableField
-          field="lastName"
-          label="Nom"
-          icon={<User className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 text-gray-500" />}
-          value={userData.lastName}
-          editedValue={editedData.personal.lastName}
-          isEditing={editMode.lastName}
-          isEditable={true}
-          onEdit={() => toggleFieldEdit('lastName')}
-          onSave={onSave}
-          onCancel={() => handleCancelField('lastName')}
-          onChange={(value) => handleInputChange('lastName', value)}
-        />
-      ) : (
-        <StaticField 
-          label="Nom"
-          icon={<User className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 text-gray-500" />}
-          value={userData.lastName || 'Non renseigné'}
-        />
-      )}
+    <div className="space-y-4">
+      <h3 className="text-lg font-medium">Informations personnelles</h3>
       
-      {/* Birth Date - Toujours afficher en mode statique pour éviter les problèmes */}
-      <StaticField 
-        label="Date de naissance"
-        icon={<Calendar className="h-4 w-4 mr-2 text-blue-500" />}
-        value={`${formatDate(userData.birthDate)}${userData.age ? ` (${userData.age} ans)` : ''}`}
+      {/* Prénom */}
+      <EditableField
+        field="firstName"
+        label="Prénom"
+        icon={<User className="h-4 w-4" />}
+        value={userData.firstName}
+        isEditing={editMode.firstName}
+        isEditable={isFieldEditable('firstName')}
+        editedValue={editedData.personal?.firstName}
+        onEdit={() => toggleFieldEdit('firstName')}
+        onSave={() => onSave('firstName')}
+        onCancel={() => handleCancelField('firstName')}
+        onChange={(e) => handleInputChange('firstName', e.target.value)}
       />
-
-      {/* Nationality */}
-      <StaticField 
-        label="Nationalité"
-        icon={<Globe className="h-4 w-4 mr-2 text-blue-500" />}
-        value={userData.nationality?.name || 'Non renseignée'}
+      
+      {/* Nom */}
+      <EditableField
+        field="lastName"
+        label="Nom"
+        icon={<Users className="h-4 w-4" />}
+        value={userData.lastName}
+        isEditing={editMode.lastName}
+        isEditable={isFieldEditable('lastName')}
+        editedValue={editedData.personal?.lastName}
+        onEdit={() => toggleFieldEdit('lastName')}
+        onSave={() => onSave('lastName')}
+        onCancel={() => handleCancelField('lastName')}
+        onChange={(e) => handleInputChange('lastName', e.target.value)}
       />
-
-      {/* Identity Documents Section - Span full width */}
-      <div className="col-span-1 sm:col-span-2 mt-2">
-        <div className="flex flex-col space-y-2">
-          <div className="flex items-center">
-            <FileBox className="h-4 w-4 mr-2 text-blue-500" />
-            <span className="text-sm font-medium">Pièces d'identité</span>
+      
+      {/* Date de naissance */}
+      <div className="flex items-start justify-between py-2">
+        <div className="flex items-center space-x-2">
+          <Calendar className="h-4 w-4 text-gray-500" />
+          <div>
+            <span className="text-sm font-medium">Date de naissance</span>
+            <p className="text-sm text-gray-500">
+              {userData.birthDate ? `${formatDate(userData.birthDate)} (${userData.age} ans)` : 'Non renseignée'}
+            </p>
           </div>
-          
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 mt-1 bg-gray-50 p-3 rounded-md">
-            <div className="flex-1">
-              {userData.identityDocuments && userData.identityDocuments.length > 0 ? (
-                <div className="flex flex-col space-y-2">
-                  {userData.identityDocuments.map((doc, index) => (
-                    <div key={index} className="flex items-center justify-between bg-white p-2 rounded border">
-                      <span className="text-sm truncate">{doc.name || `Document ${index + 1}`}</span>
-                      <div className="flex space-x-2">
-                        <Button variant="outline" size="sm" className="h-7 px-2 text-xs">Voir</Button>
-                        <Button variant="destructive" size="sm" className="h-7 px-2 text-xs">Supprimer</Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-gray-500">Aucune pièce d'identité n'a été téléchargée.</p>
-              )}
-            </div>
-            
-            <Button 
-              variant="outline" 
+        </div>
+      </div>
+      
+      {/* Nationalité */}
+      <div className="flex items-start justify-between py-2">
+        <div className="flex items-center space-x-2">
+          <Gift className="h-4 w-4 text-gray-500" />
+          <div>
+            <span className="text-sm font-medium">Nationalité</span>
+            <p className="text-sm text-gray-500">
+              {userData.nationality?.name || "Non renseignée"}
+            </p>
+          </div>
+        </div>
+      </div>
+      
+      {/* Documents d'identité */}
+      <div className="flex flex-col space-y-2 py-2">
+        <h4 className="text-sm font-medium">Documents d&apos;identité</h4>
+        
+        {/* Liste des documents d'identité */}
+        {userData.identityDocuments && userData.identityDocuments.length > 0 ? (
+          <div className="space-y-2">
+            {userData.identityDocuments.map((doc) => (
+              <div key={doc.id} className="flex items-center justify-between bg-gray-50 p-2 rounded-md">
+                <span className="text-sm">{doc.name}</span>
+                <Button variant="ghost" size="sm">Télécharger</Button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500">Aucun document d&apos;identité n&apos;a été téléversé</p>
+        )}
+        
+        {/* Bouton pour ajouter un document d'identité */}
+        <div className="mt-2">
+          <label htmlFor="upload-identity" className="relative">
+            <input
+              id="upload-identity"
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png"
+              className="absolute inset-0 opacity-0"
+              onChange={handleUploadIdentity}
+              disabled={uploadingIdentity}
+            />
+            <Button
+              type="button"
+              variant="outline"
               size="sm"
-              className="whitespace-nowrap"
-              onClick={() => onUploadIdentity && onUploadIdentity()}
+              className="w-full"
+              disabled={uploadingIdentity}
             >
-              Ajouter un document
+              <Upload className="mr-2 h-4 w-4" />
+              {uploadingIdentity ? "Téléversement en cours..." : "Ajouter un document d&apos;identité"}
             </Button>
-          </div>
+          </label>
         </div>
       </div>
     </div>
   );
+};
+
+// Définition des PropTypes
+PersonalInfoSection.propTypes = {
+  userData: PropTypes.shape({
+    firstName: PropTypes.string,
+    lastName: PropTypes.string,
+    birthDate: PropTypes.string,
+    age: PropTypes.number,
+    nationality: PropTypes.shape({
+      name: PropTypes.string
+    }),
+    identityDocuments: PropTypes.arrayOf(
+      PropTypes.shape({
+        id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+        name: PropTypes.string
+      })
+    )
+  }).isRequired,
+  editedData: PropTypes.shape({
+    personal: PropTypes.shape({
+      firstName: PropTypes.string,
+      lastName: PropTypes.string
+    })
+  }).isRequired,
+  editMode: PropTypes.shape({
+    firstName: PropTypes.bool,
+    lastName: PropTypes.bool
+  }).isRequired,
+  isFieldEditable: PropTypes.func.isRequired,
+  toggleFieldEdit: PropTypes.func.isRequired,
+  handleCancelField: PropTypes.func.isRequired,
+  handleInputChange: PropTypes.func.isRequired,
+  onSave: PropTypes.func.isRequired,
+  onUploadIdentity: PropTypes.func.isRequired
 }; 

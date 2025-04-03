@@ -26,40 +26,31 @@ const Step3Form = ({ goToPrevStep, onSubmit }) => {
 
   // Validation de l'étape 3
   const validateStep3 = () => {
-    
     const newErrors = {};
-    let valid = true;
     
-    // Valider adresse
-    if (!addressName || addressName.trim() === "") {
-      newErrors.addressName = "L'adresse est requise";
-      valid = false;
+    // Valider l'adresse
+    if (!addressName || addressName.trim() === '') {
+      newErrors.addressName = "L&apos;adresse est requise";
     }
     
-    // Valider ville
-    if (!city || city.trim() === "") {
+    // Valider la ville
+    if (!city || city.trim() === '') {
       newErrors.city = "La ville est requise";
-      valid = false;
     }
     
-    // Valider code postal
-    if (!postalCode || postalCode.trim() === "") {
+    // Valider le code postal
+    if (!postalCode || postalCode.trim() === '') {
       newErrors.postalCode = "Le code postal est requis";
-      valid = false;
     } else if (!/^[0-9]{5}$/.test(postalCode.replace(/\s/g, ''))) {
-      newErrors.postalCode = "Veuillez entrer un code postal valide (5 chiffres)";
-      valid = false;
+      newErrors.postalCode = "Le code postal doit contenir 5 chiffres";
     }
     
     // Valider conditions d'utilisation
     if (!acceptTerms) {
-      newErrors.acceptTerms = "Vous devez accepter les conditions d'utilisation";
-      valid = false;
+      newErrors.acceptTerms = "Vous devez accepter les conditions d&apos;utilisation";
     }
     
-    setLocalErrors(newErrors);
-    
-    return valid;
+    return newErrors;
   };
 
   // Fonction de soumission du formulaire
@@ -84,7 +75,7 @@ const Step3Form = ({ goToPrevStep, onSubmit }) => {
       } catch (error) {
         setLocalErrors({
           ...localErrors,
-          addressName: "Erreur lors de la validation de l'adresse. Veuillez réessayer."
+          addressName: "Erreur lors de la validation de l&apos;adresse. Veuillez réessayer."
         });
       }
     }
@@ -170,9 +161,9 @@ const Step3Form = ({ goToPrevStep, onSubmit }) => {
         </div>
         
         {/* Complément d'adresse */}
-        <div>
+        <div className="mb-4">
           <label htmlFor="addressComplement" className="block text-sm font-medium text-gray-700 mb-1">
-            Complément d'adresse (optionnel)
+            Complément d&apos;adresse (optionnel)
           </label>
           <input
             id="addressComplement"
@@ -233,7 +224,7 @@ const Step3Form = ({ goToPrevStep, onSubmit }) => {
             htmlFor="terms"
             className="text-sm font-medium leading-tight peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
           >
-            J'accepte les <a href="/terms" className="text-[#528eb2] hover:underline">conditions d'utilisation</a>
+            J&apos;accepte les <a href="/terms" className="text-[#528eb2] hover:underline">conditions d&apos;utilisation</a>
           </label>
         </div>
         {shouldShowError('acceptTerms') && (

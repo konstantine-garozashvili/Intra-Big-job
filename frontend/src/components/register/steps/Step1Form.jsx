@@ -47,7 +47,7 @@ const Step1Form = ({ goToNextStep }) => {
     
     // Valider email
     if (!email || email.trim() === "") {
-      newErrors.email = "L'email est requis";
+      newErrors.email = "L&apos;email est requis";
       valid = false;
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       newErrors.email = "Veuillez entrer un email valide";

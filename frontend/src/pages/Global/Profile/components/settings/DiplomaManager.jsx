@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
-import { GraduationCap, Plus, Trash2, X, Save, Calendar, Check, ChevronsUpDown } from 'lucide-react';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useState } from 'react';
+import { 
+  Briefcase, 
+  Pencil, 
+  Plus,
+  Trash2 
+} from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card';
+import { Button } from '../../../../components/ui/button';
+import { toast } from 'sonner';
 import {
   Dialog,
   DialogContent,
@@ -11,10 +15,12 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
-import { toast } from 'sonner';
+} from '../../../../components/ui/dialog';
 import { diplomaService } from '../../services/diplomaService';
+import { GraduationCap, Calendar, Check, ChevronsUpDown } from 'lucide-react';
+import { Input } from "@/components/ui/input";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import * as roleUtils from '../../utils/roleUtils';
@@ -127,7 +133,7 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
         }
         
         // Default error message
-        setError('Erreur lors de l\'ajout du diplôme');
+        setError('Erreur lors de l&apos;ajout du diplôme');
       }
     }
   );
@@ -156,7 +162,7 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
       return;
     }
     if (!newDiploma.obtainedDate) {
-      setError('Veuillez sélectionner une date d\'obtention');
+      setError('Veuillez sélectionner une date d&apos;obtention');
       return;
     }
     
@@ -220,7 +226,7 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
           <DialogHeader>
             <DialogTitle>Confirmer la suppression</DialogTitle>
             <DialogDescription>
-              Êtes-vous sûr de vouloir supprimer le diplôme "{diplomaToDelete?.diploma?.name}" ? Cette action est irréversible.
+              Êtes-vous sûr de vouloir supprimer le diplôme "{diplomaToDelete?.diploma?.name}" ? Cette action est irréversible et supprimera définitivement le diplôme de votre profil.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex justify-end space-x-2">
@@ -341,7 +347,7 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
                     htmlFor="date-obtention"
                     className="block text-sm font-medium text-gray-700"
                   >
-                    Date d'obtention
+                    Date d&apos;obtention
                   </label>
                   <input
                     id="date-obtention"
