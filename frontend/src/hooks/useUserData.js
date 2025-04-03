@@ -18,7 +18,7 @@ import apiService from '@/lib/services/apiService';
 export function useUserData(options = {}) {
   const {
     enabled = true,
-    preferComprehensiveData = false,
+    preferComprehensiveData = true,
     onSuccess,
     onError,
     ...queryOptions
@@ -27,7 +27,6 @@ export function useUserData(options = {}) {
   const queryClient = useQueryClient();
   const [isInitialLoading, setIsInitialLoading] = useState(false);
   const sessionId = getSessionId();
-  // Add isAuthenticated state
   const [isAuthenticated, setIsAuthenticated] = useState(() => authService.isLoggedIn());
   
   const [componentId] = useState(() => 
@@ -44,94 +43,16 @@ export function useUserData(options = {}) {
     return null;
   });
 
-  const routeKey = preferComprehensiveData ? '/profile/consolidated' : '/api/me';
-  
-  // Add a ref to track the last time we fetched data to prevent too frequent refreshes
-  const [lastFetchTime, setLastFetchTime] = useState(0);
+  const routeKey = '/api/profile/consolidated';
   
   useEffect(() => {
     userDataManager.requestRegistry.registerRouteUser(routeKey, componentId);
     
-    if (preferComprehensiveData) {
-      userDataManager.requestRegistry.registerRouteUser('/api/profile/picture', componentId);
-    }
-    
     return () => {
       userDataManager.requestRegistry.unregisterRouteUser(routeKey, componentId);
-      
-      if (preferComprehensiveData) {
-        userDataManager.requestRegistry.unregisterRouteUser('/api/profile/picture', componentId);
-      }
     };
-  }, [routeKey, componentId, preferComprehensiveData]);
+  }, [routeKey, componentId]);
   
-  useEffect(() => {
-    if (!enabled || !sessionId) return;
-    
-    const hasToken = !!localStorage.getItem('token');
-    if (!hasToken) return;
-    
-    // Only fetch if we haven't fetched in the last 10 seconds
-    const now = Date.now();
-    if (now - lastFetchTime < 10000) {
-      return;
-    }
-    
-    const fetchData = async () => {
-      setIsInitialLoading(true);
-      try {
-        // Use a timestamp-based requestId to help with debugging
-        const requestId = `useUserData_${componentId}_${now}`;
-        
-        const freshData = await userDataManager.getUserData({
-          routeKey,
-          forceRefresh: false, // Change to false to allow using cache
-          useCache: true,      // Allow using cache
-          requestId           // Add requestId for tracing
-        });
-        
-        if (freshData) {
-          queryClient.setQueryData(['unified-user-data', routeKey, sessionId], freshData);
-          
-          try {
-            localStorage.setItem('user', JSON.stringify(freshData));
-            setLocalStorageUser(freshData);
-          } catch (e) {
-            // Error saving to localStorage
-          }
-        }
-        
-        // Update the last fetch time
-        setLastFetchTime(now);
-      } catch (error) {
-        // Error in initial data fetch
-        console.warn("Error fetching user data:", error);
-      } finally {
-        setIsInitialLoading(false);
-      }
-    };
-    
-    fetchData();
-  }, [enabled, sessionId, routeKey, queryClient]);
-
-  const getCachedData = useCallback(() => {
-    // Add debouncing/memoization to prevent excessive cache reads
-    try {
-      // First try to get from query cache which is faster
-      const queryCached = queryClient.getQueryData(['unified-user-data', routeKey, sessionId]);
-      if (queryCached) return queryCached;
-      
-      // Then try userDataManager cache
-      const cached = userDataManager.getCachedUserData();
-      if (cached) return cached;
-      
-      // Finally try localStorage
-      return localStorageUser;
-    } catch (e) {
-      return localStorageUser;
-    }
-  }, [routeKey, sessionId, localStorageUser, queryClient]);
-
   const fetchUserData = useCallback(async () => {
     setIsInitialLoading(true);
     
@@ -222,7 +143,7 @@ export function useUserData(options = {}) {
   } = useQuery({
     queryKey: ['unified-user-data', routeKey, sessionId, isAuthenticated],
     queryFn: fetchUserData,
-    initialData: getCachedData,
+    initialData: localStorageUser,
     enabled: enabled && !!sessionId && isAuthenticated,
     staleTime: 1 * 60 * 1000,
     cacheTime: 20 * 60 * 1000,

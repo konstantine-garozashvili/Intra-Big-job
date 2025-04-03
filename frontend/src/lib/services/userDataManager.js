@@ -462,8 +462,8 @@ const userDataManager = {
           timeout: 12000,
         };
 
-        // Appeler l'API pour obtenir les données utilisateur
-        const response = await apiService.get('/api/me', apiOptions);
+        // Appeler l'API pour obtenir les données utilisateur consolidées
+        const response = await apiService.get('/api/profile/consolidated', apiOptions);
         
         // Extraire les données utilisateur de la réponse
         let userData = null;
@@ -502,7 +502,6 @@ const userDataManager = {
         
         resolve(userData);
       } catch (error) {
-        
         userDataCache.isLoading = false;
         userDataCache.consecutiveErrors++; // Incrémenter le compteur d'erreurs consécutives
         
@@ -531,13 +530,13 @@ const userDataManager = {
       } finally {
         // Supprimer la requête en cours de la map une fois terminée
         setTimeout(() => {
-          userDataCache.pendingRequests.delete('/api/me');
+          userDataCache.pendingRequests.delete('/api/profile/consolidated');
         }, 0);
       }
     });
 
     // Stocker la promesse dans la map des requêtes en cours
-    userDataCache.pendingRequests.set('/api/me', loadPromise);
+    userDataCache.pendingRequests.set('/api/profile/consolidated', loadPromise);
     
     return loadPromise;
   },
@@ -776,8 +775,8 @@ const userDataManager = {
     // Enregistrer le composant comme utilisateur de la route
     this.requestRegistry.registerRouteUser(route, componentId);
     
-    // Special handling for /api/me - use aggressive caching
-    if (route.includes('/api/me')) {
+    // Special handling for consolidated profile data
+    if (route === '/api/profile/consolidated') {
       const now = Date.now();
       const cachedData = this.getCachedUserData();
       

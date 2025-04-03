@@ -111,140 +111,125 @@ export function AuthForm() {
     e.preventDefault()
     
     setErrors({})
+    setIsLoading(true)
     
-    // Validation basique
+    // Validation améliorée
     const newErrors = {}
-    if (!formState.email) newErrors.email = "L'email est requis"
-    else if (!/\S+@\S+\.\S+/.test(formState.email)) newErrors.email = "Format d'email invalide"
-    if (!formState.password) newErrors.password = "Le mot de passe est requis"
+    if (!formState.email?.trim()) {
+      newErrors.email = "L'email est requis"
+    } else if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(formState.email)) {
+      newErrors.email = "Format d'email invalide"
+    }
+    
+    if (!formState.password?.trim()) {
+      newErrors.password = "Le mot de passe est requis"
+    } else if (formState.password.length < 8) {
+      newErrors.password = "Le mot de passe doit contenir au moins 8 caractères"
+    }
     
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors)
+      setIsLoading(false)
       return
     }
-    
-    setIsLoading(true)
     
     try {
       const response = await authService.login(formState.email, formState.password)
       
+      // Gestion du "Se souvenir de moi"
       if (formState.rememberMe) {
         localStorage.setItem('rememberedEmail', formState.email)
       } else {
         localStorage.removeItem('rememberedEmail')
       }
       
-      // Dispatch login success event
-      window.dispatchEvent(new Event('login-success'))
-      
-      // Get the return URL if it exists
+      // Récupération de l'URL de retour
       const returnTo = sessionStorage.getItem('returnTo')
       
-      // Add small delay before navigation - REDUCED from 300ms to 150ms
-      setTimeout(() => {
+      // Gestion de la redirection
+      const handleRedirection = () => {
         if (returnTo) {
           sessionStorage.removeItem('returnTo')
           navigate(returnTo)
-        } else {
-          // Get role from token directly to determine dashboard path
-          const token = localStorage.getItem('token')
-          let dashboardPath = '/dashboard'
-          
-          if (token) {
-            try {
-              const tokenParts = token.split('.')
-              if (tokenParts.length === 3) {
-                const payload = JSON.parse(atob(tokenParts[1]))
-                if (payload.roles && payload.roles.length > 0) {
-                  // Determine dashboard path based on role
-                  const mainRole = payload.roles[0]
-                  switch (mainRole) {
-                    case 'ROLE_ADMIN':
-                      dashboardPath = '/admin/dashboard'
-                      break
-                    case 'ROLE_SUPERADMIN':
-                      dashboardPath = '/superadmin/dashboard'
-                      break
-                    case 'ROLE_TEACHER':
-                      dashboardPath = '/teacher/dashboard'
-                      break
-                    case 'ROLE_STUDENT':
-                      dashboardPath = '/student/dashboard'
-                      break
-                    case 'ROLE_HR':
-                      dashboardPath = '/hr/dashboard'
-                      break
-                    default:
-                      dashboardPath = '/dashboard'
-                  }
-                }
-              }
-            } catch (error) {
-              console.error('Error parsing token:', error)
-            }
-          }
-          
-          // Navigate directly to role-specific dashboard
-          navigate(dashboardPath)
+          return
         }
         
-        // Show success toast after navigation
-        toast.success("Connexion réussie")
-      }, 150)
+        // Détermination du tableau de bord en fonction du rôle
+        const token = localStorage.getItem('token')
+        let dashboardPath = '/dashboard'
+        
+        if (token) {
+          try {
+            const tokenParts = token.split('.')
+            if (tokenParts.length === 3) {
+              const payload = JSON.parse(atob(tokenParts[1]))
+              if (payload.roles?.length > 0) {
+                const mainRole = payload.roles[0]
+                const roleDashboards = {
+                  'ROLE_ADMIN': '/admin/dashboard',
+                  'ROLE_SUPERADMIN': '/superadmin/dashboard',
+                  'ROLE_TEACHER': '/teacher/dashboard',
+                  'ROLE_STUDENT': '/student/dashboard',
+                  'ROLE_HR': '/hr/dashboard'
+                }
+                dashboardPath = roleDashboards[mainRole] || '/dashboard'
+              }
+            }
+          } catch (error) {
+            console.error('Error parsing token:', error)
+          }
+        }
+        
+        navigate(dashboardPath)
+      }
       
-      // Listen for when full user data is loaded
+      // Gestion des événements et de la redirection
       const handleUserDataLoaded = () => {
         refreshRoles()
         window.removeEventListener('user-data-loaded', handleUserDataLoaded)
+        handleRedirection()
+        toast.success("Connexion réussie", {
+          description: "Redirection vers votre tableau de bord..."
+        })
       }
       
       window.addEventListener('user-data-loaded', handleUserDataLoaded)
       
-      // After successful login, add some additional error handling for profile data issues
-      const fixProfileIfNeeded = setTimeout(async () => {
+      // Vérification des données du profil
+      setTimeout(async () => {
         try {
-          // Check if we can access the user data
-          const user = authService.getUser();
+          const user = authService.getUser()
           if (!user || Object.keys(user).length === 0) {
-            console.warn('User data missing after login, attempting to fix...');
-            await authService.fixProfileDataIssues();
+            await authService.fixProfileDataIssues()
           }
         } catch (profileError) {
-          console.error('Error handling profile data after login:', profileError);
-          // No need to show this error to user as login was successful
+          console.error('Error handling profile data after login:', profileError)
         }
-      }, 2000);
+      }, 2000)
       
     } catch (error) {
-      if (error.response) {
-        const { data } = error.response
-        
-        if (data.code === 'EMAIL_NOT_VERIFIED') {
-          setErrors({ email: 'Email non vérifié' })
-          
-          toast.error("Email non vérifié", {
-            description: "Veuillez vérifier votre email avant de vous connecter.",
-            action: {
-              label: "Renvoyer l'email",
-              onClick: () => navigate('/verification-error')
-            },
-            duration: 5000
-          })
-        } else if (data.message) {
-          setErrors({ auth: data.message })
-          toast.error("Erreur de connexion", {
-            description: data.message
-          })
-        } else {
-          setErrors({ auth: "Une erreur est survenue lors de la connexion. Veuillez réessayer." })
-          toast.error("Erreur de connexion", {
-            description: "Une erreur est survenue lors de la connexion. Veuillez réessayer."
-          })
-        }
-      } else {
-        setErrors({ auth: "Une erreur est survenue lors de la connexion. Veuillez réessayer." })
+      const errorResponse = error.response?.data
+      
+      if (errorResponse?.code === 'EMAIL_NOT_VERIFIED') {
+        setErrors({ email: 'Email non vérifié' })
+        toast.error("Email non vérifié", {
+          description: "Veuillez vérifier votre email avant de vous connecter.",
+          action: {
+            label: "Renvoyer l'email",
+            onClick: () => navigate('/verification-error')
+          },
+          duration: 5000
+        })
+      } else if (errorResponse?.message) {
+        setErrors({ auth: errorResponse.message })
         toast.error("Erreur de connexion", {
-          description: "Une erreur est survenue lors de la connexion. Veuillez réessayer."
+          description: errorResponse.message
+        })
+      } else {
+        const defaultError = "Une erreur est survenue lors de la connexion. Veuillez réessayer."
+        setErrors({ auth: defaultError })
+        toast.error("Erreur de connexion", {
+          description: defaultError
         })
       }
     } finally {

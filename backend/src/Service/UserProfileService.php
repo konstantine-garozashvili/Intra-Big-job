@@ -32,14 +32,18 @@ class UserProfileService
     }
     
     /**
-     * Get user profile data with all relations
+     * Get comprehensive user profile data with all relations
      */
     public function getUserProfileData(User $user): array
     {
         // Récupérer l'utilisateur avec toutes ses relations chargées
         $user = $this->userRepository->findOneWithAllRelations($user->getId());
         
-        // Récupérer les données utilisateur avec les relations
+        if (!$user) {
+            throw new \Exception('Utilisateur non trouvé');
+        }
+        
+        // Données de base de l'utilisateur
         $userData = [
             'id' => $user->getId(),
             'firstName' => $user->getFirstName(),
@@ -52,30 +56,56 @@ class UserProfileService
             'isEmailVerified' => $user->isEmailVerified(),
             'linkedinUrl' => $user->getLinkedinUrl(),
             'pictureProfilePath' => $user->getProfilePicturePath(),
-            'nationality' => $user->getNationality() ? [
-                'id' => $user->getNationality()->getId(),
-                'name' => $user->getNationality()->getName(),
-            ] : null,
-            'theme' => $user->getTheme() ? [
-                'id' => $user->getTheme()->getId(),
-                'name' => $user->getTheme()->getName(),
-            ] : null,
-            'profilePicture' => null,
+            'roles' => array_map(function($role) {
+                return is_string($role) ? $role : $role->getName();
+            }, $user->getRoles()),
         ];
-
-        // Ajouter le profile étudiant
+        
+        // Ajouter les adresses
+        $userData['addresses'] = array_map(function($address) {
+            return [
+                'id' => $address->getId(),
+                'name' => $address->getName(),
+                'complement' => $address->getComplement(),
+                'city' => $address->getCity() ? [
+                    'id' => $address->getCity()->getId(),
+                    'name' => $address->getCity()->getName()
+                ] : null,
+                'postalCode' => $address->getPostalCode() ? [
+                    'id' => $address->getPostalCode()->getId(),
+                    'code' => $address->getPostalCode()->getCode()
+                ] : null
+            ];
+        }, $user->getAddresses()->toArray());
+        
+        // Ajouter la nationalité
+        $userData['nationality'] = $user->getNationality() ? [
+            'id' => $user->getNationality()->getId(),
+            'name' => $user->getNationality()->getName(),
+        ] : null;
+        
+        // Ajouter le thème
+        $userData['theme'] = $user->getTheme() ? [
+            'id' => $user->getTheme()->getId(),
+            'name' => $user->getTheme()->getName(),
+        ] : null;
+        
+        // Ajouter le profil étudiant s'il existe
         if ($user->getStudentProfile()) {
             $studentProfile = $user->getStudentProfile();
             $userData['studentProfile'] = [
                 'id' => $studentProfile->getId(),
                 'isSeekingInternship' => $studentProfile->isSeekingInternship(),
                 'isSeekingApprenticeship' => $studentProfile->isSeekingApprenticeship(),
+                'portfolioUrl' => $studentProfile->getPortfolioUrl(),
+                'createdAt' => $studentProfile->getCreatedAt() ? $studentProfile->getCreatedAt()->format('Y-m-d H:i:s') : null,
+                'updatedAt' => $studentProfile->getUpdatedAt() ? $studentProfile->getUpdatedAt()->format('Y-m-d H:i:s') : null,
             ];
         } else {
             $userData['studentProfile'] = null;
         }
-
-        // Ajouter les spécialisations
+        
+        // Ajouter la spécialisation
         $specialization = $user->getSpecialization();
         if ($specialization) {
             $userData['specialization'] = [
@@ -89,6 +119,23 @@ class UserProfileService
         } else {
             $userData['specialization'] = null;
         }
+        
+        // Ajouter la ville par défaut (basée sur la première adresse)
+        $userData['city'] = 'Non renseignée';
+        if (!empty($userData['addresses'])) {
+            $firstAddress = $userData['addresses'][0];
+            if (isset($firstAddress['city']['name'])) {
+                $userData['city'] = $firstAddress['city']['name'];
+            }
+        }
+        
+        // Ajouter les documents
+        $userData['documents'] = []; // À implémenter si nécessaire
+        
+        // Ajouter les statistiques de profil
+        $userData['stats'] = [
+            'profile' => [], // À implémenter si nécessaire
+        ];
         
         return $userData;
     }

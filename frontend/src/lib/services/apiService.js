@@ -279,8 +279,8 @@ const apiService = {
       // Générer une clé unique pour cette requête
       const requestKey = `${path}${JSON.stringify(options.params || {})}`;
       
-      // Identify if this is a profile request for special handling
-      const isProfileRequest = path.includes('/profile') || path.includes('/me');
+      // Identify if this is a consolidated profile request
+      const isProfileRequest = path === '/api/profile/consolidated';
       const isStaticRequest = path.includes('/static') || path.includes('/config');
       
       // For profile requests, use more aggressive caching
@@ -743,7 +743,7 @@ const apiService = {
     }
     
     // Use optimized get method with profile-specific settings
-    return this.get('/me', {
+    return this.get('/api/profile/consolidated', {
       headers: {
         'X-Request-Type': 'profile',
         'X-Cache-Priority': 'high'

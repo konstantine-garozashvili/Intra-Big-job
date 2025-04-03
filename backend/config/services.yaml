@@ -16,6 +16,8 @@ parameters:
     aws.use_s3_storage: true  # Set to false to use local storage instead of S3
     # URL du frontend (from group3)
     app.frontend_url: 'http://localhost:5173'  # URL du frontend
+    # Paramètres pour le nouvel agrégateur de profil utilisateur
+    app.user_profile.default_sections: ['basic', 'profile']
 
 services:
     # default configuration for services in *this* file
@@ -32,6 +34,22 @@ services:
             - '../src/Entity/'
             - '../src/Kernel.php'
 
+    # Configuration du service d'agrégation de profil utilisateur
+    App\Service\User\UserProfileAggregator:
+        autowire: true
+        arguments:
+            $entityManager: '@doctrine.orm.entity_manager'
+            $userRepository: '@App\Repository\UserRepository'
+            $userDiplomaRepository: '@App\Repository\UserDiplomaRepository'
+            $userProfileService: '@App\Service\UserProfileService'
+            $userService: '@App\Service\UserService'
+
+    # Configuration du subscriber pour les événements utilisateur
+    App\EventSubscriber\UserDataSubscriber:
+        autowire: true
+        tags:
+            - { name: kernel.event_subscriber }
+            
     # Configuration du DocumentController
     App\Domains\Global\Document\Controller\DocumentController:
         arguments:

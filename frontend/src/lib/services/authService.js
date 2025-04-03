@@ -37,19 +37,29 @@ export const authService = {
 
   async login(email, password) {
     try {
+      // Clear all existing cache and storage
       const queryClient = getQueryClient();
       if (queryClient) {
-        queryClient.invalidateQueries({ queryKey: ['user'] });
-        queryClient.invalidateQueries({ queryKey: ['profile'] });
+        await queryClient.cancelQueries();
+        await queryClient.removeQueries();
+        clearQueryCache();
       }
       
       sessionStorage.setItem('login_in_progress', 'true');
       const deviceId = getOrCreateDeviceId();
       const { deviceName, deviceType } = getDeviceInfo();
       
+      // Clear storage but keep some settings
+      const rememberedEmail = localStorage.getItem('rememberedEmail');
+      const theme = localStorage.getItem('theme');
       localStorage.clear();
+      if (rememberedEmail) localStorage.setItem('rememberedEmail', rememberedEmail);
+      if (theme) localStorage.setItem('theme', theme);
+      
+      // Generate new session
       currentSessionId = Date.now().toString(36) + Math.random().toString(36).substring(2);
       localStorage.setItem('session_id', currentSessionId);
+      
       showGlobalLoader();
       
       const response = await apiService.post('/login_check', {
@@ -63,6 +73,7 @@ export const authService = {
       if (response.token) {
         localStorage.setItem('token', response.token);
         const payload = decodeToken(response.token);
+        
         if (payload?.roles) {
           const enhancedUser = {
             username: payload.username,
@@ -72,22 +83,38 @@ export const authService = {
             firstName: payload.firstName,
             lastName: payload.lastName,
             _extractedAt: Date.now(),
-            _minimal: true
+            _minimal: true,
+            _source: 'token'
           };
+          
+          // Update storage and cache
           localStorage.setItem('user', JSON.stringify(enhancedUser));
           localStorage.setItem('userRoles', JSON.stringify(payload.roles));
-          if (queryClient) queryClient.setQueryData(['user', 'current'], enhancedUser);
-          document.dispatchEvent(new CustomEvent('auth:minimal-data-ready', { detail: { user: enhancedUser } }));
+          localStorage.setItem('last_role', payload.roles[0]);
+          
+          if (queryClient) {
+            queryClient.setQueryData(['user', 'current'], enhancedUser);
+            queryClient.setQueryData(['unified-user-data', '/api/me', currentSessionId], enhancedUser);
+          }
+          
+          // Notify components of minimal data availability
+          document.dispatchEvent(new CustomEvent('auth:minimal-data-ready', { 
+            detail: { user: enhancedUser }
+          }));
         }
       }
       
-      if (response.refresh_token) localStorage.setItem('refresh_token', response.refresh_token);
+      if (response.refresh_token) {
+        localStorage.setItem('refresh_token', response.refresh_token);
+      }
       
+      // Trigger events
       hideGlobalLoader();
       window.dispatchEvent(new Event('login-success'));
       window.dispatchEvent(new Event('auth-state-change'));
       
-      this.lazyLoadUserData(true).catch(() => {});
+      // Load complete user data in background
+      this.lazyLoadUserData(true).catch(console.error);
       
       return response;
     } catch (error) {
@@ -134,7 +161,11 @@ export const authService = {
     if (!this.isLoggedIn()) return null;
     
     try {
-      const response = await apiService.get('/api/me', { noCache: true, timeout: 10000, retries: 1 });
+      const response = await apiService.get('/api/profile/consolidated', { 
+        noCache: true, 
+        timeout: 10000, 
+        retries: 1 
+      });
       const userData = response.user || response.data?.user || response.success ? response.user : response;
       
       if (userData) {
@@ -316,7 +347,7 @@ export const authService = {
     try {
       const userData = await userDataManager.getUserData({
         forceRefresh,
-        routeKey: '/api/me',
+        routeKey: '/api/profile/consolidated',
         requestId: callerId,
         preventRecursion: options?.preventRecursion || false
       });
@@ -416,7 +447,7 @@ export const authService = {
       }
       
       try {
-        const userData = await apiService.get('/api/profile', {
+        const userData = await apiService.get('/api/profile/consolidated', {
           noCache: true,
           retries: 2,
           timeout: 10000
