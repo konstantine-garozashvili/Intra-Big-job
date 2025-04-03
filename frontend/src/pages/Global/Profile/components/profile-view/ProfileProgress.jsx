@@ -8,65 +8,28 @@ import {
 import { Button } from "@/components/ui/button";
 import { ProfileContext } from "@/components/MainLayout";
 
-const ProfileProgress = ({ userData }) => {
+const ProfileProgress = () => {
+  console.log("[ProfileProgress] Rendering.");
+
   const [isOpen, setIsOpen] = useState(false);
   const { refreshProfileData, isProfileLoading, profileData } = useContext(ProfileContext);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  // Toujours utiliser les données les plus récentes disponibles
-  const [localUserData, setLocalUserData] = useState(userData || profileData);
-  
-  // Référence pour stocker la dernière valeur de profileData pour comparaison
-  const [lastProfileData, setLastProfileData] = useState(null);
 
-  // Mettre à jour les données locales lorsque userData change
-  useEffect(() => {
-    if (userData && !isRefreshing) {
-      setLocalUserData(userData);
-    }
-  }, [userData, isRefreshing]);
+  console.log("[ProfileProgress] Received from Context:", JSON.stringify(profileData, null, 2));
 
-  // Mettre à jour les données locales lorsque profileData change
-  useEffect(() => {
-    // Si profileData a changé depuis la dernière fois
-    if (profileData && JSON.stringify(profileData) !== JSON.stringify(lastProfileData)) {
-      setLocalUserData(profileData);
-      setLastProfileData(profileData);
-      
-      // Si nous étions en train de rafraîchir, terminer le rafraîchissement
-      if (isRefreshing) {
-        setIsRefreshing(false);
-      }
-    }
-  }, [profileData, isRefreshing, lastProfileData]);
+  console.log("[ProfileProgress] Context profileData:", profileData);
 
-  // Mécanisme de secours pour s'assurer que l'état de chargement ne reste pas bloqué
-  useEffect(() => {
-    let timeoutId;
-    if (isRefreshing) {
-      // Après 3 secondes, forcer la fin du rafraîchissement si toujours en cours
-      timeoutId = setTimeout(() => {
-        setIsRefreshing(false);
-        // Utiliser les dernières données disponibles
-        if (profileData) {
-          setLocalUserData(profileData);
-        }
-      }, 3000);
-    }
-    
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId);
-    };
-  }, [isRefreshing, profileData]);
-
-  // Calculer les éléments complétés à partir des données locales
   const { completedItems, completionItems } = useMemo(() => {
-    if (!localUserData) {
+    console.log("[ProfileProgress] Memo: Calculating completion items based on profileData:", profileData);
+
+    if (!profileData) {
+      console.log("[ProfileProgress] Memo: profileData is null/undefined.");
       return { completedItems: 0, completionItems: [] };
     }
 
-    const hasLinkedIn = Boolean(localUserData?.user?.linkedinUrl);
-    const hasCv = Boolean(localUserData?.documents?.some(doc => doc?.documentType?.code === 'CV' || doc?.type === 'CV'));
-    const hasDiploma = Boolean(localUserData?.diplomas?.length > 0);
+    const hasLinkedIn = Boolean(profileData?.linkedinUrl);
+    const hasCv = Boolean(profileData?.hasCvDocument);
+    const hasDiploma = Boolean(profileData?.diplomas?.length > 0);
     
     const items = [
       { 
@@ -96,40 +59,50 @@ const ProfileProgress = ({ userData }) => {
     const completed = [hasLinkedIn, hasCv, hasDiploma].filter(Boolean).length;
 
     return { completedItems: completed, completionItems: items };
-  }, [localUserData]);
+  }, [profileData]);
 
-  // Fonction pour rafraîchir manuellement les données
   const handleRefresh = async () => {
     if (isRefreshing || isProfileLoading) return;
     
     setIsRefreshing(true);
     try {
-      const newData = await refreshProfileData();
-      // Mettre à jour directement les données locales si refreshProfileData renvoie des données
-      if (newData) {
-        setLocalUserData(newData);
-        setLastProfileData(newData);
-        setIsRefreshing(false);
-      }
-      // Sinon, l'useEffect qui surveille profileData s'en chargera
+      await refreshProfileData();
     } catch (error) {
-      setIsRefreshing(false);
+      console.error("[ProfileProgress] Error during refresh:", error);
+    } finally {
     }
   };
 
-  // Si aucune donnée n'est disponible, afficher un état de chargement au lieu de rien
-  if (!localUserData) {
+  useEffect(() => {
+    if (!isProfileLoading && isRefreshing) {
+      setIsRefreshing(false);
+    }
+  }, [isProfileLoading, isRefreshing]);
+
+  console.log("[ProfileProgress] Rendering UI. Percentage:", profileData ? Math.round((completedItems / 3) * 100) : 0, "Items:", completionItems);
+
+  const showLoadingState = (isProfileLoading && !profileData) || isRefreshing;
+
+  if (showLoadingState) {
+    console.log("[ProfileProgress] Rendering loading state.");
     return (
       <button
         className="fixed right-8 bottom-8 z-20 flex items-center gap-2 px-4 py-3 rounded-full shadow-lg bg-primary text-primary-foreground hover:bg-primary/90"
+        disabled
       >
-        <PieChart className="w-5 h-5" />
+        <RefreshCw className="w-5 h-5 animate-spin" />
         <span className="font-medium">Chargement...</span>
       </button>
     );
   }
 
+  if (!profileData) {
+    console.log("[ProfileProgress] Rendering empty state (no profile data after load attempt).");
+    return null;
+  }
+
   const percentage = Math.round((completedItems / 3) * 100);
+  const itemsToComplete = 3 - completedItems;
 
   return (
     <>
@@ -143,9 +116,9 @@ const ProfileProgress = ({ userData }) => {
       >
         <PieChart className="w-5 h-5" />
         <span className="font-medium">
-          {completedItems === 3 
+          {itemsToComplete === 0 
             ? "Profil complet ✨" 
-            : `${3 - completedItems} élément${3 - completedItems > 1 ? 's' : ''} à compléter`}
+            : `${itemsToComplete} élément${itemsToComplete > 1 ? 's' : ''} à compléter`}
         </span>
       </button>
 
@@ -176,7 +149,7 @@ const ProfileProgress = ({ userData }) => {
                     className="inline-flex items-center justify-center rounded-full w-6 h-6 text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
                     title="Actualiser"
                   >
-                    <RefreshCw className={`w-4 h-4 ${isRefreshing || isProfileLoading ? 'animate-spin' : ''}`} />
+                    <RefreshCw className={`w-4 h-4 ${(isRefreshing || isProfileLoading) ? 'animate-spin' : ''}`} />
                   </button>
                   <span className="text-sm font-medium">
                     {completedItems}/3
@@ -191,50 +164,62 @@ const ProfileProgress = ({ userData }) => {
                 />
               </div>
 
-              <div className={`space-y-2 transition-opacity duration-300 ${isRefreshing || isProfileLoading ? 'opacity-50' : 'opacity-100'}`}>
-                {completionItems.map((item) => (
-                  <div 
-                    key={item.name}
-                    className={`flex items-start gap-3 p-2 rounded-lg transition-colors duration-300 ${
-                      item.completed 
-                        ? 'bg-green-50/50 dark:bg-green-900/10' 
-                        : 'bg-red-50/50 dark:bg-red-900/10'
-                    }`}
-                  >
-                    <div className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mt-0.5 transition-colors duration-300 ${
-                      item.completed 
-                        ? 'text-green-600 dark:text-green-400'
-                        : 'text-red-500 dark:text-red-400'
-                    }`}>
-                      {item.completed ? (
-                        <CheckCircle2 className="w-4 h-4" />
-                      ) : (
-                        <XCircle className="w-4 h-4" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">{item.name}</span>
-                        {!item.completed && (
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-6 px-2 text-xs"
-                            asChild
+              <div className={`space-y-2 transition-opacity duration-300 ${(isRefreshing || isProfileLoading) ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+                {completionItems.map((item) => {
+                  return (
+                    <div 
+                      key={item.name}
+                      className={`flex items-start gap-3 p-2 rounded-lg transition-colors duration-300 ${
+                        item.completed 
+                          ? 'bg-green-50/50 dark:bg-green-900/10' 
+                          : 'bg-red-50/50 dark:bg-red-900/10'
+                      }`}
+                    >
+                      <div className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mt-0.5 transition-colors duration-300 ${
+                        item.completed 
+                          ? 'text-green-600 dark:text-green-400'
+                          : 'text-red-500 dark:text-red-400'
+                      }`}>
+                        {item.completed ? (
+                          <CheckCircle2 className="w-4 h-4" />
+                        ) : (
+                          <XCircle className="w-4 h-4" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">{item.name}</span>
+                          {!item.completed && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-6 px-2 text-xs"
+                              asChild
+                            >
+                              <a href={item.action} className="flex items-center gap-1">
+                                Compléter
+                                <ExternalLinkIcon className="w-3 h-3" />
+                              </a>
+                            </Button>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                          {item.description}
+                        </p>
+                        {item.name === 'CV' && item.completed && (
+                          <Button
+                            variant="outline"
+                            size="xs"
+                            className="mt-2 h-6 px-2 text-xs w-full justify-center"
+                            onClick={() => console.log("Parse CV clicked!")}
                           >
-                            <a href={item.action} className="flex items-center gap-1">
-                              Compléter
-                              <ExternalLinkIcon className="w-3 h-3" />
-                            </a>
+                            Extraire LinkedIn du CV
                           </Button>
                         )}
                       </div>
-                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                        {item.description}
-                      </p>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>

@@ -381,7 +381,7 @@ const userDataManager = {
       useCache = true,
       componentId = 'default',
       requestId = null,
-      routeKey = '/api/me',
+      routeKey = '/api/profile',
       preventRecursion = false
     } = typeof options === 'object' ? options : { forceRefresh: !!options };
     
@@ -410,8 +410,8 @@ const userDataManager = {
     try {
       // Si forceRefresh est true, ignorer le cache et forcer un appel API
       if (forceRefresh) {
-        // Sinon, charger les données depuis l'API
-        return this._loadUserData(componentId, { preventRecursion }).finally(cleanup);
+        // Passer forceRefresh et routeKey à _loadUserData
+        return this._loadUserData(componentId, { preventRecursion, forceRefresh, routeKey }).finally(cleanup);
       }
       
       // Si useCache est true, vérifier si le cache est disponible
@@ -429,7 +429,8 @@ const userDataManager = {
       }
         
       // Sinon, charger les données depuis l'API
-      return this._loadUserData(componentId, { preventRecursion }).finally(cleanup);
+      // Passer routeKey à _loadUserData (forceRefresh est false par défaut ici)
+      return this._loadUserData(componentId, { preventRecursion, routeKey }).finally(cleanup);
     } catch (error) {
       cleanup();
       return Promise.reject(error);
@@ -444,26 +445,28 @@ const userDataManager = {
    * @returns {Promise<Object>} - Données utilisateur
    */
   async _loadUserData(componentId, options = {}) {
-    const { preventRecursion = false } = options;
+    const { preventRecursion = false, forceRefresh = false, routeKey = '/api/profile' } = options;
     
-    // Notifier que le chargement a commencé (sauf si preventRecursion est true)
+    // Declare endpoint at function scope level so it's available everywhere
+    const endpoint = routeKey;
+    
     userDataCache.isLoading = true;
     if (!preventRecursion) {
       this._notifySubscribers(USER_DATA_EVENTS.LOADING);
     }
     
-    // Créer une nouvelle promesse pour le chargement
     const loadPromise = new Promise(async (resolve, reject) => {
       try {
-        // Déterminer les options appropriées en fonction de si c'est un chargement forcé
         const apiOptions = {
           noCache: true,
           retries: 2,
           timeout: 12000,
         };
 
+        console.log(`_loadUserData fetching from: ${endpoint}`);
+
         // Appeler l'API pour obtenir les données utilisateur
-        const response = await apiService.get('/api/me', apiOptions);
+        const response = await apiService.get(endpoint, apiOptions);
         
         // Extraire les données utilisateur de la réponse
         let userData = null;
@@ -531,13 +534,15 @@ const userDataManager = {
       } finally {
         // Supprimer la requête en cours de la map une fois terminée
         setTimeout(() => {
-          userDataCache.pendingRequests.delete('/api/me');
+          // Utiliser endpoint pour la clé de suppression
+          userDataCache.pendingRequests.delete(endpoint);
         }, 0);
       }
     });
 
     // Stocker la promesse dans la map des requêtes en cours
-    userDataCache.pendingRequests.set('/api/me', loadPromise);
+    // Utiliser endpoint pour la clé de stockage
+    userDataCache.pendingRequests.set(endpoint, loadPromise);
     
     return loadPromise;
   },

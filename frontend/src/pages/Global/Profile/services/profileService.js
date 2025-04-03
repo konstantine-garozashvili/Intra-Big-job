@@ -19,7 +19,7 @@ class ProfileService {
   constructor() {
     // Enregistrer le service comme utilisateur des routes qu'il utilise fréquemment
     userDataManager.requestRegistry.registerRouteUser('/profile/picture', SERVICE_ID);
-    userDataManager.requestRegistry.registerRouteUser('/profile/consolidated', SERVICE_ID);
+    userDataManager.requestRegistry.registerRouteUser('/api/profile', SERVICE_ID);
   }
 
   async getUserProfile() {
@@ -108,10 +108,11 @@ class ProfileService {
    * @returns {Promise<Object>} - Données de profil
    */
   async getAllProfileData(options = {}) {
+    const routeToUse = '/api/profile'; // Define the correct route
     try {
       // Vérifier si une requête est déjà en cours pour cette route
-      if (userDataManager.requestRegistry.getActiveRequest('/profile/consolidated') && !options.forceRefresh) {
-        const activeRequest = userDataManager.requestRegistry.getActiveRequest('/profile/consolidated');
+      if (userDataManager.requestRegistry.getActiveRequest(routeToUse) && !options.forceRefresh) {
+        const activeRequest = userDataManager.requestRegistry.getActiveRequest(routeToUse);
         if (activeRequest) {
           return activeRequest;
         }
@@ -127,10 +128,10 @@ class ProfileService {
       
       // Utiliser le gestionnaire centralisé des données utilisateur avec coordination
       const response = await userDataManager.coordinateRequest(
-        '/profile/consolidated',
+        routeToUse, // Use the correct route
         SERVICE_ID,
         () => userDataManager.getUserData({
-          routeKey: '/profile/consolidated',
+          routeKey: routeToUse, // Use the correct route
           forceRefresh: options.forceRefresh,
           useCache: !options.forceRefresh
         })
@@ -153,6 +154,8 @@ class ProfileService {
             lastName: response.lastName || response.last_name || "",
             email: response.email || "",
             profilePictureUrl: response.profilePictureUrl || response.profile_picture_url || "",
+            linkedinUrl: response.linkedinUrl || "",
+            hasCvDocument: response.hasCvDocument || false,
             // Assurer que les collections sont des tableaux
             diplomas: Array.isArray(response.diplomas) ? response.diplomas : [],
             addresses: Array.isArray(response.addresses) ? response.addresses : [],
@@ -170,6 +173,7 @@ class ProfileService {
             lastName: userData.lastName || userData.last_name || "",
             email: userData.email || "",
             profilePictureUrl: userData.profilePictureUrl || userData.profile_picture_url || "",
+            linkedinUrl: userData.linkedinUrl || "",
             // Assurer que les collections sont des tableaux
             diplomas: Array.isArray(userData.diplomas) ? userData.diplomas : [],
             addresses: Array.isArray(userData.addresses) ? userData.addresses : [],
