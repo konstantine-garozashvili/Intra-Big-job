@@ -15,7 +15,7 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Serializer\SerializerInterface;
 
-#[Route('/api/notifications')]
+#[Route('/notifications')]
 class NotificationController extends AbstractController
 {
     public function __construct(
@@ -49,12 +49,20 @@ class NotificationController extends AbstractController
      * Get unread notification count
      */
     #[Route('/unread-count', name: 'app_notifications_unread_count', methods: ['GET'])]
-    #[IsGranted('ROLE_USER')]
-    public function unreadCount(#[CurrentUser] User $user): JsonResponse
+    public function unreadCount(#[CurrentUser] ?User $user = null): JsonResponse
     {
+        // If user is not logged in, return 0
+        if (!$user) {
+            return $this->json([
+                'success' => true,
+                'count' => 0
+            ]);
+        }
+
         $count = $this->notificationService->getUnreadCount($user);
 
         return $this->json([
+            'success' => true,
             'count' => $count
         ]);
     }

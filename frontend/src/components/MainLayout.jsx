@@ -7,6 +7,10 @@ import { authService } from '../lib/services/authService';
 import { profileService } from '../pages/Global/Profile/services/profileService';
 import Footer from './Footer';
 import ChatButton from './chat/ChatButton';
+import { cn } from '../lib/utils';
+
+// Define full screen routes
+const FULL_SCREEN_ROUTES = ['/login', '/register', '/forgot-password', '/reset-password'];
 
 // Create a context for profile data and refresh function
 export const ProfileContext = createContext({
@@ -28,17 +32,17 @@ const MainLayout = () => {
   const [userData, setUserData] = useState(null);
   const [profileData, setProfileData] = useState(null);
   const [loadingState, setLoadingState] = useState(LOADING_STATES.INITIAL);
-  const [showProgress, setShowProgress] = useState(false);
-  const { hasRole, isLoading: rolesLoading } = useRoles();
-  const location = useLocation();
+  const [minContentHeight, setMinContentHeight] = useState('calc(100vh - 64px)');
   const [isAuthenticated, setIsAuthenticated] = useState(authService.isLoggedIn());
+  const location = useLocation();
+  const isFullScreenPage = FULL_SCREEN_ROUTES.includes(location.pathname);
+  const showProgress = !isFullScreenPage && location.pathname === '/guest/dashboard';
+  const { hasRole, isLoading: rolesLoading } = useRoles();
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [minContentHeight, setMinContentHeight] = useState('100vh');
   const [initialRender, setInitialRender] = useState(true);
 
   // Pages qui doivent être affichées en plein écran sans marges internes
   const fullScreenPages = []; // Removed '/register'
-  const isFullScreenPage = fullScreenPages.includes(location.pathname);
 
   // Function to calculate and set the minimum content height
   const calculateMinHeight = useCallback(() => {
@@ -203,7 +207,7 @@ const MainLayout = () => {
 
   return (
     <ProfileContext.Provider value={profileContextValue}>
-      <div className="flex flex-col min-h-screen bg-gray-50">
+      <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
         {/* Navbar conditionally rendered */}
         {!isFullScreenPage && (
           <Navbar 
@@ -214,7 +218,11 @@ const MainLayout = () => {
         
         {/* Main content with minimum height to ensure footer is below viewport */}
         <main 
-          className={`flex-grow ${isFullScreenPage ? 'px-0 py-0' : 'container mx-auto px-4 py-8'}`}
+          className={cn(
+            "flex-grow",
+            isFullScreenPage ? 'px-0 py-0' : 'container mx-auto px-4 py-8',
+            "transition-colors duration-200 dark:text-gray-100"
+          )}
           style={{ minHeight: minContentHeight }}
         >
           {/* Passer l'état de chargement au contexte Outlet */}
@@ -235,7 +243,7 @@ const MainLayout = () => {
         {isAuthenticated && !isFullScreenPage && <ChatButton />}
         
         {/* Footer */}
-        <Footer />
+        <Footer className="dark:bg-gray-900 dark:text-gray-100" />
       </div>
     </ProfileContext.Provider>
   );

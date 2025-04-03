@@ -20,6 +20,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuLabel,
+  DropdownMenuGroup
 } from "./ui/dropdown-menu";
 import {
   Dialog,
@@ -34,8 +36,8 @@ import { MenuBurger } from "./MenuBurger";
 import { SearchBar } from "./SearchBar";
 import { useRolePermissions } from "../features/roles/useRolePermissions";
 import { Skeleton } from './ui/skeleton';
-import { ThemeToggle } from './ui/theme-toggle';
 import NotificationDropdown from './NotificationDropdown';
+import { ThemeToggle } from './ui/theme-toggle';
 
 // Style personnalisé pour le menu dropdown et le bouton burger
 const customStyles = `
@@ -50,6 +52,14 @@ const customStyles = `
   .navbar-dropdown-item:hover {
     background-color: rgba(82, 142, 178, 0.1) !important;
     color: #02284f !important;
+  }
+  .dark .navbar-dropdown-item {
+  background-color: rgba(120, 185, 221, 0.1) !important;
+  }
+
+  .dark .navbar-dropdown-item:hover {
+    background-color: rgba(120, 185, 221, 0.1) !important;
+    color: #78b9dd !important;
   }
   
   .navbar-dropdown-item.danger {
@@ -96,15 +106,30 @@ const customStyles = `
     border-color: rgba(255, 255, 255, 0.2) !important;
     color: white !important;
   }
+
+  .dark .search-container input {
+    background-color: rgba(120, 185, 221, 0.1) !important;
+    border-color: rgba(120, 185, 221, 0.2) !important;
+  }
   
   .search-container input::placeholder {
     color: rgba(255, 255, 255, 0.6) !important;
+  }
+
+  .dark .search-container input::placeholder {
+    color: rgba(120, 185, 221, 0.6) !important;
   }
   
   .search-container input:focus {
     background-color: rgba(255, 255, 255, 0.15) !important;
     border-color: #528eb2 !important;
     box-shadow: 0 0 0 2px rgba(82, 142, 178, 0.25) !important;
+  }
+
+  .dark .search-container input:focus {
+    background-color: rgba(120, 185, 221, 0.15) !important;
+    border-color: #78b9dd !important;
+    box-shadow: 0 0 0 2px rgba(120, 185, 221, 0.25) !important;
   }
   
   /* Fixed navbar styles */
@@ -194,7 +219,7 @@ const UserMenu = ({ onLogout, userData, setLogoutDialogOpen }) => {
 
   return (
     <div className="flex items-center">
-      {/* Utiliser le composant NotificationDropdown à la place du bouton */}
+      <ThemeToggle />
       <NotificationDropdown />
 
       {/* Dropdown menu */}
@@ -208,69 +233,47 @@ const UserMenu = ({ onLogout, userData, setLogoutDialogOpen }) => {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent 
-          align="end" 
-          className="w-64 mt-2 p-0 overflow-hidden border border-gray-100 shadow-xl rounded-xl"
-          onOpenAutoFocus={(e) => e.preventDefault()}
-          sideOffset={5}
-          ref={dropdownMenuRef}
+          className="w-56 mt-2 bg-white dark:bg-[#02284f] border-gray-200 dark:border-[#528eb2]/30 text-gray-900 dark:text-gray-100"
+          align="end"
         >
-          {/* En-tête du dropdown avec avatar et nom */}
-          <div className="bg-gradient-to-r from-[#02284f] to-[#03386b] p-4 text-white">
-            <div className="flex items-center">
-              <div className="bg-white/20 rounded-full p-2.5">
-                <UserRound className="h-6 w-6" />
-              </div>
-              <div className="ml-3">
-                <h3 className="font-medium text-sm">
-                  {userData?.firstName && userData?.lastName 
-                    ? `${userData.firstName} ${userData.lastName}`
-                    : userData?.user?.firstName && userData?.user?.lastName
-                      ? `${userData.user.firstName} ${userData.user.lastName}`
-                      : 'Utilisateur'}
-                </h3>
-                <p className="text-xs text-gray-300">
-                  {userData?.email || userData?.user?.email || 'utilisateur@example.com'}
-                </p>
-              </div>
+          <DropdownMenuLabel className="font-normal">
+            <div className="flex flex-col space-y-1">
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{userData?.firstName} {userData?.lastName}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-300 truncate">{userData?.email}</p>
             </div>
-          </div>
-          
-          {/* Corps du dropdown avec les options */}
-          <div className="py-1 bg-white">
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator className="bg-gray-200 dark:bg-[#528eb2]/30" />
+          <DropdownMenuGroup>
             <DropdownMenuItem 
-              className="navbar-dropdown-item"
+              className="text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#528eb2]/20 focus:text-gray-900 dark:focus:text-gray-100 focus:bg-gray-100 dark:focus:bg-[#528eb2]/20"
               onClick={() => navigate('/profile')}
             >
-              <User className="mr-2 h-4 w-4 text-[#528eb2]" />
-              <span>Mon profil</span>
+              <User className="w-4 h-4 mr-2" />
+              <span>Profile</span>
             </DropdownMenuItem>
-            
             <DropdownMenuItem 
-              className="navbar-dropdown-item"
-              onClick={() => navigate('/settings/profile')}
+              className="text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#528eb2]/20 focus:text-gray-900 dark:focus:text-gray-100 focus:bg-gray-100 dark:focus:bg-[#528eb2]/20"
+              onClick={() => navigate('/settings')}
             >
-              <Settings className="mr-2 h-4 w-4 text-[#528eb2]" />
+              <Settings className="w-4 h-4 mr-2" />
               <span>Paramètres</span>
             </DropdownMenuItem>
-            
             <DropdownMenuItem 
-              className="navbar-dropdown-item"
+              className="text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#528eb2]/20 focus:text-gray-900 dark:focus:text-gray-100 focus:bg-gray-100 dark:focus:bg-[#528eb2]/20"
               onClick={() => navigate('/notifications')}
             >
-              <Bell className="mr-2 h-4 w-4 text-[#528eb2] dark:text-[#78b9dd]" />
+              <Bell className="w-4 h-4 mr-2" />
               <span>Notifications</span>
             </DropdownMenuItem>
-            
-            <DropdownMenuSeparator className="my-1 bg-gray-100 dark:bg-gray-700" />
-            
-            <DropdownMenuItem 
-              className="navbar-dropdown-item danger"
-              onClick={() => setLogoutDialogOpen(true)}
-            >
-              <LogOut className="mr-2 h-4 w-4" />
-              <span>Déconnexion</span>
-            </DropdownMenuItem>
-          </div>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator className="bg-gray-200 dark:bg-[#528eb2]/30" />
+          <DropdownMenuItem 
+            className="text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-[#528eb2]/20 focus:text-red-700 dark:focus:text-red-300 focus:bg-red-50 dark:focus:bg-[#528eb2]/20"
+            onClick={() => setLogoutDialogOpen(true)}
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            <span>Déconnexion</span>
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
