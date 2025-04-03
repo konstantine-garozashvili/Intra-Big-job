@@ -5,6 +5,8 @@ import ProfileHeader from '../components/profile-view/ProfileHeader';
 import ProfileTabs from '../components/profile-view/ProfileTabs';
 import { motion } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useRoleUI } from '@/features/roles';
+import { ROLES } from '@/features/roles/roleContext';
 
 const PublicProfileView = () => {
   const { userId } = useParams();
@@ -12,6 +14,7 @@ const PublicProfileView = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isOwnProfile, setIsOwnProfile] = useState(false);
+  const roleUI = useRoleUI();
   
   console.log('PublicProfileView - userId from params:', userId);
   console.log('PublicProfileView - Current URL:', window.location.pathname);
@@ -34,36 +37,23 @@ const PublicProfileView = () => {
     
     const fetchPublicProfile = async () => {
       try {
-        // Vérifier d'abord si c'est notre propre profil
         const isOwn = await checkCurrentUser();
         if (isOwn) return;
         
-        // Nettoyer le cache avant de charger le nouveau profil
         apiService.clearPublicProfileCache(userId);
         
-        console.log('PublicProfileView - Fetching data for userId:', userId);
+        console.log('Fetching public profile for userId:', userId);
         const response = await apiService.getPublicProfile(userId);
-        console.log('PublicProfileView - API Response:', response);
+        console.log('Raw API Response:', response);
         
         if (response?.data?.user) {
-          console.log('Setting profile data from response.data.user:', response.data.user);
+          console.log('Using response.data.user:', response.data.user);
           setProfileData(response.data.user);
-        } else if (response?.data) {
-          console.log('Setting profile data from response.data:', response.data);
-          setProfileData(response.data);
-        } else if (response) {
-          console.log('Setting profile data from direct response:', response);
-          setProfileData(response);
         } else {
-          console.error('Invalid response structure:', response);
           setError('Données du profil non disponibles');
         }
       } catch (error) {
-        if (error.name === 'AbortError') {
-          console.log('Request aborted');
-          return;
-        }
-        console.error('PublicProfileView - Error fetching data:', error);
+        console.error('Error in fetchPublicProfile:', error);
         setError(error.message || 'Erreur lors de la récupération du profil');
       } finally {
         setIsLoading(false);
@@ -128,17 +118,28 @@ const PublicProfileView = () => {
     );
   }
 
+  console.log('ProfileData before transformation:', profileData);
+  
   const userData = {
     user: {
-      id: profileData.id,
-      firstName: profileData.firstName,
-      lastName: profileData.lastName,
-      email: profileData.email,
-      phoneNumber: profileData.phoneNumber,
-      profilePictureUrl: profileData.profilePicturePath,
+      ...profileData,
       roles: Array.isArray(profileData.roles) 
-        ? profileData.roles.map(role => typeof role === 'string' ? { name: role } : role)
-        : [{ name: 'USER' }],
+        ? profileData.roles.map(role => {
+            console.log('[PublicProfileView] Role avant transformation:', role);
+            const normalizedRole = role.replace('ROLE_', '');
+            const transformedRole = {
+              name: role,
+              displayName: roleUI.translateRoleName(role),
+              color: roleUI.getRoleBadgeColor(role)
+            };
+            console.log('[PublicProfileView] Role après transformation:', transformedRole);
+            return transformedRole;
+          })
+        : [{ 
+            name: ROLES.GUEST,
+            displayName: roleUI.translateRoleName(ROLES.GUEST),
+            color: roleUI.getRoleBadgeColor(ROLES.GUEST)
+          }],
       specialization: profileData.specialization || {},
       linkedinUrl: profileData.linkedinUrl || "",
       birthDate: profileData.birthDate,
@@ -158,6 +159,11 @@ const PublicProfileView = () => {
     addresses: profileData.addresses || [],
     stats: { profile: { completionPercentage: 0 } }
   };
+
+  console.log('[PublicProfileView] userData final:', {
+    roles: userData.user.roles,
+    isPublicProfile: true
+  });
 
   return (
     <motion.div

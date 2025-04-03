@@ -79,41 +79,44 @@ const ProfileHeader = ({ userData, isPublicProfile = false, profilePictureUrl })
     if (roles) {
       if (Array.isArray(roles) && roles.length > 0) {
         const firstRole = roles[0];
-        // Si c'est un objet avec une propriété name
+        // Si c'est déjà un objet complet avec name, displayName et color
+        if (typeof firstRole === 'object' && firstRole !== null && 
+            firstRole.name && firstRole.displayName && firstRole.color) {
+          return firstRole;
+        }
+        // Si c'est un objet avec juste name
         if (typeof firstRole === 'object' && firstRole !== null && firstRole.name) {
-          return firstRole.name;
+          return firstRole;
         }
         // Si c'est une chaîne
         if (typeof firstRole === 'string') {
-          return firstRole;
+          return { name: firstRole };
         }
-      }
-      // Si roles est une chaîne
-      if (typeof roles === 'string') {
-        return roles;
       }
     }
     
     // Fallback à userData.user.roles si disponible
-    if (userData && userData.user && userData.user.roles) {
-      if (Array.isArray(userData.user.roles) && userData.user.roles.length > 0) {
-        const firstRole = userData.user.roles[0];
-        // Si c'est un objet avec une propriété name
+    if (userData?.user?.roles) {
+      const userRoles = userData.user.roles;
+      if (Array.isArray(userRoles) && userRoles.length > 0) {
+        const firstRole = userRoles[0];
+        // Si c'est déjà un objet complet
+        if (typeof firstRole === 'object' && firstRole !== null && 
+            firstRole.name && firstRole.displayName && firstRole.color) {
+          return firstRole;
+        }
+        // Si c'est un objet avec juste name
         if (typeof firstRole === 'object' && firstRole !== null && firstRole.name) {
-          return firstRole.name;
+          return firstRole;
         }
         // Si c'est une chaîne
         if (typeof firstRole === 'string') {
-          return firstRole;
+          return { name: firstRole };
         }
-      }
-      // Si roles est une chaîne
-      if (typeof userData.user.roles === 'string') {
-        return userData.user.roles;
       }
     }
     
-    return "USER";
+    return { name: "USER" };
   };
 
   const mainRole = getMainRole();
@@ -230,33 +233,46 @@ const ProfileHeader = ({ userData, isPublicProfile = false, profilePictureUrl })
             >
               <AnimatePresence>
                 {(() => {
+                  console.log('userData dans ProfileHeader:', userData);
+                  
                   // Get roles securely, prioritizing the structure passed by ProfileView
                   let roles = [];
-                  if (!isPublicProfile && userData?.user?.roles && Array.isArray(userData.user.roles)) {
-                    // Check 1: For own profile, ProfileView nests data under 'user'
-                    roles = userData.user.roles;
-                  } else if (isPublicProfile && userData?.roles && Array.isArray(userData.roles)) {
-                    // Check 2: For public profile, data might be directly on userData
+                  if (userData?.roles && Array.isArray(userData.roles)) {
+                    console.log('Utilisation de userData.roles:', userData.roles);
                     roles = userData.roles;
+                  } else if (userData?.user?.roles && Array.isArray(userData.user.roles)) {
+                    console.log('Utilisation de userData.user.roles:', userData.user.roles);
+                    roles = userData.user.roles;
                   } else if (userData?.data?.roles && Array.isArray(userData.data.roles)) {
-                    // Check 3: Fallback for /api/me structure (if somehow passed directly)
+                    console.log('Utilisation de userData.data.roles:', userData.data.roles);
                     roles = userData.data.roles;
                   } else if (Array.isArray(userData)) {
-                    // Check 4: Handle if userData itself is the roles array (less likely)
+                    console.log('Utilisation de userData comme tableau:', userData);
                     roles = userData;
+                  }
+
+                  console.log('Rôles finaux:', roles);
+
+                  // Si aucun rôle n'est trouvé mais que nous avons un rôle dans user
+                  if (roles.length === 0 && userData?.user?.role) {
+                    console.log('Utilisation du rôle unique depuis user.role:', userData.user.role);
+                    roles = [userData.user.role];
                   }
 
                   // Ensure roles is always an array
                   if (!Array.isArray(roles)) {
-                      roles = [];
+                    roles = [];
                   }
                   
                   if (roles.length > 0) {
                     return roles.map((role, index) => {
-                      // Déterminer le nom du rôle en fonction de la structure
-                      const roleName = typeof role === 'object' && role !== null ? role.name : 
-                                    typeof role === 'string' ? role : 'USER';
-                                    
+                      // S'assurer que le nom du rôle est une chaîne de caractères
+                      const roleName = typeof role === 'object' && role !== null 
+                        ? (role.name || role || "USER")
+                        : String(role);
+                      
+                      console.log('Role passé au RoleBadge:', { roleName, originalRole: role });
+                      
                       return (
                         <RoleBadge
                           key={`${roleName}-${index}`}
@@ -269,15 +285,15 @@ const ProfileHeader = ({ userData, isPublicProfile = false, profilePictureUrl })
                         />
                       );
                     });
-                  } else {
-                    return (
-                      <RoleBadge 
-                        key="default-user" 
-                        role="USER" 
-                        animated={true} 
-                      />
-                    );
                   }
+                  
+                  return (
+                    <RoleBadge 
+                      key="default-user" 
+                      role="USER"
+                      animated={true} 
+                    />
+                  );
                 })()}
 
                 {userData.studentProfile?.isSeekingInternship && (
