@@ -269,10 +269,10 @@ const MenuBurger = memo(() => {
     // --- SECTION RECRUTEMENT & CARRIÈRE ---
     {
       key: 'candidatures',
-      label: 'Candidatures',
+      label: 'Gestion des candidatures',
       icon: <Share2 className="w-5 h-5 mr-2 text-[#528eb2]" />,
-      roles: [ROLES.HR, ROLES.RECRUITER, ROLES.ADMIN, ROLES.TEACHER],
-      to: '/candidatures',
+      roles: [ROLES.ADMIN, ROLES.SUPERADMIN],
+      to: '/admin/candidatures',
     },
     {
       key: 'recrutement',

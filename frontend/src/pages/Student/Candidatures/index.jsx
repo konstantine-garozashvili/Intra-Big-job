@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react'; // For loading spinner
 import { Alert } from "@/components/ui/alert";
 import { Upload } from "lucide-react"; // Add this import for the upload icon
+import { useCandidature } from '@/context/CandidatureContext';
 
 const StudentCandidaturePage = () => {
   const { userData, isLoading, error } = useUserData();
@@ -12,6 +13,7 @@ const StudentCandidaturePage = () => {
   const [cv, setCV] = useState(null);
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
+  const { addCandidature } = useCandidature();
   
   // Parse localStorage data
   const localStorageData = JSON.parse(localStorage.getItem('user'));
@@ -48,7 +50,7 @@ const StudentCandidaturePage = () => {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const errors = [];
 
@@ -62,13 +64,34 @@ const StudentCandidaturePage = () => {
     if (errors.length > 0) {
       setAlertMessage(errors.join('\n'));
       setShowAlert(true);
-      setTimeout(() => setShowAlert(false), 5000); // Hide after 5 seconds
+      setTimeout(() => setShowAlert(false), 5000);
       return;
     }
 
-    // If validation passes, proceed with submission
-    console.log('Form submitted:', { startDate, isRemoteWork, cv });
-    // Add your submission logic here
+    // Create candidature object
+    const newCandidature = {
+      id: Date.now(), // temporary ID
+      startDate,
+      isRemoteWork,
+      cv: cv.name,
+      status: 'En attente',
+      submittedAt: new Date().toISOString(),
+      studentName: 'Nom de l\'étudiant', // You can get this from your auth context
+    };
+
+    // Add to context
+    addCandidature(newCandidature);
+
+    // Show success message
+    setAlertMessage('Candidature soumise avec succès!');
+    setShowAlert(true);
+    
+    // Reset form
+    setStartDate('');
+    setIsRemoteWork(false);
+    setCV(null);
+
+    setTimeout(() => setShowAlert(false), 5000);
   };
 
   if (isLoading) {

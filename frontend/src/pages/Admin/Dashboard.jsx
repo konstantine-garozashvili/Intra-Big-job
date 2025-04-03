@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Edit, Trash2, Calendar as CalendarIcon, Users, Shield, Book, ChevronRight } from 'lucide-react';
+import { Edit, Trash2, Calendar as CalendarIcon, Users, Shield, Book, ChevronRight, FileText } from 'lucide-react';
 import Calendar from './Calendar';
 import { useAdminDashboardData } from '@/hooks/useDashboardQueries';
 import { useApiMutation } from '@/hooks/useReactQuery';
@@ -92,7 +92,14 @@ const AdminDashboard = () => {
       color: 'from-purple-500 to-purple-600',
       textColor: 'text-purple-50',
       link: '/formations',
-    }
+    },
+    {
+      title: "Gestion des Candidatures",
+      description: "Gérer les candidatures des étudiants",
+      icon: FileText,
+      link: "/admin/candidatures",
+      color: "from-emerald-500 to-teal-600"
+    },
   ];
  
   
@@ -258,6 +265,27 @@ const AdminDashboard = () => {
     }
   }, [user, isLoading]);
 
+  // Find and remove the standalone Candidatures menu item
+  const menuItems = [
+    // ... other menu items ...
+    {
+      title: "Administration",
+      icon: Shield,
+      submenu: [
+        // ... existing submenu items ...
+        {
+          title: "Gestion des candidatures",
+          href: "/admin/candidatures",
+          icon: FileText,
+          role: ["ROLE_ADMIN"]
+        },
+        // ... other submenu items ...
+      ]
+    },
+    // ... other menu items ...
+    // Remove the standalone Candidatures item if it exists
+  ];
+
   return (
     <DashboardLayout 
       loading={isLoading} 
@@ -266,6 +294,7 @@ const AdminDashboard = () => {
       user={user}
       headerIcon={Shield}
       headerTitle="Tableau de bord administrateur"
+      menuItems={menuItems} // Pass the updated menu items
     >
       <div className="container p-4 mx-auto sm:p-6 lg:p-8 bg-gray-50 dark:bg-gray-900 min-h-screen">
         {/* Statistiques essentielles */}
