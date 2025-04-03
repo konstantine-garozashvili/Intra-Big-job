@@ -4,7 +4,7 @@ globs:
 alwaysApply: false
 ---
 ---
-description: Its a global rule that you have to follow.
+description: 
 globs: 
 alwaysApply: true
 ---
