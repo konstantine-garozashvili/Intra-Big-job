@@ -4,8 +4,35 @@ framework:
         # For instance, basic validation constraints will be inferred from Doctrine's metadata.
         #auto_mapping:
         #    App\Entity\: []
+        # Activer les annotations de validation
+        enable_annotations: true
+        # Configuration des contraintes globales
+        mapping:
+            paths:
+                - "%kernel.project_dir%/src/Entity"
+                - "%kernel.project_dir%/src/Dto"
+                - "%kernel.project_dir%/src/Form"
+        
+        # Contraintes de validation par défaut
+        auto_mapping: true
 
 when@test:
     framework:
         validation:
             not_compromised_password: false
+
+# Contraintes personnalisées
+doctrine:
+    orm:
+        entity_managers:
+            default:
+                # Validateurs sur les classes d'entité
+                validation:
+                    enabled: true
+                
+# Contraintes de validation spécifiques au mot de passe
+# Ces contraintes s'appliquent à tous les formulaires et contrôleurs
+parameters:
+    app.password_constraints:
+        min_length: 8
+        max_length: 50

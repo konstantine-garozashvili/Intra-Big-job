@@ -55,8 +55,12 @@ const Step1Form = ({ goToNextStep }) => {
     }
     
     // Valider mot de passe
-    if (!password || password.trim() === "") {
+    if (!password) {
       newErrors.password = "Le mot de passe est requis";
+      valid = false;
+    } else if (password.length > 50) {
+      // Vérification explicite de la longueur maximale en priorité
+      newErrors.password = "Le mot de passe ne doit pas dépasser 50 caractères";
       valid = false;
     } else if (password.length < 8) {
       newErrors.password = "Le mot de passe doit contenir au moins 8 caractères";
@@ -155,8 +159,22 @@ const Step1Form = ({ goToNextStep }) => {
             type={showPassword ? "text" : "password"}
             className={`w-full px-4 py-3 pr-10 rounded-md border ${shouldShowError('password') ? 'border-red-500' : 'border-gray-300'}`}
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Minimum 8 caractères"
+            onChange={(e) => {
+              // Limiter la longueur du mot de passe directement lors de la saisie
+              const value = e.target.value;
+              if (value.length <= 50) {
+                setPassword(value);
+              } else {
+                // Si l'utilisateur tente de coller un mot de passe trop long,
+                // tronquer à 50 caractères et afficher un message d'erreur
+                setPassword(value.substring(0, 50));
+                const newErrors = {...localErrors};
+                newErrors.password = "Le mot de passe ne doit pas dépasser 50 caractères";
+                setLocalErrors(newErrors);
+              }
+            }}
+            placeholder="Entre 8 et 50 caractères"
+            maxLength={50} // Attribut HTML natif pour limiter la longueur
           />
           <Button
             type="button"

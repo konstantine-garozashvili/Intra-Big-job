@@ -130,10 +130,17 @@ export const RegisterProvider = ({ children }) => {
     
     if (!password) {
       newErrors.password = "Le mot de passe est requis";
+    } else if (password.length > 50) {
+      // Vérifier d'abord la longueur maximale
+      newErrors.password = "Le mot de passe ne doit pas dépasser 50 caractères";
     } else {
       const passwordValidation = validatePassword(password);
       if (!passwordValidation.isValid) {
-        newErrors.password = "Le mot de passe ne respecte pas les critères de sécurité";
+        if (passwordValidation.errors.tooShort) {
+          newErrors.password = "Le mot de passe doit contenir au moins 8 caractères";
+        } else {
+          newErrors.password = "Le mot de passe ne respecte pas les critères de sécurité";
+        }
       }
     }
     

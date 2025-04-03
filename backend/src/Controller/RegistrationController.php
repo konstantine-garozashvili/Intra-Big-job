@@ -13,6 +13,7 @@ use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 class RegistrationController extends AbstractController
 {
     private RegistrationService $registrationService;
+    private const MAX_PASSWORD_LENGTH = 50;
 
     public function __construct(RegistrationService $registrationService)
     {
@@ -42,6 +43,37 @@ class RegistrationController extends AbstractController
                 return $this->json([
                     'success' => false,
                     'message' => 'Certains champs obligatoires sont manquants'
+                ], 400);
+            }
+            
+            // Validation explicite du mot de passe côté contrôleur
+            if (!is_string($data['password'])) {
+                error_log('Erreur: Le mot de passe n\'est pas une chaîne de caractères');
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Le mot de passe doit être une chaîne de caractères',
+                    'details' => ['password' => 'Format invalide']
+                ], 400);
+            }
+            
+            $passwordLength = mb_strlen($data['password']);
+            error_log('Longueur du mot de passe reçu: ' . $passwordLength);
+            
+            if ($passwordLength > self::MAX_PASSWORD_LENGTH) {
+                error_log('Erreur: Mot de passe trop long (' . $passwordLength . ' caractères)');
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Le mot de passe ne doit pas dépasser ' . self::MAX_PASSWORD_LENGTH . ' caractères',
+                    'details' => ['password' => 'Longueur maximale dépassée']
+                ], 400);
+            }
+            
+            if ($passwordLength < 8) {
+                error_log('Erreur: Mot de passe trop court (' . $passwordLength . ' caractères)');
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Le mot de passe doit contenir au moins 8 caractères',
+                    'details' => ['password' => 'Longueur minimale requise non atteinte']
                 ], 400);
             }
             

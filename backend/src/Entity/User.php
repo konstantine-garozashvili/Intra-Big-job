@@ -11,6 +11,7 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\Table(name: '`user`')]
@@ -48,6 +49,13 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     private ?string $phoneNumber = null;
 
     #[ORM\Column(length: 255)]
+    #[Assert\NotBlank(message: "Le mot de passe est obligatoire")]
+    #[Assert\Length(
+        min: 8,
+        max: 50,
+        minMessage: "Le mot de passe doit comporter au moins {{ limit }} caractères",
+        maxMessage: "Le mot de passe ne doit pas dépasser {{ limit }} caractères"
+    )]
     private ?string $password = null;
 
     #[ORM\Column]

@@ -2,7 +2,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useAddress, useValidation } from "../RegisterContext";
+import { useAddress, useValidation, useUserData } from "../RegisterContext";
 
 const Step3Form = ({ goToPrevStep, onSubmit }) => {
   const {
@@ -69,8 +69,18 @@ const Step3Form = ({ goToPrevStep, onSubmit }) => {
     
     const isValid = validateStep3();
     if (isValid) {
+      // Validation finale de la longueur du mot de passe en utilisant directement le contexte utilisateur
+      const userContext = useUserData();
+      if (userContext && userContext.password && userContext.password.length > 50) {
+        setLocalErrors({
+          ...localErrors,
+          password: "Le mot de passe ne doit pas dépasser 50 caractères"
+        });
+        return;
+      }
+      
       try {
-      onSubmit(e);
+        onSubmit(e);
       } catch (error) {
         setLocalErrors({
           ...localErrors,

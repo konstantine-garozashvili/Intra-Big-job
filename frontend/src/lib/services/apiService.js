@@ -17,9 +17,8 @@ function detectDevicePerformance() {
     const startTime = performance.now();
     
     // Test simple de performance - calcul intense
-    let result = 0;
     for (let i = 0; i < 100000; i++) {
-      result += Math.sqrt(i);
+      Math.sqrt(i); // Exécuter le calcul sans stocker le résultat
     }
     
     const endTime = performance.now();
@@ -38,8 +37,9 @@ function detectDevicePerformance() {
     }
     
     return performanceScore;
-  } catch (e) {
-    return 50; // Score moyen par défaut
+  } catch {
+    // En cas d'erreur, retourner un score moyen par défaut
+    return 50; 
   }
 }
 
@@ -83,14 +83,6 @@ axios.interceptors.request.use(request => {
     requestData.password = '********';
   }
   
-  // Identifier les requêtes d'authentification
-  let isAuthRequest = false;
-  if (request.url) {
-    isAuthRequest = request.url.includes('/login_check') || 
-                   request.url.includes('/token/refresh') ||
-                   request.url.includes('/token/revoke');
-  }
-  
   // Set default timeout based on performance mode
   if (!request.timeout) {
     const isProfileRequest = request.url && (request.url.includes('/profile/') || request.url.includes('/me'));
@@ -112,14 +104,6 @@ axios.interceptors.request.use(request => {
 });
 
 axios.interceptors.response.use(response => {
-  // Identifier les réponses d'authentification
-  let isAuthResponse = false;
-  if (response.config?.url) {
-    isAuthResponse = response.config.url.includes('/login_check') || 
-                    response.config.url.includes('/token/refresh') ||
-                    response.config.url.includes('/token/revoke');
-  }
-  
   return response;
 }, error => {
   return Promise.reject(error);
@@ -193,6 +177,9 @@ export const generateCacheKey = (method, url, params = {}) => {
   return `${method}:${url}:${JSON.stringify(params)}`;
 };
 
+// Constante pour la longueur maximale du mot de passe
+const MAX_PASSWORD_LENGTH = 50;
+
 /**
  * Service d'API pour gérer les appels centralisés
  */
@@ -204,106 +191,102 @@ const apiService = {
    * @returns {Promise<Object>} - Réponse de l'API
    */
   async get(path, options = {}) {
-    try {
-      const url = normalizeApiUrl(path);
+    const url = normalizeApiUrl(path);
+    
+    // Générer une clé unique pour cette requête
+    const requestKey = `${path}${JSON.stringify(options.params || {})}`;
+    
+    // Vérifier si une requête identique est déjà en cours
+    if (pendingRequests.has(requestKey)) {
+      return pendingRequests.get(requestKey);
+    }
+    
+    // Check for in-memory cache if caching is not disabled
+    if (!options.noCache) {
+      const cacheKey = generateCacheKey('GET', url, options.params);
+      const cached = apiCache.get(cacheKey);
       
-      // Générer une clé unique pour cette requête
-      const requestKey = `${path}${JSON.stringify(options.params || {})}`;
-      
-      // Vérifier si une requête identique est déjà en cours
-      if (pendingRequests.has(requestKey)) {
-        return pendingRequests.get(requestKey);
+      if (cached && cached.expiry > Date.now()) {
+        return cached.data;
       }
+    }
+    
+    // Identifier le type de requête pour optimiser les timeouts
+    const isProfileRequest = path.includes('/profile') || path.includes('/me');
+    const isMessagesRequest = path.includes('/messages');
+    const isCriticalRequest = path.includes('/auth') || options.critical === true;
+    
+    // Définir les timeouts de base selon le type de requête
+    const baseTimeout = isProfileRequest ? 3000 : 
+                        isMessagesRequest ? 5000 : 
+                        isCriticalRequest ? 8000 : 10000;
+    
+    // Appliquer le timeout adaptatif en fonction des performances de l'appareil
+    const adaptiveTimeout = options.timeout || getAdaptiveTimeout(baseTimeout, isCriticalRequest);
+    
+    // Configure axios request with appropriate timeouts
+    const requestConfig = {
+      ...options,
+      timeout: adaptiveTimeout
+    };
+    
+    // Implement retries for profile and messages requests
+    const maxRetries = options.retries !== undefined ? Math.min(options.retries, 2) : 
+                       (isProfileRequest || isMessagesRequest) ? 1 : 0;
+    
+    // Créer une promesse pour cette requête
+    const requestPromise = (async () => {
+      let retries = 0;
+      let lastError = null;
       
-      // Check for in-memory cache if caching is not disabled
-      if (!options.noCache) {
-        const cacheKey = generateCacheKey('GET', url, options.params);
-        const cached = apiCache.get(cacheKey);
-        
-        if (cached && cached.expiry > Date.now()) {
-          return cached.data;
-        }
-      }
-      
-      // Identifier le type de requête pour optimiser les timeouts
-      const isProfileRequest = path.includes('/profile') || path.includes('/me');
-      const isMessagesRequest = path.includes('/messages');
-      const isCriticalRequest = path.includes('/auth') || options.critical === true;
-      
-      // Définir les timeouts de base selon le type de requête
-      const baseTimeout = isProfileRequest ? 3000 : 
-                          isMessagesRequest ? 5000 : 
-                          isCriticalRequest ? 8000 : 10000;
-      
-      // Appliquer le timeout adaptatif en fonction des performances de l'appareil
-      const adaptiveTimeout = options.timeout || getAdaptiveTimeout(baseTimeout, isCriticalRequest);
-      
-      // Configure axios request with appropriate timeouts
-      const requestConfig = {
-        ...options,
-        timeout: adaptiveTimeout
-      };
-      
-      // Implement retries for profile and messages requests
-      const maxRetries = options.retries !== undefined ? Math.min(options.retries, 2) : 
-                         (isProfileRequest || isMessagesRequest) ? 1 : 0;
-      
-      // Créer une promesse pour cette requête
-      const requestPromise = (async () => {
-        let retries = 0;
-        let lastError = null;
-        
-        // Utiliser une boucle while au lieu d'une récursion pour éviter des problèmes de pile
-        while (retries <= maxRetries) {
-          try {
-            const response = await axios.get(url, requestConfig);
-            
-            // Si success, mettre en cache si le caching n'est pas désactivé
-            if (!options.noCache) {
-              const cacheKey = generateCacheKey('GET', url, options.params);
-              const ttl = options.cacheDuration || DEFAULT_CACHE_TTL;
-              apiCache.set(cacheKey, {
-                data: response.data,
-                expiry: Date.now() + ttl
-              });
-              cleanupCache();
-            }
-            
-            return response.data;
-          } catch (error) {
-            lastError = error;
-            
-            // Ne pas retenter si c'est une erreur 4xx (sauf timeout)
-            if (error.response && error.response.status >= 400 && error.response.status < 500) {
-              break;
-            }
-            
-            // Attendre avant de réessayer avec backoff exponentiel
-            if (retries < maxRetries) {
-              const backoffDelay = Math.min(1000 * Math.pow(2, retries), 8000);
-              await new Promise(resolve => setTimeout(resolve, backoffDelay));
-              retries++;
-            } else {
-              break;
-            }
+      // Utiliser une boucle while au lieu d'une récursion pour éviter des problèmes de pile
+      while (retries <= maxRetries) {
+        try {
+          const response = await axios.get(url, requestConfig);
+          
+          // Si success, mettre en cache si le caching n'est pas désactivé
+          if (!options.noCache) {
+            const cacheKey = generateCacheKey('GET', url, options.params);
+            const ttl = options.cacheDuration || DEFAULT_CACHE_TTL;
+            apiCache.set(cacheKey, {
+              data: response.data,
+              expiry: Date.now() + ttl
+            });
+            cleanupCache();
+          }
+          
+          return response.data;
+        } catch (error) {
+          lastError = error;
+          
+          // Ne pas retenter si c'est une erreur 4xx (sauf timeout)
+          if (error.response && error.response.status >= 400 && error.response.status < 500) {
+            break;
+          }
+          
+          // Attendre avant de réessayer avec backoff exponentiel
+          if (retries < maxRetries) {
+            const backoffDelay = Math.min(1000 * Math.pow(2, retries), 8000);
+            await new Promise(resolve => setTimeout(resolve, backoffDelay));
+            retries++;
+          } else {
+            break;
           }
         }
-        
-        // Toutes les tentatives ont échoué
-        throw lastError;
-      })();
-      
-      // Enregistrer cette promesse
-      pendingRequests.set(requestKey, requestPromise);
-      
-      try {
-        return await requestPromise;
-      } finally {
-        // Libérer le verrou quand la requête est terminée
-        pendingRequests.delete(requestKey);
       }
-    } catch (error) {
-      throw error;
+      
+      // Toutes les tentatives ont échoué
+      throw lastError;
+    })();
+    
+    // Enregistrer cette promesse
+    pendingRequests.set(requestKey, requestPromise);
+    
+    try {
+      return await requestPromise;
+    } finally {
+      // Libérer le verrou quand la requête est terminée
+      pendingRequests.delete(requestKey);
     }
   },
   
@@ -311,12 +294,34 @@ const apiService = {
    * Effectue une requête POST
    * @param {string} path - Chemin de l'API
    * @param {Object} data - Données à envoyer
-   * @param {Object} options - Options de la requête (headers, etc.)
+   * @param {Object} options - Options de la requête
    * @returns {Promise<Object>} - Réponse de l'API
    */
   async post(path, data = {}, options = {}) {
+    const url = normalizeApiUrl(path);
+    
+    // Vérification spécifique pour l'inscription
+    if (path.includes('/register') && data.password) {
+      console.log(`[apiService] Vérification du mot de passe avant envoi - Longueur: ${data.password.length}`);
+      
+      // PROTECTION ABSOLUE: Vérifier la taille du mot de passe immédiatement
+      const passwordLength = data.password.length;
+      
+      if (passwordLength > MAX_PASSWORD_LENGTH) {
+        console.error(`[apiService] BLOCAGE CRITIQUE: Mot de passe trop long (${passwordLength} caractères)`);
+        
+        // Rejeter la promesse avec une erreur formatée
+        return Promise.reject({
+          success: false,
+          message: `Le mot de passe ne doit pas dépasser ${MAX_PASSWORD_LENGTH} caractères`,
+          errors: {
+            password: 'Longueur maximale dépassée'
+          }
+        });
+      }
+    }
+    
     try {
-      const url = normalizeApiUrl(path);
       const response = await axios.post(url, data, options);
       return response.data;
     } catch (error) {
@@ -348,8 +353,9 @@ const apiService = {
    * @returns {Promise<Object>} - Réponse de l'API
    */
   async put(path, data = {}, options = {}) {
+    const url = normalizeApiUrl(path);
+    
     try {
-      const url = normalizeApiUrl(path);
       const response = await axios.put(url, data, options);
       return response.data;
     } catch (error) {
@@ -374,12 +380,8 @@ const apiService = {
    * @returns {Promise<Object>} - Réponse de l'API
    */
   async delete(path, options = {}) {
-    try {
-      const response = await axios.delete(normalizeApiUrl(path), options);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await axios.delete(normalizeApiUrl(path), options);
+    return response.data;
   },
   
   /**
@@ -430,9 +432,8 @@ const apiService = {
 
   /**
    * Invalide le cache pour un chemin spécifique
-   * @param {string} path - Chemin de l'API à invalider
    */
-  invalidateCache(path) {
+  invalidateCache() {
     // Logique d'invalidation du cache pour un chemin spécifique
     // Ici, on pourrait implémenter une logique avec localStorage ou IndexedDB si nécessaire
   },
@@ -475,8 +476,8 @@ const apiService = {
         if (localStorage.getItem(key)) {
           localStorage.removeItem(key);
         }
-      } catch (e) {
-        // Silent error handling
+      } catch {
+        // Silent error handling - ignorer les erreurs
       }
     });
     
@@ -494,6 +495,41 @@ const apiService = {
     const url = normalizeApiUrl(path);
     const cacheKey = generateCacheKey(method, url, params);
     apiCache.delete(cacheKey);
+  },
+
+  /**
+   * Gère l'inscription d'un nouvel utilisateur
+   * @param {Object} userData - Les données utilisateur pour l'inscription
+   * @returns {Promise} - Promise avec la réponse de l'API
+   */
+  async register(userData) {
+    // Vérifier la longueur du mot de passe avant d'envoyer la requête
+    if (userData.password && userData.password.length > MAX_PASSWORD_LENGTH) {
+      console.error(`Mot de passe trop long (${userData.password.length} caractères) - Maximum autorisé: ${MAX_PASSWORD_LENGTH}`);
+      // Rejeter la promesse avec une erreur formatée comme une réponse API
+      return Promise.reject({
+        success: false,
+        message: `Le mot de passe ne doit pas dépasser ${MAX_PASSWORD_LENGTH} caractères`,
+        error_code: 'PASSWORD_TOO_LONG',
+        error_details: {
+          field: 'password',
+          max_length: MAX_PASSWORD_LENGTH,
+          actual_length: userData.password.length
+        }
+      });
+    }
+    
+    return this.post('/register', userData);
+  },
+
+  /**
+   * Gère la connexion d'un utilisateur
+   * @param {String} email - Email de l'utilisateur
+   * @param {String} password - Mot de passe de l'utilisateur
+   * @returns {Promise} - Promise avec la réponse de l'API
+   */
+  async login(email, password) {
+    return this.post('/login_check', { email, password });
   }
 };
 

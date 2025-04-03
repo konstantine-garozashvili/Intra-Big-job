@@ -191,7 +191,36 @@ export const SearchBar = () => {
       fetchInitialSuggestions();
     } 
     else if (query.length >= 1) {
-      fetchSuggestions(query);
+      fetchSuggestions(query, setSuggestions, setIsLoading, setError);
+    }
+  };
+
+  // Ajouter une fonction fetchSuggestions pour gérer la récupération des suggestions de recherche
+  const fetchSuggestions = async (query, setResults, setIsLoading, setError) => {
+    if (!query || query.length < 2) {
+      setResults([]);
+      return;
+    }
+    
+    setIsLoading(true);
+    
+    try {
+      // Effectuer la requête API pour récupérer les suggestions
+      const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+      
+      if (!response.ok) {
+        throw new Error('Erreur lors de la recherche');
+      }
+      
+      const data = await response.json();
+      
+      // Traiter les résultats
+      setResults(data.results || []);
+    } catch (error) {
+      console.error('Erreur de recherche:', error);
+      setError('Impossible de charger les suggestions');
+    } finally {
+      setIsLoading(false);
     }
   };
 

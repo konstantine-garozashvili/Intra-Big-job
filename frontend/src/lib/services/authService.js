@@ -54,6 +54,21 @@ export const authService = {
     try {
       if (import.meta.env.DEV) {
         console.log('[authService] Début de l\'inscription');
+        // Journalisation sécurisée des données sans exposer le mot de passe
+        const safeData = { ...userData };
+        if (safeData.password) {
+          // Log la longueur du mot de passe pour débogage
+          console.log('[authService] Longueur du mot de passe:', safeData.password.length);
+          safeData.password = '***';
+        }
+        console.log('[authService] Données d\'inscription:', safeData);
+      }
+      
+      // Vérification explicite de la longueur du mot de passe côté client
+      if (userData.password && typeof userData.password === 'string') {
+        if (userData.password.length > 50) {
+          throw new Error('Le mot de passe ne doit pas dépasser 50 caractères.');
+        }
       }
       
       const response = await apiService.post('/register', userData);

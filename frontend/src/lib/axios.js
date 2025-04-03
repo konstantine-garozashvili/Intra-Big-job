@@ -1,18 +1,24 @@
 import axios from 'axios';
 
+// Constante pour la longueur maximale du mot de passe
+const MAX_PASSWORD_LENGTH = 50;
+
 // Configuration de base
 const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
-  timeout: 15000, // 15 secondes
+  baseURL: 'http://localhost/api',
+  timeout: 5000,
   headers: {
+    'Content-Type': 'application/json',
     'Accept': 'application/json',
-    'X-Requested-With': 'XMLHttpRequest'
   },
-  // Désactiver les transformations de réponse qui pourraient perturber le flux
-  transformResponse: [(data) => {
+  transformResponse: [data => {
+    // Retourner les données directement si elles sont déjà un objet
+    if (typeof data !== 'string') return data;
+    
+    // Sinon, essayer de parser en JSON seulement si c'est une chaîne
     try {
       return JSON.parse(data);
-    } catch (error) {
+    } catch {
       return data;
     }
   }],
@@ -21,23 +27,66 @@ const axiosInstance = axios.create({
   maxRedirects: 0
 });
 
-// Configurer des intercepteurs pour les requêtes
-axiosInstance.interceptors.request.use(request => {
-  // Ajouter le token d'authentification à toutes les requêtes si disponible
-  const token = localStorage.getItem('token');
-  if (token) {
-    request.headers.Authorization = `Bearer ${token}`;
+// Intercepteur pour les requêtes
+axiosInstance.interceptors.request.use(
+  config => {
+    // Vérifier si c'est une requête d'inscription
+    if (config.url?.includes('/register') && config.method === 'post' && config.data) {
+      // Vérifier si un mot de passe est présent
+      if (config.data.password && typeof config.data.password === 'string') {
+        // Mesurer la longueur du mot de passe
+        const passwordLength = config.data.password.length;
+        
+        // Si le mot de passe est trop long, bloquer la requête
+        if (passwordLength > MAX_PASSWORD_LENGTH) {
+          console.error(`[axios interceptor] Mot de passe trop long (${passwordLength} caractères). La requête a été bloquée.`);
+          
+          // Créer une erreur et rejeter la requête
+          const error = new Error(`Le mot de passe ne doit pas dépasser ${MAX_PASSWORD_LENGTH} caractères`);
+          error.name = 'PasswordTooLongError';
+          error.code = 'PASSWORD_TOO_LONG';
+          error.config = config;
+          error.request = { status: 400 };
+          error.response = {
+            status: 400,
+            data: {
+              success: false,
+              message: `Le mot de passe ne doit pas dépasser ${MAX_PASSWORD_LENGTH} caractères`,
+              errors: {
+                password: 'Longueur maximale dépassée'
+              }
+            }
+          };
+          
+          return Promise.reject(error);
+        }
+        
+        // Tronquer le mot de passe si nécessaire (mesure de sécurité supplémentaire)
+        if (passwordLength > MAX_PASSWORD_LENGTH) {
+          console.warn(`[axios interceptor] Troncature du mot de passe de ${passwordLength} à ${MAX_PASSWORD_LENGTH} caractères`);
+          config.data.password = config.data.password.substring(0, MAX_PASSWORD_LENGTH);
+        }
+      }
+    }
+    
+    // Récupérer le token depuis le localStorage si disponible
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    // Set Content-Type only for non-FormData requests
+    if (config.data && !(config.data instanceof FormData)) {
+      config.headers['Content-Type'] = 'application/json';
+    }
+    
+    return config;
+  },
+  error => {
+    console.error('[axios interceptor] Erreur de requête:', error);
+    return Promise.reject(error);
   }
-  
-  // Set Content-Type only for non-FormData requests
-  if (request.data && !(request.data instanceof FormData)) {
-    request.headers['Content-Type'] = 'application/json';
-  }
-  
-  return request;
-}, error => {
-  return Promise.reject(error);
-});
+);
 
 // Configure external API instance (for third-party APIs)
 export const externalAxiosInstance = axios.create({

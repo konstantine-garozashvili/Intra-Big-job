@@ -4,6 +4,11 @@ import React from "react";
 export const evaluatePasswordStrength = (password) => {
   if (!password) return 0;
   
+  // Vérifier d'abord si le mot de passe dépasse la longueur maximale
+  if (password.length > 50) {
+    return 0; // Invalide en raison de la longueur excessive
+  }
+  
   let score = 0;
   
   // Longueur du mot de passe
@@ -24,10 +29,14 @@ export const evaluatePasswordStrength = (password) => {
 
 // Composant pour afficher la force du mot de passe
 export const PasswordStrengthIndicator = ({ password }) => {
-  const strength = evaluatePasswordStrength(password);
+  // Vérifier si le mot de passe est trop long
+  const isTooLong = password && password.length > 50;
+  const strength = isTooLong ? 0 : evaluatePasswordStrength(password);
   
   // Déterminer la couleur et le texte en fonction de la force
   const getColorClass = () => {
+    if (isTooLong) return "bg-red-500";
+    
     switch (strength) {
       case 0: return "bg-gray-200";
       case 1: return "bg-red-500";
@@ -39,6 +48,8 @@ export const PasswordStrengthIndicator = ({ password }) => {
   };
   
   const getText = () => {
+    if (isTooLong) return "Trop long (max 50 caractères)";
+    
     switch (strength) {
       case 0: return "Veuillez entrer un mot de passe";
       case 1: return "Très faible";
