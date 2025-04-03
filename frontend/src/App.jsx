@@ -16,6 +16,7 @@ import { queryClient } from './lib/services/queryClient'
 import ReactQueryHydration from './components/shared/ReactQueryHydration'
 import deduplicationService from './lib/services/deduplicationService'
 import apiService from './lib/services/apiService'
+import { notificationService } from './lib/services/notificationService'
 
 // Export queryClient to be used elsewhere
 export { queryClient };
@@ -158,8 +159,39 @@ function ErrorFallback({ error, resetErrorBoundary }) {
   );
 }
 
+// Function to start the app services
+const startAppServices = () => {
+  // Start notification polling if the user is logged in
+  if (localStorage.getItem('token')) {
+    notificationService.startPolling();
+  }
+};
+
 // Composant App principal qui configure le Router
 function App() {
+  useEffect(() => {
+    // Initialize app services
+    startAppServices();
+    
+    // Listen for auth changes to start/stop services
+    const handleAuthChange = () => {
+      if (localStorage.getItem('token')) {
+        notificationService.startPolling();
+      } else {
+        notificationService.stopPolling();
+        notificationService.resetCache();
+      }
+    };
+    
+    window.addEventListener('auth-change', handleAuthChange);
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener('auth-change', handleAuthChange);
+      notificationService.stopPolling();
+    };
+  }, []);
+
   return (
     <ErrorBoundary FallbackComponent={ErrorFallback}>
       <QueryClientProvider client={queryClient}>
@@ -234,6 +266,7 @@ function AppContent() {
                     <Route path="/settings/career" element={<CareerSettings />} />
                     <Route path="/settings/security" element={<SecuritySettings />} />
                     <Route path="/settings/notifications" element={<NotificationSettings />} />
+                    <Route path="/notifications" element={<NotificationsPage />} />
                   </Route>
                   
                   {/* Routes pour la gestion des formations - accessible par teachers, admins, superadmins et recruiters */}
