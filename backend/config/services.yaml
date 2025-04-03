@@ -72,6 +72,17 @@ services:
         arguments:
             $params: '@parameter_bag'
 
+    # Configuration du UserProfileService
+    App\Service\UserProfileService:
+        arguments:
+            $entityManager: '@doctrine.orm.entity_manager'
+            $userRepository: '@App\Repository\UserRepository'
+            $serializer: '@serializer'
+            $documentStorageFactory: '@App\Service\DocumentStorageFactory'
+            $documentRepository: '@App\Domains\Global\Document\Repository\DocumentRepository'
+            $documentTypeRepository: '@App\Domains\Global\Document\Repository\DocumentTypeRepository'
+            $logger: '@logger'
+
     # Configuration du contrôleur RefreshTokenController
     App\Controller\RefreshTokenController:
         arguments:

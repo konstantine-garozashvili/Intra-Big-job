@@ -5,7 +5,6 @@ import ProfileHeader from '../components/profile-view/ProfileHeader';
 import ProfileTabs from '../components/profile-view/ProfileTabs';
 import { motion } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
-import axios from 'axios';
 
 const PublicProfileView = () => {
   const { userId } = useParams();
@@ -20,7 +19,7 @@ const PublicProfileView = () => {
   useEffect(() => {
     const checkCurrentUser = async () => {
       try {
-        const currentUser = await apiService.getCurrentUser();
+        const currentUser = await apiService.getUserProfile();
         if (currentUser?.id?.toString() === userId?.toString()) {
           setIsOwnProfile(true);
           window.location.href = '/profile';
@@ -139,12 +138,13 @@ const PublicProfileView = () => {
       profilePictureUrl: profileData.profilePicturePath,
       roles: Array.isArray(profileData.roles) 
         ? profileData.roles.map(role => typeof role === 'string' ? { name: role } : role)
-        : [],
+        : [{ name: 'USER' }],
       specialization: profileData.specialization || {},
       linkedinUrl: profileData.linkedinUrl || "",
       birthDate: profileData.birthDate,
       createdAt: profileData.createdAt,
-      updatedAt: profileData.updatedAt
+      updatedAt: profileData.updatedAt,
+      addresses: profileData.addresses || []
     },
     studentProfile: profileData.studentProfile || {
       isSeekingInternship: false,
