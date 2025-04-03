@@ -483,10 +483,12 @@ const Navbar = memo(() => {
                 {isAuthenticated && (permissions.isStudent() || permissions.isTeacher()) && (
                   <Link 
                     to={permissions.isTeacher() ? "/teacher/attendance" : "/student/attendance"}
-                    className="mr-4 px-3 py-2 rounded-md bg-green-700 text-white font-medium hover:bg-green-800 transition-colors flex items-center gap-2"
+                    className="mr-4 px-4 py-2 rounded-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-medium shadow-md hover:shadow-lg hover:translate-y-[-2px] transition-all duration-300 flex items-center gap-2 group"
                   >
-                    <Clipboard className="w-4 h-4" />
-                    Présence
+                    <Clipboard className="w-4 h-4 group-hover:animate-pulse" />
+                    <span className="group-hover:tracking-wide transition-all duration-300">
+                      Présence
+                    </span>
                   </Link>
                 )}
 

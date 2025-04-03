@@ -12,6 +12,7 @@ import { useNavigate } from 'react-router-dom';
 import { useSearchRoles } from '../lib/hooks/useSearchRoles';
 import { useSearchSuggestions } from '../lib/hooks/useSearchSuggestions';
 import { SearchSuggestionsList } from './SearchSuggestionsList';
+import apiService from '../lib/services/apiService';
 
 export const SearchBar = () => {
   const wrapperRef = useRef(null);
@@ -128,24 +129,21 @@ export const SearchBar = () => {
       event.stopPropagation();
     }
     
-    // Clear existing profile cache before navigation
-    localStorage.removeItem('user');
-    sessionStorage.removeItem('user');
-    
     const userId = suggestion.id;
     if (!userId) {
       console.error('No user ID found in suggestion:', suggestion);
       return;
     }
     
+    // Nettoyer le cache du profil public avant la navigation
+    apiService.clearPublicProfileCache(userId);
+    
     setQuery(`${suggestion.firstName} ${suggestion.lastName}`);
     setSuggestions([]);
     setShowSuggestions(false);
     
     try {
-      setTimeout(() => {
-        navigate(`/profile/${userId}`);
-      }, 10);
+      navigate(`/profile/${userId}`);
     } catch (error) {
       console.error('Navigation error:', error);
       window.location.href = `/profile/${userId}`;

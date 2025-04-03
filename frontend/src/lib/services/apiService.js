@@ -158,6 +158,10 @@ let profilePreloaded = false;
 // Last cleanup timestamp
 let lastCacheCleanup = Date.now();
 
+// Ajouter ces constantes en haut du fichier
+const PUBLIC_PROFILE_CACHE_TTL = 120000; // 2 minutes
+const PUBLIC_PROFILE_CACHE_KEY = 'public-profile';
+
 /**
  * Estimate the size of an object in bytes (approximate)
  * @param {Object} object - Object to measure
@@ -815,6 +819,59 @@ const apiService = {
       }
     }
   },
+
+  async getPublicProfile(userId) {
+    if (!userId) {
+      throw new Error('User ID is required to fetch public profile');
+    }
+
+    const cacheKey = `${PUBLIC_PROFILE_CACHE_KEY}-${userId}`;
+    
+    try {
+      // Vérifier le cache d'abord
+      const cached = apiCache.get(cacheKey);
+      if (cached && cached.expiry > Date.now()) {
+        return cached.data;
+      }
+
+      const response = await this.get(`/profile/public/${userId}`, {
+        headers: {
+          'X-Request-Type': 'public-profile',
+          'X-Cache-Priority': 'normal'
+        },
+        timeout: 5000,
+        retries: 1,
+        cacheDuration: PUBLIC_PROFILE_CACHE_TTL
+      });
+
+      // Mettre en cache la réponse
+      if (response) {
+        apiCache.set(cacheKey, {
+          data: response,
+          timestamp: Date.now(),
+          expiry: Date.now() + PUBLIC_PROFILE_CACHE_TTL
+        });
+      }
+
+      return response;
+    } catch (error) {
+      console.error('Error fetching public profile:', error);
+      throw error;
+    }
+  },
+
+  clearPublicProfileCache(userId) {
+    if (userId) {
+      apiCache.delete(`${PUBLIC_PROFILE_CACHE_KEY}-${userId}`);
+    } else {
+      // Nettoyer tous les caches de profils publics
+      for (const [key] of apiCache.entries()) {
+        if (key.startsWith(PUBLIC_PROFILE_CACHE_KEY)) {
+          apiCache.delete(key);
+        }
+      }
+    }
+  }
 };
 
 export default apiService; 
