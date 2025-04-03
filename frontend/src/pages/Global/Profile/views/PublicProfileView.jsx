@@ -13,24 +13,35 @@ const PublicProfileView = () => {
   const [error, setError] = useState(null);
   
   useEffect(() => {
+    const controller = new AbortController();
+    
     const fetchPublicProfile = async () => {
       try {
         setIsLoading(true);
-        const data = await apiService.getPublicProfile(userId);
+        const response = await apiService.getPublicProfile(userId);
         
-        if (data && (data.success === true || data.data)) {
-          setProfileData(data.data || data);
+        if (response?.data?.user) {
+          setProfileData(response.data.user);
+        } else if (response?.data) {
+          setProfileData(response.data);
+        } else if (response) {
+          setProfileData(response);
         } else {
-          setError(data.error || 'Failed to fetch profile data');
+          setError('Données du profil non disponibles');
         }
       } catch (error) {
-        setError(error.message || 'Error fetching profile data');
+        if (error.name === 'AbortError') {
+          return;
+        }
+        setError(error.message || 'Erreur lors de la récupération du profil');
       } finally {
         setIsLoading(false);
       }
     };
     
     fetchPublicProfile();
+    
+    return () => controller.abort();
   }, [userId]);
 
   const pageVariants = {
@@ -79,27 +90,32 @@ const PublicProfileView = () => {
 
   const userData = {
     user: {
-      id: profileData.id || profileData.user?.id,
-      firstName: profileData.firstName || profileData.user?.firstName || "",
-      lastName: profileData.lastName || profileData.user?.lastName || "",
-      email: profileData.email || profileData.user?.email || "",
-      phoneNumber: profileData.phoneNumber || profileData.user?.phoneNumber || "",
-      profilePictureUrl: profileData.profilePictureUrl || profileData.user?.profilePictureUrl || "",
+      id: profileData.id,
+      firstName: profileData.firstName,
+      lastName: profileData.lastName,
+      email: profileData.email,
+      phoneNumber: profileData.phoneNumber,
+      profilePictureUrl: profileData.profilePicturePath,
       roles: Array.isArray(profileData.roles) 
         ? profileData.roles.map(role => typeof role === 'string' ? { name: role } : role)
-        : (profileData.user?.roles || [{ name: 'USER' }]),
-      specialization: profileData.specialization || profileData.user?.specialization || {},
-      linkedinUrl: profileData.linkedinUrl || profileData.user?.linkedinUrl || "",
-      city: profileData.city || ""
+        : [],
+      specialization: profileData.specialization || {},
+      linkedinUrl: profileData.linkedinUrl || "",
+      birthDate: profileData.birthDate,
+      createdAt: profileData.createdAt,
+      updatedAt: profileData.updatedAt
     },
     studentProfile: profileData.studentProfile || {
       isSeekingInternship: false,
-      isSeekingApprenticeship: false
+      isSeekingApprenticeship: false,
+      portfolioUrl: null,
+      currentInternshipCompany: null,
+      internshipStartDate: null,
+      internshipEndDate: null,
+      situationType: null
     },
-    diplomas: profileData.diplomas || [],
     addresses: profileData.addresses || [],
-    documents: profileData.documents || [],
-    stats: profileData.stats || { profile: { completionPercentage: 0 } }
+    stats: { profile: { completionPercentage: 0 } }
   };
 
   return (
@@ -113,14 +129,14 @@ const PublicProfileView = () => {
       <ProfileHeader 
         userData={userData} 
         isPublicProfile={true}
-        onProfileUpdate={() => {}} // Fonction vide car pas de mise à jour en mode public
+        onProfileUpdate={() => {}}
       />
 
       <ProfileTabs 
         userData={userData}
         isPublicProfile={true}
-        documents={userData.documents}
-        onProfileUpdate={() => {}} // Fonction vide car pas de mise à jour en mode public
+        documents={[]}
+        onProfileUpdate={() => {}}
       />
     </motion.div>
   );

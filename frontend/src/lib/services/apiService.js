@@ -839,23 +839,34 @@ const apiService = {
           'X-Request-Type': 'public-profile',
           'X-Cache-Priority': 'normal'
         },
-        timeout: 5000,
-        retries: 1,
-        cacheDuration: PUBLIC_PROFILE_CACHE_TTL
+        timeout: 10000, // Augmenter le timeout à 10s
+        retries: 2     // Permettre 2 tentatives
       });
 
-      // Mettre en cache la réponse
+      // Vérification plus souple de la structure
       if (response) {
+        const formattedResponse = {
+          success: true,
+          data: {
+            user: response.data?.user || response.data || response
+          }
+        };
+
+        // Mettre en cache
         apiCache.set(cacheKey, {
-          data: response,
+          data: formattedResponse,
           timestamp: Date.now(),
           expiry: Date.now() + PUBLIC_PROFILE_CACHE_TTL
         });
+        
+        return formattedResponse;
       }
 
-      return response;
+      throw new Error('No response received from server');
     } catch (error) {
-      console.error('Error fetching public profile:', error);
+      if (error.code === 'ECONNABORTED') {
+        throw new Error('La requête a pris trop de temps, veuillez réessayer');
+      }
       throw error;
     }
   },
