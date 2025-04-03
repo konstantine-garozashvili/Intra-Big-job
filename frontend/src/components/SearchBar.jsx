@@ -1,11 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import userAutocompleteService from '../lib/services/autocompleteService';
-import authService from '../lib/services/authService';
-import { useRoles, ROLES } from '../features/roles/roleContext';
-import { getPrimaryRole, matchRoleFromSearchTerm, ROLE_ALIASES } from '../lib/utils/roleUtils';
 import { getRoleDisplayFormat } from '../lib/utils/roleDisplay.jsx';
-import { Search, User, X, UserCircle2, Briefcase } from 'lucide-react';
+import { Search, X, Briefcase } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
@@ -22,13 +18,15 @@ export const SearchBar = () => {
   const [isFocused, setIsFocused] = useState(false);
   const [containerWidth, setContainerWidth] = useState(0);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
+  // State pour gérer l'état de chargement localement dans ce composant
+  const [isSearchLoading, setIsSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState(null);
 
   // Custom hooks
   const { 
     allowedSearchRoles,
     isLoggedIn,
     isRoleSearch,
-    setIsRoleSearch,
     checkForRoleSearch,
     hasRole,
     hasAnyRole
@@ -47,8 +45,7 @@ export const SearchBar = () => {
     hasSpecialRole,
     handleInputChange,
     clearSearch,
-    fetchInitialSuggestions,
-    updateIsRoleSearch
+    fetchInitialSuggestions
   } = useSearchSuggestions({ 
     isLoggedIn, 
     hasRole, 
@@ -178,14 +175,15 @@ export const SearchBar = () => {
     }
   };
 
-  // Ajouter une fonction fetchSuggestions pour gérer la récupération des suggestions de recherche
-  const fetchSuggestions = async (query, setResults, setIsLoading, setError) => {
+  // Fonction pour récupérer les suggestions de recherche
+  const fetchSuggestions = async (query, setResults, setLoadingState, setErrorState) => {
     if (!query || query.length < 2) {
       setResults([]);
       return;
     }
     
-    setIsLoading(true);
+    if (setLoadingState) setLoadingState(true);
+    setIsSearchLoading(true);
     
     try {
       // Effectuer la requête API pour récupérer les suggestions
@@ -201,11 +199,13 @@ export const SearchBar = () => {
       setResults(data.results || []);
     } catch (error) {
       console.error('Erreur de recherche:', error);
-      if (typeof setError === 'function') {
-        setError('Impossible de charger les suggestions');
+      if (setErrorState) {
+        setErrorState('Impossible de charger les suggestions');
       }
+      setSearchError('Impossible de charger les suggestions');
     } finally {
-      setIsLoading(false);
+      if (setLoadingState) setLoadingState(false);
+      setIsSearchLoading(false);
     }
   };
 
@@ -222,8 +222,7 @@ export const SearchBar = () => {
       fetchInitialSuggestions();
     } 
     else if (query.length >= 1) {
-      // Appel avec une vérification pour setError qui pourrait être indéfini
-      fetchSuggestions(query, setSuggestions, setIsLoading, null);
+      fetchSuggestions(query, setSuggestions, null, null);
     }
   };
 
@@ -286,17 +285,24 @@ export const SearchBar = () => {
         </AnimatePresence>
         
         {/* Loading indicator */}
-        {isLoading && (
+        {(isLoading || isSearchLoading) && (
           <div className="absolute right-10 z-10">
             <div className="w-3 h-3 border-2 border-t-transparent border-white/30 rounded-full animate-spin"></div>
           </div>
         )}
       </div>
       
+      {/* Message d'erreur */}
+      {searchError && (
+        <div className="absolute top-full left-0 w-full mt-2 px-3 py-2 text-xs text-red-400 bg-[#02284f]/90 rounded-md">
+          <p>{searchError}</p>
+        </div>
+      )}
+      
       {/* Message d'aide (affiché uniquement quand focusé, query vide et PAS un rôle spécial) */}
       {isFocused && query.length === 0 && isLoggedIn && 
        !hasSpecialRole() &&
-       !showSuggestions && (
+       !showSuggestions && !searchError && (
         <div className="absolute top-full left-0 w-full mt-2 px-3 py-2 text-xs text-white/70 bg-[#02284f]/90 rounded-md">
           <p>
             {allowedSearchRoles.length > 0 ? (
