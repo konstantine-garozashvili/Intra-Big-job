@@ -7,11 +7,9 @@ import {
   isValidEmail, 
   validatePassword, 
   isValidPhone, 
-  isValidPostalCode,
-  isValidBirthDate,
-  formatPhone,
-  formatPostalCode
+  isValidBirthDate
 } from '@/lib/utils/validation';
+import PropTypes from 'prop-types';
 
 // Création des sous-contextes
 const UserDataContext = createContext(null);
@@ -296,6 +294,10 @@ export const RegisterProvider = ({ children }) => {
       </AddressContext.Provider>
     </UserDataContext.Provider>
   );
+};
+
+RegisterProvider.propTypes = {
+  children: PropTypes.node.isRequired
 };
 
 export default RegisterProvider; 

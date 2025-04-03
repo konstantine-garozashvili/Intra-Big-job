@@ -1,27 +1,12 @@
-import * as React from "react";
-import { lazy, Suspense, memo, useState, useEffect, useRef, useCallback } from "react";
-import { Button } from "@/components/ui/button";
-import { Eye, EyeOff, CheckCircle2, AlertCircle, Calendar as CalendarIcon } from "lucide-react";
+import { useState, useEffect, useRef, useCallback, memo } from "react";
 import { Link } from "react-router-dom";
-import { FloatingInput } from "@/components/ui/floating-input";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
-import { cn } from "@/lib/utils";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import 'react-calendar/dist/Calendar.css';
-import { CountrySelector } from "@/components/ui/country-selector";
-import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import { useUserData, useAddress, useValidation } from "./RegisterContext";
+import { useUserData, useValidation } from "./RegisterContext";
 import Step1Form from "./steps/Step1Form";
 import Step2Form from "./steps/Step2Form";
 import Step3Form from "./steps/Step3Form";
 import FormTransition from "./FormTransition";
 import { toast } from "sonner";
-
-// Chargement dynamique du calendrier pour améliorer les performances
-const Calendar = lazy(() => import('react-calendar'));
+import PropTypes from "prop-types";
 
 // Composant de chargement pour le calendrier - Mémorisé
 const CalendarFallback = memo(() => (
@@ -100,11 +85,15 @@ const PasswordStrengthIndicator = ({ password }) => {
   );
 };
 
+PasswordStrengthIndicator.propTypes = {
+  password: PropTypes.string.isRequired
+};
+
 // Composant principal du formulaire d'inscription
 const RegisterForm = () => {
   // Récupérer les valeurs et fonctions des contextes séparés
   const { setErrors, setStep1Attempted, setStep2Attempted } = useValidation();
-  const { handleSubmit: contextHandleSubmit, isSubmitting } = useValidation();
+  const { handleSubmit: contextHandleSubmit } = useValidation();
   const { userData: userDataContext } = useUserData();
   
   // Référence pour suivre les changements d'étape

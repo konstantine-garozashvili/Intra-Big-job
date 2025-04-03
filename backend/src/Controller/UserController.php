@@ -73,8 +73,18 @@ class UserController extends AbstractController
                 return $this->json(['message' => 'User not authenticated'], JsonResponse::HTTP_UNAUTHORIZED);
             }
             
+            // Récupérer l'ID de l'utilisateur courant
+            // Utilisation de l'interface UserInterface
+            $currentUserId = null;
+            if ($currentUser instanceof User) {
+                $currentUserId = $currentUser->getId();
+            } else {
+                // Fallback sur l'identifiant utilisateur
+                $currentUserId = $currentUser->getUserIdentifier();
+            }
+            
             // Find all users except the current user
-            $users = $this->userRepository->findAllExcept($currentUser->getId());
+            $users = $this->userRepository->findAllExcept($currentUserId);
             
             // Serialize with user roles included
             $serializedUsers = $this->serializer->serialize(

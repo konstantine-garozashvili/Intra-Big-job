@@ -376,7 +376,6 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     {
         if (!$this->diplomas->contains($diploma)) {
             $this->diplomas->add($diploma);
-            $diploma->setUser($this);
         }
 
         return $this;
@@ -385,10 +384,8 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     public function removeDiploma(Diploma $diploma): static
     {
         if ($this->diplomas->removeElement($diploma)) {
-            // set the owning side to null (unless already changed)
-            if ($diploma->getUser() === $this) {
-                $diploma->setUser(null);
-            }
+            // La méthode getUser et setUser n'existent pas dans la classe Diploma
+            // Cette logique devrait être gérée ailleurs
         }
 
         return $this;

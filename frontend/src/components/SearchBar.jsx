@@ -178,23 +178,6 @@ export const SearchBar = () => {
     }
   };
 
-  // Gérer le focus de l'input
-  const handleInputFocus = () => {
-    if (!isLoggedIn) {
-      inputRef.current.blur();
-      return;
-    }
-    
-    setIsFocused(true);
-    
-    if (hasSpecialRole()) {
-      fetchInitialSuggestions();
-    } 
-    else if (query.length >= 1) {
-      fetchSuggestions(query, setSuggestions, setIsLoading, setError);
-    }
-  };
-
   // Ajouter une fonction fetchSuggestions pour gérer la récupération des suggestions de recherche
   const fetchSuggestions = async (query, setResults, setIsLoading, setError) => {
     if (!query || query.length < 2) {
@@ -218,9 +201,29 @@ export const SearchBar = () => {
       setResults(data.results || []);
     } catch (error) {
       console.error('Erreur de recherche:', error);
-      setError('Impossible de charger les suggestions');
+      if (typeof setError === 'function') {
+        setError('Impossible de charger les suggestions');
+      }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Gérer le focus de l'input
+  const handleInputFocus = () => {
+    if (!isLoggedIn) {
+      inputRef.current.blur();
+      return;
+    }
+    
+    setIsFocused(true);
+    
+    if (hasSpecialRole()) {
+      fetchInitialSuggestions();
+    } 
+    else if (query.length >= 1) {
+      // Appel avec une vérification pour setError qui pourrait être indéfini
+      fetchSuggestions(query, setSuggestions, setIsLoading, null);
     }
   };
 
