@@ -201,6 +201,7 @@ export function AuthForm() {
       window.addEventListener('user-data-loaded', handleUserDataLoaded)
       
       // After successful login, add some additional error handling for profile data issues
+      /* Commenting out the fixProfileIfNeeded logic
       const fixProfileIfNeeded = setTimeout(async () => {
         try {
           // Check if we can access the user data
@@ -214,6 +215,7 @@ export function AuthForm() {
           // No need to show this error to user as login was successful
         }
       }, 2000);
+      */
       
     } catch (error) {
       if (error.response) {

@@ -58,7 +58,6 @@ const UserProfileSettings = () => {
     error: profileError,
     forceRefresh: refetchProfile
   } = useUserDataCentralized({
-    preferComprehensiveData: true, // Utiliser la route '/profile/consolidated'
     refetchOnWindowFocus: true,    // Enable refetching when window focus changes
     refetchOnMount: true,          // Enable refetching when component mounts
     staleTime: 0,                  // Consider data stale immediately

@@ -243,7 +243,7 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
     public function findOneWithAllRelations(int $id): ?User
     {
         return $this->createQueryBuilder('u')
-            ->select('u', 'n', 't', 'ur', 'r', 's', 'ud', 'd', 'a', 'sp')
+            ->select('u', 'n', 't', 'ur', 'r', 's', 'ud', 'd', 'a')
             ->leftJoin('u.nationality', 'n')
             ->leftJoin('u.theme', 't')
             ->leftJoin('u.userRoles', 'ur')

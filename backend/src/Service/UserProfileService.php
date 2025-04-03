@@ -38,8 +38,8 @@ class UserProfileService
     {
         // Récupérer l'utilisateur avec toutes ses relations chargées
         $user = $this->userRepository->findOneWithAllRelations($user->getId());
-        
-        // Récupérer les données utilisateur avec les relations
+
+        // Récupérer les données utilisateur avec les relations    
         $userData = [
             'id' => $user->getId(),
             'firstName' => $user->getFirstName(),
@@ -52,9 +52,25 @@ class UserProfileService
             'isEmailVerified' => $user->isEmailVerified(),
             'linkedinUrl' => $user->getLinkedinUrl(),
             'pictureProfilePath' => $user->getProfilePicturePath(),
+            'roles' => $user->getRoles(),
+            'addresses' => array_map(function($address) {
+                return [
+                    'id' => $address->getId(),
+                    'name' => $address->getName(),
+                    'complement' => $address->getComplement(),     
+                    'city' => $address->getCity() ? [
+                        'id' => $address->getCity()->getId(),      
+                        'name' => $address->getCity()->getName()   
+                    ] : null,
+                    'postalCode' => $address->getPostalCode() ? [  
+                        'id' => $address->getPostalCode()->getId(),
+                        'code' => $address->getPostalCode()->getCode()
+                    ] : null
+                ];
+            }, $user->getAddresses()->toArray()),
             'nationality' => $user->getNationality() ? [
                 'id' => $user->getNationality()->getId(),
-                'name' => $user->getNationality()->getName(),
+                'name' => $user->getNationality()->getName(),      
             ] : null,
             'theme' => $user->getTheme() ? [
                 'id' => $user->getTheme()->getId(),
@@ -70,6 +86,7 @@ class UserProfileService
                 'id' => $studentProfile->getId(),
                 'isSeekingInternship' => $studentProfile->isSeekingInternship(),
                 'isSeekingApprenticeship' => $studentProfile->isSeekingApprenticeship(),
+                'portfolioUrl' => $studentProfile->getPortfolioUrl(),
             ];
         } else {
             $userData['studentProfile'] = null;

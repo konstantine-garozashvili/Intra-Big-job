@@ -12,8 +12,7 @@ const PRELOAD_MAP = {
   ],
   '/settings/profile': [
     { endpoint: '/api/me', key: 'user-profile' },
-    { endpoint: '/api/profile/picture', key: 'profile-picture' },
-    { endpoint: '/api/profile/consolidated', key: 'consolidated-profile' }
+    { endpoint: '/api/profile/picture', key: 'profile-picture' }
   ],
   '/settings/security': [
     { endpoint: '/api/me', key: 'user-profile' },
