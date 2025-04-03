@@ -11,14 +11,14 @@ import {
   Users, 
   GraduationCap,
   Calendar,
-  MessageCircle,
+  MessageCircle, 
   BookOpen, 
   Bell, 
   PiggyBank,
   Camera,
   Handshake,
   School,
-  LayoutDashboard,
+  LayoutDashboard, 
   Briefcase, 
   Share2,
   Clipboard,
@@ -26,7 +26,8 @@ import {
   ChevronRight,
   X,
   Menu,
-  ClipboardCheck
+  ClipboardCheck,
+  FileText
 } from 'lucide-react';
 import { useRolePermissions } from '@/features/roles/useRolePermissions';
 
@@ -228,6 +229,13 @@ const MenuBurger = memo(() => {
       icon: <Briefcase className="w-5 h-5 mr-2 text-[#528eb2]" />,
       roles: [ROLES.STUDENT, ROLES.TEACHER],
       to: '/projet',
+    },
+    {
+      key: 'candidatures_etudiant',
+      label: 'Mes Candidatures',
+      icon: <FileText className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.STUDENT],
+      to: '/student/candidatures',
     },
     {
       key: 'formations_management',

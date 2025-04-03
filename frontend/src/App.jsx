@@ -11,6 +11,7 @@ import ProfileLayout from '@/layouts/ProfileLayout'
 import StudentRoute from './components/StudentRoute'
 import { Toaster } from './components/ui/sonner'
 import { ErrorBoundary } from "react-error-boundary"
+import StudentCandidaturePage from './pages/Student/Candidatures'
 
 
 
@@ -479,6 +480,7 @@ const AppContent = () => {
                           <StudentDashboard />
                         </RoleGuard>
                       } />
+                      <Route path="candidatures" element={<StudentCandidaturePage />} />
                       <Route path="schedule" element={
                         <RoleGuard roles={ROLES.STUDENT} fallback={<Navigate to="/dashboard" replace />}>
                           <StudentSchedule />
