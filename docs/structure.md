@@ -17,7 +17,7 @@ frontend/
 │   ├── services/       # Services (API, authentification, etc.)
 │   ├── layouts/        # Layouts de l'application
 │   ├── hooks/          # Hooks React personnalisés
-│   ├── context/        # Contextes React
+│   ├── contexts/        # contextses React
 │   ├── App.jsx         # Composant racine
 │   └── main.jsx        # Point d'entrée de l'application
 ├── .eslintrc.js        # Configuration ESLint
