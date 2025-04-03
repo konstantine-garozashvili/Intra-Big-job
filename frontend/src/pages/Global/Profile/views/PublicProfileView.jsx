@@ -5,31 +5,46 @@ import ProfileHeader from '../components/profile-view/ProfileHeader';
 import ProfileTabs from '../components/profile-view/ProfileTabs';
 import { motion } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
+import axios from 'axios';
 
 const PublicProfileView = () => {
   const { userId } = useParams();
   const [profileData, setProfileData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isOwnProfile, setIsOwnProfile] = useState(false);
+  
+  console.log('PublicProfileView - userId from params:', userId);
+  console.log('PublicProfileView - Current URL:', window.location.pathname);
   
   useEffect(() => {
-    // Réinitialiser les états à chaque changement de userId
-    setProfileData(null);
-    setIsLoading(true);
-    setError(null);
-    
-    const controller = new AbortController();
+    const checkCurrentUser = async () => {
+      try {
+        const currentUser = await apiService.getCurrentUser();
+        if (currentUser?.id?.toString() === userId?.toString()) {
+          setIsOwnProfile(true);
+          window.location.href = '/profile';
+          return true;
+        }
+        return false;
+      } catch (error) {
+        console.error('Error checking current user:', error);
+        return false;
+      }
+    };
     
     const fetchPublicProfile = async () => {
       try {
+        // Vérifier d'abord si c'est notre propre profil
+        const isOwn = await checkCurrentUser();
+        if (isOwn) return;
+        
         // Nettoyer le cache avant de charger le nouveau profil
         apiService.clearPublicProfileCache(userId);
         
-        console.log('Fetching profile for userId:', userId);
-        const response = await apiService.getPublicProfile(userId, {
-          signal: controller.signal
-        });
-        console.log('API Response:', response);
+        console.log('PublicProfileView - Fetching data for userId:', userId);
+        const response = await apiService.getPublicProfile(userId);
+        console.log('PublicProfileView - API Response:', response);
         
         if (response?.data?.user) {
           console.log('Setting profile data from response.data.user:', response.data.user);
@@ -49,18 +64,18 @@ const PublicProfileView = () => {
           console.log('Request aborted');
           return;
         }
-        console.error('Error in fetchPublicProfile:', error);
+        console.error('PublicProfileView - Error fetching data:', error);
         setError(error.message || 'Erreur lors de la récupération du profil');
       } finally {
         setIsLoading(false);
       }
     };
     
-    fetchPublicProfile();
+    if (userId) {
+      fetchPublicProfile();
+    }
     
     return () => {
-      controller.abort();
-      // Nettoyer le cache lors du démontage du composant
       apiService.clearPublicProfileCache(userId);
     };
   }, [userId]);
