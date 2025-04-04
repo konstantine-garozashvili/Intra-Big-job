@@ -108,7 +108,7 @@ class UserController extends AbstractController
     /**
      * Endpoint to list users for chat functionality
      */
-    #[Route('/api/users/list', name: 'api_users_list', methods: ['GET'])]
+    #[Route('/users/list', name: 'api_users_list', methods: ['GET'])]
     #[IsGranted('ROLE_STUDENT')]
     public function listUsers(): JsonResponse
     {
