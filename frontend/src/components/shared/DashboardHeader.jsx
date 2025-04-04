@@ -1,13 +1,13 @@
 import React, { useEffect, useState, useRef, memo, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Clock, User, Sparkles } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
 import { authService } from '@/lib/services/authService';
 import userDataManager from '@/lib/services/userDataManager';
 import UserSkeleton from '@/components/ui/UserSkeleton';
+import ProfilePictureDisplay from '@/components/ProfilePictureDisplay';
 
 const getInitials = (firstName, lastName) => {
   if (!firstName || !lastName) return '?';
@@ -288,10 +288,9 @@ const DashboardHeader = ({ user, icon: Icon, roleTitle }) => {
     >
       <div className="flex flex-col md:flex-row md:items-center md:justify-between relative z-10">
         <div className="flex items-center">
-          <Avatar className="h-14 w-14 border-2 border-primary">
-            <AvatarImage src={profilePicture} alt={firstName} />
-            <AvatarFallback className="bg-primary text-primary-foreground">{userInitials}</AvatarFallback>
-          </Avatar>
+          <div className="relative h-16 w-16 sm:h-12 sm:w-12 md:h-16 md:w-16 lg:h-20 lg:w-20">
+            <ProfilePictureDisplay className="w-full h-full" />
+          </div>
           <div className="ml-4">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
               {firstName ? (
