@@ -503,20 +503,34 @@ const apiService = {
    * @returns {Promise} - Promise avec la réponse de l'API
    */
   async register(userData) {
-    // Vérifier la longueur du mot de passe avant d'envoyer la requête
-    if (userData.password && userData.password.length > MAX_PASSWORD_LENGTH) {
-      console.error(`Mot de passe trop long (${userData.password.length} caractères) - Maximum autorisé: ${MAX_PASSWORD_LENGTH}`);
-      // Rejeter la promesse avec une erreur formatée comme une réponse API
-      return Promise.reject({
-        success: false,
-        message: `Le mot de passe ne doit pas dépasser ${MAX_PASSWORD_LENGTH} caractères`,
-        error_code: 'PASSWORD_TOO_LONG',
-        error_details: {
-          field: 'password',
-          max_length: MAX_PASSWORD_LENGTH,
-          actual_length: userData.password.length
-        }
-      });
+    // Vérification stricte et rigoureuse de la longueur du mot de passe 
+    if (userData.password) {
+      // Forcer la conversion en chaîne pour éviter toute tentative d'injection
+      const passwordString = String(userData.password);
+      const passwordLength = passwordString.length;
+      
+      if (passwordLength > MAX_PASSWORD_LENGTH) {
+        console.error(`[apiService] BLOCAGE SÉCURITÉ: Mot de passe trop long (${passwordLength} caractères) - Maximum autorisé: ${MAX_PASSWORD_LENGTH}`);
+        
+        // Rejeter la promesse avec une erreur formatée comme une réponse API
+        return Promise.reject({
+          success: false,
+          message: `Le mot de passe ne doit pas dépasser ${MAX_PASSWORD_LENGTH} caractères`,
+          error_code: 'PASSWORD_TOO_LONG',
+          error_details: {
+            field: 'password',
+            max_length: MAX_PASSWORD_LENGTH,
+            actual_length: passwordLength
+          }
+        });
+      }
+      
+      // Remplacer le mot de passe par une version tronquée dans l'objet de données
+      // Défense en profondeur (même si les autres couches doivent bloquer)
+      const modifiedUserData = { ...userData };
+      modifiedUserData.password = passwordString.substring(0, MAX_PASSWORD_LENGTH);
+      
+      return this.post('/register', modifiedUserData);
     }
     
     return this.post('/register', userData);

@@ -34,12 +34,18 @@ axiosInstance.interceptors.request.use(
     if (config.url?.includes('/register') && config.method === 'post' && config.data) {
       // Vérifier si un mot de passe est présent
       if (config.data.password && typeof config.data.password === 'string') {
-        // Mesurer la longueur du mot de passe
+        // Mesurer la longueur exacte du mot de passe en caractères
         const passwordLength = config.data.password.length;
         
-        // Si le mot de passe est trop long, bloquer la requête
+        // Blocage strict et systématique si le mot de passe dépasse la limite
         if (passwordLength > MAX_PASSWORD_LENGTH) {
-          console.error(`[axios interceptor] Mot de passe trop long (${passwordLength} caractères). La requête a été bloquée.`);
+          console.error(`[axios interceptor] BLOCAGE CRITIQUE: Mot de passe trop long (${passwordLength} caractères). La requête a été bloquée.`);
+          
+          // Tronquer le mot de passe dans les données (défense en profondeur)
+          // Ne pas modifier l'objet original en cas d'erreur
+          const modifiedData = { ...config.data };
+          modifiedData.password = modifiedData.password.substring(0, MAX_PASSWORD_LENGTH);
+          config.data = modifiedData;
           
           // Créer une erreur et rejeter la requête
           const error = new Error(`Le mot de passe ne doit pas dépasser ${MAX_PASSWORD_LENGTH} caractères`);
@@ -60,9 +66,6 @@ axiosInstance.interceptors.request.use(
           
           return Promise.reject(error);
         }
-        
-        // Note: Ce bloc de code est supprimé car il est redondant et jamais atteint
-        // La troncature doit maintenant être gérée par le composant de saisie
       }
     }
     

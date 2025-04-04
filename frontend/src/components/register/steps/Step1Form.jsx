@@ -181,7 +181,8 @@ const Step1Form = ({ goToNextStep }) => {
               
               // Vérifier si le texte collé dépasse la limite
               if (pastedText.length > 50) {
-                e.preventDefault(); // Empêcher le collage par défaut
+                // Toujours empêcher le collage par défaut
+                e.preventDefault(); 
                 
                 // Tronquer le texte et le définir manuellement
                 setPassword(pastedText.substring(0, 50));
@@ -190,6 +191,9 @@ const Step1Form = ({ goToNextStep }) => {
                 const newErrors = {...localErrors};
                 newErrors.password = "Le mot de passe collé a été tronqué à 50 caractères";
                 setLocalErrors(newErrors);
+                
+                // Log de sécurité pour débogage
+                console.warn(`Tentative de collage d'un mot de passe trop long (${pastedText.length} caractères) - Tronqué à 50`);
               }
             }}
             placeholder="Entre 8 et 50 caractères"
