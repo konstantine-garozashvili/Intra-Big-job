@@ -35,7 +35,7 @@ export function useUserData(options = {}) {
     try {
       const stored = localStorage.getItem('user');
       if (stored) return JSON.parse(stored);
-    } catch (_) {
+    } catch (_) { // eslint-disable-line no-unused-vars
       // Error parsing user from localStorage
     }
     return null;
@@ -79,11 +79,11 @@ export function useUserData(options = {}) {
           try {
             localStorage.setItem('user', JSON.stringify(freshData));
             setLocalStorageUser(freshData);
-          } catch (_) {
+          } catch (_) { // eslint-disable-line no-unused-vars
             // Error saving to localStorage
           }
         }
-      } catch (_) {
+      } catch (_) { // eslint-disable-line no-unused-vars
         // Error in initial data fetch
       }
     };
@@ -112,8 +112,6 @@ export function useUserData(options = {}) {
         routeKey,
         componentId,
         async () => {
-          const existingCache = queryClient.getQueryData(['unified-user-data', routeKey, sessionId]);
-          
           return await apiService.get(routeKey, {
             noCache: true,
             retries: 2,
@@ -172,7 +170,7 @@ export function useUserData(options = {}) {
         try {
           localStorage.setItem('user', JSON.stringify(normalizedData));
           setLocalStorageUser(normalizedData);
-        } catch (_) {
+        } catch (_) { // eslint-disable-line no-unused-vars
           // Error saving user data to localStorage
         }
       }
@@ -209,7 +207,7 @@ export function useUserData(options = {}) {
         try {
           localStorage.setItem('user', JSON.stringify(data));
           setLocalStorageUser(data);
-        } catch (_) {
+        } catch (_) { // eslint-disable-line no-unused-vars
           // Error saving user data to localStorage
         }
       }
@@ -248,7 +246,7 @@ export function useUserData(options = {}) {
         try {
           localStorage.setItem('user', JSON.stringify(freshData));
           setLocalStorageUser(freshData);
-        } catch (_) {
+        } catch (_) { // eslint-disable-line no-unused-vars
           // Error saving user data to localStorage
         }
       }
