@@ -11,6 +11,7 @@ use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Serializer\SerializerInterface;
 use Psr\Log\LoggerInterface;
+use App\Service\UserDiplomaService;
 
 /**
  * Service to centralize common user profile operations
@@ -24,6 +25,7 @@ class UserProfileService
     private $documentRepository;
     private $documentTypeRepository;
     private $logger;
+    private $userDiplomaService;
     
     public function __construct(
         EntityManagerInterface $entityManager,
@@ -32,7 +34,8 @@ class UserProfileService
         DocumentStorageFactory $documentStorageFactory,
         DocumentRepository $documentRepository,
         DocumentTypeRepository $documentTypeRepository,
-        LoggerInterface $logger
+        LoggerInterface $logger,
+        UserDiplomaService $userDiplomaService
     ) {
         $this->entityManager = $entityManager;
         $this->userRepository = $userRepository;
@@ -41,6 +44,7 @@ class UserProfileService
         $this->documentRepository = $documentRepository;
         $this->documentTypeRepository = $documentTypeRepository;
         $this->logger = $logger;
+        $this->userDiplomaService = $userDiplomaService;
     }
     
     /**
@@ -124,19 +128,7 @@ class UserProfileService
         ];
 
         // Ajouter les diplômes de l'utilisateur
-        $userDiplomas = $user->getUserDiplomas();
-        $userData['diplomas'] = array_map(function($userDiploma) {
-            $diploma = $userDiploma->getDiploma();
-            return [
-                'id' => $userDiploma->getId(),
-                'diploma' => [
-                    'id' => $diploma->getId(),
-                    'name' => $diploma->getName(),
-                    'institution' => $diploma->getInstitution(),
-                ],
-                'obtainedDate' => $userDiploma->getObtainedDate() ? $userDiploma->getObtainedDate()->format('Y-m-d') : null,
-            ];
-        }, $userDiplomas->toArray());
+        $userData['diplomas'] = $this->userDiplomaService->formatUserDiplomas($user);
 
         // Ajouter le profile étudiant
         if ($user->getStudentProfile()) {

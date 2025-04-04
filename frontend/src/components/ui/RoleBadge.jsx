@@ -8,7 +8,7 @@ import { getRoleDisplayName, getRoleBadgeColor, normalizeRole } from '@/lib/cons
  * Composant RoleBadge qui affiche un badge pour un rôle utilisateur
  * 
  * @param {Object} props - Propriétés du composant
- * @param {string} props.role - Le rôle à afficher (avec ou sans préfixe ROLE_)
+ * @param {string|Object} props.role - Le rôle à afficher (chaîne avec/sans préfixe ROLE_ ou objet avec propriété name)
  * @param {boolean} props.animated - Si le badge doit être animé (framer-motion)
  * @param {number} props.index - Index pour l'animation (delay)
  * @param {string} props.className - Classes CSS additionnelles
@@ -33,17 +33,25 @@ const RoleBadge = ({
   hovered = false,
   ...props 
 }) => {
+  // Extraire le nom du rôle, qu'il soit sous forme d'objet ou de chaîne
+  const roleName = useMemo(() => {
+    if (typeof role === 'object' && role !== null) {
+      return role.name || 'USER';
+    }
+    return role || 'USER';
+  }, [role]);
+
   // Calculer les styles seulement quand les props changent
   const badgeContent = useMemo(() => {
-    return getRoleDisplayName(role);
-  }, [role]);
+    return getRoleDisplayName(roleName);
+  }, [roleName]);
 
   // Déterminer la variante de shadcn à utiliser
   const badgeVariant = useMemo(() => {
     if (!useVariant) return undefined;
     
     // Si on utilise les variantes, normaliser le rôle pour correspondre aux variantes définies
-    const normalizedRole = normalizeRole(role).toLowerCase();
+    const normalizedRole = normalizeRole(roleName).toLowerCase();
     
     switch (normalizedRole) {
       case 'student': return 'student';
@@ -57,14 +65,14 @@ const RoleBadge = ({
       case 'user': return 'user';
       default: return undefined;
     }
-  }, [role, useVariant]);
+  }, [roleName, useVariant]);
   
   const badgeColorClasses = useMemo(() => {
     // Si on utilise les variantes de shadcn, on ne définit pas de classes supplémentaires
     if (useVariant) return '';
     
-    return getRoleBadgeColor(role, solid);
-  }, [role, solid, useVariant]);
+    return getRoleBadgeColor(roleName, solid);
+  }, [roleName, solid, useVariant]);
   
   // Appliquer les classes de base et celles fournies en prop
   const badgeClasses = useMemo(() => {

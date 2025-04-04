@@ -16,6 +16,7 @@ import { queryClient } from './lib/services/queryClient'
 import ReactQueryHydration from './components/shared/ReactQueryHydration'
 import deduplicationService from './lib/services/deduplicationService'
 import apiService from './lib/services/apiService'
+import PublicProfileView from '@/pages/Global/Profile/views/PublicProfileView'
 
 // Export queryClient to be used elsewhere
 export { queryClient };
@@ -162,12 +163,11 @@ function ErrorFallback({ error, resetErrorBoundary }) {
 function App() {
   return (
     <ErrorBoundary FallbackComponent={ErrorFallback}>
-      <QueryClientProvider client={queryClient}>
-        {/* Composant pour gérer l'hydratation et la persistance du cache */}
-        <ReactQueryHydration>
-          <AuthProvider>
-            <RoleProvider>
-              <Router>
+      <Router>
+        <QueryClientProvider client={queryClient}>
+          <ReactQueryHydration>
+            <AuthProvider>
+              <RoleProvider>
                 {/* Initialisation des services de l'application */}
                 <AppInitializer />
                 
@@ -177,11 +177,12 @@ function App() {
                 <Suspense>
                   <AppContent />
                 </Suspense>
-              </Router>
-            </RoleProvider>
-          </AuthProvider>
-        </ReactQueryHydration>
-      </QueryClientProvider>
+                <Toaster />
+              </RoleProvider>
+            </AuthProvider>
+          </ReactQueryHydration>
+        </QueryClientProvider>
+      </Router>
     </ErrorBoundary>
   );
 }
@@ -223,9 +224,9 @@ function AppContent() {
                   {/* Regular protected routes */}
                   <Route path="/dashboard" element={<RoleDashboardRedirect />} />
                   
-                  {/* Profile view route */}
+                  {/* Profile routes */}
                   <Route path="/profile" element={<ProfileView />} />
-                  <Route path="/profile/:userId" element={<ProfileView />} />
+                  <Route path="/public-profile/:userId" element={<PublicProfileView />} />
                   
                   {/* Settings routes avec ProfileLayout */}
                   <Route element={<ProfileLayout />}>
@@ -382,7 +383,6 @@ function AppContent() {
               </Route>
             </Routes>
           </div>
-          <Toaster />
         </Suspense>
       </div>
     </div>

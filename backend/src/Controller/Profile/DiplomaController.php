@@ -3,8 +3,7 @@
 namespace App\Controller\Profile;
 
 use App\Entity\User;
-use App\Repository\DiplomaRepository;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Service\UserDiplomaService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
@@ -14,17 +13,14 @@ use Symfony\Bundle\SecurityBundle\Security;
 class DiplomaController extends AbstractController
 {
     private $security;
-    private $entityManager;
-    private $diplomaRepository;
+    private $userDiplomaService;
     
     public function __construct(
         Security $security,
-        EntityManagerInterface $entityManager,
-        DiplomaRepository $diplomaRepository
+        UserDiplomaService $userDiplomaService
     ) {
         $this->security = $security;
-        $this->entityManager = $entityManager;
-        $this->diplomaRepository = $diplomaRepository;
+        $this->userDiplomaService = $userDiplomaService;
     }
 
     /**
@@ -43,22 +39,7 @@ class DiplomaController extends AbstractController
             ], 401);
         }
         
-        $diplomas = [];
-        foreach ($user->getDiplomas() as $diploma) {
-            $diplomas[] = [
-                'id' => $diploma->getId(),
-                'name' => $diploma->getName(),
-                'obtainedAt' => $diploma->obtainedAt ? $diploma->obtainedAt->format('Y-m-d') : null,
-            ];
-        }
-        
-        // Trier les diplômes par date d'obtention (du plus récent au plus ancien)
-        usort($diplomas, function($a, $b) {
-            if (!isset($a['obtainedAt']) || !isset($b['obtainedAt'])) {
-                return 0;
-            }
-            return strtotime($b['obtainedAt']) - strtotime($a['obtainedAt']);
-        });
+        $diplomas = $this->userDiplomaService->formatUserDiplomas($user);
         
         return $this->json([
             'success' => true,

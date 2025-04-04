@@ -168,7 +168,16 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
     
     // Check if the user already has this diploma
     const alreadyHasDiploma = diplomas.some(
-      diploma => diploma.diploma.id.toString() === newDiploma.diplomaId.toString()
+      diploma => {
+        // Handle both old and new data formats
+        if (diploma.diploma && typeof diploma.diploma === 'object') {
+          // New format: diploma object is nested
+          return diploma.diploma.id.toString() === newDiploma.diplomaId.toString();
+        } else {
+          // Old format: diploma id is at the root level
+          return diploma.id.toString() === newDiploma.diplomaId.toString();
+        }
+      }
     );
     
     if (alreadyHasDiploma) {

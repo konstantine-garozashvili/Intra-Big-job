@@ -1,17 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import userAutocompleteService from '../lib/services/autocompleteService';
-import authService from '../lib/services/authService';
-import { useRoles, ROLES } from '../features/roles/roleContext';
-import { getPrimaryRole, matchRoleFromSearchTerm, ROLE_ALIASES } from '../lib/utils/roleUtils';
 import { getRoleDisplayFormat } from '../lib/utils/roleDisplay.jsx';
-import { Search, User, X, UserCircle2, Briefcase } from 'lucide-react';
+import { Search, X, Briefcase } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { useSearchRoles } from '../lib/hooks/useSearchRoles';
 import { useSearchSuggestions } from '../lib/hooks/useSearchSuggestions';
 import { SearchSuggestionsList } from './SearchSuggestionsList';
+import apiService from '../lib/services/apiService';
 
 export const SearchBar = () => {
   const wrapperRef = useRef(null);
@@ -122,15 +119,11 @@ export const SearchBar = () => {
     }
   }, [showSuggestions]);
 
-  const handleSuggestionClick = (suggestion, event) => {
+  const handleSuggestionClick = async (suggestion, event) => {
     if (event) {
       event.preventDefault();
       event.stopPropagation();
     }
-    
-    // Clear existing profile cache before navigation
-    localStorage.removeItem('user');
-    sessionStorage.removeItem('user');
     
     const userId = suggestion.id;
     if (!userId) {
@@ -138,17 +131,32 @@ export const SearchBar = () => {
       return;
     }
     
-    setQuery(`${suggestion.firstName} ${suggestion.lastName}`);
-    setSuggestions([]);
-    setShowSuggestions(false);
-    
     try {
-      setTimeout(() => {
-        navigate(`/profile/${userId}`);
-      }, 10);
+      // Nettoyer le cache du profil public avant la navigation
+      apiService.clearPublicProfileCache(userId);
+      
+      // Mettre à jour l'interface utilisateur
+      setQuery(`${suggestion.firstName} ${suggestion.lastName}`);
+      setSuggestions([]);
+      setShowSuggestions(false);
+      setActiveSuggestion(-1);
+      
+      // Désactiver temporairement l'input pour éviter les doubles clics
+      if (inputRef.current) {
+        inputRef.current.disabled = true;
+      }
+      
+      // Navigation vers le profil public
+      await navigate(`/public-profile/${userId}`);
+      
+      // Réactiver l'input après la navigation
+      if (inputRef.current) {
+        inputRef.current.disabled = false;
+      }
     } catch (error) {
       console.error('Navigation error:', error);
-      window.location.href = `/profile/${userId}`;
+      // En cas d'erreur, tenter une redirection directe
+      window.location.href = `/public-profile/${userId}`;
     }
   };
 

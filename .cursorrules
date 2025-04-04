@@ -1,8 +1,0 @@
-
-- Architecture basée sur les composants
-- Composants UI réutilisables (Shadcn)
-- Composants partagés entre domaines
-- Organisation des pages par domaine métier
-- Services et hooks partagés
-
-Ce projet suit une architecture moderne séparant clairement le backend (API Symfony) et le frontend (application React), reliés via des appels API. L'infrastructure est configurée avec Docker pour garantir un environnement de développement cohérent. 

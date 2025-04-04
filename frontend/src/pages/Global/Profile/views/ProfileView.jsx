@@ -6,7 +6,6 @@ import { useParams } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUserData } from "@/hooks/useUserData";
 import { useProfilePicture } from "../hooks/useProfilePicture";
-import { isGuest } from "../utils/roleUtils";
 import documentService from "../services/documentService";
 import apiService from "@/lib/services/apiService";
 import { toast } from "sonner";

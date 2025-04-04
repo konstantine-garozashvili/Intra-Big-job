@@ -32,77 +32,34 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
         $this->getEntityManager()->persist($user);
         $this->getEntityManager()->flush();
     }
-    public function findAutocompleteResults(string $searchTerm, ?array $allowedRoles = null): array
+    public function findAutocompleteResults(string $searchTerm, ?array $allowedRoles = null, ?int $currentUserId = null): array
     {
-        // Normalize search term for role name matching
-        $normalizedSearchTerm = strtolower(trim($searchTerm));
-        
-        // Get role alias from centralized function
-        $roleSearchTerm = $this->matchRoleFromSearchTerm($normalizedSearchTerm);
-        
-        // Create the base query builder - using the simplest approach
         $qb = $this->createQueryBuilder('u')
             ->select('u')
             ->leftJoin('u.userRoles', 'ur')
             ->leftJoin('ur.role', 'r');
         
-        // Build the query based on whether we have a role alias match
-        if ($roleSearchTerm) {
-            // If we have a role alias match, search for users with that role
-            $qb->where('r.name = :roleName')
-               ->orWhere('u.lastName LIKE :term OR u.firstName LIKE :term')
-               ->setParameter('roleName', $roleSearchTerm)
-               ->setParameter('term', '%' . $searchTerm . '%');
-        } else {
-            // Standard search for names or role names
-            $qb->where('u.lastName LIKE :term OR u.firstName LIKE :term OR LOWER(r.name) LIKE :roleTerm')
-               ->setParameter('term', '%' . $searchTerm . '%')
-               ->setParameter('roleTerm', '%' . $normalizedSearchTerm . '%');
+        // Exclude current user if ID is provided
+        if ($currentUserId !== null) {
+            $qb->andWhere('u.id != :currentUserId')
+               ->setParameter('currentUserId', $currentUserId);
         }
+        
+        // Search by name
+        $qb->andWhere('u.lastName LIKE :term OR u.firstName LIKE :term')
+           ->setParameter('term', '%' . $searchTerm . '%');
         
         // Apply role filtering if specified
         if ($allowedRoles !== null && count($allowedRoles) > 0) {
-            // Add a role filter condition
             $qb->andWhere('r.name IN (:roleNames)')
                ->setParameter('roleNames', $allowedRoles);
         }
         
-        // Finalize and execute the query
+        // Finalize query
         $qb->orderBy('u.lastName', 'ASC')
-           ->setMaxResults(20); // Increase max results for better chances of finding matches
+           ->setMaxResults(20);
            
-        // Execute the query and handle duplicates manually
-        $results = $qb->getQuery()->getResult();
-        
-        // Remove duplicates manually
-        $uniqueUsers = [];
-        $uniqueIds = [];
-        
-        foreach ($results as $user) {
-            if (!in_array($user->getId(), $uniqueIds)) {
-                $uniqueIds[] = $user->getId();
-                $uniqueUsers[] = $user;
-                
-                // If we're doing a role search, prioritize users with that role
-                if ($roleSearchTerm) {
-                    $hasRole = false;
-                    foreach ($user->getUserRoles() as $userRole) {
-                        if ($userRole->getRole()->getName() === $roleSearchTerm) {
-                            $hasRole = true;
-                            break;
-                        }
-                    }
-                    
-                    // Move users with the role to the beginning of the array
-                    if ($hasRole && count($uniqueUsers) > 1) {
-                        $userWithRole = array_pop($uniqueUsers);
-                        array_unshift($uniqueUsers, $userWithRole);
-                    }
-                }
-            }
-        }
-        
-        return $uniqueUsers;
+        return $qb->getQuery()->getResult();
     }
     
     /**
