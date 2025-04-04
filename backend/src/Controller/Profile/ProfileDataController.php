@@ -6,6 +6,7 @@ use App\Entity\User;
 use App\Repository\UserRepository;
 use App\Repository\DiplomaRepository;
 use App\Service\UserDiplomaService;
+use App\Service\UserProfileService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -22,6 +23,7 @@ class ProfileDataController extends AbstractController
     private $userRepository;
     private $diplomaRepository;
     private $userDiplomaService;
+    private $userProfileService;
     
     public function __construct(
         Security $security,
@@ -29,7 +31,8 @@ class ProfileDataController extends AbstractController
         EntityManagerInterface $entityManager,
         UserRepository $userRepository,
         DiplomaRepository $diplomaRepository,
-        UserDiplomaService $userDiplomaService
+        UserDiplomaService $userDiplomaService,
+        UserProfileService $userProfileService
     ) {
         $this->security = $security;
         $this->serializer = $serializer;
@@ -37,6 +40,7 @@ class ProfileDataController extends AbstractController
         $this->userRepository = $userRepository;
         $this->diplomaRepository = $diplomaRepository;
         $this->userDiplomaService = $userDiplomaService;
+        $this->userProfileService = $userProfileService;
     }
 
     /**
@@ -274,5 +278,32 @@ class ProfileDataController extends AbstractController
         return array_map(function($role) {
             return is_string($role) ? $role : $role->getName();
         }, $user->getRoles());
+    }
+
+    /**
+     * Get public documents for a specific user
+     */
+    #[Route('/public/{id}/documents', name: 'api_profile_public_documents', methods: ['GET'])]
+    public function getPublicUserDocuments(int $id): JsonResponse
+    {
+        // Récupérer l'utilisateur
+        $user = $this->userRepository->findOneWithAllRelations($id);
+        
+        if (!$user) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Utilisateur non trouvé'
+            ], 404);
+        }
+        
+        // Utiliser le service de profil pour récupérer les documents publics
+        $documents = $this->userProfileService->getPublicUserDocuments($user);
+        
+        return $this->json([
+            'success' => true,
+            'data' => [
+                'documents' => $documents
+            ]
+        ]);
     }
 }

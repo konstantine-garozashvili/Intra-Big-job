@@ -311,4 +311,47 @@ class UserProfileService
             ];
         }
     }
+
+    /**
+     * Get public documents for a user
+     * @param User $user The user whose documents we want to retrieve
+     * @return array Documents data
+     */
+    public function getPublicUserDocuments(User $user): array
+    {
+        try {
+            // Get CV document type
+            $cvType = $this->documentTypeRepository->findOneBy(['code' => 'CV']);
+            if (!$cvType) {
+                $this->logger->warning('DocumentType with code "CV" NOT found.');
+                return [];
+            }
+
+            // Get user's CV document
+            $cvDocument = $this->documentRepository->findOneBy([
+                'user' => $user,
+                'documentType' => $cvType,
+                'isPublic' => true // Only get public documents
+            ]);
+
+            if (!$cvDocument) {
+                return [];
+            }
+
+            // Get storage adapter
+            $storage = $this->documentStorageFactory->createStorage();
+
+            return [[
+                'id' => $cvDocument->getId(),
+                'name' => $cvDocument->getName(),
+                'type' => 'CV',
+                'mimeType' => $cvDocument->getMimeType(),
+                'url' => $storage->getUrl($cvDocument->getPath()),
+                'createdAt' => $cvDocument->getCreatedAt()->format('Y-m-d H:i:s')
+            ]];
+        } catch (\Exception $e) {
+            $this->logger->error('Error getting public documents: ' . $e->getMessage());
+            return [];
+        }
+    }
 } 

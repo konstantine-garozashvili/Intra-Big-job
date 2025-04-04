@@ -14,6 +14,7 @@ const PublicProfileView = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isOwnProfile, setIsOwnProfile] = useState(false);
+  const [documents, setDocuments] = useState([]);
   const roleUI = useRoleUI();
   
   console.log('PublicProfileView - userId from params:', userId);
@@ -49,6 +50,12 @@ const PublicProfileView = () => {
         if (response?.data?.user) {
           console.log('Using response.data.user:', response.data.user);
           setProfileData(response.data.user);
+          
+          // Fetch documents after profile is loaded
+          const documentsResponse = await apiService.getPublicUserDocuments(userId);
+          if (documentsResponse?.success && documentsResponse?.data?.documents) {
+            setDocuments(documentsResponse.data.documents);
+          }
         } else {
           setError('Données du profil non disponibles');
         }
@@ -182,7 +189,7 @@ const PublicProfileView = () => {
       <ProfileTabs 
         userData={userData}
         isPublicProfile={true}
-        documents={[]}
+        documents={documents}
         onProfileUpdate={() => {}}
       />
     </motion.div>

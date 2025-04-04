@@ -902,6 +902,32 @@ const apiService = {
         }
       }
     }
+  },
+
+  /**
+   * Get public documents for a specific user
+   * @param {string|number} userId - The ID of the user
+   * @returns {Promise<Object>} - API response containing documents
+   */
+  async getPublicUserDocuments(userId) {
+    if (!userId) {
+      throw new Error('User ID is required to fetch public documents');
+    }
+
+    try {
+      const response = await this.get(`/profile/public/${userId}/documents`, {
+        headers: {
+          'X-Request-Type': 'public-documents',
+          'Cache-Control': 'no-cache'
+        },
+        timeout: getAdaptiveTimeout(5000, true)
+      });
+
+      return response;
+    } catch (error) {
+      console.error('Error fetching public documents:', error);
+      return { success: false, data: { documents: [] } };
+    }
   }
 };
 
