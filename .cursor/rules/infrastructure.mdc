@@ -1,0 +1,67 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Infrastructure Rules
+
+> **Rules for working with Docker and infrastructure components**
+
+## Critical Rules
+
+### Use Docker exclusively
+- **Severity: CRITICAL**
+- Always use Docker for development, never run commands directly on the host
+- Never execute `npm install` directly; all dependencies are managed in containers
+- Use the Docker Compose configuration in the `infra` folder
+- Example: Instead of running `npm install`, use `docker-compose up` which handles installation
+
+### Never modify package.json
+- **Severity: CRITICAL**
+- Never modify package.json in the frontend directory
+- All dependency management should happen through Docker
+- If new dependencies are required, discuss with the team first
+
+### Preserve volume configurations
+- **Severity: CRITICAL**
+- Do not modify volume configurations in docker-compose.yml
+- The project uses specific volume mappings:
+  - `frontend_node_modules:/app/node_modules`
+  - `backend_vendor:/var/www/symfony/vendor`
+  - `backend_var:/var/www/symfony/var`
+  - `jwt_keys:/var/www/symfony/config/jwt`
+
+## High Priority Rules
+
+### Docker Compose workflow
+- **Severity: HIGH**
+- Use docker-compose commands for all development tasks:
+  - Starting environment: `docker-compose up`
+  - Rebuilding: `docker-compose up --build`
+  - Stopping: `docker-compose down`
+  - Viewing logs: `docker-compose logs [service]`
+
+### Respect service dependencies
+- **Severity: HIGH**
+- Respect the dependencies between services defined in docker-compose.yml
+- The dependency chain is: frontend → backend → database/redis
+- Wait for dependent services to be ready before attempting operations
+
+### Nginx configuration awareness
+- **Severity: HIGH**
+- Be aware of the Nginx configuration in `infra/nginx/default.conf`
+- The configuration sets file upload limits to 10MB
+- Backend API is accessible through Nginx, not directly from PHP-FPM
+
+## Medium Priority Rules
+
+### Container shell access
+- **Severity: MEDIUM**
+- Use `docker-compose exec [service] bash` or `docker-compose exec [service] sh` to access container shells
+- Example: `docker-compose exec backend bash` for PHP container shell
+
+### Database interactions
+- **Severity: MEDIUM**
+- Use PHPMyAdmin at port 8080 or MySQL client in the database container
+- Database credentials are defined in docker-compose.yml
+- Database data is persisted in Docker volumes

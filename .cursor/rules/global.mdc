@@ -1,0 +1,78 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+ # Global Project Rules
+
+> **These rules apply to the entire Intra-Big-job project**
+
+## Critical Rules
+
+### Always read before modifying
+- **Severity: CRITICAL**
+- Always read the entire file before suggesting any modifications
+- This is essential to understand the context and dependencies
+
+### Verify imports
+- **Severity: CRITICAL**
+- Never modify import statements without verifying the destination file exists
+- This applies to both PHP namespace imports and JavaScript/TypeScript imports
+
+### Understand architecture
+- **Severity: CRITICAL**
+- Understand the overall architecture before making cross-component changes
+- This project uses React for frontend, Symfony for backend, with domain-driven design
+
+### Check API flow
+- **Severity: CRITICAL**
+- Trace the entire API data flow before modifying endpoint-related code
+- Follow the path: Frontend API call → Backend Controller → Service → Repository → Database and back
+
+### Security awareness
+- **Severity: CRITICAL**
+- Maintain security best practices, especially for authentication and file handling
+- Be careful with JWT authentication, file uploads, and permission checks
+
+### Docker-only development
+- **Severity: CRITICAL**
+- Always use Docker for development (see [Infrastructure Rules](mdc:infrastructure.mdc))
+- Never execute `npm install` directly on host; all dependencies are managed in containers
+- Never modify package.json in the frontend directory
+
+## High Priority Rules
+
+### Environment variables
+- **Severity: HIGH**
+- Never hardcode values that should come from environment variables
+- Use environment variables for API URLs, credentials, and configuration
+
+### Role awareness
+- **Severity: HIGH**
+- Consider the user role system for any feature modifications
+- The system has 7 distinct roles with different permissions:
+  1. ADMIN (ID: 100)
+  2. SUPERADMIN (ID: 101)
+  3. HR (ID: 102)
+  4. TEACHER (ID: 103)
+  5. STUDENT (ID: 104)
+  6. GUEST (ID: 105)
+  7. RECRUITER (ID: 106)
+
+### Document relationships
+- **Severity: HIGH**
+- Understand entity/component relationships before modifications
+- The system has complex relationships between users, documents, formations, tickets, etc.
+
+### Terminal first
+- **Severity: HIGH**
+- Check terminal logs first when investigating issues
+- Terminal output provides the most direct insight into errors and system state
+- Use Docker logs: `docker-compose logs [service]` for service-specific logs
+
+## Medium Priority Rules
+
+### Maintain patterns
+- **Severity: MEDIUM**
+- Follow established code patterns and conventions
+- Maintain consistency with existing code style, naming conventions, and architectural patterns
