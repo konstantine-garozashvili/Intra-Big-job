@@ -40,6 +40,7 @@ const NotificationSettings = lazy(() => import('./pages/Global/Profile/views/Not
 const CareerSettings = lazy(() => import('./pages/Global/Profile/views/CareerSettings'))
 const ProfileView = lazy(() => import('./pages/Global/Profile/views/ProfileView'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
+const Trombinoscope = lazy(() => import('./pages/Global/Trombinoscope'))
 
 // Dashboards spécifiques par rôle
 const AdminDashboard = lazy(() => import('./pages/Admin/Dashboard'))
@@ -361,6 +362,13 @@ function AppContent() {
                   <Route path="/recruiter/dashboard" element={
                     <RoleGuard roles={ROLES.RECRUITER} fallback={<Navigate to="/dashboard" replace />}>
                       <RecruiterDashboard />
+                    </RoleGuard>
+                  } />
+                  
+                  {/* Trombinoscope route */}
+                  <Route path="trombinoscope" element={
+                    <RoleGuard roles={[ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.STUDENT, ROLES.RECRUITER]} fallback={<Navigate to="/dashboard" replace />}>
+                      <Trombinoscope />
                     </RoleGuard>
                   } />
                 </Route>

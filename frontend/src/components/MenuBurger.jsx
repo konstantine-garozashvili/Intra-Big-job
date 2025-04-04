@@ -196,7 +196,7 @@ const MenuBurger = memo(() => {
       label: 'Trombinoscope',
       icon: <Camera className="w-5 h-5 mr-2 text-[#528eb2]" />,
       roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.STUDENT, ROLES.RECRUITER],
-      to: '/Trombinoscope',
+      to: '/trombinoscope',
     },
     
     // --- SECTION ÉTUDES ET FORMATIONS ---
