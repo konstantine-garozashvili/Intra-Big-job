@@ -15,6 +15,23 @@ const ProfileProgress = () => {
   const { refreshProfileData, isProfileLoading, profileData } = useContext(ProfileContext);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Add event listeners for profile updates
+  useEffect(() => {
+    // This function will be called when any part of the profile is updated
+    const handleProfileUpdate = () => {
+      console.log("[ProfileProgress] Detected profile update, refreshing data");
+      refreshProfileData();
+    };
+
+    // Listen for events that indicate profile changes
+    document.addEventListener('user:data-updated', handleProfileUpdate);
+    
+    // Clean up event listeners on component unmount
+    return () => {
+      document.removeEventListener('user:data-updated', handleProfileUpdate);
+    };
+  }, [refreshProfileData]);
+
   console.log("[ProfileProgress] Received from Context:", JSON.stringify(profileData, null, 2));
 
   console.log("[ProfileProgress] Context profileData:", profileData);
@@ -69,7 +86,6 @@ const ProfileProgress = () => {
       await refreshProfileData();
     } catch (error) {
       console.error("[ProfileProgress] Error during refresh:", error);
-    } finally {
     }
   };
 

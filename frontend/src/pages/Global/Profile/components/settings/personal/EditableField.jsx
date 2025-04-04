@@ -84,6 +84,11 @@ const EditableField = memo(({
       // Call the save function in the background
       await onSave(field);
       setError(null);
+      
+      // Dispatch user:data-updated event when LinkedIn URL is updated
+      if (field === 'linkedinUrl') {
+        document.dispatchEvent(new CustomEvent('user:data-updated'));
+      }
     } catch (err) {
       // Revert optimistic update on error
       setLocalValue(value);
