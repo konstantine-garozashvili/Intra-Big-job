@@ -5,6 +5,7 @@ namespace App\Controller\Profile;
 use App\Entity\User;
 use App\Repository\UserRepository;
 use App\Repository\DiplomaRepository;
+use App\Service\UserDiplomaService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -20,19 +21,22 @@ class ProfileDataController extends AbstractController
     private $entityManager;
     private $userRepository;
     private $diplomaRepository;
+    private $userDiplomaService;
     
     public function __construct(
         Security $security,
         SerializerInterface $serializer,
         EntityManagerInterface $entityManager,
         UserRepository $userRepository,
-        DiplomaRepository $diplomaRepository
+        DiplomaRepository $diplomaRepository,
+        UserDiplomaService $userDiplomaService
     ) {
         $this->security = $security;
         $this->serializer = $serializer;
         $this->entityManager = $entityManager;
         $this->userRepository = $userRepository;
         $this->diplomaRepository = $diplomaRepository;
+        $this->userDiplomaService = $userDiplomaService;
     }
 
     /**
@@ -236,19 +240,8 @@ class ProfileDataController extends AbstractController
             }, $addresses->toArray());
         }
         
-        // Ajouter les diplômes si disponibles
-        $diplomas = $user->getUserDiplomas();
-        if (!$diplomas->isEmpty()) {
-            $userData['user']['diplomas'] = array_map(function($userDiploma) {
-                return [
-                    'id' => $userDiploma->getDiploma()->getId(),
-                    'name' => $userDiploma->getDiploma()->getName(),
-                    'obtainedAt' => $userDiploma->getDiploma()->getObtainedAt() ? $userDiploma->getDiploma()->getObtainedAt()->format('Y-m-d') : null,
-                    'institution' => $userDiploma->getDiploma()->getInstitution() ? $userDiploma->getDiploma()->getInstitution()->getName() : null,
-                    'location' => $userDiploma->getDiploma()->getLocation(),
-                ];
-            }, $diplomas->toArray());
-        }
+        // Ajouter les diplômes si disponibles en utilisant le service dédié
+        $userData['user']['diplomas'] = $this->userDiplomaService->formatUserDiplomas($user);
         
         // Ajouter le profil étudiant si disponible
         if ($user->getStudentProfile()) {

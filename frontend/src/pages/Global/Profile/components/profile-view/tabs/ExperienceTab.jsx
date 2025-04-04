@@ -71,8 +71,25 @@ const ExperienceTab = ({ userData, isPublicProfile = false, documents = [] }) =>
     
     return [];
   };
+
+  // Formater les données de diplôme pour gérer à la fois l'ancien et le nouveau format
+  const formatDiplomaData = (diploma) => {
+    // Si le diplôme a une structure imbriquée (nouveau format)
+    if (diploma.diploma && typeof diploma.diploma === 'object') {
+      return {
+        id: diploma.id,
+        name: diploma.diploma.name,
+        institution: diploma.diploma.institution,
+        obtainedAt: diploma.obtainedDate, // Nouveau nom de la propriété
+        // Autres propriétés à ajouter au besoin
+      };
+    }
+    
+    // Format existant (structure plate)
+    return diploma;
+  };
   
-  const diplomas = getDiplomas();
+  const diplomas = getDiplomas().map(formatDiplomaData);
   const hasDiplomas = diplomas.length > 0;
 
   return (
@@ -104,7 +121,7 @@ const ExperienceTab = ({ userData, isPublicProfile = false, documents = [] }) =>
                       <div className="flex items-center text-sm text-muted-foreground mb-3 bg-primary/5 px-2 py-1 rounded-full w-fit mt-2">
                         <ClockIcon className="h-4 w-4 mr-1" />
                         <span>
-                          {(diploma.obtainedAt || diploma.obtained_at) ? formatDate(diploma.obtainedAt || diploma.obtained_at) : "En cours"}
+                          {(diploma.obtainedAt || diploma.obtainedDate || diploma.obtained_at) ? formatDate(diploma.obtainedAt || diploma.obtainedDate || diploma.obtained_at) : "En cours"}
                         </span>
                       </div>
                       
