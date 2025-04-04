@@ -1,0 +1,107 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Intra-Big-job Project Rules
+
+> **Comprehensive rules for AI assistance with the Intra-Big-job project**
+
+## Rule Files
+
+This project contains several rule files that should be consulted when working with different parts of the codebase:
+
+- [Global Rules](./global.mdc) - Rules that apply to the entire project
+- [Frontend Rules](./frontend.mdc) - Rules specific to the React frontend
+- [Backend Rules](./backend.mdc) - Rules specific to the Symfony backend
+- [File Operations](./file_operations.mdc) - Rules for safely reading and modifying files
+
+## Critical Rules Summary
+
+Always follow these critical rules when working with this codebase:
+
+1. **Always read the full file content before suggesting modifications**
+2. **Never modify import statements without verifying destinations exist**
+3. **Examine controllers, entities, and services before modifying frontend code that interacts with APIs**
+4. **Trace the entire API data flow before modifying endpoint-related code**
+5. **Understand entity relationships before modifying entity classes**
+6. **Maintain security best practices, especially for authentication and file handling**
+
+## Project Tech Stack
+
+### Frontend
+- **Framework**: React 19
+- **Styling**: Tailwind CSS
+- **State Management**: TanStack Query
+- **UI Library**: Radix UI components
+- **Routing**: React Router DOM 6
+- **Form Handling**: React Hook Form
+
+### Backend
+- **Framework**: Symfony 7.2
+- **Database**: MySQL with Doctrine ORM
+- **Authentication**: JWT (lexik/jwt-authentication-bundle)
+- **API**: RESTful API architecture
+- **File Storage**: AWS S3
+
+### Infrastructure
+- **Containerization**: Docker
+- **File Sync**: Mutagen
+- **Web Server**: Nginx
+
+## Directory Structure
+
+```
+Intra-Bigjob-Group-5/
+├── backend/               # Application backend Symfony
+│   ├── assets/           # Assets managed by Symfony Asset Mapper
+│   ├── bin/              # Symfony binaries and commands
+│   ├── config/           # Application and bundle configuration
+│   ├── migrations/       # Doctrine database migrations
+│   ├── public/           # Web entry point and public files
+│   ├── src/              # Backend source code
+│   │   ├── Domain/       # Business logic by domain
+│   │   │   ├── Admin/    # Admin features
+│   │   │   ├── HR/       # HR features
+│   │   │   ├── Student/  # Student features
+│   │   │   ├── SuperAdmin/# Super Admin features
+│   │   │   ├── Teacher/  # Teacher features
+│   │   │   └── User/     # User features
+│   │   ├── Controller/   # Shared public controllers
+│   │   ├── Entity/       # Shared Doctrine entities
+│   │   ├── Repository/   # Shared Doctrine repositories
+│   │   ├── Service/      # Shared public services
+│   │   └── DataFixtures/ # Fixtures for test data
+│
+├── frontend/             # React/Vite frontend application
+│   ├── public/           # Static public resources
+│   ├── src/              # Frontend source code
+│   │   ├── assets/       # Images, fonts, static files
+│   │   ├── components/   # Reusable React components
+│   │   │   ├── ui/       # Base UI components (Shadcn)
+│   │   │   └── shared/   # Cross-domain shared components
+│   │   ├── lib/          # Utilities and helper functions
+│   │   ├── pages/        # Pages by domain
+│   │   │   ├── Admin/    # Admin pages
+│   │   │   ├── HR/       # HR pages
+│   │   │   ├── Student/  # Student pages
+│   │   │   ├── SuperAdmin/# Super Admin pages
+│   │   │   ├── Teacher/  # Teacher pages
+│   │   │   └── User/     # User pages
+│   │   ├── services/     # Shared services (API, auth, etc.)
+│   │   ├── layouts/      # Application layouts
+│   │   ├── hooks/        # Custom React hooks
+│   │   └── context/      # React contexts
+```
+
+## Role System
+
+The system has 7 defined roles:
+
+1. **ADMIN (ID: 100)** - System administrator with extended rights
+2. **SUPERADMIN (ID: 101)** - Super Administrator with all system rights
+3. **HR (ID: 102)** - Human Resources - Managing users and profiles
+4. **TEACHER (ID: 103)** - Trainer - Creating and managing training courses
+5. **STUDENT (ID: 104)** - Student - Access to courses and educational resources
+6. **GUEST (ID: 105)** - Guest - Limited read-only access
+7. **RECRUITER (ID: 106)** - Recruiter - Managing applications and job offers
