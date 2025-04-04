@@ -12,6 +12,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Security\Core\Annotation\IsGranted;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Serializer\SerializerInterface;
@@ -107,7 +108,8 @@ class UserController extends AbstractController
     /**
      * Endpoint to list users for chat functionality
      */
-    #[Route('/users/list', name: 'api_users_list', methods: ['GET'])]
+    #[Route('/api/users/list', name: 'api_users_list', methods: ['GET'])]
+    #[IsGranted('ROLE_STUDENT')]
     public function listUsers(): JsonResponse
     {
         try {
