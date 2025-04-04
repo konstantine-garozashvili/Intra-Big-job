@@ -34,6 +34,8 @@ import { MenuBurger } from "./MenuBurger";
 import { SearchBar } from "./SearchBar";
 import { useRolePermissions } from "../features/roles/useRolePermissions";
 import { Skeleton } from './ui/skeleton';
+import ProfilePictureDisplay from './ProfilePictureDisplay';
+import { Avatar, AvatarFallback } from './ui/avatar';
 
 // Style personnalisé pour le menu dropdown et le bouton burger
 const customStyles = `
@@ -207,7 +209,11 @@ const UserMenu = ({ onLogout, userData, setLogoutDialogOpen }) => {
             variant="outline" 
             className={`rounded-full w-10 h-10 p-0 ${dropdownOpen ? 'bg-[#528eb2]/20 border-[#528eb2]' : 'bg-transparent border-gray-500'} hover:bg-[#02284f]/80 hover:text-white hover:border-gray-400 transition-all duration-300`}
           >
-            <UserRound className={`h-5 w-5 ${dropdownOpen ? 'text-white' : 'text-gray-200'}`} />
+            <Avatar className="h-11 w-11">
+              <AvatarFallback className="bg-gradient-to-r from-[#02284f] to-[#03386b] text-white">
+                <User className="h-5 w-5" />
+              </AvatarFallback>
+            </Avatar>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent 
@@ -220,8 +226,8 @@ const UserMenu = ({ onLogout, userData, setLogoutDialogOpen }) => {
           {/* En-tête du dropdown avec avatar et nom */}
           <div className="bg-gradient-to-r from-[#02284f] to-[#03386b] p-4 text-white">
             <div className="flex items-center">
-              <div className="bg-white/20 rounded-full p-2.5">
-                <UserRound className="h-6 w-6" />
+              <div className="bg-white/20 rounded-full p-4.5">
+                <ProfilePictureDisplay className="h-11 w-11" />
               </div>
               <div className="ml-3">
                 <h3 className="font-medium text-sm">
