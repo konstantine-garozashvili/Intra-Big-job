@@ -1,13 +1,16 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { 
-  Briefcase, 
-  Pencil, 
-  Plus,
-  Trash2 
+  GraduationCap, 
+  Plus, 
+  Trash2, 
+  Check, 
+  ChevronsUpDown, 
+  X, 
+  Save 
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card';
-import { Button } from '../../../../components/ui/button';
-import { toast } from 'sonner';
+import { Button } from "@/components/ui/button";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Dialog,
   DialogContent,
@@ -15,203 +18,171 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '../../../../components/ui/dialog';
-import { diplomaService } from '../../services/diplomaService';
-import { GraduationCap, Calendar, Check, ChevronsUpDown } from 'lucide-react';
-import { Input } from "@/components/ui/input";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+} from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
+import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import * as roleUtils from '../../utils/roleUtils';
+import PropTypes from 'prop-types';
 import { useApiQuery, useApiMutation } from '@/hooks/useReactQuery';
+import { roleUtils } from '@/lib/utils/roleUtils';
 
 const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
   const userRole = userData?.role;
   const [isAdding, setIsAdding] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [diplomaToDelete, setDiplomaToDelete] = useState(null);
-  
+  const [diplomaModalOpen, setDiplomaModalOpen] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
   const [newDiploma, setNewDiploma] = useState({
     diplomaId: '',
     obtainedDate: format(new Date(), 'yyyy-MM-dd')
   });
-
   const [error, setError] = useState('');
-  const [open, setOpen] = useState(false);
 
-  // Fetch available diplomas using React Query
-  const { 
-    data: availableDiplomasResponse, 
-    isLoading 
-  } = useApiQuery(
-    '/api/user-diplomas/available', 
+  // Charge la liste des diplômes disponibles
+  const { data: availableDiplomasResponse } = useApiQuery(
+    'diplomasResource',
+    'getAvailableDiplomas',
+    {},
     'availableDiplomas',
     {
-      onError: (error) => {
+      onError: () => {
         toast.error('Erreur lors du chargement des diplômes');
       }
     }
   );
 
-  // Ensure availableDiplomas is always an array
+  // S'assurer que availableDiplomas est toujours un tableau
   const availableDiplomas = React.useMemo(() => {
     if (!availableDiplomasResponse) {
       return [];
     }
     
-    // Check if response has a success property and data array
-    if (availableDiplomasResponse.success && Array.isArray(availableDiplomasResponse.data)) {
-      return availableDiplomasResponse.data;
-    }
-    
-    // If response is already an array, use it directly
-    if (Array.isArray(availableDiplomasResponse)) {
-      return availableDiplomasResponse;
-    }
-    
-    // Fallback to empty array if we can't determine the structure
-    return [];
+    return Array.isArray(availableDiplomasResponse.data) 
+      ? availableDiplomasResponse.data 
+      : Array.isArray(availableDiplomasResponse) 
+        ? availableDiplomasResponse 
+        : [];
   }, [availableDiplomasResponse]);
 
-  // Setup mutations for adding and deleting diplomas
-  const addDiplomaMutation = useApiMutation(
-    '/api/user-diplomas',
-    'post',
-    'userDiplomas',
+  // API mutation pour ajouter un diplôme
+  const { mutate: addDiploma, isPending: isAddingDiploma } = useApiMutation(
+    'diplomasResource',
+    'addUserDiploma',
     {
-      onSuccess: (response) => {
-        toast.success('Diplôme ajouté avec succès');
-        
-        // Add the new diploma to the list using the setDiplomas prop
-        // If response has data property, use it, otherwise use the whole response
-        const newDiplomaData = response.data || response;
-        
-        // Ajouter le nouveau diplôme et trier la liste par date d'obtention (du plus récent au plus ancien)
-        const updatedDiplomas = [...diplomas, newDiplomaData].sort((a, b) => {
-          const dateA = new Date(a.obtainedDate);
-          const dateB = new Date(b.obtainedDate);
-          return dateB - dateA; // Ordre décroissant (du plus récent au plus ancien)
-        });
-        
-        setDiplomas(updatedDiplomas);
-        
-        // Reset form
-        setNewDiploma({
-          diplomaId: '',
-          obtainedDate: format(new Date(), 'yyyy-MM-dd')
-        });
-        
-        // Close add form
-        setIsAdding(false);
-      },
-      onError: (error) => {
-        // Check for specific error messages from the API
-        if (error.response) {
-          // Handle 400 Bad Request errors which might indicate validation issues
-          if (error.response.status === 400) {
-            const errorData = error.response.data;
-            
-            // Check for duplicate diploma error
-            if (errorData && errorData.message && errorData.message.includes('already has this diploma')) {
-              setError('Vous possédez déjà ce diplôme dans votre profil');
-              return;
-            }
-            
-            // Handle other validation errors
-            if (errorData && errorData.message) {
-              setError(errorData.message);
-              return;
-            }
-          }
+      onSuccess: (data) => {
+        // Vérifier que la réponse contient un diplôme valide
+        if (data && data.diploma) {
+          toast.success('Diplôme ajouté avec succès');
           
-          // Handle 409 Conflict which might also indicate a duplicate
-          if (error.response.status === 409) {
-            setError('Vous possédez déjà ce diplôme dans votre profil');
-            return;
-          }
+          // Fermer le formulaire
+          setIsAdding(false);
+          setDiplomaModalOpen(false);
+          
+          // Réinitialiser le formulaire
+          setNewDiploma({
+            diplomaId: '',
+            obtainedDate: format(new Date(), 'yyyy-MM-dd')
+          });
+          
+          // Ajouter le nouveau diplôme et trier la liste par date d'obtention (du plus récent au plus ancien)
+          const updatedDiplomas = [...diplomas, data].sort((a, b) => {
+            return new Date(b.obtainedDate) - new Date(a.obtainedDate);
+          });
+          
+          // Mettre à jour l'état avec les diplômes triés
+          setDiplomas(updatedDiplomas);
+          setError('');
+        } else {
+          setError('Erreur lors de l&apos;ajout du diplôme');
         }
-        
-        // Default error message
+      },
+      onError: () => {
         setError('Erreur lors de l&apos;ajout du diplôme');
       }
     }
   );
 
-  const deleteDiplomaMutation = useApiMutation(
-    (id) => `/api/user-diplomas/${id}`,
-    'delete',
-    'userDiplomas',
+  // API mutation pour supprimer un diplôme
+  const { mutate: deleteDiploma, isPending: isDeletingDiploma } = useApiMutation(
+    'diplomasResource',
+    'deleteUserDiploma',
     {
       onSuccess: (_, variables) => {
         toast.success('Diplôme supprimé avec succès');
+        setDeleteDialogOpen(false);
         
-        // Remove the diploma from the list using the setDiplomas prop
+        // Supprimer le diplôme de la liste avec la propriété setDiplomas
         setDiplomas(diplomas.filter(diploma => diploma.id !== variables));
         setDiplomaToDelete(null);
       },
-      onError: (error) => {
+      onError: () => {
         toast.error('Erreur lors de la suppression du diplôme');
       }
     }
   );
-  
+
+  // Gérer l'ajout d'un diplôme
   const handleAddDiploma = async () => {
+    setError('');
+    
+    // Vérifier que tous les champs requis sont remplis
     if (!newDiploma.diplomaId) {
       setError('Veuillez sélectionner un diplôme');
       return;
     }
-    if (!newDiploma.obtainedDate) {
-      setError('Veuillez sélectionner une date d&apos;obtention');
-      return;
-    }
     
-    // Check if the user already has this diploma
+    // Vérifier si l'utilisateur a déjà ce diplôme
     const alreadyHasDiploma = diplomas.some(
       diploma => diploma.diploma.id.toString() === newDiploma.diplomaId.toString()
     );
     
     if (alreadyHasDiploma) {
-      setError('Vous possédez déjà ce diplôme dans votre profil');
+      setError('Vous avez déjà ajouté ce diplôme à votre profil');
       return;
     }
     
-    setError('');
-    addDiplomaMutation.mutate(newDiploma);
+    if (!newDiploma.obtainedDate) {
+      setError('Veuillez sélectionner une date d&apos;obtention');
+      return;
+    }
+    
+    // Ajouter le diplôme
+    addDiploma({
+      diplomaId: newDiploma.diplomaId,
+      obtainedDate: newDiploma.obtainedDate
+    });
   };
-  
+
+  // Gérer le clic sur le bouton de suppression
   const handleDeleteDiploma = async (diploma) => {
-    if (!diploma || !diploma.id) {
-      toast.error('Diplôme introuvable');
-      return;
-    }
-    
     setDiplomaToDelete(diploma);
     setDeleteDialogOpen(true);
   };
-  
+
+  // Confirmer la suppression
   const confirmDeleteDiploma = () => {
-    if (!diplomaToDelete || !diplomaToDelete.id) {
-      toast.error('Aucun diplôme à supprimer');
-      return;
+    if (diplomaToDelete && diplomaToDelete.id) {
+      deleteDiploma(diplomaToDelete.id);
     }
-    
-    // Pass the ID directly to the mutation
-    deleteDiplomaMutation.mutate(diplomaToDelete.id);
-    setDeleteDialogOpen(false);
   };
-  
+
+  // Annuler l'ajout
   const cancelAdd = () => {
     setIsAdding(false);
+    setDiplomaModalOpen(false);
     setNewDiploma({
       diplomaId: '',
       obtainedDate: format(new Date(), 'yyyy-MM-dd')
     });
+    setError('');
   };
-  
-  // Check if this component should be rendered at all
+
+  // Déterminer si le gestionnaire de diplômes doit être affiché
   const shouldRenderDiplomaManager = () => {
-    return roleUtils.isAdmin(userRole) || roleUtils.isStudent(userRole) || roleUtils.isGuest(userRole);
+    return roleUtils.canViewAcademic(userRole);
   };
 
   if (!shouldRenderDiplomaManager()) {
@@ -219,238 +190,279 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
   }
 
   return (
-    <div className="space-y-4">
-      {/* Delete Confirmation Dialog */}
+    <div className="space-y-6 bg-white rounded-lg border p-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-xl font-semibold">Gestion des diplômes</h2>
+          <p className="text-gray-500 text-sm mt-1">
+            Ajoutez et gérez vos diplômes pour mettre en valeur votre parcours académique
+          </p>
+        </div>
+        {roleUtils.canEditAcademic(userRole) && !isAdding && (
+          <Button 
+            onClick={() => {
+              setDiplomaModalOpen(true);
+              setIsAdding(true);
+            }}
+            size="sm"
+            className="flex items-center"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Ajouter un diplôme
+          </Button>
+        )}
+      </div>
+      
+      {/* Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Confirmer la suppression</DialogTitle>
             <DialogDescription>
-              Êtes-vous sûr de vouloir supprimer le diplôme "{diplomaToDelete?.diploma?.name}" ? Cette action est irréversible et supprimera définitivement le diplôme de votre profil.
+              Êtes-vous sûr de vouloir supprimer le diplôme &quot;{diplomaToDelete?.diploma?.name}&quot; ? Cette action est irréversible et supprimera définitivement le diplôme de votre profil.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex justify-end space-x-2">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setDeleteDialogOpen(false);
-                setDiplomaToDelete(null);
-              }}
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={isDeletingDiploma}
             >
               Annuler
             </Button>
-            <Button
+            <Button 
+              type="button" 
               variant="destructive"
               onClick={confirmDeleteDiploma}
-              disabled={deleteDiplomaMutation.isPending}
+              disabled={isDeletingDiploma}
             >
-              {deleteDiplomaMutation.isPending ? 'Suppression...' : 'Supprimer'}
+              {isDeletingDiploma ? (
+                <>
+                  <div className="w-4 h-4 border-t-2 border-white rounded-full animate-spin mr-2" />
+                  Suppression...
+                </>
+              ) : (
+                "Supprimer"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <div className="flex items-center gap-2 mb-4">
-        <GraduationCap className="h-5 w-5 text-blue-600" />
-        <h2 className="text-lg font-semibold">Gestion des diplômes</h2>
-      </div>
-
-      {isLoading ? (
-        <div className="flex justify-center items-center py-6">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      
+      {/* Diploma Add/Edit Dialog */}
+      <Dialog open={diplomaModalOpen} onOpenChange={setDiplomaModalOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Ajouter un diplôme</DialogTitle>
+            <DialogDescription>
+              Choisissez un diplôme dans la liste et indiquez sa date d&apos;obtention.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm mb-4">
+                {error}
+              </div>
+            )}
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">
+                Diplôme
+              </label>
+              <Popover open={open} onOpenChange={setOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={open}
+                    className="w-full justify-between"
+                  >
+                    {newDiploma.diplomaId
+                      ? availableDiplomas.find(
+                          (diploma) => diploma.id.toString() === newDiploma.diplomaId.toString()
+                        )?.name || "Sélectionner un diplôme"
+                      : "Sélectionner un diplôme"}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[400px] p-0">
+                  <Command>
+                    <CommandInput 
+                      placeholder="Rechercher un diplôme..." 
+                      value={search}
+                      onValueChange={setSearch}
+                    />
+                    <CommandEmpty>Aucun diplôme trouvé.</CommandEmpty>
+                    <CommandList className="max-h-[200px] overflow-y-auto">
+                      <CommandGroup>
+                        {availableDiplomas.map((diploma) => {
+                          const alreadyHasDiploma = diplomas.some(
+                            userDiploma => userDiploma.diploma.id.toString() === diploma.id.toString()
+                          );
+                          
+                          return (
+                            <CommandItem
+                              key={diploma.id}
+                              disabled={alreadyHasDiploma}
+                              onSelect={() => {
+                                setNewDiploma({
+                                  ...newDiploma,
+                                  diplomaId: diploma.id.toString()
+                                });
+                                setOpen(false);
+                              }}
+                              className={cn(
+                                alreadyHasDiploma && "opacity-50",
+                                "flex items-center justify-between"
+                              )}
+                            >
+                              <span>{diploma.name}</span>
+                              {newDiploma.diplomaId === diploma.id.toString() && (
+                                <Check className="h-4 w-4" />
+                              )}
+                            </CommandItem>
+                          );
+                        })}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+            
+            <div className="space-y-2">
+              <label
+                htmlFor="obtained-date"
+                className="block text-sm font-medium text-gray-700"
+              >
+                Date d&apos;obtention
+              </label>
+              <input
+                type="date"
+                id="obtained-date"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                value={newDiploma.obtainedDate}
+                onChange={(e) => setNewDiploma({
+                  ...newDiploma,
+                  obtainedDate: e.target.value
+                })}
+                max={new Date().toISOString().split('T')[0]}
+              />
+            </div>
+          </div>
+          
+          <DialogFooter className="flex justify-end space-x-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={cancelAdd}
+              disabled={isAddingDiploma}
+              className="text-sm"
+            >
+              <X className="h-4 w-4 mr-2" />
+              Annuler
+            </Button>
+            <Button 
+              type="button"
+              onClick={handleAddDiploma}
+              disabled={!newDiploma.diplomaId || !newDiploma.obtainedDate || isAddingDiploma}
+            >
+              {isAddingDiploma ? (
+                <>
+                  <div className="w-4 h-4 border-t-2 border-white rounded-full animate-spin mr-2" />
+                  Enregistrement...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Enregistrer
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Diplomas List */}
+      {diplomas && diplomas.length > 0 ? (
+        <div className="space-y-3">
+          {diplomas.map((diploma) => (
+            <div 
+              key={diploma.id} 
+              className="flex items-start justify-between gap-4 py-3"
+            >
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-blue-50 text-blue-600 rounded-full">
+                  <GraduationCap className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-medium">{diploma.diploma.name}</h3>
+                  <p className="text-sm text-gray-500">
+                    {format(new Date(diploma.obtainedDate), 'MMMM yyyy', { locale: fr })}
+                    {diploma.diploma.institution && (
+                      <span className="ml-1">
+                        • {diploma.diploma.institution}
+                      </span>
+                    )}
+                  </p>
+                </div>
+              </div>
+              {roleUtils.canEditAcademic(userRole) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleDeleteDiploma(diploma)}
+                  className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                  data-testid="delete-diploma-button"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          ))}
         </div>
       ) : (
-        <>
-          {/* Add Diploma Button */}
+        <div className="text-center py-6">
+          <GraduationCap className="h-12 w-12 mx-auto text-gray-400 mb-3" />
+          <p className="text-gray-500">Vous n&apos;avez pas encore ajouté de diplômes à votre profil.</p>
           {roleUtils.canEditAcademic(userRole) && !isAdding && (
-            <button
-              onClick={() => setIsAdding(true)}
-              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg border-2 border-dashed border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50 transition-all"
+            <Button 
+              variant="outline" 
+              className="mt-4"
+              onClick={() => {
+                setDiplomaModalOpen(true);
+                setIsAdding(true);
+              }}
             >
-              <Plus className="h-5 w-5" />
-              <span>Ajouter un diplôme</span>
-            </button>
+              <Plus className="h-4 w-4 mr-2" />
+              Ajouter un diplôme
+            </Button>
           )}
-
-          {/* Add Diploma Form */}
-          {isAdding && (
-            <div className="bg-gray-50 p-4 rounded-lg space-y-4">
-              <h3 className="text-base font-medium">Ajouter un diplôme</h3>
-              {error && (
-                <div className="text-sm text-red-500 p-2 bg-red-50 rounded-md">
-                  {error}
-                </div>
-              )}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Diplôme</label>
-                  <Popover open={open} onOpenChange={setOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={open}
-                        className="w-full justify-between"
-                      >
-                        <span className="truncate">
-                          {newDiploma.diplomaId
-                            ? availableDiplomas.find((diploma) => diploma.id.toString() === newDiploma.diplomaId)?.name
-                            : "Sélectionner un diplôme..."}
-                        </span>
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
-                      <Command>
-                        <CommandInput placeholder="Rechercher un diplôme..." />
-                        <CommandList>
-                          <CommandEmpty>Aucun diplôme trouvé.</CommandEmpty>
-                          <CommandGroup>
-                            {availableDiplomas.map((diploma) => {
-                              const alreadyHasDiploma = diplomas.some(
-                                userDiploma => userDiploma.diploma.id.toString() === diploma.id.toString()
-                              );
-                              
-                              return (
-                                <CommandItem
-                                  key={diploma.id}
-                                  value={diploma.name}
-                                  disabled={alreadyHasDiploma}
-                                  onSelect={() => {
-                                    setNewDiploma({ ...newDiploma, diplomaId: diploma.id.toString() });
-                                    if (error) setError('');
-                                    setOpen(false);
-                                  }}
-                                  className={cn(
-                                    alreadyHasDiploma && "opacity-50",
-                                    "flex items-center justify-between"
-                                  )}
-                                >
-                                  <div className="flex flex-col">
-                                    <span className="font-medium">{diploma.name}</span>
-                                    <span className="text-sm text-gray-500">{diploma.institution}</span>
-                                  </div>
-                                  {newDiploma.diplomaId === diploma.id.toString() && (
-                                    <Check className="h-4 w-4 shrink-0" />
-                                  )}
-                                </CommandItem>
-                              );
-                            })}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                <div className="space-y-2">
-                  <label
-                    htmlFor="date-obtention"
-                    className="block text-sm font-medium text-gray-700"
-                  >
-                    Date d&apos;obtention
-                  </label>
-                  <input
-                    id="date-obtention"
-                    type="date"
-                    value={newDiploma.obtainedDate}
-                    onChange={(e) => {
-                      setNewDiploma({...newDiploma, obtainedDate: e.target.value});
-                      if (error) setError('');
-                    }}
-                    className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm"
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end gap-3 mt-4">
-                <Button 
-                  variant="outline" 
-                  onClick={cancelAdd}
-                  className="text-sm"
-                >
-                  <X className="h-4 w-4 mr-2" />
-                  Annuler
-                </Button>
-                <Button 
-                  onClick={handleAddDiploma}
-                  disabled={addDiplomaMutation.isPending}
-                  className="text-sm"
-                >
-                  {addDiplomaMutation.isPending ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      <span>Enregistrement...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Save className="h-4 w-4 mr-2" />
-                      Enregistrer
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-          )}
-          
-          {/* Diplomas List */}
-          {diplomas && diplomas.length > 0 ? (
-            <div className="space-y-3">
-              {diplomas.map((diploma) => (
-                <div 
-                  key={diploma.id} 
-                  className="flex items-start justify-between gap-4 py-3"
-                >
-                  <div className="flex items-start gap-3 min-w-0">
-                    <GraduationCap className="h-5 w-5 text-gray-400 flex-shrink-0 mt-1" />
-                    <div className="min-w-0">
-                      <h4 className="font-medium text-gray-900 truncate">
-                        {diploma.diploma.name}
-                      </h4>
-                      <p className="text-sm text-gray-500 truncate">
-                        {diploma.diploma.institution}
-                      </p>
-                      <p className="text-sm text-gray-400">
-                        Obtenu le {format(new Date(diploma.obtainedDate), 'dd MMMM yyyy', { locale: fr })}
-                      </p>
-                    </div>
-                  </div>
-                  {roleUtils.canEditAcademic(userRole) && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDeleteDiploma(diploma)}
-                      disabled={deleteDiplomaMutation.isPending}
-                      className="h-8 w-8 text-red-500 hover:text-red-600"
-                    >
-                      {deleteDiplomaMutation.isPending && deleteDiplomaMutation.variables === diploma.id ? (
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-500"></div>
-                      ) : (
-                        <Trash2 className="h-4 w-4" />
-                      )}
-                    </Button>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-6">
-              <GraduationCap className="h-12 w-12 mx-auto text-gray-400 mb-3" />
-              <p className="text-gray-500">Vous n'avez pas encore ajouté de diplômes à votre profil.</p>
-              {roleUtils.canEditAcademic(userRole) && !isAdding && (
-                <Button 
-                  variant="outline" 
-                  onClick={() => setIsAdding(true)}
-                  className="mt-4"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Ajouter un diplôme
-                </Button>
-              )}
-            </div>
-          )}
-        </>
+        </div>
       )}
     </div>
   );
+};
+
+// Définition des PropTypes
+DiplomaManager.propTypes = {
+  userData: PropTypes.shape({
+    role: PropTypes.string
+  }).isRequired,
+  diplomas: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+      diploma: PropTypes.shape({
+        id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+        name: PropTypes.string,
+        institution: PropTypes.string
+      }),
+      obtainedDate: PropTypes.string
+    })
+  ).isRequired,
+  setDiplomas: PropTypes.func.isRequired
 };
 
 export default DiplomaManager; 
