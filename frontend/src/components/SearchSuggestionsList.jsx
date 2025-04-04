@@ -1,184 +1,175 @@
-import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Briefcase } from 'lucide-react';
-import { cn } from '../lib/utils';
-import { ROLES } from '../features/roles/roleContext';
-import { getRoleDisplayFormat } from '../lib/utils/roleDisplay.jsx';
-import { SearchSuggestionItem } from './SearchSuggestionItem';
+import { cn } from '@/lib/utils';
+import { Briefcase, GraduationCap, School, User, UserRound } from 'lucide-react';
+import PropTypes from 'prop-types';
 
-export const SearchSuggestionsList = ({ 
+/**
+ * Composant affichant la liste des suggestions de recherche
+ */
+export function SearchSuggestionsList({
+  isLoading,
+  error,
   suggestions, 
-  isRoleSearch, 
+  searchQuery,
   activeSuggestion, 
-  setActiveSuggestion, 
-  handleSuggestionClick,
-  allowedSearchRoles,
-  hasRole,
-  hasAnyRole,
-  suggestionsRef,
-  query,
-  containerWidth,
-  dropdownPosition,
-  handleKeyDown
-}) => {
+  onSuggestionClick,
+  roleSuggestions = [],
+  showRoleSuggestions = false,
+  includeDescription = true,
+}) {
+  if (isLoading) {
+    return (
+      <div className="p-4 text-center text-sm text-gray-500">
+        <div className="mx-auto mb-2 h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-primary"></div>
+        Recherche en cours...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 text-center text-sm text-red-500">
+        Erreur lors de la recherche
+      </div>
+    );
+  }
+
+  if (
+    (!suggestions || suggestions.length === 0) &&
+    (!roleSuggestions || roleSuggestions.length === 0)
+  ) {
+    return (
+      <div className="p-4 text-center text-sm text-gray-500">
+        Aucun résultat pour &quot;{searchQuery}&quot;
+      </div>
+    );
+  }
+
+  // Fonction pour obtenir l&apos;icône correspondant au rôle
+  const getRoleIcon = (role) => {
+    switch (role) {
+      case 'ROLE_STUDENT':
+        return <GraduationCap className="h-4 w-4" />;
+      case 'ROLE_TEACHER':
+        return <School className="h-4 w-4" />;
+      case 'ROLE_HR':
+      case 'ROLE_ADMIN':
+      case 'ROLE_SUPER_ADMIN':
+        return <Briefcase className="h-4 w-4" />;
+      default:
+        return <User className="h-4 w-4" />;
+    }
+  };
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10, scale: 0.95 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: 10, scale: 0.95 }}
-      transition={{ duration: 0.2, type: "spring", stiffness: 500, damping: 30 }}
+    <div className="overflow-y-auto max-h-[300px]">
+      {showRoleSuggestions && roleSuggestions && roleSuggestions.length > 0 && (
+        <div className="border-b border-gray-100">
+          <div className="px-3 py-2 text-xs font-semibold text-gray-500">
+            Rechercher par rôle
+          </div>
+          {roleSuggestions.map((role, index) => (
+            <div
+              key={`role-${index}`}
       className={cn(
-        "search-dropdown-portal overflow-hidden bg-white rounded-xl shadow-xl border border-gray-100",
-        "max-h-[300px] md:max-h-[400px]"
-      )}
-      style={{ 
-        boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
-        zIndex: 9999,
-        position: 'absolute',
-        top: `${dropdownPosition.top}px`,
-        left: `${dropdownPosition.left}px`,
-        width: dropdownPosition.width ? `${dropdownPosition.width}px` : (containerWidth > 0 ? `${containerWidth}px` : '100%')
-      }}
-      tabIndex={-1}
-      onKeyDown={handleKeyDown}
-    >
-      {suggestions.length === 0 ? (
-        <EmptySuggestionState 
-          isRoleSearch={isRoleSearch} 
-          hasRole={hasRole} 
-          hasAnyRole={hasAnyRole}
-          allowedSearchRoles={allowedSearchRoles}
-        />
-      ) : (
-        <div className="overflow-hidden">
-          <div className="px-3 py-2 bg-gray-50 border-b border-gray-100">
-            <p className="text-xs font-medium text-gray-500">
-              {suggestions.length} résultat{suggestions.length > 1 ? 's' : ''} trouvé{suggestions.length > 1 ? 's' : ''}
-              {isRoleSearch && (
-                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700">
-                  <Briefcase className="w-3 h-3 mr-1" />
-                  Recherche par rôle
-                </span>
+                'flex items-center px-3 py-2 cursor-pointer hover:bg-gray-50',
+                activeSuggestion === index && 'bg-gray-50'
               )}
-            </p>
+              data-suggestion-index={index}
+              data-suggestion-type="role"
+              onClick={() => onSuggestionClick(role, 'role')}
+            >
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 mr-3">
+                {getRoleIcon(role)}
+              </div>
+              <div className="flex-1">
+                <div className="font-medium">
+                  {role === 'ROLE_STUDENT'
+                    ? 'Étudiants'
+                    : role === 'ROLE_TEACHER'
+                    ? 'Professeurs'
+                    : role === 'ROLE_HR'
+                    ? 'Ressources Humaines'
+                    : role === 'ROLE_ADMIN'
+                    ? 'Administrateurs'
+                    : role === 'ROLE_SUPER_ADMIN'
+                    ? 'Super Administrateurs'
+                    : role}
+                </div>
+              </div>
           </div>
-          <div 
-            ref={suggestionsRef}
-            className="max-h-[250px] overflow-y-auto py-1 divide-y divide-gray-50"
-          >
-            {suggestions.map((user, index) => (
-              <SearchSuggestionItem
-                key={user.id || index}
-                user={user}
-                index={index}
-                activeSuggestion={activeSuggestion}
-                handleSuggestionClick={handleSuggestionClick}
-                setActiveSuggestion={setActiveSuggestion}
-              />
-            ))}
-          </div>
-          
-          {/* Message d'aide pour les rôles spéciaux */}
-          {(hasRole(ROLES.SUPERADMIN) || hasRole(ROLES.RECRUITER) || hasRole(ROLES.TEACHER) || 
-            hasRole(ROLES.STUDENT) || hasRole(ROLES.HR) || hasRole(ROLES.GUEST) || 
-            hasRole(ROLES.ADMIN)) && query.length === 0 && (
-            <HelpMessageForSpecialRoles 
-              hasRole={hasRole} 
-              hasAnyRole={hasAnyRole}
-              allowedSearchRoles={allowedSearchRoles}
-            />
-          )}
+          ))}
         </div>
       )}
-    </motion.div>
-  );
-};
 
-const EmptySuggestionState = ({ isRoleSearch, hasRole, hasAnyRole, allowedSearchRoles }) => (
-  <motion.div 
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    transition={{ delay: 0.1 }}
-    className="p-6 text-center"
-  >
-    <div className="flex flex-col items-center justify-center">
-      {isRoleSearch ? (
-        <>
-          <Briefcase className="w-10 h-10 text-purple-300 mb-2" />
-          <p className="text-gray-500 font-medium">Aucun utilisateur trouvé avec ce rôle</p>
-          <p className="text-gray-400 text-sm mt-1">
-            {hasRole(ROLES.ADMIN) && !hasRole(ROLES.SUPERADMIN) ? (
-              <>En tant qu'Admin, vous ne pouvez pas rechercher les <strong>super admins</strong>. Essayez un autre rôle.</>
-            ) : hasRole(ROLES.TEACHER) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN]) ? (
-              <>En tant que Formateur, vous pouvez uniquement rechercher des <strong>étudiants</strong> et des personnes des <strong>ressources humaines</strong></>
-            ) : hasRole(ROLES.RECRUITER) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.HR, ROLES.TEACHER]) ? (
-              <>En tant que Recruteur, vous pouvez uniquement rechercher des <strong>étudiants</strong> et des <strong>formateurs</strong></>
-            ) : hasRole(ROLES.HR) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN]) ? (
-              <>En tant que RH, vous pouvez uniquement rechercher des <strong>étudiants</strong>, des <strong>formateurs</strong> et des <strong>recruteurs</strong></>
-            ) : allowedSearchRoles.length > 0 ? (
-              allowedSearchRoles.length === 1 ? (
-                <>Vous pouvez uniquement rechercher des <strong>{getRoleDisplayFormat(allowedSearchRoles[0]).toLowerCase()}</strong></>
-              ) : (
-                <>Essayez avec un autre rôle : {allowedSearchRoles.map(role => getRoleDisplayFormat(role).toLowerCase()).join(', ')}</>
-              )
-            ) : (
-              <>Essayez avec un autre terme de recherche</>
-            )}
-          </p>
-        </>
-      ) : (
-        <>
-          <Search className="w-10 h-10 text-gray-300 mb-2" />
-          <p className="text-gray-500 font-medium">Aucun utilisateur trouvé</p>
-          <p className="text-gray-400 text-sm mt-1">
-            {hasRole(ROLES.ADMIN) && !hasRole(ROLES.SUPERADMIN) ? (
-              <>Essayez avec un autre terme ou recherchez par rôle (à l'exception des <strong>super admins</strong>) : {allowedSearchRoles.map(role => getRoleDisplayFormat(role).toLowerCase()).join(', ')}</>
-            ) : hasRole(ROLES.TEACHER) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN]) ? (
-              <>Essayez avec un autre terme ou recherchez par rôle : <strong>étudiant</strong> ou <strong>ressources humaines</strong></>
-            ) : hasRole(ROLES.RECRUITER) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.HR, ROLES.TEACHER]) ? (
-              <>Essayez avec un autre terme ou recherchez par rôle : <strong>étudiant</strong> ou <strong>formateur</strong></>
-            ) : hasRole(ROLES.HR) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN]) ? (
-              <>Essayez avec un autre terme ou recherchez par rôle : <strong>étudiant</strong>, <strong>formateur</strong> ou <strong>recruteur</strong></>
-            ) : allowedSearchRoles.length > 0 ? (
-              allowedSearchRoles.length === 1 ? (
-                <>Essayez avec un autre terme ou recherchez par le rôle <strong>{getRoleDisplayFormat(allowedSearchRoles[0]).toLowerCase()}</strong></>
-              ) : (
-                <>Essayez avec un autre terme ou recherchez par rôle : {allowedSearchRoles.map(role => getRoleDisplayFormat(role).toLowerCase()).join(', ')}</>
-              )
-            ) : (
-              <>Essayez avec un autre terme de recherche</>
-            )}
-          </p>
-        </>
+      {suggestions && suggestions.length > 0 && (
+        <div>
+          <div className="px-3 py-2 text-xs font-semibold text-gray-500">
+            Personnes
+          </div>
+          {suggestions.map((suggestion, index) => {
+            const actualIndex = showRoleSuggestions
+              ? index + roleSuggestions.length
+              : index;
+            
+            return (
+              <div
+                key={`suggestion-${suggestion.id || index}`}
+                className={cn(
+                  'flex items-center px-3 py-2 cursor-pointer hover:bg-gray-50',
+                  activeSuggestion === actualIndex && 'bg-gray-50'
+                )}
+                data-suggestion-index={actualIndex}
+                data-suggestion-type="user"
+                onClick={() => onSuggestionClick(suggestion, 'user')}
+              >
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary mr-3">
+                  {suggestion.profileImageUrl ? (
+                    <img
+                      src={suggestion.profileImageUrl}
+                      alt={`${suggestion.firstName} ${suggestion.lastName}`}
+                      className="h-8 w-8 rounded-full object-cover"
+                    />
+                  ) : (
+                    <UserRound className="h-4 w-4" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <div className="font-medium">
+                    {suggestion.firstName} {suggestion.lastName}
+                  </div>
+                  {includeDescription && suggestion.role && (
+                    <div className="text-xs text-gray-500">
+                      {suggestion.role === 'ROLE_STUDENT'
+                        ? 'Étudiant'
+                        : suggestion.role === 'ROLE_TEACHER'
+                        ? 'Professeur'
+                        : suggestion.role === 'ROLE_HR'
+                        ? 'Ressources Humaines'
+                        : suggestion.role === 'ROLE_ADMIN'
+                        ? 'Administrateur'
+                        : suggestion.role === 'ROLE_SUPER_ADMIN'
+                        ? 'Super Administrateur'
+                        : suggestion.role}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
     </div>
-  </motion.div>
-);
+  );
+}
 
-const HelpMessageForSpecialRoles = ({ hasRole, hasAnyRole, allowedSearchRoles }) => (
-  <div className="px-3 py-2 bg-gray-50 border-t border-gray-100 text-xs text-gray-500">
-    <p>
-      {hasRole(ROLES.SUPERADMIN) ? (
-        <>En tant que Super Admin, vous pouvez rechercher tous les utilisateurs par nom ou par rôle : {allowedSearchRoles.map(role => 
-          role !== 'SUPERADMIN' ? getRoleDisplayFormat(role).toLowerCase() : null
-        ).filter(Boolean).join(', ')}</>
-      ) : hasRole(ROLES.ADMIN) ? (
-        <>En tant qu'Admin, vous pouvez rechercher tous les utilisateurs par nom ou par rôle, à l'exception des <strong>super admins</strong> : {allowedSearchRoles.map(role => 
-          getRoleDisplayFormat(role).toLowerCase()
-        ).filter(Boolean).join(', ')}</>
-      ) : hasRole(ROLES.RECRUITER) && !hasRole(ROLES.SUPERADMIN) ? (
-        <>En tant que Recruteur, vous pouvez uniquement rechercher des <strong>étudiants</strong> et des <strong>formateurs</strong> par nom ou par rôle</>
-      ) : hasRole(ROLES.TEACHER) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN]) ? (
-        <>En tant que Formateur, vous pouvez uniquement rechercher des <strong>étudiants</strong> et des personnes des <strong>ressources humaines</strong> par nom ou par rôle</>
-      ) : hasRole(ROLES.STUDENT) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.TEACHER]) ? (
-        <>En tant qu'Étudiant, vous pouvez rechercher des <strong>formateurs</strong>, <strong>étudiants</strong>, <strong>recruteurs</strong>, et <strong>ressources humaines</strong> par nom ou par rôle</>
-      ) : hasRole(ROLES.HR) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN]) ? (
-        <>En tant que RH, vous pouvez uniquement rechercher des <strong>étudiants</strong>, des <strong>formateurs</strong> et des <strong>recruteurs</strong> par nom ou par rôle</>
-      ) : hasRole(ROLES.GUEST) ? (
-        <>En tant qu'Invité, vous pouvez uniquement rechercher des <strong>recruteurs</strong> par nom ou par rôle</>
-      ) : (
-        <>Vous pouvez rechercher par nom ou par rôle</>
-      )}
-    </p>
-  </div>
-); 
+SearchSuggestionsList.propTypes = {
+  isLoading: PropTypes.bool,
+  error: PropTypes.string,
+  suggestions: PropTypes.array,
+  searchQuery: PropTypes.string,
+  activeSuggestion: PropTypes.number,
+  onSuggestionClick: PropTypes.func.isRequired,
+  roleSuggestions: PropTypes.array,
+  showRoleSuggestions: PropTypes.bool,
+  includeDescription: PropTypes.bool
+}; 

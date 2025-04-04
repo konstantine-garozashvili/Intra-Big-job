@@ -61,11 +61,8 @@ axiosInstance.interceptors.request.use(
           return Promise.reject(error);
         }
         
-        // Tronquer le mot de passe si nécessaire (mesure de sécurité supplémentaire)
-        if (passwordLength > MAX_PASSWORD_LENGTH) {
-          console.warn(`[axios interceptor] Troncature du mot de passe de ${passwordLength} à ${MAX_PASSWORD_LENGTH} caractères`);
-          config.data.password = config.data.password.substring(0, MAX_PASSWORD_LENGTH);
-        }
+        // Note: Ce bloc de code est supprimé car il est redondant et jamais atteint
+        // La troncature doit maintenant être gérée par le composant de saisie
       }
     }
     

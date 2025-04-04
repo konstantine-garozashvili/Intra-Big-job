@@ -1,51 +1,61 @@
 import { useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
+import { Link, Navigate } from 'react-router-dom';
 import { CheckCircle } from 'lucide-react';
-import { authService } from '@/lib/services/authService';
 
-const RegistrationSuccess = () => {
-  const navigate = useNavigate();
-  
-  // Rediriger vers la page de connexion si l'utilisateur n'a pas été redirigé ici après inscription
+/**
+ * Page de succès d'inscription
+ * Affiche une confirmation après l'inscription réussie et redirige si accédée directement
+ * @returns {JSX.Element} Page de confirmation d'inscription
+ */
+export default function RegistrationSuccess() {
+  // Vérifier si l'utilisateur vient bien de terminer l'inscription
+  const registrationCompleted = sessionStorage.getItem('registrationCompleted');
+
+  // Effet pour nettoyer la session après chargement
   useEffect(() => {
-    const registrationCompleted = sessionStorage.getItem('registrationCompleted');
-    
-    if (!registrationCompleted) {
-      navigate('/login');
+    if (registrationCompleted) {
+      // Nettoyer après affichage
+      const cleanupTimeout = setTimeout(() => {
+        sessionStorage.removeItem('registrationCompleted');
+      }, 1000);
+      
+      return () => clearTimeout(cleanupTimeout);
     }
-    
-    // Nettoyer le stockage de session après vérification
-    return () => {
-      sessionStorage.removeItem('registrationCompleted');
-    };
-  }, [navigate]);
-  
+  }, [registrationCompleted]);
+
+  // Rediriger si l'utilisateur n'a pas terminé l'inscription
+  if (!registrationCompleted) {
+    return <Navigate to="/register" replace />;
+  }
+
   return (
-    <div className="flex flex-col items-center justify-center p-8 max-w-md mx-auto">
-      <div className="bg-white rounded-lg shadow-lg p-8 w-full text-center">
-        <div className="flex justify-center mb-4">
-          <CheckCircle className="h-16 w-16 text-green-500" />
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 px-6 py-8">
+      <div className="mx-auto w-full max-w-md text-center">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
+          <CheckCircle className="h-6 w-6 text-green-600" aria-hidden="true" />
         </div>
         
-        <h1 className="text-2xl font-bold mb-4">Inscription réussie !</h1>
+        <h1 className="mt-2 text-center text-2xl font-bold tracking-tight text-gray-900">
+          Inscription réussie !
+        </h1>
         
-        <p className="text-gray-600 mb-6">
-          Votre compte a été créé avec succès. Vous pouvez maintenant vous connecter pour accéder à votre espace personnel.
+        <p className="mt-2 text-center text-sm text-gray-600">
+          Votre compte a été créé avec succès. Veuillez vérifier votre boîte mail pour confirmer votre adresse email avant de vous connecter.
         </p>
         
-        <div className="space-y-4">
-          <Button asChild className="w-full">
-            <Link to="/login">Se connecter</Link>
-          </Button>
+        <div className="mt-6 flex flex-col space-y-4">
+          <Link
+            to="/login"
+            className="flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+          >
+            Aller à la page de connexion
+          </Link>
           
-          <p className="text-sm text-gray-500">
-            Si vous avez des questions, n'hésitez pas à contacter notre support.
+          <p className="text-center text-xs text-gray-500">
+            Vous n&apos;avez pas reçu l&apos;email ? <Link to="/resend-verification" className="font-medium text-blue-600 hover:text-blue-500">Renvoyer l&apos;email de vérification</Link>
           </p>
         </div>
       </div>
     </div>
   );
-};
-
-export default RegistrationSuccess; 
+} 

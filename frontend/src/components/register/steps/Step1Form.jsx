@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Eye, EyeOff } from "lucide-react";
 import { useUserData, useValidation } from "../RegisterContext";
 import { PasswordStrengthIndicator } from "../RegisterUtils";
+import PropTypes from "prop-types";
 
 const Step1Form = ({ goToNextStep }) => {
   const {
@@ -173,6 +174,24 @@ const Step1Form = ({ goToNextStep }) => {
                 setLocalErrors(newErrors);
               }
             }}
+            onPaste={(e) => {
+              // Intercepter l'événement de collage
+              const clipboardData = e.clipboardData || window.clipboardData;
+              const pastedText = clipboardData.getData('text');
+              
+              // Vérifier si le texte collé dépasse la limite
+              if (pastedText.length > 50) {
+                e.preventDefault(); // Empêcher le collage par défaut
+                
+                // Tronquer le texte et le définir manuellement
+                setPassword(pastedText.substring(0, 50));
+                
+                // Afficher un message d'erreur
+                const newErrors = {...localErrors};
+                newErrors.password = "Le mot de passe collé a été tronqué à 50 caractères";
+                setLocalErrors(newErrors);
+              }
+            }}
             placeholder="Entre 8 et 50 caractères"
             maxLength={50} // Attribut HTML natif pour limiter la longueur
           />
@@ -213,6 +232,11 @@ const Step1Form = ({ goToNextStep }) => {
       </div>
     </div>
   );
+};
+
+// Définition des PropTypes
+Step1Form.propTypes = {
+  goToNextStep: PropTypes.func.isRequired
 };
 
 export default Step1Form; 

@@ -4,7 +4,7 @@ import { useUserData } from '../hooks/useUserData';
 import { motion } from 'framer-motion';
 import Navbar from './Navbar';
 import Footer from './Footer';
-import { useRolesContext } from '../features/roles/roleContext';
+import { useRoles } from '../features/roles/roleContext';
 
 /**
  * Layout principal qui inclut la barre de navigation et le pied de page
@@ -15,12 +15,12 @@ const MainLayout = () => {
   const { userData, loading, fetchUserData, hasMinimalData, isLoggedIn } = useUserData();
   
   // Récupérer le contexte des rôles
-  const { refreshRoles } = useRolesContext();
+  const { refreshRoles } = useRoles();
   
   // Effet pour charger les données utilisateur au montage
   useEffect(() => {
     const loadUserData = async () => {
-      if (isLoggedIn()) {
+      if (isLoggedIn) {
         await fetchUserData();
       }
     };
@@ -34,19 +34,19 @@ const MainLayout = () => {
       refreshRoles();
     }
   }, [userData, refreshRoles]);
-  
+    
   // S'assurer que la page est affichée depuis le haut à chaque navigation
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
-  
+
   // Contexte à passer à l'Outlet (disponible via useOutletContext)
   const context = {
     userData,
     loading,
     hasMinimalData
   };
-  
+
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar userData={userData} />
@@ -61,10 +61,10 @@ const MainLayout = () => {
         >
           <Outlet context={context} />
         </motion.div>
-      </main>
-      
-      <Footer />
-    </div>
+        </main>
+
+        <Footer />
+      </div>
   );
 };
 

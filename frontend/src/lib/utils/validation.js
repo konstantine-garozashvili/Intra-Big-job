@@ -233,7 +233,8 @@ export const isValidLinkedInUrl = (url) => {
     }
     
     return false;
-  } catch (_) {
+  } catch {
+    // Error se produit si l'URL est mal formée
     return false;
   }
 };
@@ -250,7 +251,8 @@ export const isValidUrl = (url) => {
   try {
     const urlObj = new URL(url);
     return urlObj.protocol === 'https:';
-  } catch (_) {
+  } catch {
+    // Error se produit si l'URL est mal formée
     return false;
   }
 };

@@ -2,7 +2,8 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useAddress, useValidation, useUserData } from "../RegisterContext";
+import { useAddress, useValidation } from "../RegisterContext";
+import PropTypes from "prop-types";
 
 const Step3Form = ({ goToPrevStep, onSubmit }) => {
   const {
@@ -58,47 +59,22 @@ const Step3Form = ({ goToPrevStep, onSubmit }) => {
     e.preventDefault();
     setStep3Tried(true);
     
-    const isValid = validateStep3();
-    if (isValid) {
-      // Validation finale de la longueur du mot de passe en utilisant directement le contexte utilisateur
-      const userContext = useUserData();
-      if (userContext && userContext.password && userContext.password.length > 50) {
-        setLocalErrors({
-          ...localErrors,
-          password: "Le mot de passe ne doit pas dépasser 50 caractères"
-        });
-        return;
-      }
-      
-      try {
-        onSubmit(e);
-      } catch (error) {
-        setLocalErrors({
-          ...localErrors,
-          addressName: "Erreur lors de la validation de l&apos;adresse. Veuillez réessayer."
-        });
-      }
+    const validationErrors = validateStep3();
+    const isValid = Object.keys(validationErrors).length === 0;
+    
+    if (!isValid) {
+      setLocalErrors(validationErrors);
+      return;
     }
-  };
-
-  // Validation manuelle de l'adresse si nécessaire
-  const manuallyValidateAddress = () => {
-    if (!addressName || !city || !postalCode) {
-      return false;
+    
+    try {
+      onSubmit(e);
+    } catch {
+      setLocalErrors({
+        ...localErrors,
+        addressName: "Erreur lors de la validation de l&apos;adresse. Veuillez réessayer."
+      });
     }
-    return true;
-  };
-  
-  // Gestion spécifique pour la sélection d'adresse
-  const onAddressSelected = (addressData) => {
-    handleAddressSelect(addressData);
-    // Vérifier si nous avons tous les champs nécessaires
-    setLocalErrors({
-      ...localErrors,
-      addressName: null,
-      city: null,
-      postalCode: null
-    });
   };
 
   // Vérifier si une erreur doit être affichée
@@ -144,16 +120,7 @@ const Step3Form = ({ goToPrevStep, onSubmit }) => {
             id="addressName"
             value={addressName}
             onChange={(e) => setAddressName(e.target.value)}
-            onAddressSelect={(data) => {
-              handleAddressSelect(data);
-              // Nettoyer les erreurs après sélection d'une adresse valide
-              setLocalErrors({
-                ...localErrors,
-                addressName: null,
-                city: null,
-                postalCode: null
-              });
-            }}
+            onAddressSelect={handleAddressSelect}
             error={shouldShowError('addressName') ? getErrorMessage('addressName') : null}
             className=""
             inputClassName={`w-full px-4 py-3 rounded-md border ${shouldShowError('addressName') ? 'border-red-500' : 'border-gray-300'}`}
@@ -263,6 +230,12 @@ const Step3Form = ({ goToPrevStep, onSubmit }) => {
       </form>
     </div>
   );
+};
+
+// Définition des PropTypes
+Step3Form.propTypes = {
+  goToPrevStep: PropTypes.func.isRequired,
+  onSubmit: PropTypes.func.isRequired
 };
 
 export default Step3Form; 

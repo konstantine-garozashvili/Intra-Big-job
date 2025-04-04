@@ -1,6 +1,10 @@
-import React from "react";
+import PropTypes from 'prop-types';
 
-// Fonction pour évaluer la force du mot de passe
+/**
+ * Évalue la force d'un mot de passe sur une échelle de 0 à 4
+ * @param {string} password - Le mot de passe à évaluer
+ * @returns {number} - Score de force du mot de passe (0-4)
+ */
 export const evaluatePasswordStrength = (password) => {
   if (!password) return 0;
   
@@ -27,7 +31,12 @@ export const evaluatePasswordStrength = (password) => {
   return Math.min(score, 4); // Score de 0 à 4
 };
 
-// Composant pour afficher la force du mot de passe
+/**
+ * Composant qui affiche un indicateur visuel de la force du mot de passe
+ * @param {Object} props - Les propriétés du composant
+ * @param {string} props.password - Le mot de passe à évaluer
+ * @returns {JSX.Element} - L'indicateur visuel de force du mot de passe
+ */
 export const PasswordStrengthIndicator = ({ password }) => {
   // Vérifier si le mot de passe est trop long
   const isTooLong = password && password.length > 50;
@@ -77,4 +86,8 @@ export const PasswordStrengthIndicator = ({ password }) => {
       </div>
     </div>
   );
+};
+
+PasswordStrengthIndicator.propTypes = {
+  password: PropTypes.string
 }; 

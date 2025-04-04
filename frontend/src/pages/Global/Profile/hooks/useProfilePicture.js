@@ -1,5 +1,15 @@
 import { useState, useCallback } from 'react';
-import { profileService } from '../services/profileService';
+// Suppression de l'import qui crée la dépendance circulaire
+// import { profileService } from '../services/profileService';
+
+/**
+ * Événements liés à la photo de profil pour la communication entre les composants
+ */
+export const profilePictureEvents = {
+  UPLOADED: 'profile_picture_uploaded',
+  DELETED: 'profile_picture_deleted',
+  ERROR: 'profile_picture_error'
+};
 
 /**
  * Hook personnalisé pour gérer la photo de profil
@@ -37,6 +47,9 @@ export const useProfilePicture = () => {
       const formData = new FormData();
       formData.append('profilePicture', file);
       
+      // Import dynamique du service pour éviter la dépendance circulaire
+      const { profileService } = await import('../services/profileService');
+      
       // Envoyer la requête
       const result = await profileService.uploadProfilePicture(formData);
       
@@ -62,6 +75,9 @@ export const useProfilePicture = () => {
   const deleteProfilePicture = useCallback(async () => {
     try {
       setIsDeleting(true);
+      
+      // Import dynamique du service pour éviter la dépendance circulaire
+      const { profileService } = await import('../services/profileService');
       
       const result = await profileService.deleteProfilePicture();
       
@@ -106,7 +122,7 @@ export const useProfilePicture = () => {
       setPreviewUrl(null);
     }
   }, [previewUrl]);
-  
+
   return {
     uploadProfilePicture,
     deleteProfilePicture,

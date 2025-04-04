@@ -34,34 +34,14 @@ export const usePersonalInformation = (userData) => {
   const [isSaving, setIsSaving] = useState(false);
   
   const userRole = userData?.role || '';
-  const isStudent = userRole === 'ROLE_STUDENT';
-  const isSuperAdmin = userRole === 'ROLE_SUPER_ADMIN' || userRole === 'SUPER_ADMIN' || userRole === 'SUPERADMIN';
-  const isAdmin = roleUtils.hasAdminPermissions(userRole);
+  const isStudent = roleUtils.isStudent(userRole);
+  const isAdmin = roleUtils.isAdmin(userRole);
   const studentProfile = userData?.studentProfile || null;
   
   // Déterminer si un champ est éditable en fonction du rôle
   const isFieldEditable = useCallback((field) => {
-    // Les super admins et admins peuvent tout éditer
-    if (isSuperAdmin || isAdmin) {
-      return true;
-    }
-    
-    // Pour les étudiants
-    if (isStudent) {
-      // Permettre l'édition de certains champs spécifiques aux étudiants
-      if (field === 'portfolioUrl') {
-        return true;
-      }
-    }
-    
-    // Restreindre l'édition de certains champs sensibles
-    if (field === 'firstName' || field === 'lastName' || field === 'email' || field === 'birthDate') {
-      return false;
-    }
-    
-    // Par défaut, autoriser l'édition pour les autres champs
-    return true;
-  }, [isAdmin, isStudent, userRole, isSuperAdmin]);
+    return roleUtils.isFieldEditable(userRole, field);
+  }, [userRole]);
   
   /**
    * Activer l'édition d'un champ
@@ -85,7 +65,8 @@ export const usePersonalInformation = (userData) => {
   
   /**
    * Gérer le changement de valeur d'un champ
-   * @param {Event} event - Événement de changement
+   * @param {string} fieldName - Nom du champ à modifier
+   * @param {*} value - Nouvelle valeur
    */
   const handleChange = useCallback((fieldName, value) => {
     setPersonalData(prev => ({
@@ -142,7 +123,7 @@ export const usePersonalInformation = (userData) => {
     savePersonalInfo,
     isStudent,
     isAdmin,
-    isSuperAdmin,
+    isSuperAdmin: roleUtils.isFieldEditable(userRole, 'email'), // Utilisé pour vérifier si on est super admin
     studentProfile,
     isFieldEditable
   };

@@ -144,4 +144,14 @@ export const canEditPortfolioUrl = (userRole) => {
  */
 export const showPortfolioUrl = (userRole) => {
   return isStudent(userRole) || isAdmin(userRole) || isTeacher(userRole) || isHR(userRole);
+};
+
+/**
+ * Vérifie si l'utilisateur a des permissions de super admin
+ * @param {string} role - Rôle de l'utilisateur
+ * @returns {boolean} - True si l'utilisateur a des permissions de super admin
+ */
+export const hasSuperAdminPermissions = (role) => {
+  const superAdminRoles = ['ROLE_SUPER_ADMIN', 'ROLE_TECH_ADMIN'];
+  return superAdminRoles.includes(role);
 }; 
