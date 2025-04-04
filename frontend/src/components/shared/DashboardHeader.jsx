@@ -288,7 +288,7 @@ const DashboardHeader = ({ user, icon: Icon, roleTitle }) => {
     >
       <div className="flex flex-col md:flex-row md:items-center md:justify-between relative z-10">
         <div className="flex items-center">
-          <div className="relative h-16 w-16 sm:h-12 sm:w-12 md:h-16 md:w-16 lg:h-20 lg:w-20">
+          <div className="relative h-16 w-16 sm:h-12 sm:w-12 md:h-16 md:w-16 lg:h-18 lg:w-18">
             <ProfilePictureDisplay className="w-full h-full" />
           </div>
           <div className="ml-4">
@@ -337,7 +337,7 @@ const DashboardHeader = ({ user, icon: Icon, roleTitle }) => {
           </div>
           <Link to="/profile">
             <Button size="sm" className="gap-2 bg-primary hover:bg-primary/90">
-              <User className="h-4 w-4" />
+              <User className="h-5 w-5" />
               <span className="hidden sm:inline">Mon profil</span>
             </Button>
           </Link>

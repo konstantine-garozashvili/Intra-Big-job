@@ -1,5 +1,7 @@
 import React from 'react';
 import { useProfilePicture } from '../pages/Global/Profile/hooks/useProfilePicture';
+import { Avatar, AvatarFallback } from './ui/avatar';
+import { User } from "lucide-react";
 
 const ProfilePictureDisplay = ({ className = '' }) => {
   const {
@@ -9,25 +11,24 @@ const ProfilePictureDisplay = ({ className = '' }) => {
   } = useProfilePicture();
 
   const handleImageError = (e) => {
-    e.target.src = '/default-avatar.png';
+    e.target.src = '';
   };
 
   return (
-    <div className={`relative rounded-full ${className}`}>
+    <Avatar className={`rounded-full ${className}`}>
       {profilePictureUrl ? (
         <img
           src={profilePictureUrl}
           alt="Photo de profil"
-          className="rounded-full w-full h-full object-cover transition-opacity duration-300"
+          className="w-full h-full object-cover"
           onError={handleImageError}
         />
       ) : (
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-user w-6 h-6 text-white">
-          <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
-          <circle cx="12" cy="7" r="4"></circle>
-        </svg>
+        <AvatarFallback className="bg-gradient-to-r from-[#02284f] to-[#03386b] text-white">
+          <User className="w-4 h-4 sm:w-6 sm:h-6 md:w-8 md:h-8" />
+        </AvatarFallback>
       )}
-    </div>
+    </Avatar>
   );
 };
 

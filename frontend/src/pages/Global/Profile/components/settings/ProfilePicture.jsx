@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { UserRound, Camera, Upload, Loader2, Trash2 } from 'lucide-react';
+import { UserRound, Camera, Upload, Loader2, Trash2, User } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { toast } from 'sonner';
 import { useProfilePicture } from '../../hooks/useProfilePicture';
 import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Dialog,
   DialogContent,
@@ -252,7 +253,11 @@ const ProfilePicture = ({ userData, onProfilePictureChange, isLoading: externalL
                 onError={handleImageError}
               />
             ) : (
-              <UserRound className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 text-gray-400" />
+              <Avatar className="w-full h-full">
+                <AvatarFallback className="bg-gradient-to-r from-[#02284f] to-[#03386b] text-white">
+                  <User className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16" />
+                </AvatarFallback>
+              </Avatar>
             )}
             <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
               <Camera className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 text-white" />

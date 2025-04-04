@@ -1,6 +1,7 @@
 import React, { memo, useState } from 'react';
-import { UserRound, Mail, Building } from 'lucide-react';
+import { Mail, Building } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import ProfilePictureDisplay from '@/components/ProfilePictureDisplay';
 
 const OptimizedImage = memo(({ src, alt, ...props }) => {
   const [isLoaded, setIsLoaded] = useState(false);
@@ -27,18 +28,8 @@ const ProfileCard = memo(({ userData }) => {
   return (
     <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-300">
       <div className="flex items-center space-x-4 mb-6">
-        <div className="bg-[#02284f] rounded-full p-4 relative">
-          {userData.avatar ? (
-            <div className="relative w-12 h-12">
-              <OptimizedImage
-                src={userData.avatar}
-                alt={`${userData.firstName} ${userData.lastName}`}
-                className="rounded-full w-full h-full object-cover"
-              />
-            </div>
-          ) : (
-            <UserRound className="h-12 w-12 text-white" />
-          )}
+        <div className="bg-white/20 rounded-full p-2.5">
+          <ProfilePictureDisplay className="w-12 h-12" />
         </div>
         <div>
           <h2 className="text-2xl font-bold text-gray-900">
@@ -63,17 +54,15 @@ const ProfileCard = memo(({ userData }) => {
     </div>
   );
 }, (prevProps, nextProps) => {
-  // Custom comparison function for memoization
   return (
     prevProps.userData?.firstName === nextProps.userData?.firstName &&
     prevProps.userData?.lastName === nextProps.userData?.lastName &&
     prevProps.userData?.email === nextProps.userData?.email &&
     prevProps.userData?.role === nextProps.userData?.role &&
-    prevProps.userData?.organization === nextProps.userData?.organization &&
-    prevProps.userData?.avatar === nextProps.userData?.avatar
+    prevProps.userData?.organization === nextProps.userData?.organization
   );
 });
 
 ProfileCard.displayName = 'ProfileCard';
 
-export default ProfileCard; 
+export default ProfileCard;

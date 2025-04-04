@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { getProfilePictureUrl, getUserInitials } from "@/lib/utils/profileUtils";
 import apiService from "@/lib/services/apiService";
 import RoleBadge from "@/components/ui/RoleBadge";
+import { User } from "lucide-react";
 
 const ProfileHeader = ({ userData, isPublicProfile = false, profilePictureUrl }) => {
   const [imageError, setImageError] = useState(false);
@@ -183,8 +184,8 @@ const ProfileHeader = ({ userData, isPublicProfile = false, profilePictureUrl })
                     className={`transition-opacity duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
                   />
                 )}
-                <AvatarFallback className="text-2xl bg-gradient-to-br from-primary/90 to-indigo-600/90 text-white font-medium">
-                  {userInitials}
+                <AvatarFallback className="bg-gradient-to-r from-[#02284f] to-[#03386b] text-white">
+                  <User className="w-10 h-10 sm:w-12 sm:h-12" />
                 </AvatarFallback>
               </Avatar>
             </div>
