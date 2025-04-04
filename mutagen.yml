@@ -8,15 +8,9 @@ sync:
     permissions:
       defaultFileMode: 0644
       defaultDirectoryMode: 0755
-
-  frontend:
-    alpha: "./frontend"
-    beta: "docker://infra-frontend-1:/app"
-    ignore:
-      paths:
-        - node_modules
-        - .git
-        - dist
+    watch:
+      mode: portable
+      pollingInterval: 2
 
   backend:
     alpha: "./backend"
@@ -28,3 +22,12 @@ sync:
         - .git
         - var/cache
         - var/log
+    permissions:
+      defaultFileMode: 0644
+      defaultDirectoryMode: 0755
+      defaultOwner: "www-data"
+      defaultGroup: "www-data"
+    watch:
+      mode: portable
+    staging:
+      mode: neighboring

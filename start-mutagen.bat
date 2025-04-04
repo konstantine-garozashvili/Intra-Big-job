@@ -1,46 +1,44 @@
 @echo off
-echo Starting project with Mutagen for improved performance...
+echo Starting project with Mutagen for backend synchronization...
 
-REM Set path to local Mutagen executable
-set MUTAGEN_PATH=%~dp0mutagen\mutagen.exe
+REM Stop Mutagen daemon and any existing sessions
+echo Stopping Mutagen daemon and sessions...
+mutagen daemon stop
+timeout /t 5 /nobreak
 
-REM Check if local Mutagen exists
-if not exist "%MUTAGEN_PATH%" (
-    echo Local Mutagen executable not found at %MUTAGEN_PATH%
-    echo Checking for system-wide installation...
-    
-    mutagen version >nul 2>&1
-    if %ERRORLEVEL% NEQ 0 (
-        echo Mutagen is not installed. Please install it first or extract it to the mutagen folder.
-        echo Visit https://mutagen.io/documentation/introduction/installation for installation instructions.
-        exit /b 1
-    ) else (
-        echo Using system-wide Mutagen installation.
-        set MUTAGEN_PATH=mutagen
-    )
-) else (
-    echo Using local Mutagen installation.
-)
+REM Start Mutagen daemon
+echo Starting Mutagen daemon...
+mutagen daemon start
+timeout /t 5 /nobreak
 
-REM Stop any existing Mutagen sessions
-echo Stopping any existing Mutagen sessions...
-"%MUTAGEN_PATH%" sync terminate --all
+REM Arrêter Docker complètement
+docker-compose -f infra/docker-compose.yml -f docker-compose.mutagen.yml down
 
-REM Start Docker Compose with the Mutagen override
-echo Starting Docker Compose with Mutagen configuration...
+REM Attendre quelques secondes
+timeout /t 5 /nobreak
+
+REM Démarrer Docker avec la nouvelle configuration
 docker-compose -f infra/docker-compose.yml -f docker-compose.mutagen.yml up -d
 
 REM Wait for containers to be ready
 echo Waiting for containers to be ready...
 timeout /t 10 /nobreak
 
-REM Start Mutagen sync
-echo Starting Mutagen file synchronization...
-"%MUTAGEN_PATH%" project start
-timeout /t 40 /nobreak
+REM Create Mutagen sync session explicitly
+echo Creating Mutagen sync session for backend...
+mutagen sync terminate backend-sync 2>nul
+mutagen sync create --name=backend-sync --sync-mode=two-way-resolved --watch-mode=portable --ignore-vcs --default-file-mode=0644 --default-directory-mode=0755 --staging-mode=neighboring ./backend docker://infra-backend-1:/var/www/symfony
 
-echo Project started successfully with Mutagen!
-echo Access your application at:
-echo   - Frontend: http://localhost:5173
-echo   - Backend API: http://localhost:8000
-echo   - PHPMyAdmin: http://localhost:8080
+REM Monitor the sync status
+echo Monitoring sync status for 30 seconds...
+mutagen sync monitor backend-sync
+timeout /t 30 /nobreak
+
+echo Checking final sync status...
+mutagen sync list
+
+echo Configuration complete. Use these commands to manage synchronization:
+echo - View status: mutagen sync list
+echo - Monitor changes: mutagen sync monitor backend-sync
+echo - Flush changes: mutagen sync flush backend-sync
+echo - Reset sync: mutagen sync reset backend-sync
