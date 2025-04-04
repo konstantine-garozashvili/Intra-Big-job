@@ -1,0 +1,24 @@
+sync:
+  backend:
+    alpha: "../backend"
+    beta: "docker://infra-backend-1/var/www/symfony"
+    mode: "two-way-resolved"
+    ignore:
+      - "/vendor"
+      - "/var"
+      - "/config/jwt"
+      - "/.git"
+      - "/.idea"
+      - "/.vscode"
+      - "/.env.local"
+      - "**/*.log"
+    permissions:
+      defaultFileMode: 0644
+      defaultDirectoryMode: 0755
+    symlink:
+      mode: "portable"
+    watch:
+      pollingInterval: 2
+    rescan:
+      # Rescan every 10 seconds if file watching fails
+      interval: 10 
