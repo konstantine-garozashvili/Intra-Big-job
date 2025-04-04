@@ -30,6 +30,7 @@ import {
   Ticket
 } from 'lucide-react';
 import { useRolePermissions } from '@/features/roles/useRolePermissions';
+import ProfilePictureDisplay from '@/components/ProfilePictureDisplay';
 
 // Style personnalisé pour les animations et transitions
 const customStyles = `
@@ -537,12 +538,12 @@ const MenuBurger = memo(() => {
               <div className="flex flex-col h-full">
                 {roles.length > 0 && (
                   <div className="flex items-center p-4 border-b border-blue-700 bg-gradient-to-r from-[#00284f] to-[#003a6b]">
-                    <div className="w-12 h-12 bg-white/20 rounded-full mr-3 flex items-center justify-center cursor-pointer hover:bg-white/30 transition-colors" 
+                    <div className="w-14 h-14 bg-white/20 rounded-full mr-3 flex items-center justify-center cursor-pointer hover:bg-white/30 transition-colors" 
                          onClick={() => {
                            setMenuOpen(false);
                            navigate('/profile');
                          }}>
-                      <User className="w-6 h-6 text-white" />
+                      <ProfilePictureDisplay className="w-full h-full" />
                     </div>
                     <div className="cursor-pointer" 
                          onClick={() => {
