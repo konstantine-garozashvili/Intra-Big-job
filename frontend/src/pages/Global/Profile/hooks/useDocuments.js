@@ -1,144 +1,134 @@
-import { useState, useEffect, useCallback } from 'react';
-import documentService, { documentEvents } from '../services/documentService';
-import { useQueryClient } from '@tanstack/react-query';
+import { useApiQuery, useApiMutation } from '@/hooks/useReactQuery';
 import { toast } from 'sonner';
+import documentService from '../services/documentService';
+
+// Définir les clés de requête constantes
+const DOCUMENT_QUERY_KEYS = {
+  byType: (type) => ['documents', 'byType', type],
+  publicByUser: (userId) => ['documents', 'public', userId],
+};
 
 /**
- * Hook personnalisé pour gérer les documents CV
- * @returns {Object} Méthodes et données pour gérer les documents CV
+ * Hook personnalisé pour gérer les documents
+ * @param {string} type - Type de document (CV, etc.)
+ * @returns {Object} - Fonctions et données pour gérer les documents
  */
-export function useDocuments(type = 'CV') {
-  const [documents, setDocuments] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const queryClient = useQueryClient();
-
-  // Fonction pour charger les documents
-  const loadDocuments = useCallback(async (forceRefresh = false) => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      let docs;
-      if (type) {
-        docs = await documentService.getDocumentByType(type, forceRefresh);
-      } else {
-        docs = await documentService.getDocuments(forceRefresh);
+export const useDocuments = (type) => {
+  // Query pour récupérer les documents
+  const { 
+    data: documents, 
+    isLoading,
+    refetch
+  } = useApiQuery(
+    `/api/documents/type/${type}`,  // Endpoint sous forme de chaîne
+    DOCUMENT_QUERY_KEYS.byType(type),
+    {
+      refetchOnWindowFocus: false,
+      onError: (error) => {
+        console.error(`Error fetching ${type} documents:`, error);
+        toast.error(`Failed to fetch ${type} documents`);
       }
-      
-      // Filtrer les documents temporaires
-      const filteredDocs = docs.filter(doc => !doc.is_temp);
-      
-      setDocuments(filteredDocs);
-    } catch (err) {
-      setError(err);
-    } finally {
-      setIsLoading(false);
     }
-  }, [type]);
+  );
 
-  // Fonction pour télécharger un document
-  const downloadDocument = useCallback(async (documentId, filename) => {
-    setIsDownloading(true);
-    try {
-      const response = await fetch(`/api/documents/${documentId}/download`);
-      if (!response.ok) {
-        throw new Error(`Erreur HTTP: ${response.status}`);
+  // Mutation pour l'upload de CV
+  const { mutate: uploadDocument, isPending: isUploading } = useApiMutation(
+    '/api/documents/upload/cv',
+    'post',
+    DOCUMENT_QUERY_KEYS.byType(type),
+    {
+      onSuccess: () => {
+        toast.success('Document uploaded successfully');
+        refetch();
+        // Notify MainLayout about the update
+        document.dispatchEvent(new CustomEvent('user:data-updated'));
+      },
+      onError: (error) => {
+        toast.error('Failed to upload document: ' + (error.response?.data?.message || error.message));
       }
-      
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename || 'document.pdf';
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (err) {
-      setError(err);
-    } finally {
-      setIsDownloading(false);
     }
-  }, []);
+  );
 
-  // Fonction pour supprimer un document
-  const deleteDocument = useCallback(async (documentId) => {
-    setIsDeleting(true);
-    try {
-      const response = await fetch(`/api/documents/${documentId}`, {
-        method: 'DELETE',
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Erreur HTTP: ${response.status}`);
+  // Mutation pour la suppression
+  const { mutate: deleteDocument, isPending: isDeleting } = useApiMutation(
+    (id) => `/api/documents/${id}`,
+    'delete',
+    DOCUMENT_QUERY_KEYS.byType(type),
+    {
+      onSuccess: () => {
+        toast.success('Document deleted successfully');
+        refetch();
+        // Notify MainLayout about the update
+        document.dispatchEvent(new CustomEvent('user:data-updated'));
+      },
+      onError: (error) => {
+        toast.error('Failed to delete document: ' + (error.response?.data?.message || error.message));
       }
-      
-      // Mettre à jour la liste des documents après suppression
-      setDocuments(prev => prev.filter(doc => doc.id !== documentId));
-      
-      return true;
-    } catch (err) {
-      setError(err);
-      return false;
-    } finally {
-      setIsDeleting(false);
     }
-  }, []);
+  );
 
-  // Fonction pour uploader un CV
-  const uploadCV = useCallback(async (file) => {
-    setIsUploading(true);
+  // Fonction pour le téléchargement
+  const downloadDocument = async (documentId, fileName) => {
     try {
-      const formData = new FormData();
-      formData.append('document', file);
-      
-      const response = await fetch('/api/documents/cv', {
-        method: 'POST',
-        body: formData,
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Erreur HTTP: ${response.status}`);
-      }
-      
-      const result = await response.json();
-      
-      // Ajouter le nouveau document à la liste
-      if (result.success && result.data) {
-        setDocuments(prev => [...prev, result.data]);
-      }
-      
-      return result;
-    } catch (err) {
-      setError(err);
-      return { success: false, error: err.message };
-    } finally {
-      setIsUploading(false);
+      await documentService.downloadDocument(documentId);
+      toast.success('Document downloaded successfully');
+    } catch (error) {
+      toast.error('Failed to download document');
+      console.error('Error downloading document:', error);
     }
-  }, []);
-
-  // Écouter les événements de mise à jour des documents
-  useEffect(() => {
-    // Charger les documents au montage du composant
-    loadDocuments();
-    
-    // S'abonner aux événements de mise à jour
-    const unsubscribe = documentEvents.subscribe(() => {
-      loadDocuments(true);
-    });
-    
-    // Se désabonner lors du démontage du composant
-    return () => unsubscribe();
-  }, [loadDocuments]);
+  };
 
   return {
-    documents,
+    documents: documents?.data || [],
+    isLoading,
+    isUploading,
+    isDeleting,
+    uploadDocument,
+    deleteDocument,
+    downloadDocument,
+    refetch
+  };
+};
+
+/**
+ * Hook pour récupérer les documents publics d'un utilisateur
+ * @param {number} userId - ID de l'utilisateur
+ * @returns {Object} - Documents publics de l'utilisateur
+ */
+export const usePublicDocuments = (userId) => {
+  const { 
+    data: documents, 
     isLoading,
     error,
-    refreshDocuments: () => loadDocuments(true),
-    downloadDocument,
-    deleteDocument,
-    uploadCV
+    refetch
+  } = useApiQuery(
+    `/api/profile/public/${userId}/documents`,
+    DOCUMENT_QUERY_KEYS.publicByUser(userId),
+    {
+      refetchOnWindowFocus: false,
+      enabled: !!userId,
+      onError: (error) => {
+        console.error(`Error fetching public documents for user ${userId}:`, error);
+      }
+    }
+  );
+
+  // Fonction pour le téléchargement
+  const downloadDocument = async (documentId, fileName) => {
+    try {
+      await documentService.downloadDocument(documentId);
+      toast.success('Document téléchargé avec succès');
+    } catch (error) {
+      toast.error('Erreur lors du téléchargement du document');
+      console.error('Error downloading document:', error);
+    }
   };
-} 
+
+  return {
+    documents: documents?.data?.documents || [],
+    isLoading,
+    error,
+    downloadDocument,
+    refetch
+  };
+}; 

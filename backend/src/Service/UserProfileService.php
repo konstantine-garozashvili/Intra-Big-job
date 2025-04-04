@@ -320,35 +320,44 @@ class UserProfileService
     public function getPublicUserDocuments(User $user): array
     {
         try {
+            $this->logger->info('Fetching public documents for user ID: ' . $user->getId());
+            
             // Get CV document type
             $cvType = $this->documentTypeRepository->findOneBy(['code' => 'CV']);
             if (!$cvType) {
                 $this->logger->warning('DocumentType with code "CV" NOT found.');
                 return [];
             }
+            $this->logger->info('Found CV document type with ID: ' . $cvType->getId());
 
-            // Get user's CV document
+            // Get user's CV document - no need to filter by isPublic
             $cvDocument = $this->documentRepository->findOneBy([
                 'user' => $user,
-                'documentType' => $cvType,
-                'isPublic' => true // Only get public documents
+                'documentType' => $cvType
             ]);
 
             if (!$cvDocument) {
+                $this->logger->warning('No CV document found for user ID: ' . $user->getId());
                 return [];
             }
+            
+            $this->logger->info('Found CV document with ID: ' . $cvDocument->getId());
 
             // Get storage adapter
             $storage = $this->documentStorageFactory->createStorage();
 
-            return [[
+            $documentData = [
                 'id' => $cvDocument->getId(),
                 'name' => $cvDocument->getName(),
                 'type' => 'CV',
                 'mimeType' => $cvDocument->getMimeType(),
                 'url' => $storage->getUrl($cvDocument->getPath()),
                 'createdAt' => $cvDocument->getCreatedAt()->format('Y-m-d H:i:s')
-            ]];
+            ];
+            
+            $this->logger->info('Successfully retrieved document data: ' . json_encode($documentData));
+            
+            return [$documentData];
         } catch (\Exception $e) {
             $this->logger->error('Error getting public documents: ' . $e->getMessage());
             return [];

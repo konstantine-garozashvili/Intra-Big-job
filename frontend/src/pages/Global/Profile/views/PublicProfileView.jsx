@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRoleUI } from '@/features/roles';
 import { ROLES } from '@/features/roles/roleContext';
+import { usePublicDocuments } from '../hooks/useDocuments';
 
 const PublicProfileView = () => {
   const { userId } = useParams();
@@ -14,11 +15,18 @@ const PublicProfileView = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isOwnProfile, setIsOwnProfile] = useState(false);
-  const [documents, setDocuments] = useState([]);
   const roleUI = useRoleUI();
+  
+  // Utiliser le hook pour récupérer les documents publics
+  const { 
+    documents, 
+    isLoading: isLoadingDocuments, 
+    downloadDocument 
+  } = usePublicDocuments(userId);
   
   console.log('PublicProfileView - userId from params:', userId);
   console.log('PublicProfileView - Current URL:', window.location.pathname);
+  console.log('PublicProfileView - Documents:', documents);
   
   useEffect(() => {
     const checkCurrentUser = async () => {
@@ -50,12 +58,6 @@ const PublicProfileView = () => {
         if (response?.data?.user) {
           console.log('Using response.data.user:', response.data.user);
           setProfileData(response.data.user);
-          
-          // Fetch documents after profile is loaded
-          const documentsResponse = await apiService.getPublicUserDocuments(userId);
-          if (documentsResponse?.success && documentsResponse?.data?.documents) {
-            setDocuments(documentsResponse.data.documents);
-          }
         } else {
           setError('Données du profil non disponibles');
         }
@@ -76,6 +78,53 @@ const PublicProfileView = () => {
     };
   }, [userId]);
 
+  if (isLoading) {
+    return (
+      <div className="w-full max-w-7xl mx-auto px-4 py-6 space-y-8">
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="flex flex-col items-center sm:flex-row sm:items-start space-y-4 sm:space-y-0 sm:space-x-6">
+            <Skeleton className="h-24 w-24 rounded-full" />
+            <div className="flex-1 space-y-2 text-center sm:text-left">
+              <Skeleton className="h-7 w-3/4 sm:w-1/2" />
+              <Skeleton className="h-5 w-2/3 sm:w-1/3" />
+              <div className="flex flex-wrap justify-center sm:justify-start gap-2 mt-3">
+                <Skeleton className="h-6 w-16" />
+                <Skeleton className="h-6 w-20" />
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <Skeleton className="h-7 w-32 mb-4" />
+          <div className="space-y-3">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-2/3" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="w-full max-w-7xl mx-auto px-4 py-6">
+        <div className="bg-white rounded-lg shadow-sm p-6 text-center">
+          <h2 className="text-xl font-semibold text-red-600 mb-2">Erreur</h2>
+          <p className="text-gray-700">{error}</p>
+          <Button asChild className="mt-4">
+            <Link to="/dashboard">Retour au tableau de bord</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isOwnProfile) {
+    return null; // Will redirect to /profile
+  }
+
   const pageVariants = {
     hidden: { opacity: 0 },
     visible: { 
@@ -88,89 +137,17 @@ const PublicProfileView = () => {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="w-full max-w-7xl mx-auto px-4 py-6 space-y-8" data-testid="public-profile-loading">
-        <div className="w-full bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 rounded-lg shadow-md overflow-hidden">
-          <Skeleton className="h-64 w-full" />
-          <div className="p-6 space-y-4">
-            <Skeleton className="h-8 w-1/3" />
-            <Skeleton className="h-4 w-2/3" />
-            <Skeleton className="h-4 w-1/2" />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="w-full max-w-7xl mx-auto px-4 py-6" data-testid="public-profile-error">
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative" role="alert">
-          <strong className="font-bold">Erreur :</strong>
-          <span className="block sm:inline"> {error}</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (!profileData) {
-    return (
-      <div className="w-full max-w-7xl mx-auto px-4 py-6" data-testid="public-profile-no-data">
-        <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded relative" role="alert">
-          <strong className="font-bold">Attention :</strong>
-          <span className="block sm:inline"> Profil non trouvé.</span>
-        </div>
-      </div>
-    );
-  }
-
-  console.log('ProfileData before transformation:', profileData);
-  
   const userData = {
-    user: {
-      ...profileData,
-      roles: Array.isArray(profileData.roles) 
-        ? profileData.roles.map(role => {
-            console.log('[PublicProfileView] Role avant transformation:', role);
-            const normalizedRole = role.replace('ROLE_', '');
-            const transformedRole = {
-              name: role,
-              displayName: roleUI.translateRoleName(role),
-              color: roleUI.getRoleBadgeColor(role)
-            };
-            console.log('[PublicProfileView] Role après transformation:', transformedRole);
-            return transformedRole;
-          })
-        : [{ 
-            name: ROLES.GUEST,
-            displayName: roleUI.translateRoleName(ROLES.GUEST),
-            color: roleUI.getRoleBadgeColor(ROLES.GUEST)
-          }],
-      specialization: profileData.specialization || {},
-      linkedinUrl: profileData.linkedinUrl || "",
-      birthDate: profileData.birthDate,
-      createdAt: profileData.createdAt,
-      updatedAt: profileData.updatedAt,
-      addresses: profileData.addresses || []
-    },
-    studentProfile: profileData.studentProfile || {
+    user: profileData,
+    studentProfile: profileData?.studentProfile || {
       isSeekingInternship: false,
-      isSeekingApprenticeship: false,
-      portfolioUrl: null,
-      currentInternshipCompany: null,
-      internshipStartDate: null,
-      internshipEndDate: null,
-      situationType: null
+      isSeekingApprenticeship: false
     },
-    addresses: profileData.addresses || [],
-    stats: { profile: { completionPercentage: 0 } }
+    diplomas: profileData?.diplomas || [],
+    addresses: profileData?.addresses || [],
+    documents: documents || [],
+    stats: profileData?.stats || { profile: { completionPercentage: 0 } }
   };
-
-  console.log('[PublicProfileView] userData final:', {
-    roles: userData.user.roles,
-    isPublicProfile: true
-  });
 
   return (
     <motion.div

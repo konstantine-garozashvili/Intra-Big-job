@@ -1,0 +1,99 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Frontend Rules
+
+> **Rules for working with the React frontend**
+
+## Critical Rules
+
+### Read file first
+- **Severity: CRITICAL**
+- Always read the entire file contents before suggesting modifications
+- This ensures you understand the component's purpose and dependencies
+
+### Verify imports
+- **Severity: CRITICAL**
+- Verify all import paths exist before modifying import statements
+- Check for path aliases defined in vite.config.js (@components, @services, etc.) and confirm destination files exist
+- Path aliases are defined in vite.config.js:
+  ```js
+  resolve: {
+    alias: {
+      '@': './src',
+      '@components': './src/components',
+      '@ui': './src/components/ui',
+      '@features': './src/features',
+      '@services': './src/lib/services',
+      '@utils': './src/lib/utils',
+      '@hooks': './src/lib/hooks',
+      '@pages': './src/pages',
+      '@assets': './src/assets',
+    }
+  }
+  ```
+
+### Check API endpoints
+- **Severity: CRITICAL**
+- Verify API endpoints against backend controllers before modifying API calls
+- Confirm endpoint URL, HTTP method, and request payload match backend controller expectations
+- All API calls use the base URL from environment: `import.meta.env.VITE_API_URL` or `http://localhost:8000/api`
+
+## High Priority Rules
+
+### Tailwind CSS
+- **Severity: HIGH**
+- Use Tailwind CSS for styling components
+- Avoid inline styles and CSS files when possible
+- Follow existing component patterns for styling
+
+### React patterns
+- **Severity: HIGH**
+- Follow modern React patterns (hooks, function components)
+- Use React 19 features appropriately
+- Avoid class components and deprecated patterns
+
+### Query management
+- **Severity: HIGH**
+- Use TanStack Query for data fetching and state management
+- Follow established patterns for queries, mutations, and caching
+- Example pattern:
+  ```jsx
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['resourceName', id],
+    queryFn: () => fetchResource(id)
+  });
+  ```
+
+### Respect roles
+- **Severity: HIGH**
+- Consider user roles when modifying UI components
+- The system has 7 distinct roles with different permissions
+- Components may need conditional rendering based on user role
+
+## Medium Priority Rules
+
+### Component structure
+- **Severity: MEDIUM**
+- Follow established component directory structure
+- Place components in appropriate directories:
+  - UI components: `src/components/ui/`
+  - Shared components: `src/components/shared/`
+  - Domain-specific: `src/pages/{DomainName}/`
+
+### Form handling
+- **Severity: MEDIUM**
+- Use react-hook-form for form handling
+- Follow established form validation patterns
+- Example pattern:
+  ```jsx
+  const { register, handleSubmit, formState: { errors } } = useForm();
+  ```
+
+### Radix UI components
+- **Severity: MEDIUM**
+- Utilize Radix UI components for interactive elements
+- The project uses various Radix components like Dialog, DropdownMenu, etc.
+- Follow existing patterns for importing and using these components

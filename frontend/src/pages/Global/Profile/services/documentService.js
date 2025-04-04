@@ -103,54 +103,31 @@ class DocumentService {
   }
 
   /**
+   * Get documents by type (CV, DIPLOME, etc.)
+   * @param {string} type - Document type to filter by
+   * @returns {Promise<Array>} Array of documents of the specified type
+   */
+  async getDocumentsByType(type) {
+    try {
+      const response = await apiService.get(`/documents/type/${type}`);
+      return response.data || [];
+    } catch (error) {
+      console.error("Error fetching documents by type:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Upload a CV document
    * @param {FormData} formData - FormData containing the file to upload
    * @returns {Promise<Object>} Response data containing the document
    */
   async uploadCV(formData) {
     try {
-      // Extraire le fichier pour l'optimistic update
-      const file = formData.get('file') || formData.get('cv');
-      
-      // Créer un document temporaire pour l'optimistic update
-      const tempDocument = {
-        id: `temp-${Date.now()}`,
-        type: 'CV',
-        name: file ? file.name : 'CV en cours d\'upload',
-        mime_type: file ? file.type : 'application/pdf',
-        created_at: new Date().toISOString(),
-        is_temp: true // Marquer comme temporaire
-      };
-      
-      // Mettre à jour le cache avec le document temporaire
-      documentCache.updateOptimistically('CV', tempDocument);
-      
-      // Notifier les abonnés de la mise à jour optimiste
-      documentEvents.notify();
-      
-      // Ajouter le type au formData
-      formData.append('type', 'CV');
-      
-      const config = {
-        headers: {
-          'Authorization': `Bearer ${authService.getToken()}`
-        }
-      };
-      
-      // Use apiService instead of direct axios call
-      const response = await apiService.post('/documents/upload/cv', formData, config);
-      
-      // Clear cache after upload
-      documentCache.clear();
-      
-      // Notify subscribers about the update
-      documentEvents.notify();
-      
+      const response = await apiService.post('/documents/upload/cv', formData);
       return response;
     } catch (error) {
-      // En cas d'erreur, forcer un rafraîchissement pour supprimer les documents temporaires
-      documentCache.clear();
-      documentEvents.notify();
+      console.error("Error uploading CV:", error);
       throw error;
     }
   }
@@ -213,21 +190,32 @@ class DocumentService {
    */
   async downloadDocument(documentId) {
     try {
-      const config = {
+      const response = await fetch(`${API_URL}/api/documents/${documentId}/download`, {
         headers: {
           'Authorization': `Bearer ${authService.getToken()}`
-        },
-        responseType: 'blob'
-      };
+        }
+      });
       
-      // Use apiService.get with raw: true option
-      const response = await axios.get(
-        `${API_URL}/api/documents/${documentId}/download`,
-        config
-      );
+      if (!response.ok) {
+        throw new Error('Failed to download document');
+      }
       
-      return response.data;
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = 'document.pdf'; // Le nom sera remplacé par le vrai nom du fichier
+      document.body.appendChild(a);
+      a.click();
+      
+      // Clean up
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      return true;
     } catch (error) {
+      console.error("Error downloading document:", error);
       throw error;
     }
   }
@@ -239,25 +227,10 @@ class DocumentService {
    */
   async deleteDocument(documentId) {
     try {
-      // Remove from cache first for optimistic UI update
-      documentCache.removeDocument(documentId);
-      
-      // Notify subscribers about the update
-      documentEvents.notify();
-      
       const response = await apiService.delete(`/documents/${documentId}`);
-      
-      // Clear the cache after deletion
-      documentCache.clear();
-      
-      // Notify subscribers about the update again after server confirmation
-      documentEvents.notify();
-      
       return response;
     } catch (error) {
-      // Refresh cache in case of error
-      documentCache.clear();
-      documentEvents.notify();
+      console.error("Error deleting document:", error);
       throw error;
     }
   }

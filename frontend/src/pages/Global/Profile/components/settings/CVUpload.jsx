@@ -3,7 +3,6 @@ import { Download, Upload, FileText, Trash2, AlertCircle, File, CheckCircle2 } f
 import { Button } from "@/components/ui/button";
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import { useApiQuery, useApiMutation } from '@/hooks/useReactQuery';
 import {
   Dialog,
   DialogContent,
@@ -12,9 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-
-// Importer le service documentService directement dans le composant
-import documentService from '../../services/documentService';
+import { useDocuments } from '../../hooks/useDocuments';
 
 const CVUpload = memo(({ userData, onUpdate }) => {
   const [cvFile, setCvFile] = useState(null);
@@ -22,63 +19,19 @@ const CVUpload = memo(({ userData, onUpdate }) => {
   const [fileError, setFileError] = useState(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-  // Fetch CV document using React Query
-  const { 
-    data: cvDocuments, 
+  const {
+    documents: cvDocuments,
     isLoading: isLoadingCV,
+    isUploading,
+    isDeleting,
+    uploadDocument,
+    deleteDocument,
+    downloadDocument,
     refetch: refetchCV
-  } = useApiQuery('/api/documents/type/CV', 'userCVDocument', {
-    refetchOnWindowFocus: false,
-    onError: (error) => {
-      console.error("Error fetching CV document:", error);
-    }
-  });
+  } = useDocuments('CV');
 
   // Get the first CV document if available
-  const cvDocument = cvDocuments?.data?.[0] || null;
-
-  // Mutation for uploading CV
-  const { 
-    mutate: uploadCV,
-    isPending: isUploading
-  } = useApiMutation('/api/documents/upload/cv', 'post', 'userCVDocument', {
-    onSuccess: () => {
-      toast.success('CV uploaded successfully');
-      setCvFile(null);
-      refetchCV();
-      
-      // Dispatch event to notify MainLayout about the update
-      document.dispatchEvent(new CustomEvent('user:data-updated'));
-      
-      if (onUpdate) onUpdate();
-      
-      // Reset file input
-      const fileInput = document.getElementById('cv-upload');
-      if (fileInput) fileInput.value = '';
-    },
-    onError: (error) => {
-      toast.error('Failed to upload CV: ' + (error.response?.data?.message || error.message));
-    }
-  });
-
-  // Mutation for deleting CV
-  const { 
-    mutate: deleteCV,
-    isPending: isDeleting
-  } = useApiMutation((id) => `/api/documents/${id}`, 'delete', 'userCVDocument', {
-    onSuccess: () => {
-      toast.success('CV deleted successfully');
-      refetchCV();
-      
-      // Dispatch event to notify MainLayout about the update
-      document.dispatchEvent(new CustomEvent('user:data-updated'));
-
-      if (onUpdate) onUpdate();
-    },
-    onError: (error) => {
-      toast.error('Failed to delete CV: ' + (error.response?.data?.message || error.message));
-    }
-  });
+  const cvDocument = cvDocuments?.[0] || null;
 
   // Handle file selection
   const handleCvFileChange = useCallback((event) => {
@@ -112,8 +65,13 @@ const CVUpload = memo(({ userData, onUpdate }) => {
     
     const formData = new FormData();
     formData.append('file', cvFile);
-    uploadCV(formData);
-  }, [cvFile, uploadCV]);
+    uploadDocument(formData);
+    setCvFile(null);
+    
+    // Reset file input
+    const fileInput = document.getElementById('cv-upload');
+    if (fileInput) fileInput.value = '';
+  }, [cvFile, uploadDocument]);
 
   // Handle document deletion
   const handleDeleteDocument = useCallback(() => {
@@ -134,9 +92,8 @@ const CVUpload = memo(({ userData, onUpdate }) => {
     
     // Close dialog immediately for fluid interaction
     setDeleteDialogOpen(false);
-    
-    deleteCV(cvDocument.id);
-  }, [cvDocument, deleteCV]);
+    deleteDocument(cvDocument.id);
+  }, [cvDocument, deleteDocument]);
 
   // Handle document download
   const handleDownloadDocument = useCallback(async () => {
@@ -145,36 +102,8 @@ const CVUpload = memo(({ userData, onUpdate }) => {
       return;
     }
     
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/documents/${cvDocument.id}/download`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to download document');
-      }
-      
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = url;
-      a.download = cvDocument.name || 'cv.pdf';
-      document.body.appendChild(a);
-      a.click();
-      
-      // Clean up
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      
-      toast.success('Document téléchargé avec succès');
-    } catch (error) {
-      console.error('Erreur lors du téléchargement du CV:', error);
-      toast.error('Erreur lors du téléchargement du CV');
-    }
-  }, [cvDocument]);
+    await downloadDocument(cvDocument.id, cvDocument.name);
+  }, [cvDocument, downloadDocument]);
 
   // Handle drag events
   const handleDrag = useCallback((e) => {

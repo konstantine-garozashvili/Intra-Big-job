@@ -3,7 +3,6 @@
 namespace App\Domains\Global\Document\Controller;
 
 use App\Domains\Global\Document\Entity\Document;
-use App\Domains\Global\Document\Entity\DocumentType;
 use App\Domains\Global\Document\Entity\DocumentHistory;
 use App\Domains\Global\Document\Repository\DocumentRepository;
 use App\Domains\Global\Document\Repository\DocumentTypeRepository;
@@ -73,20 +72,100 @@ class DocumentController extends AbstractController
      * Upload CV for authenticated student or guest user
      */
     #[Route('/upload/cv', name: 'app_document_upload_cv', methods: ['POST'])]
-    public function uploadCv(Request $request): JsonResponse
+    public function uploadCV(Request $request): JsonResponse
     {
-        $user = $this->getUser();
-        
-        // Check if user is either a student or a guest
-        $isStudent = $this->hasStudentRole($user);
-        $isGuest = $this->hasGuestRole($user);
-        
-        if (!$isStudent && !$isGuest) {
-            throw new AccessDeniedHttpException('Only students and guests can upload CV documents');
+        try {
+            $user = $this->getUser();
+            
+            // Check permission to upload CV
+            if ($this->hasGuestRole($user)) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Guests are not allowed to upload CV'
+                ], Response::HTTP_FORBIDDEN);
+            }
+            
+            // Get file from request
+            $file = $request->files->get('file');
+            
+            if (!$file) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'No file uploaded'
+                ], Response::HTTP_BAD_REQUEST);
+            }
+            
+            // Delete any existing CV
+            $cvType = $this->documentTypeRepository->findOneBy(['code' => self::CV_DOCUMENT_TYPE_CODE]);
+            if (!$cvType) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'CV document type not found'
+                ], Response::HTTP_NOT_FOUND);
+            }
+            
+            $existingCV = $this->documentRepository->findOneBy([
+                'user' => $user,
+                'documentType' => $cvType
+            ]);
+            
+            if ($existingCV) {
+                // Delete from storage
+                $storage = $this->storageFactory->createStorage();
+                $storage->delete($existingCV->getPath());
+                
+                // Delete from database
+                $this->entityManager->remove($existingCV);
+                $this->entityManager->flush();
+            }
+            
+            // Process the new file
+            $document = new Document();
+            $document->setUser($user);
+            $document->setDocumentType($cvType);
+            $document->setName($file->getClientOriginalName());
+            $document->setSize($file->getSize());
+            $document->setMimeType($file->getMimeType());
+            
+            // Generate safe filename
+            $originalFilename = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+            $safeFilename = $this->slugger->slug($originalFilename);
+            $newFilename = $safeFilename . '-' . uniqid() . '.' . $file->guessExtension();
+            
+            $document->setFilename($newFilename);
+            
+            // Save file to storage
+            $storage = $this->storageFactory->createStorage();
+            
+            $path = $storage->save(
+                $file,
+                $newFilename,
+                'documents/cv/' . $user->getId()
+            );
+            
+            $document->setPath($path);
+            $document->setStatus(DocumentStatus::PENDING);
+            
+            // Save to database
+            $this->entityManager->persist($document);
+            $this->entityManager->flush();
+            
+            // Create history entry
+            $this->createDocumentHistory($document, DocumentAction::UPLOAD, 'CV uploaded by user');
+            
+            return $this->json([
+                'success' => true,
+                'message' => 'CV uploaded successfully',
+                'data' => $document
+            ], Response::HTTP_CREATED, [], ['groups' => ['document:read']]);
+            
+        } catch (\Exception $e) {
+            error_log('Error uploading CV: ' . $e->getMessage());
+            return $this->json([
+                'success' => false,
+                'message' => 'Error uploading CV: ' . $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
-        
-        // Reuse common upload logic
-        return $this->handleCvUpload($request, $user);
     }
 
     /**

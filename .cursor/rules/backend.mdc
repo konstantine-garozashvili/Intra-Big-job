@@ -1,0 +1,87 @@
+---
+description: 
+globs: .php,.twig.html,.env,.yml
+alwaysApply: false
+---
+# Backend Rules
+
+> **Rules for working with the Symfony backend**
+
+## Critical Rules
+
+### Read file first
+- **Severity: CRITICAL**
+- Always read the entire file contents before suggesting modifications
+- This ensures you understand the component's purpose and dependencies
+
+### Controllers first
+- **Severity: CRITICAL**
+- Examine controllers, entities, and services before modifying any frontend code that interacts with the API
+- Understanding the backend data flow is essential before modifying frontend API calls
+- API controllers are found in `src/Controller/` or in domain-specific directories like `src/Domain/*/Controller/`
+
+### Verify imports
+- **Severity: CRITICAL** 
+- Verify all namespace imports before modifying PHP files
+- Confirm namespace paths match directory structure and that referenced classes exist
+- Namespace follows PSR-4 with base namespace `App\`
+
+### Entity relations
+- **Severity: CRITICAL**
+- Understand entity relationships before modifying entity classes
+- The system has complex relationships between:
+  - User: Has many UserRole, Address, Signature, UserDiploma entities
+  - Belongs to Nationality, Theme, Specialization
+  - Many-to-many with Formation, Group
+  - Role: Connected to User via UserRole junction table
+  - Document-related: document, document_category, document_type, document_history
+  - Ticket system: ticket, ticket_status, ticket_comment, ticket_service
+  - Formation system: formation, formation_student (junction), specialization
+
+## High Priority Rules
+
+### Domain structure
+- **Severity: HIGH**
+- Respect the domain-driven design architecture
+- Code is organized by domain (Admin, HR, Student, SuperAdmin, Teacher, User)
+- Domain-specific code is in `src/Domain/{DomainName}/`
+
+### JWT authentication
+- **Severity: HIGH**
+- Maintain JWT authentication patterns when modifying auth-related code
+- The system uses lexik/jwt-authentication-bundle for authentication
+- Authentication endpoints:
+  - Login: POST `/api/login_check`
+  - Refresh: POST `/api/token/refresh`
+
+### Role system
+- **Severity: HIGH**
+- Consider the role system when modifying security configurations
+- The system has 7 distinct roles with different permissions:
+  1. ADMIN (ID: 100)
+  2. SUPERADMIN (ID: 101)
+  3. HR (ID: 102)
+  4. TEACHER (ID: 103)
+  5. STUDENT (ID: 104)
+  6. GUEST (ID: 105)
+  7. RECRUITER (ID: 106)
+
+### AWS integration
+- **Severity: HIGH**
+- Be careful when modifying AWS S3 integration code for document storage
+- The system uses AWS S3 for document storage (CV, diplomas, etc.)
+- AWS configuration is in .env file
+
+## Medium Priority Rules
+
+### Repository patterns
+- **Severity: MEDIUM**
+- Follow Doctrine repository patterns when adding/modifying database queries
+- Use repository methods for database operations, not direct entity manager queries when possible
+- Repositories are located in `src/Repository/` or domain-specific directories
+
+### REST patterns
+- **Severity: MEDIUM**
+- Maintain RESTful API patterns when modifying controllers
+- Follow consistent response formats and HTTP status codes
+- Use JSON for request and response bodies

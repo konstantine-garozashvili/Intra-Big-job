@@ -286,24 +286,39 @@ class ProfileDataController extends AbstractController
     #[Route('/public/{id}/documents', name: 'api_profile_public_documents', methods: ['GET'])]
     public function getPublicUserDocuments(int $id): JsonResponse
     {
+        // Debug log
+        error_log("Attempting to fetch documents for user ID: " . $id);
+        
         // Récupérer l'utilisateur
         $user = $this->userRepository->findOneWithAllRelations($id);
         
         if (!$user) {
+            error_log("User not found with ID: " . $id);
             return $this->json([
                 'success' => false,
                 'message' => 'Utilisateur non trouvé'
             ], 404);
         }
+
+        error_log("User found with ID: " . $id);
         
-        // Utiliser le service de profil pour récupérer les documents publics
-        $documents = $this->userProfileService->getPublicUserDocuments($user);
-        
-        return $this->json([
-            'success' => true,
-            'data' => [
-                'documents' => $documents
-            ]
-        ]);
+        try {
+            // Utiliser le service de profil pour récupérer les documents publics
+            $documents = $this->userProfileService->getPublicUserDocuments($user);
+            error_log("Documents retrieved: " . json_encode($documents));
+            
+            return $this->json([
+                'success' => true,
+                'data' => [
+                    'documents' => $documents
+                ]
+            ]);
+        } catch (\Exception $e) {
+            error_log("Error fetching documents: " . $e->getMessage());
+            return $this->json([
+                'success' => false,
+                'message' => 'Erreur lors de la récupération des documents: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }
