@@ -6,6 +6,51 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Configuration personnalisée du container */
+@layer components {
+  .container {
+    @apply mx-auto px-4;
+    max-width: 100%;
+  }
+  
+  /* Breakpoints personnalisés pour le container */
+  @media (min-width: 640px) {
+    .container {
+      max-width: 640px;
+    }
+  }
+  
+  @media (min-width: 768px) {
+    .container {
+      max-width: 768px;
+    }
+  }
+  
+  @media (min-width: 1024px) {
+    .container {
+      max-width: 1024px;
+    }
+  }
+  
+  @media (min-width: 1280px) {
+    .container {
+      max-width: 1280px;
+    }
+  }
+  
+  @media (min-width: 1536px) {
+    .container {
+      max-width: 1536px;
+    }
+  }
+  
+  @media (min-width: 1920px) {
+    .container {
+      max-width: 1800px;
+    }
+  }
+}
+
 @layer base {
   :root {
     --color-primary: 200 39% 51%; /* #528eb2 - Couleur principale du nouveau frontend */
