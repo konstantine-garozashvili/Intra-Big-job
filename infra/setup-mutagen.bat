@@ -1,16 +1,25 @@
 @echo off
 echo Setting up Mutagen synchronization for backend container...
 
-REM Check if Mutagen is installed
-mutagen version >nul 2>&1
+REM Set Mutagen executable path
+set MUTAGEN_PATH=%~dp0..\mutagen\mutagen.exe
+
+REM Check if Mutagen executable exists
+if not exist "%MUTAGEN_PATH%" (
+    echo ERROR: Mutagen executable not found at: %MUTAGEN_PATH%
+    exit /b 1
+)
+
+REM Check Mutagen version
+"%MUTAGEN_PATH%" version >nul 2>&1
 if %ERRORLEVEL% NEQ 0 (
-    echo ERROR: Mutagen not found. Please install Mutagen 0.18.1 from https://mutagen.io/
+    echo ERROR: Failed to execute Mutagen. Please check the executable permissions.
     exit /b 1
 )
 
 REM Stop any existing synchronization
 echo Terminating any existing backend synchronization...
-mutagen sync terminate backend-sync 2>nul
+"%MUTAGEN_PATH%" sync terminate backend-sync 2>nul
 
 REM Restart Docker containers
 echo Restarting Docker containers...
@@ -35,7 +44,7 @@ set PROJECT_DIR=%~dp0..
 set BACKEND_DIR=%PROJECT_DIR%\backend
 
 echo Starting Mutagen synchronization...
-mutagen sync create --name=backend-sync ^
+"%MUTAGEN_PATH%" sync create --name=backend-sync ^
     --default-file-mode=0644 ^
     --default-directory-mode=0755 ^
     --symlink-mode=portable ^
@@ -52,7 +61,7 @@ mutagen sync create --name=backend-sync ^
 REM Check status
 echo Checking synchronization status...
 timeout /t 2 /nobreak >nul
-mutagen sync list
+"%MUTAGEN_PATH%" sync list
 
 echo.
 echo Setup Complete!

@@ -1,18 +1,25 @@
 # Mutagen setup script for backend container
 Write-Host "Setting up Mutagen synchronization for backend container..." -ForegroundColor Cyan
 
-# Check if Mutagen is installed
+# Check if Mutagen executable exists
+$mutagenPath = "$PSScriptRoot/../mutagen/mutagen.exe"
+if (-not (Test-Path $mutagenPath)) {
+    Write-Host "ERROR: Mutagen executable not found at: $mutagenPath" -ForegroundColor Red
+    exit 1
+}
+
+# Check Mutagen version
 try {
-    $mutagenVersion = (mutagen version)
+    $mutagenVersion = (& "$mutagenPath" version)
     Write-Host "Mutagen found: $mutagenVersion" -ForegroundColor Green
 } catch {
-    Write-Host "ERROR: Mutagen not found. Please install Mutagen 0.18.1 from https://mutagen.io/" -ForegroundColor Red
+    Write-Host "ERROR: Failed to execute Mutagen. Please check the executable permissions." -ForegroundColor Red
     exit 1
 }
 
 # Stop any existing synchronization
 Write-Host "Terminating any existing backend synchronization..." -ForegroundColor Yellow
-mutagen sync terminate backend-sync 2>$null
+& "$mutagenPath" sync terminate backend-sync 2>$null
 
 # Restart Docker containers
 Write-Host "Restarting Docker containers..." -ForegroundColor Yellow
@@ -37,7 +44,7 @@ $projectDir = (Get-Item $PSScriptRoot).Parent.FullName
 $backendDir = Join-Path $projectDir "backend"
 
 Write-Host "Starting Mutagen synchronization..." -ForegroundColor Green
-mutagen sync create --name=backend-sync `
+& "$mutagenPath" sync create --name=backend-sync `
     --default-file-mode=0644 `
     --default-directory-mode=0755 `
     --symlink-mode=portable `
@@ -54,7 +61,7 @@ mutagen sync create --name=backend-sync `
 # Check status
 Write-Host "Checking synchronization status..." -ForegroundColor Cyan
 Start-Sleep -Seconds 2
-mutagen sync list
+& "$mutagenPath" sync list
 
 Write-Host "`nSetup Complete!" -ForegroundColor Green
 Write-Host "Your backend files should now be synchronizing with the container." -ForegroundColor Green
