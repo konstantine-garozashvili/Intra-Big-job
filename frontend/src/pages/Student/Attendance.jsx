@@ -47,15 +47,6 @@ const Attendance = () => {
         >
           <motion.div variants={itemVariants} className="mb-6">
             <Card className="border-none shadow-md">
-              <CardHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-t-xl">
-                <div className="flex items-center gap-2">
-                  <PenLine className="h-5 w-5" />
-                  <CardTitle className="text-white">Signature de présence</CardTitle>
-                </div>
-                <CardDescription className="text-blue-100">
-                  Enregistrez votre présence et consultez votre historique
-                </CardDescription>
-              </CardHeader>
               <CardContent className="pt-6">
                 <Tabs defaultValue="signature" onValueChange={setActiveTab} className="w-full">
                   <TabsList className="grid w-full grid-cols-2 mb-6">
