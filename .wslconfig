@@ -1,0 +1,6 @@
+[wsl2]
+memory=6GB
+processors=2
+swap=2GB
+localhostForwarding=true
+kernelCommandLine=vsyscall=emulate

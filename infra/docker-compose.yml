@@ -50,14 +50,28 @@ services:
 
   database:
     image: mysql:8.0
-    command: --default-authentication-plugin=mysql_native_password
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --innodb-use-native-aio=0
+      --innodb-flush-method=O_DIRECT
+      --innodb-flush-log-at-trx-commit=0
+      --max-allowed-packet=128M
+      --skip-host-cache
+      --skip-name-resolve
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: bigproject
       MYSQL_USER: user
       MYSQL_PASSWORD: "password"
     volumes:
-      - database_data:/var/lib/mysql
+      - type: volume
+        source: database_data
+        target: /var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     ports:
       - "3306:3306"
     networks:
@@ -87,12 +101,23 @@ services:
     networks:
       - app-network
 
+  dns-checker:
+    image: nicolaka/netshoot
+    command: sh -c "while true; do dig database; sleep 5; done"
+    networks:
+      - app-network
+    depends_on:
+      - database
+
 networks:
   app-network:
     driver: bridge
 
 volumes:
   database_data:
+    driver: local
+    driver_opts:
+      o: "size=2G"
   frontend_node_modules:
   backend_vendor:
   backend_var:
