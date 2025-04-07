@@ -80,7 +80,7 @@ const MainLayout = () => {
         setLoadingState(LOADING_STATES.COMPLETE);
         return newProfileData; // Retourner les nouvelles données pour permettre aux composants de les utiliser
       } catch (error) {
-        console.error('Error refreshing profile data:', error);
+        // Silently handle error
         setLoadingState(LOADING_STATES.ERROR);
         return null;
       }
@@ -111,7 +111,7 @@ const MainLayout = () => {
                 const profileData = await profileService.getAllProfileData();
                 setProfileData(profileData);
               } catch (profileError) {
-                console.warn('Error loading profile data with complete user:', profileError);
+                // Silently handle profile loading error
               }
             }
           } else {
@@ -127,7 +127,7 @@ const MainLayout = () => {
             setShowProgress(true);
           }, 300);
         } catch (error) {
-          console.error('Error fetching initial user data:', error);
+          // Silently handle error
           setLoadingState(LOADING_STATES.ERROR);
         }
       }
@@ -145,16 +145,25 @@ const MainLayout = () => {
       // Mise à jour avec les données complètes du profil
       if (event.detail && event.detail.user) {
         setUserData(event.detail.user);
-        setLoadingState(LOADING_STATES.COMPLETE);
+        // We might already have complete data from the event, so reflect that possibility.
+        // However, we will rely on the refreshProfileData triggered elsewhere 
+        // (e.g., by ProfileProgress) to fetch and set the definitive full profileData state.
+        // Avoid setting loading state directly to COMPLETE here unless absolutely certain,
+        // as the context refresh might still be in progress.
+        // Consider if setLoadingState(LOADING_STATES.COMPLETE) is safe here or should be removed.
+        // For now, let's assume minimal user data update is the primary goal here.
         
-        // Charger les données de profil complètes
-        profileService.getAllProfileData()
-          .then(profileData => {
-            setProfileData(profileData);
-          })
-          .catch(error => {
-            console.warn('Error loading profile data after update:', error);
-          });
+        // REMOVED: Do not fetch profile data here again, rely on refreshProfileData from context.
+        // profileService.getAllProfileData()
+        //   .then(profileData => {
+        //     setProfileData(profileData);
+        //     // Potentially set loading state complete *after* profile data is confirmed set.
+        //     setLoadingState(LOADING_STATES.COMPLETE); 
+        //   })
+        //   .catch(error => {
+        //     console.warn('Error loading profile data after update:', error);
+        //     // Handle error appropriately, maybe revert loading state or show error message
+        //   });
       }
     };
 
