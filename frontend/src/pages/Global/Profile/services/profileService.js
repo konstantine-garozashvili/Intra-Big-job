@@ -126,14 +126,27 @@ class ProfileService {
         return profileCache.consolidatedData;
       }
       
+      // Add unique timestamp to URL to ensure we bypass browser cache when forceRefresh is true
+      const url = options.forceRefresh ? 
+        `${routeToUse}?_t=${Date.now()}` : 
+        routeToUse;
+      
       // Utiliser le gestionnaire centralisé des données utilisateur avec coordination
       const response = await userDataManager.coordinateRequest(
-        routeToUse, // Use the correct route
+        url, // Use the URL with cache buster if needed
         SERVICE_ID,
         () => userDataManager.getUserData({
-          routeKey: routeToUse, // Use the correct route
+          routeKey: url, // Use the URL with cache buster if needed
           forceRefresh: options.forceRefresh,
-          useCache: !options.forceRefresh
+          useCache: !options.forceRefresh,
+          // Add additional parameters to ensure fresh data
+          fetchOptions: options.forceRefresh ? {
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache',
+              'Expires': '0'
+            }
+          } : undefined
         })
       );
       
