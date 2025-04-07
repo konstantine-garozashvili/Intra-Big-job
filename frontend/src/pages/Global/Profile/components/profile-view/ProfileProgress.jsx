@@ -9,8 +9,6 @@ import { Button } from "@/components/ui/button";
 import { ProfileContext } from "@/components/MainLayout";
 
 const ProfileProgress = () => {
-  console.log("[ProfileProgress] Rendering.");
-
   const [isOpen, setIsOpen] = useState(false);
   const { refreshProfileData, isProfileLoading, profileData } = useContext(ProfileContext);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -19,7 +17,6 @@ const ProfileProgress = () => {
   useEffect(() => {
     // This function will be called when any part of the profile is updated
     const handleProfileUpdate = () => {
-      console.log("[ProfileProgress] Detected profile update, refreshing data");
       refreshProfileData();
     };
 
@@ -32,21 +29,24 @@ const ProfileProgress = () => {
     };
   }, [refreshProfileData]);
 
-  console.log("[ProfileProgress] Received from Context:", JSON.stringify(profileData, null, 2));
 
-  console.log("[ProfileProgress] Context profileData:", profileData);
 
   const { completedItems, completionItems } = useMemo(() => {
-    console.log("[ProfileProgress] Memo: Calculating completion items based on profileData:", profileData);
-
+   
     if (!profileData) {
-      console.log("[ProfileProgress] Memo: profileData is null/undefined.");
+     
       return { completedItems: 0, completionItems: [] };
     }
 
     const hasLinkedIn = Boolean(profileData?.linkedinUrl);
     const hasCv = Boolean(profileData?.hasCvDocument);
-    const hasDiploma = Boolean(profileData?.diplomas?.length > 0);
+    // Improved diploma check with more detailed logging
+    const hasDiploma = (() => {
+      const isDiplomaArray = Array.isArray(profileData?.diplomas);
+      const diplomaCount = isDiplomaArray ? profileData.diplomas.length : 0;
+      const result = isDiplomaArray && diplomaCount > 0;
+      return result;
+    })();
     
     const items = [
       { 
@@ -85,7 +85,7 @@ const ProfileProgress = () => {
     try {
       await refreshProfileData();
     } catch (error) {
-      console.error("[ProfileProgress] Error during refresh:", error);
+      // Error handling silently
     }
   };
 
@@ -95,12 +95,9 @@ const ProfileProgress = () => {
     }
   }, [isProfileLoading, isRefreshing]);
 
-  console.log("[ProfileProgress] Rendering UI. Percentage:", profileData ? Math.round((completedItems / 3) * 100) : 0, "Items:", completionItems);
-
   const showLoadingState = (isProfileLoading && !profileData) || isRefreshing;
 
   if (showLoadingState) {
-    console.log("[ProfileProgress] Rendering loading state.");
     return (
       <button
         className="fixed right-8 bottom-8 z-20 flex items-center gap-2 px-4 py-3 rounded-full shadow-lg bg-primary text-primary-foreground hover:bg-primary/90"
@@ -113,7 +110,6 @@ const ProfileProgress = () => {
   }
 
   if (!profileData) {
-    console.log("[ProfileProgress] Rendering empty state (no profile data after load attempt).");
     return null;
   }
 
