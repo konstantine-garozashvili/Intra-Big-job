@@ -361,8 +361,34 @@ Previous work included addressing issues with:
 - Document uploads (CV, diplomas)
 - Data fetching and caching mechanisms
 - Transaction handling in the backend
+- Fixing diploma display in the UI by ensuring proper data refetching
 
 The main focus was on ensuring the profile completion status was correctly updated when documents were uploaded, particularly CV and diploma files and we fixed it. 
+
+## Recent Fixes
+
+### Diploma API Endpoint Issue (Fixed)
+
+We resolved an issue where the `/api/user-diplomas` endpoint wasn't being called consistently after diploma operations (particularly after PUT operations), which caused the available diplomas list to become out of sync with the actual state in the backend. This resulted in:
+
+1. Delays in registering diplomas
+2. Excessive API calls in some cases
+3. Inconsistent UI state where deleted/added diplomas weren't properly reflected
+
+The solution involved multiple layers of protection to ensure API endpoints are properly called after diploma operations:
+
+1. **Direct Service Calls**: Added explicit service calls to bypass React Query's cache
+2. **Cache Busting**: Implemented URL parameters with timestamps to force fresh requests
+3. **Local Storage Clearing**: Added aggressive clearing of cached diploma data
+4. **Redundant Mechanisms**: Used both React Query and direct service calls to guarantee API calls
+5. **Delayed Refetching**: Added timeouts to ensure backend has time to process changes before refetching
+
+Modified files:
+- `DiplomaManager.jsx`: Enhanced mutation handlers with robust refetching
+- `CareerSettings.jsx`: Updated diploma state management
+- `diplomaService.js`: Added cache management and guaranteed API calls
+
+This approach ensures that after any diploma operation (add or delete), both the user diplomas and available diplomas endpoints are properly called, keeping the UI state consistent with the backend.
 
 ## API Authentication Examples
 

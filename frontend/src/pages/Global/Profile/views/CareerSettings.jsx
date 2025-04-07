@@ -308,8 +308,20 @@ const CareerSettings = () => {
             userData={{ role: userRole }}
             diplomas={diplomas || []}
             setDiplomas={(updatedDiplomas) => {
-              // Conserver la compatibilité avec l'API existante
+              // Update the React Query cache without triggering additional refetches
               queryClient.setQueryData(['userDiplomas'], updatedDiplomas);
+              
+              // Explicitly invalidate and refetch to ensure API call occurs
+              queryClient.invalidateQueries(['userDiplomas']);
+              queryClient.refetchQueries(['userDiplomas']);
+              
+              // Also refetch profile data for completeness
+              queryClient.invalidateQueries(['/api/profile']);
+              
+              // Force a direct API call regardless of React Query's cache
+              diplomaService.getUserDiplomas().catch(err => 
+                console.error("[CareerSettings] Error directly fetching user diplomas:", err)
+              );
             }}
           />
         </div>
