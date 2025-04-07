@@ -87,7 +87,7 @@ export const useProfilePicture = () => {
         setPreviewUrl(null);
       }
       
-      return result;
+                return result;
     } catch (error) {
       console.error("Erreur lors de la suppression de la photo de profil:", error);
       throw error;

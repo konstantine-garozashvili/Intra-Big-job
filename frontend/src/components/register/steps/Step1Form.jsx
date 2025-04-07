@@ -4,6 +4,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { useUserData, useValidation } from "../RegisterContext";
 import { PasswordStrengthIndicator } from "../RegisterUtils";
 import PropTypes from "prop-types";
+import { toast } from "@/lib/toast";
 
 const Step1Form = ({ goToNextStep }) => {
   const {
@@ -181,19 +182,22 @@ const Step1Form = ({ goToNextStep }) => {
               
               // Vérifier si le texte collé dépasse la limite
               if (pastedText.length > 50) {
-                // Toujours empêcher le collage par défaut
-                e.preventDefault(); 
+                // Empêcher le collage par défaut
+                e.preventDefault();
                 
-                // Tronquer le texte et le définir manuellement
-                setPassword(pastedText.substring(0, 50));
+                // Afficher un message d'alerte
+                alert(`ATTENTION : Le mot de passe que vous tentez de coller (${pastedText.length} caractères) dépasse la limite de 50 caractères. Veuillez utiliser un mot de passe plus court.`);
                 
-                // Afficher un message d'erreur
+                // Utiliser notre toast personnalisé pour les erreurs de limite de mot de passe
+                toast.passwordLimitError(`Tentative de collage d'un mot de passe trop long (${pastedText.length} caractères)`);
+                
+                // Afficher un message d'erreur dans le formulaire
                 const newErrors = {...localErrors};
-                newErrors.password = "Le mot de passe collé a été tronqué à 50 caractères";
+                newErrors.password = "Le collage a été bloqué - le mot de passe dépassait 50 caractères";
                 setLocalErrors(newErrors);
                 
                 // Log de sécurité pour débogage
-                console.warn(`Tentative de collage d'un mot de passe trop long (${pastedText.length} caractères) - Tronqué à 50`);
+                console.error(`Tentative bloquée de collage d'un mot de passe trop long (${pastedText.length} caractères)`);
               }
             }}
             placeholder="Entre 8 et 50 caractères"
@@ -216,6 +220,12 @@ const Step1Form = ({ goToNextStep }) => {
         {shouldShowError('password') && (
           <p className="text-red-500 text-xs mt-1">{getErrorMessage('password')}</p>
         )}
+        
+        <div className="flex items-center mt-1">
+          <p className="text-xs text-gray-500">
+            <span className="font-semibold">Important :</span> Votre mot de passe ne doit pas dépasser 50 caractères.
+          </p>
+        </div>
         
         {/* Indicateur de force du mot de passe */}
         <PasswordStrengthIndicator password={password} />
