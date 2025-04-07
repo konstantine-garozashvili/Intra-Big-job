@@ -117,7 +117,9 @@ volumes:
   database_data:
     driver: local
     driver_opts:
-      o: "size=2G"
+      type: none
+      o: bind
+      device: C:/DockerVolumes/mysql-data
   frontend_node_modules:
   backend_vendor:
   backend_var:
