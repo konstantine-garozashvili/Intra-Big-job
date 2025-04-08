@@ -7,6 +7,7 @@ nelmio_cors:
         allow_headers: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
         expose_headers: ['Link', 'Location', 'X-Debug-Token', 'X-Debug-Token-Link']
         max_age: 3600
+        allow_credentials: true
     paths:
         '^/api/':
             allow_origin: ['*']

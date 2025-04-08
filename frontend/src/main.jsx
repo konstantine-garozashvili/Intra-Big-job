@@ -6,8 +6,6 @@ import './index.css'
 import { queryClient } from './lib/services/queryClient'
 import { ReactQueryDevTools } from './components/devtools/ReactQueryDevTools.jsx'
 
-
-
 // Expose queryClient globally for debugging
 window.queryClient = queryClient;
 

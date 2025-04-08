@@ -174,6 +174,17 @@
   overflow: hidden;
 }
 
+/* Star animation for space theme */
+@keyframes twinkle {
+  0% { opacity: 0.2; }
+  50% { opacity: 0.8; }
+  100% { opacity: 0.2; }
+}
+
+.animate-twinkle {
+  animation: twinkle 3s infinite ease-in-out;
+}
+
 /* Calendar navigation */
 .react-calendar__navigation {
   display: flex;

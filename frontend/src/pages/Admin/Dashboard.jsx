@@ -314,7 +314,6 @@ const AdminDashboard = () => {
         </Card>
         
 
-
         <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
           <DialogContent className="no-focus-outline">
             <DialogHeader>
