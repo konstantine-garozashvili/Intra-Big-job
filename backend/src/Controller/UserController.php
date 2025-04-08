@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\User;
 use App\Repository\UserRepository;
+use App\Service\DocumentStorageFactory;
 use App\Service\RegistrationService;
 use App\Service\ValidationService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -24,17 +25,20 @@ class UserController extends AbstractController
     private $serializer;
     private $userRepository;
     private $validationService;
+    private $documentStorageFactory;
     
     public function __construct(
         Security $security,
         SerializerInterface $serializer,
         UserRepository $userRepository,
-        ValidationService $validationService
+        ValidationService $validationService,
+        DocumentStorageFactory $documentStorageFactory
     ) {
         $this->security = $security;
         $this->serializer = $serializer;
         $this->userRepository = $userRepository;
         $this->validationService = $validationService;
+        $this->documentStorageFactory = $documentStorageFactory;
     }
     
     #[Route('/register', name: 'app_register', methods: ['POST'])]
@@ -113,7 +117,6 @@ class UserController extends AbstractController
     public function listUsers(): JsonResponse
     {
         try {
-            // Get current user
             $currentUser = $this->getUser();
             if (!$currentUser) {
                 return $this->json(['message' => 'User not authenticated'], JsonResponse::HTTP_UNAUTHORIZED);
@@ -122,14 +125,34 @@ class UserController extends AbstractController
             // Find all users except the current user
             $users = $this->userRepository->findAllExcept($currentUser->getId());
             
-            // Serialize with user roles included
-            $serializedUsers = $this->serializer->serialize(
-                $users, 
-                'json', 
-                ['groups' => ['user:read', 'message:read']]
-            );
+            // Format users with profile picture URLs
+            $formattedUsers = [];
+            foreach ($users as $user) {
+                $userData = [
+                    'id' => $user->getId(),
+                    'firstName' => $user->getFirstName(),
+                    'lastName' => $user->getLastName(),
+                    'email' => $user->getEmail(),
+                    'profilePicturePath' => $user->getProfilePicturePath(),
+                    'profilePictureUrl' => null
+                ];
+                
+                // Add profile picture URL if available
+                if ($user->getProfilePicturePath()) {
+                    try {
+                        $userData['profilePictureUrl'] = $this->documentStorageFactory->getDocumentUrl($user->getProfilePicturePath());
+                    } catch (\Exception $e) {
+                        // Continue without URL in case of error
+                    }
+                }
+                
+                $formattedUsers[] = $userData;
+            }
             
-            return new JsonResponse($serializedUsers, JsonResponse::HTTP_OK, [], true);
+            return $this->json([
+                'success' => true,
+                'data' => $formattedUsers
+            ]);
         } catch (\Exception $e) {
             return $this->json([
                 'success' => false,

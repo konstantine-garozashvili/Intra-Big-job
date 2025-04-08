@@ -82,6 +82,7 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     private ?\App\Domains\Student\Entity\StudentProfile $studentProfile = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['user:read', 'message:read'])]
     private ?string $profilePicturePath = null;
 
     #[ORM\ManyToOne]
@@ -665,6 +666,18 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     {
         $this->profilePicturePath = $profilePicturePath;
         return $this;
+    }
+
+    /**
+     * Get the URL of the profile picture
+     */
+    public function getProfilePictureUrl(): ?string
+    {
+        if (!$this->profilePicturePath) {
+            return null;
+        }
+
+        return $this->profilePicturePath;
     }
 
     /**
