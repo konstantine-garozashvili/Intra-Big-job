@@ -1,25 +1,10 @@
-import React, { lazy, Suspense, memo, useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { CalendarIcon } from "lucide-react";
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { CountrySelector } from "@/components/ui/country-selector";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { useUserData, useValidation } from "../RegisterContext";
-import 'react-calendar/dist/Calendar.css';
-import '../../../styles/custom-calendar.css'; // Import du CSS personnalisé pour le calendrier
 import { isValidPhone } from "@/lib/utils/validation";
-
-// Chargement dynamique du calendrier pour améliorer les performances
-const Calendar = lazy(() => import('react-calendar'));
-
-// Composant de chargement pour le calendrier - Mémorisé
-const CalendarFallback = memo(() => (
-  <div className="flex items-center justify-center p-8">
-    <div className="w-8 h-8 border-t-2 border-b-2 border-[#0066ff] rounded-full animate-spin"></div>
-  </div>
-));
-
-CalendarFallback.displayName = 'CalendarFallback';
 
 const Step2Form = ({ goToNextStep, goToPrevStep }) => {
   const {
@@ -34,16 +19,156 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
     step2Tried
   } = useValidation();
 
-  // État local pour le calendrier et les erreurs
-  const [calendarOpen, setCalendarOpen] = useState(false);
+  // État local pour les erreurs
   const [localErrors, setLocalErrors] = React.useState({});
+  const [dateInput, setDateInput] = useState(
+    birthDate 
+      ? new Intl.DateTimeFormat('fr-FR').format(birthDate) 
+      : ""
+  );
+  
+  const inputRef = useRef(null);
 
   // Formater la date pour l'affichage
-  const formattedBirthDate = birthDate ? new Intl.DateTimeFormat('fr-FR').format(birthDate) : null;
+  const formattedBirthDate = birthDate ? new Intl.DateTimeFormat('fr-FR').format(birthDate) : "";
+
+  // Formater automatiquement la saisie de date (JJ/MM/AAAA)
+  const formatDateInput = (value) => {
+    // Supprimer tous les caractères qui ne sont pas des chiffres ou des barres obliques
+    let cleaned = value.replace(/[^\d/]/g, '');
+    // Supprimer les barres obliques existantes pour les ajouter correctement
+    cleaned = cleaned.replace(/\//g, '');
+    
+    let formatted = '';
+    
+    // Limiter à 8 chiffres max (JJ/MM/AAAA = 8 chiffres)
+    cleaned = cleaned.slice(0, 8);
+    
+    // Formater avec les barres obliques
+    for (let i = 0; i < cleaned.length; i++) {
+      if (i === 2 || i === 4) {
+        formatted += '/';
+      }
+      formatted += cleaned[i];
+    }
+    
+    return formatted;
+  };
+
+  // Gérer le changement de date via saisie manuelle
+  const handleDateInputChange = (e) => {
+    const value = e.target.value;
+    const formattedValue = formatDateInput(value);
+    setDateInput(formattedValue);
+    
+    // Positionner correctement le curseur après avoir ajouté une barre oblique
+    if (value.length === 2 && formattedValue.length === 3) {
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.selectionStart = 3;
+          inputRef.current.selectionEnd = 3;
+        }
+      }, 0);
+    } else if (value.length === 5 && formattedValue.length === 6) {
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.selectionStart = 6;
+          inputRef.current.selectionEnd = 6;
+        }
+      }, 0);
+    }
+  };
+
+  // Appliquer la date saisie
+  const applyDateInput = () => {
+    if (!dateInput || dateInput.length < 10) { // JJ/MM/AAAA = 10 caractères
+      if (dateInput.length > 0) {
+        setLocalErrors(prev => ({...prev, birthDate: "Format de date invalide. Utilisez JJ/MM/AAAA"}));
+      }
+      return;
+    }
+    
+    // Format attendu: JJ/MM/AAAA
+    const dateParts = dateInput.split('/');
+    if (dateParts.length !== 3) {
+      setLocalErrors(prev => ({...prev, birthDate: "Format de date invalide. Utilisez JJ/MM/AAAA"}));
+      return;
+    }
+    
+    const day = parseInt(dateParts[0], 10);
+    const month = parseInt(dateParts[1], 10) - 1; // Les mois commencent à 0 en JavaScript
+    const year = parseInt(dateParts[2], 10);
+    
+    if (isNaN(day) || isNaN(month) || isNaN(year) || 
+        day < 1 || day > 31 || month < 0 || month > 11 || year < 1940 || year > new Date().getFullYear()) {
+      setLocalErrors(prev => ({...prev, birthDate: "Date invalide"}));
+      return;
+    }
+    
+    // Vérification supplémentaire pour les jours par mois
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    if (day > daysInMonth) {
+      setLocalErrors(prev => ({...prev, birthDate: `Le mois sélectionné n'a que ${daysInMonth} jours`}));
+      return;
+    }
+    
+    // Vérification de l'âge minimum (16 ans)
+    const birthDateObj = new Date(year, month, day);
+    const today = new Date();
+    const minAgeDate = new Date(today);
+    minAgeDate.setFullYear(today.getFullYear() - 16);
+    
+    if (birthDateObj > minAgeDate) {
+      setLocalErrors(prev => ({...prev, birthDate: "Vous devez avoir au moins 16 ans pour vous inscrire"}));
+      return;
+    }
+    
+    handleDateChange(birthDateObj);
+    setLocalErrors(prev => ({...prev, birthDate: null}));
+  };
+
+  // Fonction exécutée quand on quitte le champ de date
+  const handleDateBlur = () => {
+    applyDateInput();
+  };
+
+  // Fonction exécutée quand on appuie sur Entrée dans le champ de date
+  const handleDateKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      applyDateInput();
+    }
+  };
+
+  // Fonction pour gérer la touche "Backspace"
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      applyDateInput();
+      return;
+    }
+    
+    // Ne rien faire de spécial pour les autres touches
+    if (e.key !== 'Backspace') return;
+    
+    // Gérer la suppression des barres obliques
+    const cursorPosition = e.target.selectionStart;
+    if (dateInput[cursorPosition - 1] === '/' && cursorPosition > 0) {
+      e.preventDefault();
+      const newValue = dateInput.slice(0, cursorPosition - 2) + dateInput.slice(cursorPosition);
+      setDateInput(newValue);
+      
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.selectionStart = cursorPosition - 2;
+          inputRef.current.selectionEnd = cursorPosition - 2;
+        }
+      }, 0);
+    }
+  };
 
   // Validation de l'étape 2
   const validateStep2 = () => {
-    
     const newErrors = {};
     let valid = true;
     
@@ -99,78 +224,28 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
           Date de naissance
         </label>
         <div className="relative">
-          <div 
-            className={`w-full px-4 py-3 rounded-md border flex items-center cursor-pointer transition-colors hover:border-[#0066ff] ${shouldShowError('birthDate') ? 'border-red-500' : 'border-gray-300'}`}
-            onClick={() => setCalendarOpen(true)}
-          >
-            {formattedBirthDate ? (
-              <span className="text-gray-900">
-                {formattedBirthDate}
-              </span>
-            ) : (
-              <span className="text-gray-500">JJ/MM/AAAA</span>
-            )}
+          <div className={`w-full px-4 py-3 rounded-md border flex items-center ${shouldShowError('birthDate') ? 'border-red-500' : 'border-gray-300'}`}>
+            <input 
+              ref={inputRef}
+              type="text" 
+              placeholder="JJ/MM/AAAA"
+              className="w-full border-none focus:outline-none bg-transparent"
+              value={dateInput}
+              onChange={handleDateInputChange}
+              onBlur={handleDateBlur}
+              onKeyDown={handleKeyDown}
+              inputMode="numeric"
+              maxLength={10}
+            />
             <CalendarIcon className="ml-auto h-5 w-5 text-gray-500" />
           </div>
-          
-          <Dialog open={calendarOpen} onOpenChange={setCalendarOpen}>
-            <DialogContent className="p-0 sm:max-w-[425px] bg-white rounded-lg shadow-xl border-none overflow-hidden">
-              <div className="p-4 pb-0">
-                <DialogTitle className="text-xl font-semibold text-center text-gray-900">
-                  Sélectionnez votre date de naissance
-                </DialogTitle>
-                <DialogDescription className="text-sm text-center text-gray-500 mt-1">
-                  Vous devez avoir au moins 16 ans pour vous inscrire.
-                </DialogDescription>
-              </div>
-              <div className="calendar-container w-full p-4">
-                <Suspense fallback={<CalendarFallback />}>
-                  <Calendar 
-                    onChange={handleDateChange} 
-                    value={birthDate} 
-                    locale="fr"
-                    maxDate={new Date()}
-                    minDetail="decade" 
-                    defaultView="century"
-                    minDate={new Date(1940, 0, 1)}
-                    className="modern-calendar w-full"
-                    formatShortWeekday={(locale, date) => ['L', 'M', 'M', 'J', 'V', 'S', 'D'][date.getDay()]}
-                    navigationLabel={({ date }) => 
-                      date.toLocaleString('fr', { month: 'long', year: 'numeric' }).toLowerCase()
-                    }
-                    next2Label={<span className="text-lg text-[#0066ff]">»</span>}
-                    prev2Label={<span className="text-lg text-[#0066ff]">«</span>}
-                    nextLabel={<span className="text-lg text-[#0066ff]">›</span>}
-                    prevLabel={<span className="text-lg text-[#0066ff]">‹</span>}
-                    showNeighboringMonth={false}
-                    tileClassName={({ date, view }) => {
-                      // Vérifie si la date est dans le futur
-                      const today = new Date();
-                      today.setHours(0, 0, 0, 0);
-                      
-                      if (view === 'month' && date > today) {
-                        return 'calendar-future-date';
-                      }
-                      
-                      return null;
-                    }}
-                  />
-                </Suspense>
-              </div>
-              <div className="p-4 flex justify-end">
-                <button 
-                  className="calendar-confirm-button"
-                  onClick={() => setCalendarOpen(false)}
-                >
-                  Confirmer
-                </button>
-              </div>
-            </DialogContent>
-          </Dialog>
           
           {shouldShowError('birthDate') && (
             <p className="text-red-500 text-xs mt-1">{getErrorMessage('birthDate')}</p>
           )}
+          <p className="text-xs text-gray-500 mt-1">
+            Format: JJ/MM/AAAA - Vous devez avoir au moins 16 ans pour vous inscrire.
+          </p>
         </div>
       </div>
 
