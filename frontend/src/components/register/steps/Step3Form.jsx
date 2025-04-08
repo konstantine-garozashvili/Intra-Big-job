@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useAddress, useValidation } from "../RegisterContext";
 import { useUserData, useValidation } from "../RegisterContext";
 import { motion } from "framer-motion";
 
