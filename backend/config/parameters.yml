@@ -1,0 +1,12 @@
+parameters:
+    database_host: konstaxglobal.mysql.db
+    database_port: 3306
+    database_name: konstax_bigprjg
+    database_user: konstax_bigprjg
+    database_password: Weaver0311
+    mailer_transport: smtp
+    mailer_host: smtp.example.com
+    mailer_user: ~
+    mailer_password: ~
+    locale: en
+    secret: 9941583c5b114eb7fd76e3477c2b0582c3faea5a342652d62199c3e964c10bbf 
