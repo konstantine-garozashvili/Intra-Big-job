@@ -354,6 +354,7 @@ function AppContent() {
       {/* Public Routes */}
       <Route element={<PublicLayout />}>
         <Route element={<PublicRoute />}>
+          <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/registration-success" element={<RegistrationSuccess />} />
@@ -362,17 +363,17 @@ function AppContent() {
           <Route path="/reset-password" element={<ResetPasswordRequest />} />
           <Route path="/reset-password/confirmation" element={<ResetPasswordConfirmation />} />
           <Route path="/reset-password/reset" element={<ResetPassword />} />
+          <Route path="/formations" element={<FormationList />} />
+          <Route path="/formation-finder" element={<FormationFinder />} />
+          <Route path="/all-formations" element={<AllFormations />} />
+          <Route path="/formations/web" element={<WebDevelopment />} />
+          <Route path="/formations/ai" element={<ArtificialIntelligence />} />
+          <Route path="/formations/cybersecurity" element={<Cybersecurity />} />
+          <Route path="/formations/mobile" element={<MobileDevelopment />} />
+          <Route path="/formations/data-science" element={<DataScience />} />
+          <Route path="/formations/game" element={<GameDevelopment />} />
+          <Route path="/skill-assessment" element={<SkillAssessment />} />
         </Route>
-        {/* Formation routes - accessible without authentication */}
-        <Route path="/formations" element={<FormationList />} />
-        <Route path="/formation-finder" element={<FormationFinder />} />
-        <Route path="/all-formations" element={<AllFormations />} />
-        <Route path="/formations/web-development" element={<WebDevelopment />} />
-        <Route path="/formations/cybersecurity" element={<Cybersecurity />} />
-        <Route path="/formations/artificial-intelligence" element={<ArtificialIntelligence />} />
-        <Route path="/formations/data-science" element={<DataScience />} />
-        <Route path="/formations/mobile-development" element={<MobileDevelopment />} />
-        <Route path="/formations/game-development" element={<GameDevelopment />} />
       </Route>
 
       {/* Protected Routes */}
@@ -393,7 +394,6 @@ function AppContent() {
           {/* Global Routes */}
           <Route path="/trombinoscope" element={<Trombinoscope />} />
           <Route path="/visual-concept" element={<VisualConcept />} />
-          <Route path="/skill-assessment" element={<SkillAssessment />} />
 
           {/* Ticket System Routes */}
           <Route path="/tickets" element={<TicketList />} />

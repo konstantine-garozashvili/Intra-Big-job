@@ -41,7 +41,7 @@ const HeroSection = ({ onExploreClick }) => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.4 }}
         >
-          <Link to="/formations/finder">
+          <Link to="/formation-finder">
             <motion.button
               className="px-8 py-4 bg-gradient-to-r from-[#001a38] to-[#0a3c6e] rounded-full text-white font-medium text-lg shadow-lg"
               whileHover={{ scale: 1.05, boxShadow: '0 0 20px rgba(10, 60, 110, 0.5)' }}
@@ -51,7 +51,7 @@ const HeroSection = ({ onExploreClick }) => {
             </motion.button>
           </Link>
           
-          <Link to="/formations/all">
+          <Link to="/all-formations">
             <motion.button
               className="px-8 py-4 bg-[#001a38]/60 backdrop-blur-sm rounded-full text-white font-medium text-lg border border-[#0a3c6e]/50 hover:border-blue-400"
               whileHover={{ scale: 1.05 }}

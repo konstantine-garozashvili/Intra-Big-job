@@ -275,7 +275,6 @@ const MainLayout = () => {
   const { hasRole, isLoading: rolesLoading } = useRoles();
   const location = useLocation();
   const [isAuthenticated, setIsAuthenticated] = useState(authService.isLoggedIn());
-  const [isTransitioning, setIsTransitioning] = useState(false);
   const [minContentHeight, setMinContentHeight] = useState('100vh');
   const [initialRender, setInitialRender] = useState(true);
   const [isShowingConfetti, setIsShowingConfetti] = useState(false);
@@ -495,50 +494,41 @@ const MainLayout = () => {
 
   return (
     <ProfileContext.Provider value={profileContextValue}>
-      <div className="flex flex-col min-h-screen bg-gray-50">
-        {/* Layout-wide Confetti Animation */}
-        {isShowingConfetti && (
-          <LayoutConfetti isActive={isShowingConfetti} />
-        )}
+      <div className="min-h-screen bg-background">
+        {/* Only show Navbar for authenticated users */}
+        {isAuthenticated && <Navbar />}
         
-        {/* Congratulations Modal */}
-        <CongratulationsModal 
-          isOpen={showCongratulations} 
-          onClose={handleCloseCongratulations} 
-        />
-        
-        {/* Navbar conditionally rendered */}
-        {!isFullScreenPage && (
-          <Navbar 
-            user={userData} 
-            isLoading={loadingState !== LOADING_STATES.COMPLETE && isAuthenticated} 
-          />
-        )}
-        
-        {/* Main content with minimum height to ensure footer is below viewport */}
-        <main 
-          className={`flex-grow ${isFullScreenPage ? 'px-0 py-0' : 'container mx-auto px-4 py-8'}`}
-          style={{ minHeight: minContentHeight }}
+        <main
+          style={{
+            minHeight: minContentHeight,
+            paddingTop: isAuthenticated ? '64px' : '0', // Add padding only when navbar is present
+          }}
+          className={`relative ${isFullScreenPage ? '' : 'container mx-auto px-4 sm:px-6 lg:px-8'}`}
         >
-          {/* Passer l'état de chargement au contexte Outlet */}
-          <Outlet context={{ 
-            userData, 
-            profileData, 
-            loadingState,
-            isLoading,
-            hasMinimalData
-          }} />
+          <Outlet />
+          {showProgress && !isFullScreenPage && (
+            <RoleGuard roles={[ROLES.STUDENT]}>
+              <ProfileProgress />
+            </RoleGuard>
+          )}
         </main>
 
-        {showProgress && profileData && hasRole(ROLES.GUEST) && (
-          <ProfileProgress userData={profileData} />
+        {/* Only show Footer and Chat for authenticated users */}
+        {isAuthenticated && (
+          <>
+            <Footer />
+            <RoleGuard roles={[ROLES.STUDENT, ROLES.TEACHER]}>
+              <ChatButton />
+            </RoleGuard>
+          </>
         )}
-        
-        {/* Add ChatButton for authenticated users */}
-        {isAuthenticated && !isFullScreenPage && <ChatButton />}
-        
-        {/* Footer */}
-        <Footer />
+
+        {/* Confetti and congratulations modal */}
+        <LayoutConfetti isActive={isShowingConfetti} />
+        <CongratulationsModal
+          isOpen={showCongratulations}
+          onClose={handleCloseCongratulations}
+        />
       </div>
     </ProfileContext.Provider>
   );

@@ -121,7 +121,7 @@ const FormationLayout = ({
           </motion.button>
           
           <div className="flex items-center space-x-4">
-            <Link to="/formations/all">
+            <Link to="/all-formations">
               <motion.button
                 className={`py-2 px-4 rounded-lg ${colors.light} hover:bg-opacity-10 hover:bg-white`}
                 whileHover={{ scale: 1.05 }}

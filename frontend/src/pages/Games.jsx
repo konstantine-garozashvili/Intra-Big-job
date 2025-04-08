@@ -188,7 +188,7 @@ const SkillAssessment = () => {
               </p>
             </div>
             
-            <Link to="/formations/finder">
+            <Link to="/formation-finder">
               <motion.button
                 className={`px-10 py-5 rounded-xl text-white font-medium text-lg shadow-xl relative overflow-hidden group`}
                 style={{ 
