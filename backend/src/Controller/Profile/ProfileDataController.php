@@ -6,6 +6,7 @@ use App\Entity\User;
 use App\Repository\UserRepository;
 use App\Repository\DiplomaRepository;
 use App\Service\UserDiplomaService;
+use App\Service\DocumentStorageFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -22,6 +23,7 @@ class ProfileDataController extends AbstractController
     private $userRepository;
     private $diplomaRepository;
     private $userDiplomaService;
+    private $documentStorageFactory;
     
     public function __construct(
         Security $security,
@@ -29,7 +31,8 @@ class ProfileDataController extends AbstractController
         EntityManagerInterface $entityManager,
         UserRepository $userRepository,
         DiplomaRepository $diplomaRepository,
-        UserDiplomaService $userDiplomaService
+        UserDiplomaService $userDiplomaService,
+        DocumentStorageFactory $documentStorageFactory
     ) {
         $this->security = $security;
         $this->serializer = $serializer;
@@ -37,6 +40,7 @@ class ProfileDataController extends AbstractController
         $this->userRepository = $userRepository;
         $this->diplomaRepository = $diplomaRepository;
         $this->userDiplomaService = $userDiplomaService;
+        $this->documentStorageFactory = $documentStorageFactory;
     }
 
     /**
@@ -124,6 +128,19 @@ class ProfileDataController extends AbstractController
                 'diplomas' => $diplomas,
             ]
         ];
+        
+        // Ajouter l'URL de la photo de profil si disponible
+        if ($user->getProfilePicturePath()) {
+            try {
+                $profilePictureUrl = $this->documentStorageFactory->getDocumentUrl($user->getProfilePicturePath());
+                $userData['user']['profilePictureUrl'] = $profilePictureUrl;
+            } catch (\Exception $e) {
+                // En cas d'erreur, on ne bloque pas la réponse, on continue sans l'URL
+                $userData['user']['profilePictureUrl'] = null;
+            }
+        } else {
+            $userData['user']['profilePictureUrl'] = null;
+        }
         
         // Ajouter le profil étudiant si l'utilisateur en a un
         if ($user->getStudentProfile()) {
@@ -219,6 +236,19 @@ class ProfileDataController extends AbstractController
                 ] : null,
             ]
         ];
+        
+        // Ajouter l'URL de la photo de profil si disponible
+        if ($user->getProfilePicturePath()) {
+            try {
+                $profilePictureUrl = $this->documentStorageFactory->getDocumentUrl($user->getProfilePicturePath());
+                $userData['user']['profilePictureUrl'] = $profilePictureUrl;
+            } catch (\Exception $e) {
+                // En cas d'erreur, on ne bloque pas la réponse, on continue sans l'URL
+                $userData['user']['profilePictureUrl'] = null;
+            }
+        } else {
+            $userData['user']['profilePictureUrl'] = null;
+        }
         
         // Ajouter les adresses si disponibles
         $addresses = $user->getAddresses();

@@ -1,5 +1,10 @@
 ---
 description: 
+globs: 
+alwaysApply: false
+---
+---
+description: 
 globs: .php,.twig.html,.env,.yml
 alwaysApply: false
 ---
@@ -13,6 +18,7 @@ alwaysApply: false
 - **Severity: CRITICAL**
 - Always read the entire file contents before suggesting modifications
 - This ensures you understand the component's purpose and dependencies
+- Always use the backend commands in the backend container
 
 ### Controllers first
 - **Severity: CRITICAL**
