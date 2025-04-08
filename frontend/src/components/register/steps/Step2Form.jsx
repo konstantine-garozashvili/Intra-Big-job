@@ -19,18 +19,26 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
     step2Tried
   } = useValidation();
 
-  // État local pour les erreurs
+  // État local pour les erreurs et le focus
   const [localErrors, setLocalErrors] = React.useState({});
   const [dateInput, setDateInput] = useState(
     birthDate 
       ? new Intl.DateTimeFormat('fr-FR').format(birthDate) 
       : ""
   );
+  const [isFocused, setIsFocused] = useState(false);
   
   const inputRef = useRef(null);
 
   // Formater la date pour l'affichage
   const formattedBirthDate = birthDate ? new Intl.DateTimeFormat('fr-FR').format(birthDate) : "";
+
+  // Effet pour mettre à jour l'entrée quand birthDate change
+  useEffect(() => {
+    if (birthDate) {
+      setDateInput(new Intl.DateTimeFormat('fr-FR').format(birthDate));
+    }
+  }, [birthDate]);
 
   // Formater automatiquement la saisie de date (JJ/MM/AAAA)
   const formatDateInput = (value) => {
@@ -61,6 +69,11 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
     const formattedValue = formatDateInput(value);
     setDateInput(formattedValue);
     
+    // Si une erreur était affichée, la masquer pendant que l'utilisateur tape
+    if (localErrors.birthDate && formattedValue !== dateInput) {
+      setLocalErrors(prev => ({...prev, birthDate: null}));
+    }
+    
     // Positionner correctement le curseur après avoir ajouté une barre oblique
     if (value.length === 2 && formattedValue.length === 3) {
       setTimeout(() => {
@@ -81,10 +94,14 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
 
   // Appliquer la date saisie
   const applyDateInput = () => {
-    if (!dateInput || dateInput.length < 10) { // JJ/MM/AAAA = 10 caractères
-      if (dateInput.length > 0) {
-        setLocalErrors(prev => ({...prev, birthDate: "Format de date invalide. Utilisez JJ/MM/AAAA"}));
-      }
+    // Si le champ est vide, ne pas afficher d'erreur immédiatement (attendre la validation finale)
+    if (!dateInput || dateInput.trim() === "") {
+      return;
+    }
+    
+    // Si la date est incomplète
+    if (dateInput.length < 10) { // JJ/MM/AAAA = 10 caractères
+      setLocalErrors(prev => ({...prev, birthDate: "Format de date invalide. Utilisez JJ/MM/AAAA"}));
       return;
     }
     
@@ -99,9 +116,24 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
     const month = parseInt(dateParts[1], 10) - 1; // Les mois commencent à 0 en JavaScript
     const year = parseInt(dateParts[2], 10);
     
-    if (isNaN(day) || isNaN(month) || isNaN(year) || 
-        day < 1 || day > 31 || month < 0 || month > 11 || year < 1940 || year > new Date().getFullYear()) {
-      setLocalErrors(prev => ({...prev, birthDate: "Date invalide"}));
+    // Valider les plages de valeurs
+    if (isNaN(day) || isNaN(month) || isNaN(year)) {
+      setLocalErrors(prev => ({...prev, birthDate: "Format de date invalide"}));
+      return;
+    }
+    
+    if (day < 1 || day > 31) {
+      setLocalErrors(prev => ({...prev, birthDate: "Jour invalide (doit être entre 1 et 31)"}));
+      return;
+    }
+    
+    if (month < 0 || month > 11) {
+      setLocalErrors(prev => ({...prev, birthDate: "Mois invalide (doit être entre 01 et 12)"}));
+      return;
+    }
+    
+    if (year < 1940 || year > new Date().getFullYear()) {
+      setLocalErrors(prev => ({...prev, birthDate: `L'année doit être entre 1940 et ${new Date().getFullYear()}`}));
       return;
     }
     
@@ -123,28 +155,28 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
       return;
     }
     
+    // Si tout est valide, mettre à jour la date
     handleDateChange(birthDateObj);
     setLocalErrors(prev => ({...prev, birthDate: null}));
   };
 
   // Fonction exécutée quand on quitte le champ de date
   const handleDateBlur = () => {
+    setIsFocused(false);
     applyDateInput();
   };
 
-  // Fonction exécutée quand on appuie sur Entrée dans le champ de date
-  const handleDateKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      applyDateInput();
-    }
+  // Fonction exécutée quand on focus le champ
+  const handleDateFocus = () => {
+    setIsFocused(true);
   };
 
-  // Fonction pour gérer la touche "Backspace"
+  // Fonction pour gérer les touches spéciales
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       applyDateInput();
+      inputRef.current?.blur();
       return;
     }
     
@@ -164,6 +196,15 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
           inputRef.current.selectionEnd = cursorPosition - 2;
         }
       }, 0);
+    }
+  };
+
+  // Fonction pour vider le champ de date
+  const clearDateInput = () => {
+    setDateInput("");
+    handleDateChange(null);
+    if (inputRef.current) {
+      inputRef.current.focus();
     }
   };
 
@@ -208,7 +249,7 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
 
   // Vérifier si une erreur doit être affichée
   const shouldShowError = (fieldName) => {
-    return step2Tried && localErrors[fieldName];
+    return (step2Tried || localErrors[fieldName]) && localErrors[fieldName];
   };
 
   // Récupérer le message d'erreur
@@ -224,7 +265,12 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
           Date de naissance
         </label>
         <div className="relative">
-          <div className={`w-full px-4 py-3 rounded-md border flex items-center ${shouldShowError('birthDate') ? 'border-red-500' : 'border-gray-300'}`}>
+          <div 
+            className={`w-full px-4 py-3 rounded-md border flex items-center transition-colors ${
+              isFocused ? 'border-blue-500 shadow-sm' : 
+              shouldShowError('birthDate') ? 'border-red-500' : 'border-gray-300'
+            }`}
+          >
             <input 
               ref={inputRef}
               type="text" 
@@ -233,15 +279,35 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
               value={dateInput}
               onChange={handleDateInputChange}
               onBlur={handleDateBlur}
+              onFocus={handleDateFocus}
               onKeyDown={handleKeyDown}
               inputMode="numeric"
               maxLength={10}
+              aria-invalid={shouldShowError('birthDate') ? "true" : "false"}
+              aria-describedby={shouldShowError('birthDate') ? "date-error" : undefined}
             />
-            <CalendarIcon className="ml-auto h-5 w-5 text-gray-500" />
+            <CalendarIcon 
+              className={`h-5 w-5 transition-colors ${
+                isFocused ? 'text-blue-500' : 
+                shouldShowError('birthDate') ? 'text-red-500' : 'text-gray-500'
+              }`} 
+            />
+            {dateInput && (
+              <button
+                type="button"
+                onClick={clearDateInput}
+                className="ml-2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                aria-label="Effacer la date"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
           </div>
           
           {shouldShowError('birthDate') && (
-            <p className="text-red-500 text-xs mt-1">{getErrorMessage('birthDate')}</p>
+            <p id="date-error" className="text-red-500 text-xs mt-1">{getErrorMessage('birthDate')}</p>
           )}
           <p className="text-xs text-gray-500 mt-1">
             Format: JJ/MM/AAAA - Vous devez avoir au moins 16 ans pour vous inscrire.
