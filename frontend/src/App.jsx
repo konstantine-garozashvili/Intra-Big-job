@@ -427,7 +427,8 @@ function AppContent() {
                 <Route path="dashboard" element={<AdminDashboard />} />
                 <Route path="tickets" element={<AdminTicketList />} />
                 <Route path="services" element={<TicketServiceList />} />
-                <Route path="user-role-manager" element={<UserRoleManager />} />
+                <Route path="users" element={<UserRoleManager />} />
+                <Route path="user-role-manager" element={<Navigate to="/admin/users" replace />} />
               </Routes>
             </RoleGuard>
           } />
