@@ -18,6 +18,7 @@ const ProfileView = () => {
   const [hasLoadedStudentProfile, setHasLoadedStudentProfile] = useState(false);
   const [isLoadingStudentProfile, setIsLoadingStudentProfile] = useState(false);
   const isPublicProfile = !!userId;
+  const [isMounted, setIsMounted] = useState(false);
   
   const { 
     user: currentProfileData, 
@@ -33,40 +34,50 @@ const ProfileView = () => {
   const [publicProfileData, setPublicProfileData] = useState(null);
   const [isLoadingPublicProfile, setIsLoadingPublicProfile] = useState(false);
   const [publicProfileError, setPublicProfileError] = useState(null);
+
+  useEffect(() => {
+    setIsMounted(true);
+    return () => setIsMounted(false);
+  }, []);
   
   // Fonction réutilisable pour charger le profil étudiant
   const fetchStudentProfile = useCallback(async (forceFresh = true) => {
-    if (isLoadingStudentProfile) return; // Éviter les appels multiples
+    if (isLoadingStudentProfile || !isMounted) return;
     
     try {
       setIsLoadingStudentProfile(true);
       
       const response = await studentProfileService.getMyProfile(forceFresh);
       
-      if (response && response.success && response.data) {
+      if (response && response.success && response.data && isMounted) {
         setStudentProfile(response.data);
         
         // Mettre également à jour les données dans le profil utilisateur
         if (currentProfileData && !isPublicProfile) {
-          currentProfileData.studentProfile = response.data;
-          
-          // Notifier les autres composants de la mise à jour
-          handleProfileUpdate({
-            studentProfile: response.data
-          });
+          if (isMounted) {
+            handleProfileUpdate({
+              studentProfile: response.data
+            });
+          }
         }
       }
-      setHasLoadedStudentProfile(true);
+      if (isMounted) {
+        setHasLoadedStudentProfile(true);
+      }
     } catch (error) {
-      setHasLoadedStudentProfile(true); // Même en cas d'erreur, pour éviter les appels en boucle
+      if (isMounted) {
+        setHasLoadedStudentProfile(true);
+      }
     } finally {
-      setIsLoadingStudentProfile(false);
+      if (isMounted) {
+        setIsLoadingStudentProfile(false);
+      }
     }
-  }, [isLoadingStudentProfile, currentProfileData, isPublicProfile]);
+  }, [isLoadingStudentProfile, currentProfileData, isPublicProfile, isMounted]);
   
   // Préchargement du profil étudiant pour résoudre le problème d'affichage
   useEffect(() => {
-    if (!isPublicProfile && currentProfileData && !hasLoadedStudentProfile && !isLoadingStudentProfile) {
+    if (!isPublicProfile && currentProfileData && !hasLoadedStudentProfile && !isLoadingStudentProfile && isMounted) {
       // Vérifie si l'utilisateur est un étudiant
       const isStudent = currentProfileData.roles?.some(role => {
         if (typeof role === 'string') {
@@ -78,51 +89,45 @@ const ProfileView = () => {
       });
       
       if (isStudent) {
-        // Toujours forcer le chargement frais des données lors de l'initialisation
         fetchStudentProfile(true);
       } else {
-        setHasLoadedStudentProfile(true); // Marquer comme chargé si l'utilisateur n'est pas un étudiant
+        setHasLoadedStudentProfile(true);
       }
     }
-  }, [isPublicProfile, currentProfileData, hasLoadedStudentProfile, isLoadingStudentProfile, fetchStudentProfile]);
+  }, [isPublicProfile, currentProfileData, hasLoadedStudentProfile, isLoadingStudentProfile, fetchStudentProfile, isMounted]);
   
   // Gestionnaire de mise à jour du profil utilisateur depuis les composants enfants
   const handleProfileUpdate = useCallback((updatedData) => {
+    if (!isMounted) return;
     
     if (isPublicProfile) {
-      // Pour les profils publics, mettre à jour l'état local
       setPublicProfileData(prev => ({
         ...prev,
         ...updatedData
       }));
     } else {
-      // Pour le profil de l'utilisateur connecté, utiliser la fonction de mise à jour du hook
       if (setCurrentProfileData) {
         setCurrentProfileData(prev => ({
           ...prev,
           ...updatedData
         }));
       } else {
-        // Fallback: forcer un rafraichissement complet des données
         refetchCurrentProfile();
       }
       
-      // Mettre à jour aussi l'état local des documents si nécessaire
       if (updatedData.documents) {
         setDocuments(updatedData.documents);
       }
       
-      // Mettre à jour l'état du profil étudiant si présent
       if (updatedData.studentProfile) {
         setStudentProfile(updatedData.studentProfile);
       }
     }
     
-    // Toast pour indiquer que le profil a été mis à jour
     if (updatedData.toastMessage !== false) {
       toast.success(updatedData.toastMessage || "Profil mis à jour");
     }
-  }, [isPublicProfile, setCurrentProfileData, refetchCurrentProfile]);
+  }, [isPublicProfile, setCurrentProfileData, refetchCurrentProfile, isMounted]);
   
   // Écouter les événements de mise à jour des statuts de recherche
   useEffect(() => {

@@ -3,7 +3,8 @@ import { BrowserRouter as Router, Routes, Route, useLocation, Navigate, useNavig
 import { lazy, Suspense, useEffect, useRef, useCallback, useState } from 'react'
 import MainLayout from './components/MainLayout'
 import { RoleDashboardRedirect, RoleGuard, ROLES, RoleProvider } from './features/roles'
-import { useQueryClient } from '@tanstack/react-query'
+import { AuthProvider } from './contexts/AuthContext'
+import { QueryClientProvider, useQueryClient } from '@tanstack/react-query'
 import './index.css'
 import ProtectedRoute from './components/ProtectedRoute'
 import PublicRoute from './components/PublicRoute'
@@ -12,6 +13,7 @@ import StudentRoute from './components/StudentRoute'
 import { Toaster } from './components/ui/sonner'
 import AdminTicketList from './components/admin/AdminTicketList'
 import { queryClient } from './lib/services/queryClient'
+import ReactQueryHydration from './components/shared/ReactQueryHydration'
 import deduplicationService from './lib/services/deduplicationService'
 import apiService from './lib/services/apiService'
 import PublicProfileView from '@/pages/Global/Profile/views/PublicProfileView'
@@ -29,11 +31,11 @@ const LoadingFallback = () => (
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { hasError: false, error: null };
   }
 
   static getDerivedStateFromError(error) {
-    return { hasError: true };
+    return { hasError: true, error };
   }
 
   componentDidCatch(error, errorInfo) {
@@ -43,14 +45,18 @@ class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <h2 className="text-xl font-bold text-red-600">Une erreur est survenue</h2>
+        <div className="flex items-center justify-center min-h-screen p-4 bg-gray-50">
+          <div className="w-full max-w-md p-6 bg-white rounded-lg shadow-lg">
+            <h2 className="mb-4 text-2xl font-bold text-red-600">Une erreur est survenue</h2>
+            <p className="mb-4 text-red-700">{this.state.error?.message || "Une erreur inattendue s'est produite"}</p>
             <button 
-              onClick={() => window.location.reload()}
-              className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              onClick={() => {
+                this.setState({ hasError: false, error: null });
+                window.location.reload();
+              }}
+              className="px-4 py-2 text-white bg-blue-600 rounded hover:bg-blue-700"
             >
-              Recharger la page
+              Réessayer
             </button>
           </div>
         </div>
@@ -61,16 +67,16 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-// Wrapper pour le chargement des composants
+// Wrapper for the loading components with better error handling
 const withSuspense = (Component) => (props) => (
-  <Suspense fallback={<LoadingFallback />}>
-    <ErrorBoundary>
+  <ErrorBoundary>
+    <Suspense fallback={<LoadingFallback />}>
       <Component {...props} />
-    </ErrorBoundary>
-  </Suspense>
+    </Suspense>
+  </ErrorBoundary>
 );
 
-// Import des composants avec Suspense
+// Import the Home component properly
 const Home = withSuspense(lazy(() => import('./pages/Home')));
 const Login = withSuspense(lazy(() => import('./pages/Login')));
 const Register = withSuspense(lazy(() => import('./pages/Register')));
@@ -133,19 +139,28 @@ const GameDevelopment = withSuspense(lazy(() => import('./pages/formations/GameD
 const AllFormations = withSuspense(lazy(() => import('./pages/AllFormations')));
 const FormationThemeWrapper = withSuspense(lazy(() => import('./components/formations/FormationThemeWrapper')));
 
+// Import the new SettingsLayout
+const SettingsLayout = withSuspense(lazy(() => import('./layouts/SettingsLayout')));
+
 function App() {
   return (
     <ThemeProvider>
       <Router>
-        <RoleProvider>
-          <ErrorBoundary>
-            <div className="relative font-poppins">
-              <AppInitializer />
-              <AppContent />
-              <Toaster />
-            </div>
-          </ErrorBoundary>
-        </RoleProvider>
+        <QueryClientProvider client={queryClient}>
+          <ReactQueryHydration>
+            <AuthProvider>
+              <RoleProvider>
+                <ErrorBoundary>
+                  <div className="relative font-poppins">
+                    <AppInitializer />
+                    <AppContent />
+                    <Toaster />
+                  </div>
+                </ErrorBoundary>
+              </RoleProvider>
+            </AuthProvider>
+          </ReactQueryHydration>
+        </QueryClientProvider>
       </Router>
     </ThemeProvider>
   );
@@ -354,7 +369,7 @@ function AppContent() {
       {/* Public Routes */}
       <Route element={<PublicLayout />}>
         <Route element={<PublicRoute />}>
-          <Route path="/" element={<Home />} />
+          <Route index path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/registration-success" element={<RegistrationSuccess />} />
@@ -379,16 +394,23 @@ function AppContent() {
       {/* Protected Routes */}
       <Route element={<MainLayout />}>
         <Route element={<ProtectedRoute />}>
-          {/* Profile Routes */}
+          <Route path="/dashboard" element={<RoleDashboardRedirect />} />
+          
+          {/* Profile Routes - Protected and accessible by all authenticated users */}
           <Route path="/profile" element={<ProfileLayout />}>
             <Route index element={<ProfileView />} />
-            <Route path="settings" element={<SettingsProfile />} />
+          </Route>
+          <Route path="/profile/:userId" element={<PublicProfileView />} />
+          
+          {/* Settings Routes - Protected and accessible by all authenticated users */}
+          <Route path="/settings" element={<SettingsLayout />}>
+            <Route index element={<Navigate to="/settings/profile" replace />} />
+            <Route path="profile" element={<SettingsProfile />} />
             <Route path="security" element={<SecuritySettings />} />
             <Route path="notifications" element={<NotificationSettings />} />
             <Route path="career" element={<CareerSettings />} />
           </Route>
-          <Route path="/profile/:userId" element={<PublicProfileView />} />
-          
+
           {/* Global Routes */}
           <Route path="/trombinoscope" element={<Trombinoscope />} />
           <Route path="/visual-concept" element={<VisualConcept />} />
@@ -469,25 +491,7 @@ function AppContent() {
       </Route>
 
       {/* Fallback route */}
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
-  );
-}
-
-// Fallback component for error boundary
-function ErrorFallback({ error, resetErrorBoundary }) {
-  return (
-    <div role="alert" className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-50">
-      <div className="w-full max-w-md p-6 bg-white rounded-lg shadow-lg">
-        <h2 className="mb-4 text-2xl font-bold text-red-600">Une erreur est survenue</h2>
-        <p className="mb-4 text-red-700">{error?.message || "Une erreur inattendue s'est produite"}</p>
-        <button 
-          onClick={resetErrorBoundary || (() => window.location.reload())}
-          className="px-4 py-2 text-white bg-blue-600 rounded hover:bg-blue-700"
-        >
-          Réessayer
-        </button>
-      </div>
-    </div>
   );
 }
