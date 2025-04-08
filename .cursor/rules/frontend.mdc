@@ -1,12 +1,12 @@
 ---
 description: 
-globs: 
+globs: .jsx,.js
 alwaysApply: false
 ---
 ---
 description: 
-globs: 
-alwaysApply: true
+globs: .jsx,.js
+alwaysApply: false
 ---
 # Frontend Rules
 
