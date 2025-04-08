@@ -27,6 +27,7 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
       : ""
   );
   const [isFocused, setIsFocused] = useState(false);
+  const [isTouched, setIsTouched] = useState(false);
   
   const inputRef = useRef(null);
 
@@ -39,6 +40,15 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
       setDateInput(new Intl.DateTimeFormat('fr-FR').format(birthDate));
     }
   }, [birthDate]);
+
+  // Fonction pour gérer les événements tactiles
+  const handleTouchStart = () => {
+    setIsTouched(true);
+  };
+
+  const handleTouchEnd = () => {
+    setIsTouched(false);
+  };
 
   // Formater automatiquement la saisie de date (JJ/MM/AAAA)
   const formatDateInput = (value) => {
@@ -89,6 +99,16 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
           inputRef.current.selectionEnd = 6;
         }
       }, 0);
+    }
+    
+    // Valider à la volée uniquement si la date semble complète
+    if (formattedValue.length === 10) {
+      // Attendre que l'utilisateur ait fini de taper (300ms)
+      setTimeout(() => {
+        if (dateInput === formattedValue) {
+          validateDateOnChange(formattedValue);
+        }
+      }, 300);
     }
   };
 
@@ -158,6 +178,30 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
     // Si tout est valide, mettre à jour la date
     handleDateChange(birthDateObj);
     setLocalErrors(prev => ({...prev, birthDate: null}));
+  };
+
+  // Fonction pour vérifier si la date est potentiellement valide (validation à la volée)
+  const validateDateOnChange = (value) => {
+    // Si la saisie est en cours (moins de 10 caractères), ne pas faire de validation complète
+    if (!value || value.length < 10) return;
+    
+    const dateParts = value.split('/');
+    if (dateParts.length !== 3) return;
+    
+    const day = parseInt(dateParts[0], 10);
+    const month = parseInt(dateParts[1], 10) - 1;
+    const year = parseInt(dateParts[2], 10);
+    
+    // Vérification minimale pendant la saisie
+    if (isNaN(day) || isNaN(month) || isNaN(year)) return;
+    
+    // Vérification de base des plages
+    if (day < 1 || day > 31 || month < 0 || month > 11 || year < 1940 || year > new Date().getFullYear()) {
+      return;
+    }
+    
+    // Si les conditions de base sont remplies, faire une validation complète
+    applyDateInput();
   };
 
   // Fonction exécutée quand on quitte le champ de date
@@ -267,9 +311,12 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
         <div className="relative">
           <div 
             className={`w-full px-4 py-3 rounded-md border flex items-center transition-colors ${
+              isTouched ? 'bg-gray-50 border-blue-500' :
               isFocused ? 'border-blue-500 shadow-sm' : 
               shouldShowError('birthDate') ? 'border-red-500' : 'border-gray-300'
             }`}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
           >
             <input 
               ref={inputRef}
@@ -285,6 +332,8 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
               maxLength={10}
               aria-invalid={shouldShowError('birthDate') ? "true" : "false"}
               aria-describedby={shouldShowError('birthDate') ? "date-error" : undefined}
+              pattern="\d{2}/\d{2}/\d{4}"
+              autoComplete="bday"
             />
             <CalendarIcon 
               className={`h-5 w-5 transition-colors ${
@@ -296,7 +345,7 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
               <button
                 type="button"
                 onClick={clearDateInput}
-                className="ml-2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                className="ml-2 p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors active:bg-gray-200"
                 aria-label="Effacer la date"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -307,7 +356,9 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
           </div>
           
           {shouldShowError('birthDate') && (
-            <p id="date-error" className="text-red-500 text-xs mt-1">{getErrorMessage('birthDate')}</p>
+            <p id="date-error" className="text-red-500 text-xs mt-1 animate-in fade-in slide-in-from-top-1 duration-200">
+              {getErrorMessage('birthDate')}
+            </p>
           )}
           <p className="text-xs text-gray-500 mt-1">
             Format: JJ/MM/AAAA - Vous devez avoir au moins 16 ans pour vous inscrire.
