@@ -1,228 +1,105 @@
-import { useApiQuery, useApiMutation } from '@/hooks/useReactQuery';
-import { useQueryClient } from '@tanstack/react-query';
-import { useState, useEffect, useRef, useCallback } from 'react';
-
-// Define constant query keys at module level
-export const CV_QUERY_KEYS = {
-  userCV: ['userCVDocument'],
-  documents: ['documents']
-};
+import { useCallback } from 'react';
+import { documentService } from '../services/documentService';
 
 /**
- * Custom hook for managing CV document operations with React Query
- * @returns {Object} CV document data and operations
+ * Hook personnalisé pour gérer le CV de l'utilisateur
+ * Fournit des méthodes pour récupérer, télécharger et gérer le CV
+ * 
+ * @returns {Object} Méthodes et états pour manipuler le CV
  */
-export function useCV() {
-  const queryClient = useQueryClient();
-  const isMountedRef = useRef(true);
-  
-  // Reset isMountedRef on component mount/unmount
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
-  // Query for CV document
-  const cvQuery = useApiQuery(
-    '/api/documents/type/CV',
-    CV_QUERY_KEYS.userCV,
-    {
-      staleTime: 0, // Always consider data stale to ensure fresh data
-      cacheTime: 10 * 60 * 1000, // Cache for 10 minutes
-      retry: 1,
-      refetchOnWindowFocus: true,
-      refetchOnMount: true
-    }
-  );
-
-  // Get the first CV document if available
-  const cvDocument = cvQuery.data?.data?.[0] || null;
-
-  // Force refresh function
-  const forceRefresh = useCallback(async () => {
-    // Invalidate all related queries
-    await Promise.all([
-      queryClient.invalidateQueries({ 
-        queryKey: CV_QUERY_KEYS.userCV,
-        refetchType: 'all'
-      }),
-      queryClient.invalidateQueries({ 
-        queryKey: CV_QUERY_KEYS.documents,
-        refetchType: 'all'
-      })
-    ]);
-    
-    // Force immediate refetch
-    return await cvQuery.refetch();
-  }, [queryClient, cvQuery]);
-
-  // Upload CV mutation
-  const uploadCVMutation = useApiMutation(
-    '/api/documents/upload/cv',
-    'post',
-    CV_QUERY_KEYS.userCV,
-    {
-      onMutate: async (formData) => {
-        // Cancel any outgoing refetches
-        await queryClient.cancelQueries({ queryKey: CV_QUERY_KEYS.userCV });
-        
-        // Save previous state
-        const previousData = queryClient.getQueryData(CV_QUERY_KEYS.userCV);
-        
-        // Create temporary document for optimistic update
-        const file = formData.get('file');
-        if (file instanceof File) {
-          // Create optimistic update data
-          const tempDocument = {
-            id: `temp-${Date.now()}`,
-            type: 'CV',
-            name: file.name,
-            mime_type: file.type,
-            created_at: new Date().toISOString(),
-            is_temp: true
-          };
-          
-          // Update cache immediately with optimistic data
-          queryClient.setQueryData(CV_QUERY_KEYS.userCV, {
-            success: true,
-            data: [tempDocument]
-          });
-        }
-        
-        return { previousData };
-      },
-      onSuccess: async (data) => {
-        if (!isMountedRef.current) return;
-        
-        try {
-          // Verify data is valid
-          if (!data || !data.success) {
-            throw new Error('Invalid data received from server');
-          }
-          
-          // Update cache with server data
-          queryClient.setQueryData(CV_QUERY_KEYS.userCV, data);
-          
-          // Force refresh to ensure consistency
-          await forceRefresh();
-        } catch (error) {
-          // Error handled silently
-        }
-      },
-      onError: (error, variables, context) => {
-        // Restore previous state on error
-        if (context?.previousData) {
-          queryClient.setQueryData(CV_QUERY_KEYS.userCV, context.previousData);
-        }
-      }
-    }
-  );
-
-  // Delete CV mutation
-  const deleteCVMutation = useApiMutation(
-    (id) => `/api/documents/${id}`,
-    'delete',
-    CV_QUERY_KEYS.userCV,
-    {
-      onMutate: async (id) => {
-        // Cancel any outgoing refetches
-        await queryClient.cancelQueries({ queryKey: CV_QUERY_KEYS.userCV });
-        
-        // Save previous state
-        const previousData = queryClient.getQueryData(CV_QUERY_KEYS.userCV);
-        
-        // Update cache immediately with optimistic data (remove the document)
-        queryClient.setQueryData(CV_QUERY_KEYS.userCV, {
-          success: true,
-          data: []
-        });
-        
-        return { previousData };
-      },
-      onSuccess: async () => {
-        if (!isMountedRef.current) return;
-        
-        try {
-          // Force refresh to ensure consistency
-          await forceRefresh();
-        } catch (error) {
-          // Error handled silently
-        }
-      },
-      onError: (error, variables, context) => {
-        // Restore previous state on error
-        if (context?.previousData) {
-          queryClient.setQueryData(CV_QUERY_KEYS.userCV, context.previousData);
-        }
-      }
-    }
-  );
-
-  // Download CV function
-  const downloadCV = useCallback(async () => {
-    if (!cvDocument || !cvDocument.id) {
-      throw new Error('No CV document to download');
-    }
-    
+export const useCV = () => {
+  /**
+   * Télécharger le CV
+   * @param {number} documentId - ID du document CV
+   * @param {string} filename - Nom du fichier à télécharger
+   */
+  const downloadCV = useCallback(async (documentId, filename) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/documents/${cvDocument.id}/download`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      const blob = await documentService.downloadDocument(documentId);
       
-      if (!response.ok) {
-        throw new Error('Failed to download document');
-      }
-      
-      const blob = await response.blob();
+      // Créer un lien de téléchargement
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.style.display = 'none';
       a.href = url;
-      a.download = cvDocument.name || 'cv.pdf';
+      a.download = filename || 'CV.pdf';
+      
+      // Ajouter temporairement à la page, cliquer et nettoyer
       document.body.appendChild(a);
       a.click();
       
-      // Clean up
+      // Nettoyer
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
       
       return true;
     } catch (error) {
-      console.error('Error downloading CV:', error);
+      console.error("Erreur lors du téléchargement du CV:", error);
+      return false;
+    }
+  }, []);
+
+  /**
+   * Récupérer le CV actuel de l'utilisateur
+   * @param {number} userId - ID de l'utilisateur
+   * @returns {Promise<Object|null>} Document CV ou null si non trouvé
+   */
+  const getCurrentCV = useCallback(async (userId) => {
+    try {
+      const documents = await documentService.getUserDocuments(userId);
+      return documents.find(doc => doc.type === 'CV') || null;
+    } catch (error) {
+      console.error("Erreur lors de la récupération du CV:", error);
+      return null;
+    }
+  }, []);
+
+  /**
+   * Vérifier si l'utilisateur a un CV
+   * @param {Object} userData - Données utilisateur
+   * @returns {boolean} True si l'utilisateur a un CV
+   */
+  const hasCV = useCallback((userData) => {
+    if (!userData || !userData.documents) return false;
+    return userData.documents.some(doc => doc.type === 'CV');
+  }, []);
+
+  /**
+   * Récupérer l'URL du CV
+   * @param {number} documentId - ID du document CV
+   * @returns {Promise<string|null>} URL du CV ou null en cas d'erreur
+   */
+  const getCVUrl = useCallback(async (documentId) => {
+    try {
+      return await documentService.getDocumentUrl(documentId);
+    } catch (error) {
+      console.error("Erreur lors de la récupération de l'URL du CV:", error);
+      return null;
+    }
+  }, []);
+
+  /**
+   * Téléverser un nouveau CV
+   * @param {File} file - Fichier CV à téléverser
+   * @returns {Promise<Object>} Résultat du téléversement
+   */
+  const uploadCV = useCallback(async (file) => {
+    try {
+      const formData = new FormData();
+      formData.append('document', file);
+      formData.append('type', 'CV');
+      
+      return await documentService.uploadDocument(formData);
+    } catch (error) {
+      console.error("Erreur lors du téléversement du CV:", error);
       throw error;
     }
-  }, [cvDocument]);
+  }, []);
 
   return {
-    // CV document data
-    cvDocument,
-    isLoading: cvQuery.isLoading,
-    isFetching: cvQuery.isFetching,
-    isError: cvQuery.isError,
-    error: cvQuery.error,
-    
-    // Operations
-    refetch: forceRefresh,
-    uploadCV: uploadCVMutation.mutate,
-    deleteCV: deleteCVMutation.mutate,
     downloadCV,
-    
-    // Mutation states
-    uploadStatus: {
-      isPending: uploadCVMutation.isPending,
-      isSuccess: uploadCVMutation.isSuccess,
-      isError: uploadCVMutation.isError,
-      error: uploadCVMutation.error
-    },
-    deleteStatus: {
-      isPending: deleteCVMutation.isPending,
-      isSuccess: deleteCVMutation.isSuccess,
-      isError: deleteCVMutation.isError,
-      error: deleteCVMutation.error
-    }
+    getCurrentCV,
+    hasCV,
+    getCVUrl,
+    uploadCV
   };
-} 
+}; 

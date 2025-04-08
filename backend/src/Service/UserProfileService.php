@@ -134,15 +134,18 @@ class UserProfileService
         }
         
         try {
-            // Get storage adapter
-            $storage = $this->documentStorageFactory->createStorage();
-            
             // Generate unique filename
             $newFilename = 'profile_' . $user->getId() . '_' . uniqid() . '.' . $extension;
-            $storagePath = 'profile_pictures/' . $newFilename;
+            $uploadDir = 'uploads/profile_pictures/';
+            $storagePath = $uploadDir . $newFilename;
             
-            // Store the file
-            $storage->store($uploadedFile, $storagePath);
+            // Ensure directory exists
+            if (!is_dir(dirname($storagePath))) {
+                mkdir(dirname($storagePath), 0777, true);
+            }
+            
+            // Move the file to its final location
+            $uploadedFile->move(dirname($storagePath), $newFilename);
             
             // Update user profile picture path
             $oldPicturePath = $user->getProfilePicturePath();
@@ -151,12 +154,8 @@ class UserProfileService
             $this->entityManager->flush();
             
             // Delete old picture if exists
-            if ($oldPicturePath) {
-                try {
-                    $storage->delete($oldPicturePath);
-                } catch (\Exception $e) {
-                    // Log error but continue
-                }
+            if ($oldPicturePath && file_exists($oldPicturePath)) {
+                unlink($oldPicturePath);
             }
             
             return [
@@ -187,11 +186,10 @@ class UserProfileService
         }
         
         try {
-            // Get storage adapter
-            $storage = $this->documentStorageFactory->createStorage();
-            
-            // Delete the file
-            $storage->delete($picturePath);
+            // Delete the file if it exists
+            if (file_exists($picturePath)) {
+                unlink($picturePath);
+            }
             
             // Update user
             $user->setProfilePicturePath(null);
@@ -225,11 +223,8 @@ class UserProfileService
         }
         
         try {
-            // Get storage adapter
-            $storage = $this->documentStorageFactory->createStorage();
-            
-            // Get URL
-            $url = $storage->getUrl($picturePath);
+            // Generate a URL from the path
+            $url = '/uploads/' . basename(dirname($picturePath)) . '/' . basename($picturePath);
             
             return [
                 'success' => true,

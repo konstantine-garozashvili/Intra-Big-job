@@ -11,6 +11,7 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\Table(name: '`user`')]
@@ -48,6 +49,13 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     private ?string $phoneNumber = null;
 
     #[ORM\Column(length: 255)]
+    #[Assert\NotBlank(message: "Le mot de passe est obligatoire")]
+    #[Assert\Length(
+        min: 8,
+        max: 50,
+        minMessage: "Le mot de passe doit comporter au moins {{ limit }} caractères",
+        maxMessage: "Le mot de passe ne doit pas dépasser {{ limit }} caractères"
+    )]
     private ?string $password = null;
 
     #[ORM\Column]
@@ -368,7 +376,6 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     {
         if (!$this->diplomas->contains($diploma)) {
             $this->diplomas->add($diploma);
-            $diploma->setUser($this);
         }
 
         return $this;
@@ -377,10 +384,8 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     public function removeDiploma(Diploma $diploma): static
     {
         if ($this->diplomas->removeElement($diploma)) {
-            // set the owning side to null (unless already changed)
-            if ($diploma->getUser() === $this) {
-                $diploma->setUser(null);
-            }
+            // La méthode getUser et setUser n'existent pas dans la classe Diploma
+            // Cette logique devrait être gérée ailleurs
         }
 
         return $this;

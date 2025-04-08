@@ -1,15 +1,23 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTeacherDashboardData } from '@/hooks/useDashboardQueries';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Link } from 'react-router-dom';
-
-import { 
+import { motion, AnimatePresence } from "framer-motion";
+import DashboardLayout from '@/components/DashboardLayout';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
   BookOpen, 
   Users, 
   Calendar, 
@@ -26,16 +34,8 @@ import {
   XCircle,
   User
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import DashboardLayout from '@/components/DashboardLayout';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import PropTypes from 'prop-types';
+
 // Animation variants
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -66,10 +66,50 @@ const fadeInVariants = {
 };
 
 /**
+ * Composant de carte d'accès rapide
+ * @param {Object} props - Propriétés du composant
+ * @returns {JSX.Element} - Composant de carte
+ */
+function QuickAccessCard({ title, description, icon: Icon, linkTo, count }) {
+  return (
+    <Link to={linkTo} className="block">
+      <Card className="relative overflow-hidden hover:border-primary/50 transition-all hover:shadow-md cursor-pointer">
+        <CardHeader>
+          <div className="rounded-full w-12 h-12 flex items-center justify-center bg-primary/10 mb-2">
+            <Icon className="h-6 w-6 text-primary" />
+          </div>
+          <CardTitle className="text-lg flex items-center justify-between">
+            {title}
+            {count !== undefined && (
+              <Badge variant="outline" className="ml-2">{count}</Badge>
+            )}
+          </CardTitle>
+          <CardDescription>{description}</CardDescription>
+        </CardHeader>
+        <CardFooter>
+          <div className="flex items-center text-sm text-primary hover:underline">
+            Voir détails
+            <ChevronRight className="h-4 w-4 ml-1" />
+          </div>
+        </CardFooter>
+      </Card>
+    </Link>
+  );
+}
+
+QuickAccessCard.propTypes = {
+  title: PropTypes.string.isRequired,
+  description: PropTypes.string.isRequired,
+  icon: PropTypes.elementType.isRequired,
+  linkTo: PropTypes.string.isRequired,
+  count: PropTypes.number
+};
+
+/**
  * Tableau de bord spécifique pour les formateurs
  */
 const TeacherDashboard = () => {
-  const { user, dashboardData, isLoading, isError, error, refetch } = useTeacherDashboardData();
+  const { user, dashboardData, isLoading, isError, error } = useTeacherDashboardData();
 
   // Calculate attendance percentage for progress bar
   const attendancePercentage = useMemo(() => {
@@ -82,12 +122,6 @@ const TeacherDashboard = () => {
       }, 0) / dashboardData.attendance.length
     );
   }, [dashboardData]);
-
-  // Get initials for avatar fallback
-  const userInitials = useMemo(() => {
-    if (!user?.firstName || !user?.lastName) return 'T';
-    return `${user.firstName[0]}${user.lastName[0]}`;
-  }, [user]);
 
   // Utiliser le DashboardLayout pour gérer les états de chargement et d'erreur
   return (
@@ -130,7 +164,7 @@ const TeacherDashboard = () => {
                     <p className="font-medium text-lg">{dashboardData.formation.duration}</p>
                   </div>
                   <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Nombre d'étudiants</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Nombre d&apos;étudiants</p>
                     <p className="font-medium text-lg">{dashboardData.formation.students} étudiants</p>
                   </div>
                 </div>
@@ -270,7 +304,7 @@ const TeacherDashboard = () => {
                           </div>
                           <Button size="sm" variant="outline" className="gap-1">
                             <Clock className="h-4 w-4" />
-                            <span>Aujourd'hui</span>
+                            <span>Aujourd&apos;hui</span>
                           </Button>
                         </div>
                       </CardHeader>

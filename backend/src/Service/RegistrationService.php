@@ -58,6 +58,45 @@ class RegistrationService
      */
     public function registerUser(array $data): User
     {
+        // Logging pour le débogage
+        error_log('RegistrationService::registerUser - Début de la méthode');
+        
+        // VALIDATION DU MOT DE PASSE - Première priorité, avant toute autre validation
+        // S'assurer que le mot de passe existe et est de type string
+        if (!isset($data['password'])) {
+            error_log('RegistrationService - Erreur critique: Mot de passe manquant');
+            throw new \InvalidArgumentException(json_encode([
+                'password' => "Le mot de passe est requis."
+            ]));
+        }
+        
+        // Forcer la conversion en string si nécessaire (protection supplémentaire)
+        $password = (string)$data['password'];
+        
+        // Remplacer le mot de passe dans les données avec la version forcée en string
+        $data['password'] = $password;
+        
+        // Vérifier la longueur EXACTE du mot de passe (longueur absolue en octets)
+        $passwordLength = mb_strlen($password, '8bit');
+        error_log('RegistrationService - Validation mot de passe - Longueur exacte: ' . $passwordLength . ' octets');
+        
+        // Bloquer si le mot de passe est trop long (limite absolue)
+        if ($passwordLength > 50) {
+            error_log('RegistrationService - ERREUR CRITIQUE: Mot de passe trop long (' . $passwordLength . ' caractères)');
+            throw new \InvalidArgumentException(json_encode([
+                'password' => "Le mot de passe ne doit pas dépasser 50 caractères."
+            ]));
+        }
+        
+        // Bloquer si le mot de passe est trop court
+        if ($passwordLength < 8) {
+            error_log('RegistrationService - ERREUR: Mot de passe trop court (' . $passwordLength . ' caractères)');
+            throw new \InvalidArgumentException(json_encode([
+                'password' => "Le mot de passe doit contenir au moins 8 caractères."
+            ]));
+        }
+        
+        // Maintenant, passer aux autres validations
         // Vérifier l'âge minimum (16 ans)
         $birthDate = new \DateTime($data['birthDate']);
         $now = new \DateTime();

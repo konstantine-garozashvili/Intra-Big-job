@@ -1,8 +1,10 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Eye, EyeOff } from "lucide-react";
 import { useUserData, useValidation } from "../RegisterContext";
 import { PasswordStrengthIndicator } from "../RegisterUtils";
+import PropTypes from "prop-types";
+import { toast } from "@/lib/toast";
 
 const Step1Form = ({ goToNextStep }) => {
   const {
@@ -47,7 +49,7 @@ const Step1Form = ({ goToNextStep }) => {
     
     // Valider email
     if (!email || email.trim() === "") {
-      newErrors.email = "L'email est requis";
+      newErrors.email = "L&apos;email est requis";
       valid = false;
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       newErrors.email = "Veuillez entrer un email valide";
@@ -55,8 +57,12 @@ const Step1Form = ({ goToNextStep }) => {
     }
     
     // Valider mot de passe
-    if (!password || password.trim() === "") {
+    if (!password) {
       newErrors.password = "Le mot de passe est requis";
+      valid = false;
+    } else if (password.length > 50) {
+      // Vérification explicite de la longueur maximale en priorité
+      newErrors.password = "Le mot de passe ne doit pas dépasser 50 caractères";
       valid = false;
     } else if (password.length < 8) {
       newErrors.password = "Le mot de passe doit contenir au moins 8 caractères";
@@ -155,8 +161,47 @@ const Step1Form = ({ goToNextStep }) => {
             type={showPassword ? "text" : "password"}
             className={`w-full px-4 py-3 pr-10 rounded-md border ${shouldShowError('password') ? 'border-red-500' : 'border-gray-300'}`}
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Minimum 8 caractères"
+            onChange={(e) => {
+              // Limiter la longueur du mot de passe directement lors de la saisie
+              const value = e.target.value;
+              if (value.length <= 50) {
+                setPassword(value);
+              } else {
+                // Si l'utilisateur tente de coller un mot de passe trop long,
+                // tronquer à 50 caractères et afficher un message d'erreur
+                setPassword(value.substring(0, 50));
+                const newErrors = {...localErrors};
+                newErrors.password = "Le mot de passe ne doit pas dépasser 50 caractères";
+                setLocalErrors(newErrors);
+              }
+            }}
+            onPaste={(e) => {
+              // Intercepter l'événement de collage
+              const clipboardData = e.clipboardData || window.clipboardData;
+              const pastedText = clipboardData.getData('text');
+              
+              // Vérifier si le texte collé dépasse la limite
+              if (pastedText.length > 50) {
+                // Empêcher le collage par défaut
+                e.preventDefault();
+                
+                // Afficher un message d'alerte
+                alert(`ATTENTION : Le mot de passe que vous tentez de coller (${pastedText.length} caractères) dépasse la limite de 50 caractères. Veuillez utiliser un mot de passe plus court.`);
+                
+                // Utiliser notre toast personnalisé pour les erreurs de limite de mot de passe
+                toast.passwordLimitError(`Tentative de collage d'un mot de passe trop long (${pastedText.length} caractères)`);
+                
+                // Afficher un message d'erreur dans le formulaire
+                const newErrors = {...localErrors};
+                newErrors.password = "Le collage a été bloqué - le mot de passe dépassait 50 caractères";
+                setLocalErrors(newErrors);
+                
+                // Log de sécurité pour débogage
+                console.error(`Tentative bloquée de collage d'un mot de passe trop long (${pastedText.length} caractères)`);
+              }
+            }}
+            placeholder="Entre 8 et 50 caractères"
+            maxLength={50} // Attribut HTML natif pour limiter la longueur
           />
           <Button
             type="button"
@@ -175,6 +220,12 @@ const Step1Form = ({ goToNextStep }) => {
         {shouldShowError('password') && (
           <p className="text-red-500 text-xs mt-1">{getErrorMessage('password')}</p>
         )}
+        
+        <div className="flex items-center mt-1">
+          <p className="text-xs text-gray-500">
+            <span className="font-semibold">Important :</span> Votre mot de passe ne doit pas dépasser 50 caractères.
+          </p>
+        </div>
         
         {/* Indicateur de force du mot de passe */}
         <PasswordStrengthIndicator password={password} />
@@ -195,6 +246,11 @@ const Step1Form = ({ goToNextStep }) => {
       </div>
     </div>
   );
+};
+
+// Définition des PropTypes
+Step1Form.propTypes = {
+  goToNextStep: PropTypes.func.isRequired
 };
 
 export default Step1Form; 

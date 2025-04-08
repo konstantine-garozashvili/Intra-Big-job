@@ -36,63 +36,19 @@ class UserController extends AbstractController
         $this->validationService = $validationService;
     }
     
-    #[Route('/register', name: 'app_register', methods: ['POST'])]
-    public function register(
+    /**
+     * Endpoint pour l'inscription d'un nouvel utilisateur
+     * CETTE ROUTE EST DÉSACTIVÉE - Utiliser RegistrationController à la place
+     */
+    // #[Route('/register', name: 'app_register', methods: ['POST'])]
+    private function register(
         Request $request,
         RegistrationService $registrationService,
         ValidatorInterface $validator,
         EntityManagerInterface $entityManager
-    ): JsonResponse {
-        try {
-            // Récupérer les données
-            $data = json_decode($request->getContent(), true);
-
-            // Valider les données basiques
-            if (!isset($data['email']) || !isset($data['password'])) {
-                return $this->json([
-                    'success' => false,
-                    'message' => 'Données incomplètes. Email et mot de passe requis.'
-                ], 400);
-            }
-
-            // Vérifier si l'email est déjà utilisé
-            $existingUser = $entityManager->getRepository(User::class)->findOneBy(['email' => $data['email']]);
-            if ($existingUser) {
-                return $this->json([
-                    'success' => false,
-                    'message' => 'Cet email est déjà utilisé.'
-                ], 400);
-            }
-
-            // Enregistrer l'utilisateur via le service
-            $user = $registrationService->registerUser($data);
-
-            return $this->json([
-                'success' => true,
-                'message' => 'Inscription réussie !',
-                'user' => [
-                    'id' => $user->getId(),
-                    'firstName' => $user->getFirstName(),
-                    'lastName' => $user->getLastName(),
-                    'email' => $user->getEmail()
-                ]
-            ], 201);
-        } catch (\InvalidArgumentException $e) {
-            // Erreurs de validation
-            return $this->json([
-                'success' => false,
-                'message' => 'Erreurs de validation',
-                'errors' => json_decode($e->getMessage(), true)
-            ], 400);
-        } catch (\Exception $e) {
-            // Log l'erreur pour débogage
-            error_log($e->getMessage());
-
-            return $this->json([
-                'success' => false,
-                'message' => 'Une erreur est survenue: ' . $e->getMessage()
-            ], 500);
-        }
+    ): JsonResponse 
+    {
+        throw new \RuntimeException('Cette route est désactivée - Utilisez /api/register à la place.');
     }
 
     #[Route('/test', name: 'app_test', methods: ['GET'])]
@@ -117,8 +73,18 @@ class UserController extends AbstractController
                 return $this->json(['message' => 'User not authenticated'], JsonResponse::HTTP_UNAUTHORIZED);
             }
             
+            // Récupérer l'ID de l'utilisateur courant
+            // Utilisation de l'interface UserInterface
+            $currentUserId = null;
+            if ($currentUser instanceof User) {
+                $currentUserId = $currentUser->getId();
+            } else {
+                // Fallback sur l'identifiant utilisateur
+                $currentUserId = $currentUser->getUserIdentifier();
+            }
+            
             // Find all users except the current user
-            $users = $this->userRepository->findAllExcept($currentUser->getId());
+            $users = $this->userRepository->findAllExcept($currentUserId);
             
             // Serialize with user roles included
             $serializedUsers = $this->serializer->serialize(
