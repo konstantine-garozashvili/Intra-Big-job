@@ -379,8 +379,6 @@ function AppContent() {
       {/* Protected Routes */}
       <Route element={<MainLayout />}>
         <Route element={<ProtectedRoute />}>
-          <Route path="/" element={<RoleDashboardRedirect />} />
-          
           {/* Profile Routes */}
           <Route path="/profile" element={<ProfileLayout />}>
             <Route index element={<ProfileView />} />

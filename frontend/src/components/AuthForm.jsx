@@ -174,8 +174,17 @@ export function AuthForm() {
                     case 'ROLE_HR':
                       dashboardPath = '/hr/dashboard'
                       break
+                    case 'ROLE_GUEST':
+                      dashboardPath = '/guest/dashboard'
+                      break
+                    case 'ROLE_RECRUITER':
+                      dashboardPath = '/recruiter/dashboard'
+                      break
                     default:
-                      dashboardPath = '/dashboard'
+                      // En cas d'erreur, déconnexion
+                      authService.logout()
+                      navigate('/login')
+                      return
                   }
                 }
               }
