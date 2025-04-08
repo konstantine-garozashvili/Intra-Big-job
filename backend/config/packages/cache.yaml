@@ -5,6 +5,9 @@ framework:
 
         # The "app" cache stores to the filesystem by default.
         # The data in this cache should persist between deploys.
+        app: cache.adapter.filesystem
+        system: cache.adapter.filesystem
+
         # Other options include:
 
         # Redis
@@ -17,14 +20,3 @@ framework:
         # Namespaced pools use the above "app" backend by default
         #pools:
             #my.dedicated.cache: null
-
-when@dev:
-    framework:
-        cache:
-            # Utiliser APCu au lieu du filesystem
-            app: cache.adapter.apcu
-            system: cache.adapter.apcu
-            # Define common cache pools
-            pools:
-                doctrine.system_cache_pool:
-                    adapter: cache.system
