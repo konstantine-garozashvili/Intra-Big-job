@@ -240,36 +240,9 @@ const TechOdysseyFusion = () => {
   };
   
   return (
-    <div className="min-h-screen overflow-hidden bg-gray-950 text-white relative">
-      {/* Cosmic background */}
-      <div className="fixed inset-0 z-0 overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-full bg-gray-950">
-          {/* Stars */}
-          {Array.from({ length: 150 }).map((_, i) => (
-            <div 
-              key={i}
-              className="absolute rounded-full bg-white animate-twinkle"
-              style={{
-                top: `${Math.random() * 100}%`,
-                left: `${Math.random() * 100}%`,
-                width: `${Math.random() * 3 + 1}px`,
-                height: `${Math.random() * 3 + 1}px`,
-                opacity: Math.random() * 0.8 + 0.2,
-                animationDuration: `${Math.random() * 5 + 3}s`,
-                animationDelay: `${Math.random() * 5}s`
-              }}
-            />
-          ))}
-          
-          {/* Nebulas */}
-          <div className="absolute top-1/4 left-1/4 w-80 h-80 rounded-full bg-blue-500/20 filter blur-3xl animate-pulse" />
-          <div className="absolute bottom-1/3 right-1/4 w-96 h-96 rounded-full bg-purple-500/20 filter blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
-          <div className="absolute top-2/3 left-2/3 w-72 h-72 rounded-full bg-pink-500/20 filter blur-3xl animate-pulse" style={{ animationDelay: '4s' }} />
-        </div>
-      </div>
-      
+    <div className="w-full overflow-hidden text-white">
       {/* Main content */}
-      <div className="relative z-10 h-screen overflow-y-auto">
+      <div className="relative z-10">
         <AnimatePresence mode="wait">
           {renderCurrentStage()}
         </AnimatePresence>

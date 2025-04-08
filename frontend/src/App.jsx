@@ -59,7 +59,7 @@ const SecuritySettings = lazy(() => import('./pages/Global/Profile/views/Securit
 const NotificationSettings = lazy(() => import('./pages/Global/Profile/views/NotificationSettings'));
 const FormationList = lazy(() => import('./pages/FormationList'));
 const GuestStudentRoleManager = lazy(() => import('./pages/Recruiter/GuestStudentRoleManager'));
-const Games = lazy(() => import('./pages/Games'));
+const SkillAssessment = lazy(() => import('./pages/Games'));
 const VisualConcept = lazy(() => import('./pages/VisualConcept'));
 const FormationFinder = lazy(() => import('./pages/FormationFinder'));
 
@@ -394,7 +394,8 @@ const AppContent = () => {
                 <Route path="/" element={<Home />} />
                 
                 {/* Route pour la page des jeux */}
-                <Route path="/games" element={<Games />} />
+                <Route path="/skill-assessment" element={<SkillAssessment />} />
+                <Route path="/games" element={<Navigate to="/skill-assessment" replace />} />
                 
                 {/* Formation pages - No authentication required */}
                 <Route path="/formations/web" element={

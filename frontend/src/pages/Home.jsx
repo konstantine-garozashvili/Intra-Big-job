@@ -447,9 +447,9 @@ const Home = () => {
                       className={`px-6 py-3 bg-gradient-to-r ${currentTheme.buttonGradient} rounded-lg text-white font-medium shadow-md ${currentTheme.shadow}`}
                       whileHover={{ scale: 1.05, boxShadow: colorMode === 'navy' ? '0 0 20px rgba(10, 60, 110, 0.4)' : '0 0 20px rgba(0, 0, 0, 0.4)' }}
                       whileTap={{ scale: 0.98 }}
-                      onClick={() => navigate('/games')}
+                      onClick={() => navigate('/skill-assessment')}
                     >
-                      Découvrir les jeux
+                      Tester mon niveau
                     </motion.button>
                   </div>
                 </motion.div>
