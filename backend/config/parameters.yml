@@ -1,8 +1,8 @@
 parameters:
-    database_host: konstaxglobal.mysql.db
+    database_host: konstaxbigprjg.mysql.db
     database_port: 3306
-    database_name: konstax_bigprjg
-    database_user: konstax_bigprjg
+    database_name: konstaxbigprjg
+    database_user: konstaxbigprjg
     database_password: Weaver0311
     mailer_transport: smtp
     mailer_host: smtp.example.com
