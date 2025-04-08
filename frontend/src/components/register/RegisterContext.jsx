@@ -12,6 +12,7 @@ import {
   formatPhone,
   formatPostalCode
 } from '@/lib/utils/validation';
+import { verifyRecaptchaToken } from '@/lib/recaptcha';
 
 // Création des sous-contextes
 const UserDataContext = createContext(null);
@@ -73,8 +74,11 @@ export const RegisterProvider = ({ children }) => {
   const [activeStep, setActiveStep] = useState("step1");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [registerSuccess, setRegisterSuccess] = useState(false);
+  // État pour le reCAPTCHA
+  const [recaptchaToken, setRecaptchaToken] = useState(null);
+  const [recaptchaVerified, setRecaptchaVerified] = useState(false);
 
-  // Callbacks
+  // Fonctions pour gérer les changements de valeurs
   const handleDateChange = useCallback((date) => {
     // Vérification immédiate de l'âge
     const now = new Date();
@@ -105,6 +109,38 @@ export const RegisterProvider = ({ children }) => {
     setAddressName(addressData.address);
     setCity(addressData.city);
     setPostalCode(addressData.postcode);
+  }, []);
+
+  // Fonction pour gérer le changement de token reCAPTCHA
+  const handleRecaptchaChange = useCallback(async (token) => {
+    setRecaptchaToken(token);
+    
+    // Si le token est null (expiré ou erreur), marquer comme non vérifié
+    if (!token) {
+      setRecaptchaVerified(false);
+      setErrors(prev => ({...prev, recaptcha: "La vérification reCAPTCHA a expiré, veuillez réessayer"}));
+      return;
+    }
+    
+    // Vérifier le token avec notre backend
+    try {
+      const isValid = await verifyRecaptchaToken(token);
+      setRecaptchaVerified(isValid);
+      
+      if (!isValid) {
+        setErrors(prev => ({...prev, recaptcha: "La vérification reCAPTCHA a échoué, veuillez réessayer"}));
+      } else {
+        setErrors(prev => {
+          const newErrors = {...prev};
+          delete newErrors.recaptcha;
+          return newErrors;
+        });
+      }
+    } catch (error) {
+      console.error('Erreur lors de la vérification du reCAPTCHA:', error);
+      setRecaptchaVerified(false);
+      setErrors(prev => ({...prev, recaptcha: "Erreur lors de la vérification, veuillez réessayer"}));
+    }
   }, []);
 
   const validateStep1 = useCallback(() => {
@@ -174,8 +210,39 @@ export const RegisterProvider = ({ children }) => {
     return isValid;
   }, [birthDate, nationality, phone]);
 
+  // Ajouter validation pour le reCAPTCHA avant soumission finale
+  const validateRecaptcha = useCallback(() => {
+    const newErrors = {};
+    
+    // En développement, on ignore la vérification reCAPTCHA
+    if (import.meta.env.DEV) {
+      return true;
+    }
+    
+    if (!recaptchaToken) {
+      newErrors.recaptcha = "Veuillez compléter le reCAPTCHA";
+    } else if (!recaptchaVerified) {
+      newErrors.recaptcha = "La vérification reCAPTCHA a échoué, veuillez réessayer";
+    }
+    
+    setErrors(prevErrors => ({ ...prevErrors, ...newErrors }));
+    
+    return Object.keys(newErrors).length === 0;
+  }, [recaptchaToken, recaptchaVerified]);
+
   const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
+    
+    // Vérifier le reCAPTCHA avant de soumettre, sauf en mode développement
+    if (!import.meta.env.DEV) {
+      const recaptchaValid = validateRecaptcha();
+      if (!recaptchaValid) {
+        toast.error("Veuillez compléter la vérification reCAPTCHA");
+        return;
+      }
+    } else {
+      console.log("DEV MODE: Validation reCAPTCHA ignorée");
+    }
     
     setIsSubmitting(true);
     
@@ -194,7 +261,8 @@ export const RegisterProvider = ({ children }) => {
           complement: addressComplement ? addressComplement.trim() : '',
           city: city.trim(),
           postalCode: postalCode.trim()
-        }
+        },
+        recaptchaToken: recaptchaToken || "dev-test-token" // Utiliser un token factice en dev
       };
       
       const response = await authService.register(userData);
@@ -221,7 +289,8 @@ export const RegisterProvider = ({ children }) => {
     }
   }, [
     firstName, lastName, birthDate, nationality, email, phone, password,
-    addressName, addressComplement, city, postalCode, navigate
+    addressName, addressComplement, city, postalCode, navigate,
+    recaptchaToken, recaptchaVerified, validateRecaptcha
   ]);
 
   // Mémorisation des valeurs du contexte utilisateur
@@ -269,15 +338,23 @@ export const RegisterProvider = ({ children }) => {
     isSubmitting, registerSuccess,
     validateStep1,
     validateStep2,
+    validateRecaptcha,
     handleSubmit,
+    // reCAPTCHA
+    recaptchaToken, setRecaptchaToken,
+    recaptchaVerified, setRecaptchaVerified,
+    handleRecaptchaChange,
   }), [
     step1Valid, step1Attempted,
     step2Valid, step2Attempted,
     step1Tried, step2Tried,
     errors, activeStep,
     isSubmitting, registerSuccess,
-    validateStep1, validateStep2,
-    handleSubmit
+    validateStep1, validateStep2, validateRecaptcha,
+    handleSubmit,
+    // reCAPTCHA
+    recaptchaToken, recaptchaVerified,
+    handleRecaptchaChange
   ]);
 
   return (

@@ -99,3 +99,6 @@ export default defineConfig({
   },
   cacheDir: 'node_modules/.vite'
 })
+
+// S'assurer que la variable d'environnement du reCAPTCHA est disponible
+console.log('VITE_RECAPTCHA_SITE_KEY:', process.env.VITE_RECAPTCHA_SITE_KEY);

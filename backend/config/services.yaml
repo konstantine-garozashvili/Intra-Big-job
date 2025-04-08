@@ -115,3 +115,13 @@ services:
             $daysToKeep: 15  # Keep messages for 15 days
         tags:
             - { name: kernel.event_listener, event: kernel.terminate, method: onKernelTerminate }
+
+    # Configuration du contrôleur reCAPTCHA
+    App\Controller\RecaptchaController:
+        arguments:
+            $recaptchaSecret: '%env(RECAPTCHA_SECRET_KEY)%'
+            
+    # Configuration du contrôleur utilisateur
+    App\Controller\UserController:
+        arguments:
+            $recaptchaSecret: '%env(RECAPTCHA_SECRET_KEY)%'
