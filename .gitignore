@@ -1,1 +1,3 @@
 new-frontend
+backend/config/google/*.json
+*.env.local
