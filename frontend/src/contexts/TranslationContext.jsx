@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { translationService } from '../components/Translation/TranslationService';
+import { toast } from 'sonner';
 
 const TranslationContext = createContext();
 
@@ -11,49 +12,47 @@ export function TranslationProvider({ children }) {
     return localStorage.getItem(STORAGE_KEY) || DEFAULT_LANGUAGE;
   });
   
-  const [translations, setTranslations] = useState({});
   const [loading, setLoading] = useState(false);
 
-  // Sauvegarder la langue préférée
+  // Initialiser la langue au chargement de la page
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, currentLanguage);
-  }, [currentLanguage]);
+    const savedLanguage = localStorage.getItem(STORAGE_KEY);
+    if (savedLanguage && savedLanguage !== currentLanguage) {
+      setCurrentLanguage(savedLanguage);
+    }
+  }, []);
 
   // Fonction pour changer de langue
   const changeLanguage = async (newLanguage) => {
     try {
       setLoading(true);
-      setCurrentLanguage(newLanguage);
-      // Ici, vous pourriez précharger certaines traductions communes
-      // ou effectuer d'autres initialisations nécessaires
+      
+      // Sauvegarder la nouvelle langue
+      localStorage.setItem(STORAGE_KEY, newLanguage);
+      
+      // Afficher un message de chargement
+      toast.loading('Changement de langue en cours...');
+      
+      // Recharger la page après un court délai
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+      
     } catch (error) {
       console.error('Error changing language:', error);
-    } finally {
-      setLoading(false);
+      toast.error('Erreur lors du changement de langue');
     }
   };
 
-  // Fonction pour traduire un texte
+  // Fonction pour traduire un texte (utilisée uniquement pour les traductions ponctuelles)
   const translate = async (text, targetLang = currentLanguage) => {
     if (!text) return '';
     
-    // Vérifier si nous avons déjà la traduction en cache
-    const cacheKey = `${text}_${targetLang}`;
-    if (translations[cacheKey]) {
-      return translations[cacheKey];
-    }
-
     try {
-      const translatedText = await translationService.translateText(text, targetLang);
-      // Mettre en cache la traduction
-      setTranslations(prev => ({
-        ...prev,
-        [cacheKey]: translatedText
-      }));
-      return translatedText;
+      return await translationService.translateText(text, targetLang);
     } catch (error) {
       console.error('Translation error:', error);
-      return text; // Retourner le texte original en cas d'erreur
+      return text;
     }
   };
 
@@ -61,8 +60,7 @@ export function TranslationProvider({ children }) {
     currentLanguage,
     changeLanguage,
     translate,
-    loading,
-    translationService
+    loading
   };
 
   return (
