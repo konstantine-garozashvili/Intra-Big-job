@@ -3,97 +3,106 @@
  */
 
 /**
+ * Generates a random background color for default avatar
+ * @param {string} initials - The user's initials
+ * @returns {string} - A CSS color string
+ */
+export const generateAvatarBackgroundColor = (initials) => {
+  // Convert initials to a number (ASCII values)
+  let hash = 0;
+  for (let i = 0; i < initials.length; i++) {
+    hash = initials.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  
+  // Generate a color based on the hash
+  const r = (hash & 0xFF0000) >> 16;
+  const g = (hash & 0x00FF00) >> 8;
+  const b = hash & 0x0000FF;
+  
+  // Return a CSS color string with good contrast
+  return `rgb(${r % 256}, ${g % 256}, ${b % 256})`;
+};
+
+/**
  * Generates a complete URL for a profile picture path
  * @param {string|null} picturePath - The profile picture path from the API
+ * @param {string|null} s3Url - The S3 URL for the profile picture
  * @returns {string|null} - The complete URL or null if no path is provided
  */
-export const getProfilePictureUrl = (picturePath) => {
-    // console.log('Profile picture path:', picturePath);
-  
-  if (!picturePath) {
-    // console.log('No profile picture path provided');
+export const getProfilePictureUrl = (picturePath, s3Url = null) => {
+  // Si une URL S3 est fournie, l'utiliser directement
+  if (s3Url) {
+    return s3Url;
+  }
+
+  // Si le chemin est null, vide ou une chaîne vide, retourner null
+  if (!picturePath || picturePath.trim() === '') {
     return null;
   }
-  
-  // If the path already starts with http, it's already a complete URL
+
+  // Si le chemin commence déjà par http, c'est déjà une URL complète
   if (picturePath.startsWith('http')) {
-    // console.log('Path is already a complete URL');
     return picturePath;
   }
-  
-  // Get the API base URL from environment variables
+
+  // Obtenir l'URL de base de l'API à partir des variables d'environnement
   const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-  const apiBaseUrl = baseUrl.replace(/\/api$/, ''); // Remove /api if it exists at the end
-  // console.log('API Base URL:', apiBaseUrl);
-  
-  // If the path is just a filename (no slashes or backslashes)
+  const apiBaseUrl = baseUrl.replace(/\/api$/, ''); // Supprimer /api si elle existe à la fin
+
+  // Si le chemin est juste un nom de fichier (sans slash ou backslash)
   if (!picturePath.includes('/') && !picturePath.includes('\\')) {
-    // console.log('Path is just a filename:', picturePath);
-    // Try different possible locations
+    // Essayer différentes localisations possibles
     const possibleUrls = [
       `${apiBaseUrl}/uploads/documents/${picturePath}`,
       `${apiBaseUrl}/uploads/profile-pictures/${picturePath}`,
       `${apiBaseUrl}/uploads/${picturePath}`
     ];
     
-    // console.log('Trying these URLs:', possibleUrls);
-    
-    // Return the first URL (we'll try them all in the component)
+    // Retourner la première URL (nous les essaierons tous dans le composant)
     return possibleUrls[0];
   }
-  
-  // Handle local file paths (which might be absolute paths)
+
+  // Gérer les chemins de fichiers locaux (qui pourraient être des chemins absolus)
   if (picturePath.includes('/var/www/') || picturePath.includes('C:\\') || picturePath.includes('/public/uploads/')) {
-    // console.log('Path appears to be a local file path');
-    
-    // Extract the relevant part of the path
+    // Extraire la partie pertinente du chemin
     let relativePath;
     
     if (picturePath.includes('/public/uploads/')) {
-      // Extract the path after /public/
+      // Extraire le chemin après /public/
       relativePath = picturePath.split('/public/')[1];
-      // console.log('Extracted relative path from public directory:', relativePath);
     } else if (picturePath.includes('/var/www/')) {
-      // Extract the path after /var/www/html/ or similar
+      // Extraire le chemin après /var/www/html/ ou similaire
       const parts = picturePath.split('/var/www/');
       const afterVarWww = parts[1];
-      // Skip the first directory (usually html or the project name)
+      // Ignorer le premier répertoire (généralement html ou le nom du projet)
       const pathParts = afterVarWww.split('/');
       relativePath = pathParts.slice(1).join('/');
-      // console.log('Extracted relative path from /var/www/:', relativePath);
     } else {
-      // Extract the filename from the path for Windows paths
+      // Extraire le nom de fichier du chemin pour les chemins Windows
       const parts = picturePath.split('\\');
-      // Look for 'uploads' directory in the path
+      // Chercher le répertoire 'uploads' dans le chemin
       const uploadsIndex = parts.findIndex(part => part === 'uploads');
       if (uploadsIndex !== -1) {
         relativePath = 'uploads/' + parts.slice(uploadsIndex + 1).join('/');
       } else {
         relativePath = 'uploads/' + parts[parts.length - 1];
       }
-      // console.log('Extracted relative path from Windows path:', relativePath);
     }
     
-    // Construct URL with the relative path
-    const fullUrl = `${apiBaseUrl}/${relativePath}`;
-    // console.log('Constructed profile picture URL from local path:', fullUrl);
-    return fullUrl;
+    // Construire l'URL avec le chemin relatif
+    return `${apiBaseUrl}/${relativePath}`;
   }
-  
-  // Ensure the path starts with a slash
+
+  // S'assurer que le chemin commence par un slash
   const normalizedPath = picturePath.startsWith('/') ? picturePath : `/${picturePath}`;
   
-  // If the path includes 'uploads', it's likely a file path
+  // Si le chemin contient 'uploads', c'est probablement un chemin de fichier
   if (normalizedPath.includes('uploads')) {
-    const fullUrl = `${apiBaseUrl}${normalizedPath}`;
-    // console.log('Constructed profile picture URL with uploads path:', fullUrl);
-    return fullUrl;
+    return `${apiBaseUrl}${normalizedPath}`;
   }
-  
-  // If the path doesn't include 'uploads', it might be a relative path to the API
-  const fullUrl = `${apiBaseUrl}/uploads/${normalizedPath}`;
-  //  console.log('Constructed profile picture URL with default path:', fullUrl);
-  return fullUrl;
+
+  // Si le chemin ne contient pas 'uploads', c'est peut-être un chemin relatif à l'API
+  return `${apiBaseUrl}/uploads${normalizedPath}`;
 };
 
 /**
