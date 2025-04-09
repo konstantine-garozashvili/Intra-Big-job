@@ -49,7 +49,9 @@ The deployment is now set up with the following workflow:
 
 ## Configuration Files
 
-we should configut .httacess
+we should configure .httacess
+we should configure vite.config
+we should configure nginx.conf
 
 ## Access Information
 
