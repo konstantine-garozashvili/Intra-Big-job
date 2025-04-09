@@ -14,6 +14,8 @@ import { toast } from 'sonner';
 import authService from '@/lib/services/authService';
 import { Checkbox } from '@/components/ui/checkbox';
 import apiService from '@/lib/services/apiService';
+import { useTranslation } from '@/contexts/TranslationContext';
+import AsyncTranslation from '@/components/Translation/AsyncTranslation';
 
 const ROLE_COLORS = {
   'ADMIN': 'bg-blue-100 text-blue-800',
@@ -45,6 +47,7 @@ const itemVariants = {
 };
 
 const AdminDashboard = () => {
+  const { translate, currentLanguage } = useTranslation();
   const { user, users, isLoading, isError, error, refetch } = useAdminDashboardData();
   
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -63,7 +66,7 @@ const AdminDashboard = () => {
   const [selectedRoles, setSelectedRoles] = useState([]);
   const [isLoadingRoles, setIsLoadingRoles] = useState(false);
 
-  // Définir les cartes pour les accès rapides
+  // Définir les cartes pour les accès rapides avec traduction
   const quickAccessCards = [
     {
       title: 'Gestion des utilisateurs',
@@ -253,14 +256,65 @@ const AdminDashboard = () => {
     }
   }, [user, isLoading]);
 
+  // Log initial mount
+  useEffect(() => {
+    console.log('[AdminDashboard] Component mounted');
+    console.log('[AdminDashboard] Current language:', currentLanguage);
+  }, []);
+
+  // Log language changes
+  useEffect(() => {
+    console.log('[Translation] Language changed to:', currentLanguage);
+  }, [currentLanguage]);
+
+  // Log translations
+  const loggedTranslate = async (text) => {
+    console.log('[Translation] Attempting to translate:', text);
+    try {
+      const result = await translate(text);
+      console.log('[Translation] Result:', {
+        original: text,
+        translated: result,
+        language: currentLanguage
+      });
+      return result;
+    } catch (error) {
+      console.error('[Translation] Error:', error);
+      return text;
+    }
+  };
+
+  // Wrap quickAccessCards translations
+  const [translatedCards, setTranslatedCards] = useState([]);
+
+  useEffect(() => {
+    const translateCards = async () => {
+      console.log('[Cards] Starting translation of quick access cards');
+      try {
+        const translated = await Promise.all(quickAccessCards.map(async (card) => ({
+          ...card,
+          translatedTitle: await translate(card.title),
+          translatedDescription: await translate(card.description)
+        })));
+        console.log('[Cards] Translation completed:', translated);
+        setTranslatedCards(translated);
+      } catch (error) {
+        console.error('[Cards] Translation error:', error);
+        setTranslatedCards(quickAccessCards);
+      }
+    };
+
+    translateCards();
+  }, [currentLanguage, translate]);
+
   return (
     <DashboardLayout 
       loading={isLoading} 
-      error={isError ? error?.message || 'Une erreur est survenue lors du chargement des données' : null}
+      error={isError ? error?.message || <AsyncTranslation text="Une erreur est survenue lors du chargement des données" /> : null}
       className="p-0"
       user={user}
       headerIcon={Shield}
-      headerTitle="Tableau de bord administrateur"
+      headerTitle={<AsyncTranslation text="Tableau de bord administrateur" />}
     >
       <div className="container p-4 mx-auto sm:p-6 lg:p-8 bg-gray-50 dark:bg-gray-900 min-h-screen">
         {/* Statistiques essentielles */}
@@ -275,7 +329,9 @@ const AdminDashboard = () => {
 
         <Card className="border-0 shadow-md mb-6">
           <CardContent className="p-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-6">Accès rapide</h2>
+            <h2 className="text-xl font-semibold text-gray-800 mb-6">
+              <AsyncTranslation text="Accès rapide" />
+            </h2>
             
             <motion.div 
               variants={containerVariants}
@@ -283,7 +339,7 @@ const AdminDashboard = () => {
               animate="visible"
               className="grid grid-cols-1 md:grid-cols-2 gap-5"
             >
-              {quickAccessCards.map((card, index) => (
+              {translatedCards.map((card, index) => (
                 <motion.div key={index} variants={itemVariants} className="h-full">
                   <Link to={card.link} className="block h-full">
                     <div className="relative h-full overflow-hidden rounded-xl shadow-sm hover:shadow-md transition-all duration-300 group">
@@ -299,10 +355,10 @@ const AdminDashboard = () => {
                         </div>
                         
                         <h2 className="text-xl font-semibold text-white mb-1">
-                          {card.title}
+                          {card.translatedTitle}
                         </h2>
                         <p className="text-white/80 text-sm mb-4">
-                          {card.description}
+                          {card.translatedDescription}
                         </p>
                       </div>
                     </div>
@@ -318,8 +374,8 @@ const AdminDashboard = () => {
         <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
           <DialogContent className="no-focus-outline">
             <DialogHeader>
-              <DialogTitle>Modifier l'utilisateur</DialogTitle>
-              <DialogDescription>Modifier les informations de l'utilisateur</DialogDescription>
+              <DialogTitle><AsyncTranslation text="Modifier l'utilisateur" /></DialogTitle>
+              <DialogDescription><AsyncTranslation text="Modifier les informations de l'utilisateur" /></DialogDescription>
             </DialogHeader>
             <form onSubmit={handleEditUser} className="space-y-4">
               <div>
@@ -408,10 +464,9 @@ const AdminDashboard = () => {
         <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
           <DialogContent className="no-focus-outline">
             <DialogHeader>
-              <DialogTitle>Supprimer l'utilisateur</DialogTitle>
+              <DialogTitle><AsyncTranslation text="Supprimer l'utilisateur" /></DialogTitle>
               <DialogDescription>
-                Êtes-vous sûr de vouloir supprimer cet utilisateur ?
-                Cette action est irréversible.
+                <AsyncTranslation text="Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible." />
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>

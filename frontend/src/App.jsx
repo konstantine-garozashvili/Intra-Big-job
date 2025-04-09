@@ -3,6 +3,7 @@ import { lazy, Suspense, useEffect } from 'react'
 import MainLayout from './components/MainLayout'
 import { RoleProvider, RoleDashboardRedirect, RoleGuard, ROLES } from './features/roles'
 import { AuthProvider } from './contexts/AuthContext'
+import { TranslationProvider } from './contexts/TranslationContext'
 import { QueryClientProvider, useQueryClient } from '@tanstack/react-query'
 import './index.css'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -169,16 +170,18 @@ function App() {
           <ReactQueryHydration>
             <AuthProvider>
               <RoleProvider>
-                {/* Initialisation des services de l'application */}
-                <AppInitializer />
-                
-                {/* Gestionnaire de préchargement */}
-                <PrefetchHandler />
-                
-                <Suspense>
-                  <AppContent />
-                </Suspense>
-                <Toaster />
+                <TranslationProvider>
+                  {/* Initialisation des services de l'application */}
+                  <AppInitializer />
+                  
+                  {/* Gestionnaire de préchargement */}
+                  <PrefetchHandler />
+                  
+                  <Suspense>
+                    <AppContent />
+                  </Suspense>
+                  <Toaster />
+                </TranslationProvider>
               </RoleProvider>
             </AuthProvider>
           </ReactQueryHydration>
