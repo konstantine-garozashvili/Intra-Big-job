@@ -26,15 +26,15 @@ const ProfileView = () => {
     forceRefresh: refetchCurrentProfile,
     setUser: setCurrentProfileData
   } = useUserData({
+    userId: isPublicProfile ? userId : undefined,
     preferComprehensiveData: true,
-    enabled: !isPublicProfile
+    enabled: true
   });
   
   const [publicProfileData, setPublicProfileData] = useState(null);
   const [isLoadingPublicProfile, setIsLoadingPublicProfile] = useState(false);
   const [publicProfileError, setPublicProfileError] = useState(null);
   
-  // Fonction réutilisable pour charger le profil étudiant
   const fetchStudentProfile = useCallback(async (forceFresh = true) => {
     if (isLoadingStudentProfile) return; // Éviter les appels multiples
     
@@ -46,11 +46,9 @@ const ProfileView = () => {
       if (response && response.success && response.data) {
         setStudentProfile(response.data);
         
-        // Mettre également à jour les données dans le profil utilisateur
         if (currentProfileData && !isPublicProfile) {
           currentProfileData.studentProfile = response.data;
           
-          // Notifier les autres composants de la mise à jour
           handleProfileUpdate({
             studentProfile: response.data
           });
@@ -58,16 +56,14 @@ const ProfileView = () => {
       }
       setHasLoadedStudentProfile(true);
     } catch (error) {
-      setHasLoadedStudentProfile(true); // Même en cas d'erreur, pour éviter les appels en boucle
+      setHasLoadedStudentProfile(true); 
     } finally {
       setIsLoadingStudentProfile(false);
     }
   }, [isLoadingStudentProfile, currentProfileData, isPublicProfile]);
   
-  // Préchargement du profil étudiant pour résoudre le problème d'affichage
   useEffect(() => {
     if (!isPublicProfile && currentProfileData && !hasLoadedStudentProfile && !isLoadingStudentProfile) {
-      // Vérifie si l'utilisateur est un étudiant
       const isStudent = currentProfileData.roles?.some(role => {
         if (typeof role === 'string') {
           return role.includes('STUDENT');
@@ -78,130 +74,47 @@ const ProfileView = () => {
       });
       
       if (isStudent) {
-        // Toujours forcer le chargement frais des données lors de l'initialisation
         fetchStudentProfile(true);
       } else {
-        setHasLoadedStudentProfile(true); // Marquer comme chargé si l'utilisateur n'est pas un étudiant
+        setHasLoadedStudentProfile(true);
       }
     }
   }, [isPublicProfile, currentProfileData, hasLoadedStudentProfile, isLoadingStudentProfile, fetchStudentProfile]);
   
-  // Gestionnaire de mise à jour du profil utilisateur depuis les composants enfants
   const handleProfileUpdate = useCallback((updatedData) => {
-    
     if (isPublicProfile) {
-      // Pour les profils publics, mettre à jour l'état local
       setPublicProfileData(prev => ({
         ...prev,
         ...updatedData
       }));
     } else {
-      // Pour le profil de l'utilisateur connecté, utiliser la fonction de mise à jour du hook
       if (setCurrentProfileData) {
         setCurrentProfileData(prev => ({
           ...prev,
           ...updatedData
         }));
       } else {
-        // Fallback: forcer un rafraichissement complet des données
         refetchCurrentProfile();
       }
       
-      // Mettre à jour aussi l'état local des documents si nécessaire
       if (updatedData.documents) {
         setDocuments(updatedData.documents);
       }
       
-      // Mettre à jour l'état du profil étudiant si présent
       if (updatedData.studentProfile) {
         setStudentProfile(updatedData.studentProfile);
       }
     }
     
-    // Toast pour indiquer que le profil a été mis à jour
     if (updatedData.toastMessage !== false) {
       toast.success(updatedData.toastMessage || "Profil mis à jour");
     }
   }, [isPublicProfile, setCurrentProfileData, refetchCurrentProfile]);
   
-  // Écouter les événements de mise à jour des statuts de recherche
-  useEffect(() => {
-    if (!isPublicProfile) {
-      // Gestionnaire pour les mises à jour de statut de recherche
-      const handleJobStatusUpdate = async (event) => {
-        await fetchStudentProfile(true);
-      };
-      
-      // Gestionnaire pour les mises à jour de portfolio
-      const handlePortfolioUpdate = async (event) => {
-        
-        // Forcer le rafraîchissement du profil étudiant si c'est une mise à jour de portfolio
-        if (event.detail?.portfolioUrl !== undefined || (event.detail?.type === 'portfolio')) {
-          const portfolioUrl = event.detail.portfolioUrl || (event.detail.type === 'portfolio' ? event.detail.portfolioUrl : undefined);
-          
-          // Mise à jour optimiste immédiate
-          if (studentProfile && portfolioUrl !== undefined) {
-            setStudentProfile(prevProfile => ({
-              ...prevProfile,
-              portfolioUrl: portfolioUrl
-            }));
-            
-            // Mettre également à jour le profil utilisateur principal
-            if (currentProfileData && currentProfileData.studentProfile) {
-              currentProfileData.studentProfile.portfolioUrl = portfolioUrl;
-              handleProfileUpdate({
-                studentProfile: {
-                  ...currentProfileData.studentProfile,
-                  portfolioUrl: portfolioUrl
-                },
-                toastMessage: false // Éviter d'afficher un toast pour cette mise à jour
-              });
-            }
-          }
-          
-          // Puis forcer le chargement complet des données fraîches
-          await fetchStudentProfile(true);
-        }
-      };
-      
-      // Écouter les événements personnalisés
-      window.addEventListener('job-status-updated', handleJobStatusUpdate);
-      window.addEventListener('profile-updated', handlePortfolioUpdate);
-      window.addEventListener('portfolio-updated', handlePortfolioUpdate);
-      
-      // Nettoyer les écouteurs quand le composant est démonté
-      return () => {
-        window.removeEventListener('job-status-updated', handleJobStatusUpdate);
-        window.removeEventListener('profile-updated', handlePortfolioUpdate);
-        window.removeEventListener('portfolio-updated', handlePortfolioUpdate);
-      };
-    }
-  }, [isPublicProfile, fetchStudentProfile, studentProfile, currentProfileData, handleProfileUpdate]);
-  
-  // Add this useEffect to clear cache when component mounts or when reloading the page
-  useEffect(() => {
-    // Clear cache on page reload
-    const handleBeforeUnload = () => {
-      studentProfileService.clearCache();
-    };
-    
-    // Listen for page reload/navigation
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    
-    // Initial cache clear when component mounts
-    studentProfileService.clearCache();
-    
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, []);
-  
   useEffect(() => {
     if (isPublicProfile && userId) {
-      // Get the current user's ID from the profile data
       const currentUserId = currentProfileData?.id;
       
-      // If we're viewing our own profile, don't fetch public profile data
       if (currentUserId && currentUserId.toString() === userId) {
         setPublicProfileData(currentProfileData);
         setIsLoadingPublicProfile(false);
@@ -287,13 +200,24 @@ const ProfileView = () => {
     }
   };
 
-  // Add this useEffect to clear cache when userId changes
   useEffect(() => {
-    // Clear profile cache when userId changes
+    const handleBeforeUnload = () => {
+      studentProfileService.clearCache();
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    studentProfileService.clearCache();
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
+
+  useEffect(() => {
     localStorage.removeItem('user');
     sessionStorage.removeItem('user');
     
-    // Force refresh profile data
     if (refetchCurrentProfile) {
       refetchCurrentProfile();
     }
@@ -406,50 +330,17 @@ const ProfileView = () => {
     );
   }
 
-  let userData;
-  
-  if (isPublicProfile) {
-    userData = {
-      user: {
-        id: data.id || data.user?.id,
-        firstName: data.firstName || data.user?.firstName || "",
-        lastName: data.lastName || data.user?.lastName || "",
-        email: data.email || data.user?.email || "",
-        phoneNumber: data.phoneNumber || data.user?.phoneNumber || "",
-        profilePictureUrl: profilePictureUrl || data.profilePictureUrl || data.user?.profilePictureUrl || "",
-        roles: Array.isArray(data.roles) 
-          ? data.roles.map(role => typeof role === 'string' ? { name: role } : role)
-          : (data.user?.roles || [{ name: 'USER' }]),
-        specialization: data.specialization || data.user?.specialization || {},
-        linkedinUrl: data.linkedinUrl || data.user?.linkedinUrl || "",
-        city: data.city || ""
-      },
-      studentProfile: data.studentProfile || {
-        isSeekingInternship: false,
-        isSeekingApprenticeship: false
-      },
-      diplomas: data.diplomas || [],
-      addresses: data.addresses || [],
-      documents: data.documents || [],
-      stats: data.stats || { profile: { completionPercentage: 0 } }
-    };
-  } else {
-    userData = {
-      user: data,
-      // Priorité au profil étudiant préchargé, sinon utiliser celui des données actuelles
-      studentProfile: studentProfile || data.studentProfile || {
-        isSeekingInternship: false,
-        isSeekingApprenticeship: false
-      },
-      diplomas: data.diplomas || [],
-      addresses: data.addresses || [],
-      documents: documents.length > 0 ? documents : (data.documents || []),
-      stats: data.stats || { profile: { completionPercentage: 0 } }
-    };
-  }
-
-  if (studentProfile) {
-  }
+  const userData = {
+    user: currentProfileData || {},
+    studentProfile: studentProfile || {
+      isSeekingInternship: false,
+      isSeekingApprenticeship: false
+    },
+    diplomas: currentProfileData?.diplomas || [],
+    addresses: currentProfileData?.addresses || [],
+    documents: documents.length > 0 ? documents : (currentProfileData?.documents || []),
+    stats: currentProfileData?.stats || { profile: { completionPercentage: 0 } }
+  };
 
   return (
     <motion.div

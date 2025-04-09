@@ -408,7 +408,7 @@ const UserModal = ({ user, onClose }) => {
               </div>
 
               <Link
-                to={`/profile/${user.id}`}
+                to={`/public-profile/${user.id}`}
                 className="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
               >
                 <User className="w-4 h-4 mr-2" />

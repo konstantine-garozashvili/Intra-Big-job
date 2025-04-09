@@ -177,4 +177,122 @@ class UserController extends AbstractController
             ], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
+
+    /**
+     * Endpoint to view a user's public profile
+     */
+    #[Route('/profile/view/{id}', name: 'api_profile_view', methods: ['GET'])]
+    #[IsGranted('ROLE_STUDENT')]
+    public function viewProfile(Request $request, $id): JsonResponse
+    {
+        try {
+            $currentUser = $this->getUser();
+            if (!$currentUser) {
+                return $this->json(['message' => 'User not authenticated'], JsonResponse::HTTP_UNAUTHORIZED);
+            }
+
+            $user = $this->userRepository->find($id);
+            if (!$user) {
+                return $this->json(['message' => 'User not found'], JsonResponse::HTTP_NOT_FOUND);
+            }
+
+            // Check if the user can view this profile based on roles
+            $currentUserRoles = $currentUser->getUserRoles()->map(function($role) {
+                return $role->getRole()->getName();
+            })->toArray();
+
+            $targetUserRoles = $user->getUserRoles()->map(function($role) {
+                return $role->getRole()->getName();
+            })->toArray();
+
+            // Admins and Super Admins can view all profiles
+            if (in_array('ADMIN', $currentUserRoles) || in_array('SUPER_ADMIN', $currentUserRoles)) {
+                return $this->json([
+                    'success' => true,
+                    'data' => $this->formatUserProfile($user)
+                ]);
+            }
+
+            // Students can only view TEACHER, STUDENT, RECRUITER, and HR profiles
+            if (in_array('STUDENT', $currentUserRoles)) {
+                if (array_intersect(['TEACHER', 'STUDENT', 'RECRUITER', 'HR'], $targetUserRoles)) {
+                    return $this->json([
+                        'success' => true,
+                        'data' => $this->formatUserProfile($user)
+                    ]);
+                }
+            }
+
+            // HR can only view TEACHER, STUDENT, and RECRUITER profiles
+            if (in_array('HR', $currentUserRoles)) {
+                if (array_intersect(['TEACHER', 'STUDENT', 'RECRUITER'], $targetUserRoles)) {
+                    return $this->json([
+                        'success' => true,
+                        'data' => $this->formatUserProfile($user)
+                    ]);
+                }
+            }
+
+            // Recruiters can only view TEACHER and STUDENT profiles
+            if (in_array('RECRUITER', $currentUserRoles)) {
+                if (array_intersect(['TEACHER', 'STUDENT'], $targetUserRoles)) {
+                    return $this->json([
+                        'success' => true,
+                        'data' => $this->formatUserProfile($user)
+                    ]);
+                }
+            }
+
+            // Teachers can only view STUDENT and HR profiles
+            if (in_array('TEACHER', $currentUserRoles)) {
+                if (array_intersect(['STUDENT', 'HR'], $targetUserRoles)) {
+                    return $this->json([
+                        'success' => true,
+                        'data' => $this->formatUserProfile($user)
+                    ]);
+                }
+            }
+
+            // Guests can only view RECRUITER profiles
+            if (in_array('GUEST', $currentUserRoles)) {
+                if (in_array('RECRUITER', $targetUserRoles)) {
+                    return $this->json([
+                        'success' => true,
+                        'data' => $this->formatUserProfile($user)
+                    ]);
+                }
+            }
+
+            return $this->json([
+                'success' => false,
+                'message' => 'You do not have permission to view this profile'
+            ], JsonResponse::HTTP_FORBIDDEN);
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Error fetching profile: ' . $e->getMessage()
+            ], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private function formatUserProfile($user)
+    {
+        return [
+            'id' => $user->getId(),
+            'firstName' => $user->getFirstName(),
+            'lastName' => $user->getLastName(),
+            'email' => $user->getEmail(),
+            'profilePicturePath' => $user->getProfilePicturePath(),
+            'profilePictureUrl' => $user->getProfilePicturePath() ? $this->documentStorageFactory->getDocumentUrl($user->getProfilePicturePath()) : null,
+            'userRoles' => array_map(function($userRole) {
+                return [
+                    'id' => $userRole->getId(),
+                    'role' => [
+                        'id' => $userRole->getRole()->getId(),
+                        'name' => $userRole->getRole()->getName()
+                    ]
+                ];
+            }, $user->getUserRoles()->toArray())
+        ];
+    }
 }
