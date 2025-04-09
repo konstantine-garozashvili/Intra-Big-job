@@ -67,9 +67,26 @@ The deployment is now set up with the following workflow:
 
 ## Configuration Files
 
-We should configure .htaccess for proper routing.
+### .htaccess Configuration
 
-For production, the server uses the `.env.dev` file which automatically sets the production database and other settings.
+The project includes two important .htaccess files for OVH hosting:
+
+1. **Root .htaccess** (/.htaccess)
+   - Handles proper routing to the Symfony app
+   - Redirects requests to the backend/public/index.php file
+   - Sets PHP configuration for the entire site
+   - Adds compression and caching rules
+
+2. **Backend API .htaccess** (/backend/public/.htaccess-ovh)
+   - Special configuration for the API
+   - Handles CORS headers specifically for the production domain
+   - Configures PHP settings optimized for API operation
+
+**Important:** When deploying to OVH, make sure that:
+1. The root .htaccess is placed in the root directory of your hosting
+2. Rename /backend/public/.htaccess-ovh to /backend/public/.htaccess on the server
+
+These .htaccess files ensure proper routing between frontend and backend components.
 
 ## Access Information
 
