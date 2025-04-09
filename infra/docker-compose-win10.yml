@@ -1,10 +1,12 @@
+version: '3.8'
+
 services:
   frontend:
     build:
       context: ../frontend
       dockerfile: Dockerfile
     volumes:
-      - frontend_node_modules:/app/node_modules
+      - ../frontend:/app
     ports:
       - "5173:5173"
     depends_on:
@@ -30,20 +32,13 @@ services:
       - app-network
     environment:
       REDIS_URL: redis://redis:6379
-    command: bash -c "composer install --no-interaction && 
-      echo 'Waiting for database to be fully ready...' &&
-      sleep 60 &&
-      for i in {1..30}; do
-        if mysql -h database -u root -proot -e 'SELECT 1' &>/dev/null; then
-          echo 'MySQL is ready!';
-          break;
-        fi;
-        echo \"Waiting for MySQL... ($$i/30)\";
-        sleep 5;
-      done &&
-      php bin/console doctrine:database:create --if-not-exists --no-interaction && 
-      php bin/console doctrine:schema:update --force --no-interaction && 
-      php bin/console doctrine:fixtures:load --no-interaction --append || php bin/console doctrine:fixtures:load --no-interaction && 
+    command: bash -c "
+      composer install --no-interaction && 
+      echo 'Waiting for database...' &&
+      php -r \"set_time_limit(30);for(;;){if(@fsockopen('database',3306))die('Database ready!\\n');echo '.';sleep(1);}\" &&
+      php bin/console doctrine:database:create --if-not-exists --no-interaction &&
+      php bin/console doctrine:schema:update --force --no-interaction &&
+      php bin/console doctrine:fixtures:load --no-interaction --append || php bin/console doctrine:fixtures:load --no-interaction &&
       exec php-fpm"
 
   nginx:
@@ -69,6 +64,9 @@ services:
       --skip-host-cache
       --skip-name-resolve
       --bind-address=0.0.0.0
+      --log-error=/var/log/mysql/error.log
+    cap_add:
+      - SYS_NICE
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: bigproject
@@ -76,19 +74,21 @@ services:
       MYSQL_PASSWORD: "password"
       MYSQL_ROOT_HOST: "%"
     volumes:
-      - type: volume
-        source: database_data
-        target: /var/lib/mysql
+      - database_data:/var/lib/mysql
       - ./mysql-init:/docker-entrypoint-initdb.d
+      - ./mysql-logs:/var/log/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-proot"]
       interval: 5s
       timeout: 5s
       retries: 20
+      start_period: 10s
     ports:
       - "3306:3306"
     networks:
       - app-network
+    # Utiliser un init system pour améliorer la gestion des signaux sur Windows
+    init: true
 
   redis:
     image: redis:alpine
@@ -114,6 +114,18 @@ services:
     networks:
       - app-network
 
+  # Conteneur spécifique pour Windows 10 qui exécute le script de correction automatiquement
+  mysql-win10-fix:
+    image: mysql:8.0
+    volumes:
+      - ./mysql-init:/scripts
+    command: bash -c "sleep 15 && mysql -h database -u root -proot < /scripts/init.sql || echo 'Retry...' && sleep 5 && mysql -h database -u root -proot < /scripts/init.sql"
+    networks:
+      - app-network
+    depends_on:
+      - database
+    restart: "no"
+
 networks:
   app-network:
     driver: bridge
@@ -123,5 +135,4 @@ volumes:
   backend_vendor:
   backend_var:
   jwt_keys:
-  redis_data:
-  frontend_node_modules:
+  redis_data: 

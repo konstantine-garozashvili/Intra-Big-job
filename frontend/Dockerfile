@@ -2,18 +2,17 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Nettoyage du cache npm
-RUN npm cache clean --force
+# Copier d'abord package.json et package-lock.json pour utiliser le cache Docker
+COPY package*.json ./
 
-# Copie des fichiers de dépendances
-COPY package.json ./
-
-# Installation des dépendances
+# Installer les dépendances 
 RUN npm install
 
-# Copie du reste du code
+# Ensuite copier les fichiers de l'application
 COPY . .
 
+# Exposer le port utilisé par Vite
 EXPOSE 5173
 
+# Commande par défaut pour démarrer en mode développement
 CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

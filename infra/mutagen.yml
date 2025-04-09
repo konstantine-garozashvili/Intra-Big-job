@@ -21,4 +21,25 @@ sync:
       pollingInterval: 2
     rescan:
       # Rescan every 10 seconds if file watching fails
+      interval: 10
+  
+  frontend:
+    alpha: "../frontend"
+    beta: "docker://infra-frontend-1/app"
+    mode: "two-way-resolved"
+    ignore:
+      - "/node_modules"
+      - "/.git"
+      - "/.idea"
+      - "/.vscode"
+      - "**/*.log"
+      - "/dist"
+    permissions:
+      defaultFileMode: 0644
+      defaultDirectoryMode: 0755
+    symlink:
+      mode: "portable"
+    watch:
+      pollingInterval: 2
+    rescan:
       interval: 10 

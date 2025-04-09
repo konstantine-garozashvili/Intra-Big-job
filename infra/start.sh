@@ -1,5 +1,5 @@
 #!/bin/bash
-# Script de demarrage de l'environnement pour Bash
+# Script de démarrage de l'environnement pour Bash
 
 # Couleurs pour les messages
 RED='\033[0;31m'
@@ -11,29 +11,31 @@ NC='\033[0m' # No Color
 # Chemins
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-echo -e "${CYAN}🚀 Demarrage de l'environnement de developpement...${NC}"
+echo -e "${CYAN}🚀 Démarrage de l'environnement de développement...${NC}"
 
-# Verifier si Docker est en cours d'execution
+# Vérifier si Docker est en cours d'exécution
 if ! docker info >/dev/null 2>&1; then
-  echo -e "${RED}❌ Docker n'est pas en cours d'execution. Veuillez demarrer Docker.${NC}"
+  echo -e "${RED}❌ Docker n'est pas en cours d'exécution. Veuillez démarrer Docker.${NC}"
   exit 1
 fi
 
 cd "$SCRIPT_DIR" || exit
 
-# Demarrer les containers
-echo -e "${YELLOW}📦 Demarrage des containers...${NC}"
+
+
+# Pour les autres systèmes, utiliser le démarrage standard
+echo -e "${YELLOW}📦 Démarrage des containers...${NC}"
 docker-compose up -d
 
-# Attendre que les containers soient prets
-echo -e "${YELLOW}⏳ Attente du demarrage des services...${NC}"
+# Attendre que les containers soient prêts
+echo -e "${YELLOW}⏳ Attente du démarrage des services...${NC}"
 sleep 10
 
-# Demarrer Mutagen
+# Démarrer Mutagen
 echo -e "${YELLOW}🔄 Configuration de la synchronisation Mutagen...${NC}"
 bash "$SCRIPT_DIR/setup-mutagen.sh"
 
-echo -e "\n${GREEN}✅ Environnement de developpement pret!${NC}"
+echo -e "\n${GREEN}✅ Environnement de développement prêt!${NC}"
 echo -e "${CYAN}📝 URLs disponibles:${NC}"
 echo -e "   Frontend: http://localhost:5173"
 echo -e "   Backend API: http://localhost:8000"

@@ -1,0 +1,98 @@
+2025-04-08T07:54:29.528994Z 0 [Warning] [MY-011068] [Server] The syntax '--skip-host-cache' is deprecated and will be removed in a future release. Please use SET GLOBAL host_cache_size=0 instead.
+2025-04-08T07:54:29.529079Z 0 [Warning] [MY-011068] [Server] The syntax '--skip-host-cache' is deprecated and will be removed in a future release. Please use SET GLOBAL host_cache_size=0 instead.
+2025-04-08T07:54:29.530306Z 0 [Warning] [MY-010918] [Server] 'default_authentication_plugin' is deprecated and will be removed in a future release. Please use authentication_policy instead.
+2025-04-08T07:54:29.530875Z 0 [System] [MY-013169] [Server] /usr/sbin/mysqld (mysqld 8.0.41) initializing of server in progress as process 81
+2025-04-08T07:54:29.707298Z 1 [System] [MY-013576] [InnoDB] InnoDB initialization has started.
+2025-04-08T07:54:32.613391Z 1 [System] [MY-013577] [InnoDB] InnoDB initialization has ended.
+2025-04-08T07:54:35.532714Z 6 [Warning] [MY-010453] [Server] root@localhost is created with an empty password ! Please consider switching off the --initialize-insecure option.
+2025-04-08T07:54:36.568107Z 6 [Warning] [MY-013360] [Server] Plugin mysql_native_password reported: ''mysql_native_password' is deprecated and will be removed in a future release. Please use caching_sha2_password instead'
+2025-04-08T07:54:44.173093Z 0 [Warning] [MY-011068] [Server] The syntax '--skip-host-cache' is deprecated and will be removed in a future release. Please use SET GLOBAL host_cache_size=0 instead.
+2025-04-08T07:54:44.173196Z 0 [Warning] [MY-011068] [Server] The syntax '--skip-host-cache' is deprecated and will be removed in a future release. Please use SET GLOBAL host_cache_size=0 instead.
+2025-04-08T07:54:44.180479Z 0 [Warning] [MY-010918] [Server] 'default_authentication_plugin' is deprecated and will be removed in a future release. Please use authentication_policy instead.
+2025-04-08T07:54:44.180526Z 0 [System] [MY-010116] [Server] /usr/sbin/mysqld (mysqld 8.0.41) starting as process 142
+2025-04-08T07:54:44.251428Z 1 [System] [MY-013576] [InnoDB] InnoDB initialization has started.
+2025-04-08T07:54:45.164691Z 1 [System] [MY-013577] [InnoDB] InnoDB initialization has ended.
+2025-04-08T07:54:46.069773Z 0 [Warning] [MY-010068] [Server] CA certificate ca.pem is self signed.
+2025-04-08T07:54:46.072388Z 0 [System] [MY-013602] [Server] Channel mysql_main configured to support TLS. Encrypted connections are now supported for this channel.
+2025-04-08T07:54:46.082906Z 0 [Warning] [MY-011810] [Server] Insecure configuration for --pid-file: Location '/var/run/mysqld' in the path is accessible to all OS users. Consider choosing a different directory.
+2025-04-08T07:54:46.206207Z 0 [System] [MY-010931] [Server] /usr/sbin/mysqld: ready for connections. Version: '8.0.41'  socket: '/var/run/mysqld/mysqld.sock'  port: 0  MySQL Community Server - GPL.
+2025-04-08T07:54:46.206334Z 0 [System] [MY-011323] [Server] X Plugin ready for connections. Socket: /var/run/mysqld/mysqlx.sock
+2025-04-08T07:54:46.375077Z 8 [Warning] [MY-013360] [Server] Plugin mysql_native_password reported: ''mysql_native_password' is deprecated and will be removed in a future release. Please use caching_sha2_password instead'
+2025-04-08T07:54:53.959200Z 14 [Warning] [MY-010235] [Server] Following users were specified in CREATE USER IF NOT EXISTS but they already exist. Corresponding entry in binary log used default authentication plugin 'mysql_native_password' to rewrite authentication information (if any) for them: 'root'@'%'
+2025-04-08T07:54:53.998107Z 14 [Warning] [MY-010235] [Server] Following users were specified in CREATE USER IF NOT EXISTS but they already exist. Corresponding entry in binary log used default authentication plugin 'mysql_native_password' to rewrite authentication information (if any) for them: 'user'@'%'
+2025-04-08T07:54:54.069099Z 15 [Warning] [MY-010235] [Server] Following users were specified in CREATE USER IF NOT EXISTS but they already exist. Corresponding entry in binary log used default authentication plugin 'mysql_native_password' to rewrite authentication information (if any) for them: 'root'@'%'
+2025-04-08T07:54:54.083787Z 15 [Warning] [MY-010235] [Server] Following users were specified in CREATE USER IF NOT EXISTS but they already exist. Corresponding entry in binary log used default authentication plugin 'mysql_native_password' to rewrite authentication information (if any) for them: 'user'@'%'
+2025-04-08T07:54:54.199139Z 16 [System] [MY-013172] [Server] Received SHUTDOWN from user root. Shutting down mysqld (Version: 8.0.41).
+2025-04-08T07:54:55.681189Z 0 [System] [MY-010910] [Server] /usr/sbin/mysqld: Shutdown complete (mysqld 8.0.41)  MySQL Community Server - GPL.
+2025-04-08T07:54:56.660570Z 0 [Warning] [MY-011068] [Server] The syntax '--skip-host-cache' is deprecated and will be removed in a future release. Please use SET GLOBAL host_cache_size=0 instead.
+2025-04-08T07:54:56.660621Z 0 [Warning] [MY-011068] [Server] The syntax '--skip-host-cache' is deprecated and will be removed in a future release. Please use SET GLOBAL host_cache_size=0 instead.
+2025-04-08T07:54:56.663619Z 0 [Warning] [MY-010918] [Server] 'default_authentication_plugin' is deprecated and will be removed in a future release. Please use authentication_policy instead.
+2025-04-08T07:54:56.663670Z 0 [System] [MY-010116] [Server] /usr/sbin/mysqld (mysqld 8.0.41) starting as process 7
+2025-04-08T07:54:56.690771Z 1 [System] [MY-013576] [InnoDB] InnoDB initialization has started.
+2025-04-08T07:54:57.533897Z 1 [System] [MY-013577] [InnoDB] InnoDB initialization has ended.
+2025-04-08T07:54:58.161419Z 0 [Warning] [MY-010068] [Server] CA certificate ca.pem is self signed.
+2025-04-08T07:54:58.162981Z 0 [System] [MY-013602] [Server] Channel mysql_main configured to support TLS. Encrypted connections are now supported for this channel.
+2025-04-08T07:54:58.170456Z 0 [Warning] [MY-011810] [Server] Insecure configuration for --pid-file: Location '/var/run/mysqld' in the path is accessible to all OS users. Consider choosing a different directory.
+2025-04-08T07:54:58.403118Z 0 [System] [MY-011323] [Server] X Plugin ready for connections. Bind-address: '::' port: 33060, socket: /var/run/mysqld/mysqlx.sock
+2025-04-08T07:54:58.403480Z 0 [System] [MY-010931] [Server] /usr/sbin/mysqld: ready for connections. Version: '8.0.41'  socket: '/var/run/mysqld/mysqld.sock'  port: 3306  MySQL Community Server - GPL.
+2025-04-08T07:55:00.920803Z 8 [Warning] [MY-013360] [Server] Plugin mysql_native_password reported: ''mysql_native_password' is deprecated and will be removed in a future release. Please use caching_sha2_password instead'
+2025-04-08T07:57:01.628066Z 36 [Warning] [MY-010235] [Server] Following users were specified in CREATE USER IF NOT EXISTS but they already exist. Corresponding entry in binary log used default authentication plugin 'mysql_native_password' to rewrite authentication information (if any) for them: 'root'@'%'
+2025-04-08T07:57:01.662246Z 36 [Warning] [MY-010235] [Server] Following users were specified in CREATE USER IF NOT EXISTS but they already exist. Corresponding entry in binary log used default authentication plugin 'mysql_native_password' to rewrite authentication information (if any) for them: 'user'@'%'
+2025-04-08T07:57:06.816952Z 49 [Warning] [MY-010235] [Server] Following users were specified in CREATE USER IF NOT EXISTS but they already exist. Corresponding entry in binary log used default authentication plugin 'mysql_native_password' to rewrite authentication information (if any) for them: 'root'@'%'
+2025-04-08T07:57:06.850641Z 49 [Warning] [MY-010235] [Server] Following users were specified in CREATE USER IF NOT EXISTS but they already exist. Corresponding entry in binary log used default authentication plugin 'mysql_native_password' to rewrite authentication information (if any) for them: 'user'@'%'
+2025-04-08T07:59:01.932880Z 0 [System] [MY-013172] [Server] Received SHUTDOWN from user <via user signal>. Shutting down mysqld (Version: 8.0.41).
+2025-04-08T07:59:04.241239Z 0 [System] [MY-010910] [Server] /usr/sbin/mysqld: Shutdown complete (mysqld 8.0.41)  MySQL Community Server - GPL.
+2025-04-08T07:59:31.886582Z 0 [Warning] [MY-011068] [Server] The syntax '--skip-host-cache' is deprecated and will be removed in a future release. Please use SET GLOBAL host_cache_size=0 instead.
+2025-04-08T07:59:31.886751Z 0 [Warning] [MY-011068] [Server] The syntax '--skip-host-cache' is deprecated and will be removed in a future release. Please use SET GLOBAL host_cache_size=0 instead.
+2025-04-08T07:59:31.887287Z 0 [Warning] [MY-010918] [Server] 'default_authentication_plugin' is deprecated and will be removed in a future release. Please use authentication_policy instead.
+2025-04-08T07:59:31.887326Z 0 [System] [MY-013169] [Server] /usr/sbin/mysqld (mysqld 8.0.41) initializing of server in progress as process 83
+2025-04-08T07:59:32.021264Z 1 [System] [MY-013576] [InnoDB] InnoDB initialization has started.
+2025-04-08T07:59:33.329257Z 1 [System] [MY-013577] [InnoDB] InnoDB initialization has ended.
+2025-04-08T07:59:36.150946Z 6 [Warning] [MY-010453] [Server] root@localhost is created with an empty password ! Please consider switching off the --initialize-insecure option.
+2025-04-08T07:59:36.643673Z 6 [Warning] [MY-013360] [Server] Plugin mysql_native_password reported: ''mysql_native_password' is deprecated and will be removed in a future release. Please use caching_sha2_password instead'
+2025-04-08T07:59:42.393302Z 0 [Warning] [MY-011068] [Server] The syntax '--skip-host-cache' is deprecated and will be removed in a future release. Please use SET GLOBAL host_cache_size=0 instead.
+2025-04-08T07:59:42.393338Z 0 [Warning] [MY-011068] [Server] The syntax '--skip-host-cache' is deprecated and will be removed in a future release. Please use SET GLOBAL host_cache_size=0 instead.
+2025-04-08T07:59:42.395078Z 0 [Warning] [MY-010918] [Server] 'default_authentication_plugin' is deprecated and will be removed in a future release. Please use authentication_policy instead.
+2025-04-08T07:59:42.395147Z 0 [System] [MY-010116] [Server] /usr/sbin/mysqld (mysqld 8.0.41) starting as process 137
+2025-04-08T07:59:42.426270Z 1 [System] [MY-013576] [InnoDB] InnoDB initialization has started.
+2025-04-08T07:59:43.198229Z 1 [System] [MY-013577] [InnoDB] InnoDB initialization has ended.
+2025-04-08T07:59:44.799632Z 0 [Warning] [MY-010068] [Server] CA certificate ca.pem is self signed.
+2025-04-08T07:59:44.800049Z 0 [System] [MY-013602] [Server] Channel mysql_main configured to support TLS. Encrypted connections are now supported for this channel.
+2025-04-08T07:59:44.809327Z 0 [Warning] [MY-011810] [Server] Insecure configuration for --pid-file: Location '/var/run/mysqld' in the path is accessible to all OS users. Consider choosing a different directory.
+2025-04-08T07:59:44.868180Z 0 [System] [MY-011323] [Server] X Plugin ready for connections. Socket: /var/run/mysqld/mysqlx.sock
+2025-04-08T07:59:44.868710Z 0 [System] [MY-010931] [Server] /usr/sbin/mysqld: ready for connections. Version: '8.0.41'  socket: '/var/run/mysqld/mysqld.sock'  port: 0  MySQL Community Server - GPL.
+2025-04-08T07:59:44.968607Z 8 [Warning] [MY-013360] [Server] Plugin mysql_native_password reported: ''mysql_native_password' is deprecated and will be removed in a future release. Please use caching_sha2_password instead'
+2025-04-08T07:59:52.998556Z 14 [Warning] [MY-010235] [Server] Following users were specified in CREATE USER IF NOT EXISTS but they already exist. Corresponding entry in binary log used default authentication plugin 'mysql_native_password' to rewrite authentication information (if any) for them: 'root'@'%'
+2025-04-08T07:59:53.041611Z 14 [Warning] [MY-010235] [Server] Following users were specified in CREATE USER IF NOT EXISTS but they already exist. Corresponding entry in binary log used default authentication plugin 'mysql_native_password' to rewrite authentication information (if any) for them: 'user'@'%'
+2025-04-08T07:59:53.102370Z 15 [Warning] [MY-010235] [Server] Following users were specified in CREATE USER IF NOT EXISTS but they already exist. Corresponding entry in binary log used default authentication plugin 'mysql_native_password' to rewrite authentication information (if any) for them: 'root'@'%'
+2025-04-08T07:59:53.115115Z 15 [Warning] [MY-010235] [Server] Following users were specified in CREATE USER IF NOT EXISTS but they already exist. Corresponding entry in binary log used default authentication plugin 'mysql_native_password' to rewrite authentication information (if any) for them: 'user'@'%'
+2025-04-08T07:59:53.207974Z 16 [System] [MY-013172] [Server] Received SHUTDOWN from user root. Shutting down mysqld (Version: 8.0.41).
+2025-04-08T07:59:54.455342Z 0 [System] [MY-010910] [Server] /usr/sbin/mysqld: Shutdown complete (mysqld 8.0.41)  MySQL Community Server - GPL.
+2025-04-08T07:59:55.531755Z 0 [Warning] [MY-011068] [Server] The syntax '--skip-host-cache' is deprecated and will be removed in a future release. Please use SET GLOBAL host_cache_size=0 instead.
+2025-04-08T07:59:55.531795Z 0 [Warning] [MY-011068] [Server] The syntax '--skip-host-cache' is deprecated and will be removed in a future release. Please use SET GLOBAL host_cache_size=0 instead.
+2025-04-08T07:59:55.535059Z 0 [Warning] [MY-010918] [Server] 'default_authentication_plugin' is deprecated and will be removed in a future release. Please use authentication_policy instead.
+2025-04-08T07:59:55.535097Z 0 [System] [MY-010116] [Server] /usr/sbin/mysqld (mysqld 8.0.41) starting as process 9
+2025-04-08T07:59:55.579417Z 1 [System] [MY-013576] [InnoDB] InnoDB initialization has started.
+2025-04-08T07:59:56.888721Z 1 [System] [MY-013577] [InnoDB] InnoDB initialization has ended.
+2025-04-08T07:59:57.341066Z 0 [Warning] [MY-010068] [Server] CA certificate ca.pem is self signed.
+2025-04-08T07:59:57.341882Z 0 [System] [MY-013602] [Server] Channel mysql_main configured to support TLS. Encrypted connections are now supported for this channel.
+2025-04-08T07:59:57.356321Z 0 [Warning] [MY-011810] [Server] Insecure configuration for --pid-file: Location '/var/run/mysqld' in the path is accessible to all OS users. Consider choosing a different directory.
+2025-04-08T07:59:57.496837Z 0 [System] [MY-011323] [Server] X Plugin ready for connections. Bind-address: '::' port: 33060, socket: /var/run/mysqld/mysqlx.sock
+2025-04-08T07:59:57.498219Z 0 [System] [MY-010931] [Server] /usr/sbin/mysqld: ready for connections. Version: '8.0.41'  socket: '/var/run/mysqld/mysqld.sock'  port: 3306  MySQL Community Server - GPL.
+2025-04-08T07:59:57.702253Z 8 [Warning] [MY-013360] [Server] Plugin mysql_native_password reported: ''mysql_native_password' is deprecated and will be removed in a future release. Please use caching_sha2_password instead'
+2025-04-08T08:14:17.806934Z 0 [System] [MY-013172] [Server] Received SHUTDOWN from user <via user signal>. Shutting down mysqld (Version: 8.0.41).
+2025-04-08T08:14:20.010108Z 0 [System] [MY-010910] [Server] /usr/sbin/mysqld: Shutdown complete (mysqld 8.0.41)  MySQL Community Server - GPL.
+2025-04-08T09:20:43.724143Z 0 [Warning] [MY-011068] [Server] The syntax '--skip-host-cache' is deprecated and will be removed in a future release. Please use SET GLOBAL host_cache_size=0 instead.
+2025-04-08T09:20:43.724197Z 0 [Warning] [MY-011068] [Server] The syntax '--skip-host-cache' is deprecated and will be removed in a future release. Please use SET GLOBAL host_cache_size=0 instead.
+2025-04-08T09:20:43.742058Z 0 [Warning] [MY-010918] [Server] 'default_authentication_plugin' is deprecated and will be removed in a future release. Please use authentication_policy instead.
+2025-04-08T09:20:43.742095Z 0 [System] [MY-010116] [Server] /usr/sbin/mysqld (mysqld 8.0.41) starting as process 7
+2025-04-08T09:20:43.808611Z 1 [System] [MY-013576] [InnoDB] InnoDB initialization has started.
+2025-04-08T09:20:47.194596Z 1 [System] [MY-013577] [InnoDB] InnoDB initialization has ended.
+2025-04-08T09:20:50.310173Z 0 [Warning] [MY-010068] [Server] CA certificate ca.pem is self signed.
+2025-04-08T09:20:50.310955Z 0 [System] [MY-013602] [Server] Channel mysql_main configured to support TLS. Encrypted connections are now supported for this channel.
+2025-04-08T09:20:50.325669Z 0 [Warning] [MY-011810] [Server] Insecure configuration for --pid-file: Location '/var/run/mysqld' in the path is accessible to all OS users. Consider choosing a different directory.
+2025-04-08T09:20:50.587583Z 0 [System] [MY-011323] [Server] X Plugin ready for connections. Bind-address: '::' port: 33060, socket: /var/run/mysqld/mysqlx.sock
+2025-04-08T09:20:50.588128Z 0 [System] [MY-010931] [Server] /usr/sbin/mysqld: ready for connections. Version: '8.0.41'  socket: '/var/run/mysqld/mysqld.sock'  port: 3306  MySQL Community Server - GPL.
+2025-04-08T09:20:55.460215Z 8 [Warning] [MY-013360] [Server] Plugin mysql_native_password reported: ''mysql_native_password' is deprecated and will be removed in a future release. Please use caching_sha2_password instead'
+2025-04-08T09:34:43.303910Z 0 [System] [MY-013172] [Server] Received SHUTDOWN from user <via user signal>. Shutting down mysqld (Version: 8.0.41).
+2025-04-08T09:34:47.123036Z 0 [System] [MY-010910] [Server] /usr/sbin/mysqld: Shutdown complete (mysqld 8.0.41)  MySQL Community Server - GPL.
