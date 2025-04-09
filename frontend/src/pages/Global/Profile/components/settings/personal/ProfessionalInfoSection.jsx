@@ -130,7 +130,7 @@ export const ProfessionalInfoSection = ({
         onChange={(value) => handleInputChange('linkedinUrl', value)}
       />
 
-      {isStudent ? (
+      {isStudent && (
         <EditableField
           field="portfolioUrl"
           label="Portfolio"
@@ -141,24 +141,16 @@ export const ProfessionalInfoSection = ({
           isEditing={editMode.portfolioUrl}
           isEditable={true}
           onEdit={() => {
-            // S'assurer que la valeur éditée est initialisée avec la valeur actuelle
             handleInputChange('portfolioUrl', localPortfolioUrl);
             toggleFieldEdit('portfolioUrl');
           }}
           onSave={() => handleSavePortfolio(editedData.personal.portfolioUrl)}
           onCancel={() => {
             handleCancelField('portfolioUrl');
-            // Rétablir l'état local après annulation
             setLocalPortfolioUrl(currentPortfolioUrl);
           }}
           onChange={(value) => handleInputChange('portfolioUrl', value)}
           loading={loading}
-        />
-      ) : (
-        <StaticField 
-          label="Portfolio"
-          icon={<Globe className="h-4 w-4 mr-2 text-blue-500" />}
-          value={localPortfolioUrl || 'Non renseigné'}
         />
       )}
 

@@ -1,12 +1,25 @@
 import { useState, useRef, useEffect, forwardRef } from 'react';
 import { toast } from 'sonner';
 import { Button } from '../ui/button';
-import { Loader2, MapPin, CheckCircle, AlertCircle } from 'lucide-react';
+import { 
+  Loader2, 
+  MapPin, 
+  CheckCircle, 
+  AlertCircle, 
+  CalendarCheck, 
+  PenLine, 
+  Zap, 
+  MapPinned
+} from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '../ui/alert';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../../lib/services/authService';
 import { useRoles } from '@/features/roles/roleContext';
 import { useRolePermissions } from '@/features/roles/useRolePermissions';
+import { motion } from 'framer-motion';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 
 // Custom fallback implementation for SignatureCanvas
 const FallbackSignatureCanvas = forwardRef((props, ref) => {
@@ -401,28 +414,28 @@ const DocumentSignature = () => {
   // Submit signature
   const submitSignature = async () => {
     if (!location) {
-      toast.error("Erreur", {
+      toast.error("Signature non autorisée", {
         description: "La localisation est requise. Veuillez autoriser l'accès à votre position."
       });
       return;
     }
 
     if (!signatureRef.current || signatureRef.current.isEmpty()) {
-      toast.error("Erreur", {
+      toast.error("Validation impossible", {
         description: "Veuillez signer avant de soumettre."
       });
       return;
     }
 
     if (!currentPeriod) {
-      toast.error("Erreur", {
+      toast.error("Signature non autorisée", {
         description: "Les signatures ne sont autorisées qu'entre 9h-12h (matin) et 13h-17h (après-midi)."
       });
       return;
     }
 
     if (signedPeriods.includes(currentPeriod)) {
-      toast.error("Erreur", {
+      toast.error("Signature déjà enregistrée", {
         description: `Vous avez déjà signé pour la période ${availablePeriods[currentPeriod]} aujourd'hui.`
       });
       return;
@@ -529,69 +542,156 @@ const DocumentSignature = () => {
   // If user has already signed for the current period, show the alert
   if (currentPeriod && signedPeriods.includes(currentPeriod)) {
     return (
-      <div className="space-y-4">
-        <Alert className="bg-green-50 border-green-200">
-          <CheckCircle className="h-4 w-4 text-green-600" />
-          <AlertTitle className="text-green-800">Présence déjà enregistrée</AlertTitle>
-          <AlertDescription className="text-green-700">
-            Vous avez déjà signé pour la période {availablePeriods[currentPeriod]} aujourd'hui.
-          </AlertDescription>
-        </Alert>
-        
-        <div className="text-sm text-gray-500 dark:text-gray-400">
-          <p>Les signatures sont autorisées aux périodes suivantes :</p>
-          <ul className="list-disc list-inside mt-2">
-            <li>Matin : 9h - 12h</li>
-            <li>Après-midi : 13h - 17h</li>
-          </ul>
-        </div>
-      </div>
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="space-y-4"
+      >
+        <Card className="overflow-hidden border-green-100 dark:border-green-900">
+          <CardHeader className="bg-green-50 dark:bg-green-900/20 border-b border-green-100 dark:border-green-900/10">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-500" />
+              <CardTitle className="text-green-800 dark:text-green-400">Présence déjà enregistrée</CardTitle>
+            </div>
+            <CardDescription className="text-green-700 dark:text-green-300">
+              Vous avez déjà signé pour la période {availablePeriods[currentPeriod]} aujourd'hui.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="font-medium mb-2">Les signatures sont autorisées aux périodes suivantes :</p>
+              <ul className="space-y-2 mt-2">
+                <li className="flex items-center gap-2">
+                  <Badge variant="outline" className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800">
+                    Matin
+                  </Badge>
+                  <span>9h - 12h</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Badge variant="outline" className="bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800">
+                    Après-midi
+                  </Badge>
+                  <span>13h - 17h</span>
+                </li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="border rounded-md p-4 bg-gray-50 dark:bg-gray-900">
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
-          {currentPeriod ? (
-            `Signez ci-dessous pour confirmer votre présence pour la période ${availablePeriods[currentPeriod]}`
-          ) : (
-            "Les signatures ne sont autorisées qu'entre 9h-12h (matin) et 13h-17h (après-midi)."
+    <motion.div 
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="space-y-4"
+    >
+      <Card className="overflow-hidden border-blue-100 dark:border-blue-900/50">
+        <CardHeader className="bg-blue-50 dark:bg-blue-900/20 border-b border-blue-100 dark:border-blue-900/10">
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-blue-800 dark:text-blue-400">
+              {currentPeriod ? "Signature de présence" : "Période de signature fermée"}
+            </CardTitle>
+          </div>
+          <CardDescription className="text-blue-700 dark:text-blue-300">
+            {currentPeriod ? (
+              `Signez ci-dessous pour confirmer votre présence pour la période ${availablePeriods[currentPeriod]}`
+            ) : (
+              "Les signatures ne sont autorisées qu'entre 9h-12h (matin) et 13h-17h (après-midi)."
+            )}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="pt-4">
+          <div className="bg-white dark:bg-gray-800/40 rounded-md border border-gray-200 dark:border-gray-700 p-4 mb-4">
+            <FallbackSignatureCanvas ref={signatureRef} onEnd={() => console.log("Signature completed")} />
+          </div>
+          
+          {location && (
+            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-3">
+              <MapPinned className="h-4 w-4 text-green-600 dark:text-green-500" />
+              <span>Localisation détectée avec succès</span>
+              <Badge variant="outline" className="ml-auto bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800">
+                <CheckCircle className="h-3 w-3 mr-1" /> Prêt
+              </Badge>
+            </div>
           )}
-        </p>
-        
-        <FallbackSignatureCanvas ref={signatureRef} onEnd={() => console.log("Signature completed")} />
-        
-        <div className="flex justify-between mt-4">
+          
+          {!location && (
+            <Alert variant="destructive" className="mb-3">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Localisation requise</AlertTitle>
+              <AlertDescription>
+                Veuillez autoriser l'accès à votre position pour continuer.
+              </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+        <CardFooter className="flex justify-between border-t border-gray-100 dark:border-gray-800 py-3 bg-gray-50 dark:bg-gray-800/20">
           <Button 
             variant="outline" 
             onClick={clearSignature}
-            disabled={isSubmitting}  // Only disable during submission
+            disabled={isSubmitting}
+            className="gap-1"
           >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 6 6 18"></path><path d="m6 6 12 12"></path>
+            </svg>
             Effacer
           </Button>
           
-          <Button 
-            onClick={submitSignature}
-            disabled={isButtonDisabled()}
-          >
-            {getButtonText()}
-          </Button>
-        </div>
-      </div>
-      
-      {/* Location status */}
-      <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-        <MapPin className="h-4 w-4 mr-2" />
-        {isLocating ? (
-          "Détection de la localisation..."
-        ) : location ? (
-          "Localisation détectée"
-        ) : (
-          "Localisation non disponible"
-        )}
-      </div>
-    </div>
+          <div className="flex gap-2">
+            {!location && (
+              <Button 
+                variant="outline"
+                className="gap-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800"
+                onClick={getLocation}
+                disabled={isLocating}
+              >
+                {isLocating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Localisation...</span>
+                  </>
+                ) : (
+                  <>
+                    <MapPin className="h-4 w-4" />
+                    <span>Localiser</span>
+                  </>
+                )}
+              </Button>
+            )}
+            
+            <Button 
+              onClick={submitSignature}
+              disabled={isButtonDisabled()}
+              className="gap-1"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Envoi...</span>
+                </>
+              ) : (
+                <>
+                  {!location ? (
+                    <MapPin className="h-4 w-4" />
+                  ) : !signatureRef.current || signatureRef.current.isEmpty() ? (
+                    <PenLine className="h-4 w-4" />
+                  ) : (
+                    <CalendarCheck className="h-4 w-4" />
+                  )}
+                  <span>{getButtonText()}</span>
+                </>
+              )}
+            </Button>
+          </div>
+        </CardFooter>
+      </Card>
+
+    </motion.div>
   );
 };
 

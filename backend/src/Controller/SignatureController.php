@@ -46,6 +46,23 @@ class SignatureController extends AbstractController
             'end' => new \DateTimeImmutable('tomorrow', $timezone)
         ];
     }
+    
+    /**
+     * Get the date range for the current week
+     * @return array with 'start' and 'end' keys containing DateTimeImmutable objects
+     */
+    private function getWeekDateRange(\DateTimeImmutable $referenceDate = null): array
+    {
+        $timezone = new \DateTimeZone('Europe/Paris');
+        if (!$referenceDate) {
+            $referenceDate = new \DateTimeImmutable('now', $timezone);
+        }
+        
+        return [
+            'start' => new \DateTimeImmutable('monday this week', $timezone),
+            'end' => new \DateTimeImmutable('monday next week', $timezone)
+        ];
+    }
 
     #[Route('/today', methods: ['GET'])]
     public function checkTodaySignature(): JsonResponse
@@ -114,6 +131,77 @@ class SignatureController extends AbstractController
             return $this->json([
                 'success' => false,
                 'message' => 'Error checking today\'s signature: ' . $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    #[Route('/weekly', methods: ['GET'])]
+    public function getWeeklyHistory(Request $request): JsonResponse
+    {
+        try {
+            $user = $this->getUser();
+            if (!$user) {
+                return $this->json(['message' => 'User not authenticated'], Response::HTTP_UNAUTHORIZED);
+            }
+            
+            // Get current week's date range
+            $dateRange = $this->getWeekDateRange();
+            $weekStart = $dateRange['start'];
+            $weekEnd = $dateRange['end'];
+            
+            // Log the time values for debugging
+            error_log('Week start: ' . $weekStart->format('Y-m-d H:i:s'));
+            error_log('Week end: ' . $weekEnd->format('Y-m-d H:i:s'));
+            
+            // Get all signatures for the week
+            $signatures = $this->signatureRepository->findWeeklyByUser($user, $weekStart);
+            
+            error_log('Found ' . count($signatures) . ' signatures for the week');
+            
+            // Serialize signatures properly
+            $serializedSignatures = json_decode($this->serializer->serialize($signatures, 'json', ['groups' => 'signature:read']), true);
+            
+            // Organize signatures by date and period
+            $signaturesByDate = [];
+            $currentDate = clone $weekStart;
+            
+            // Initialize the structure with all weekdays
+            while ($currentDate < $weekEnd) {
+                $dateKey = $currentDate->format('Y-m-d');
+                $signaturesByDate[$dateKey] = [
+                    'date' => $dateKey,
+                    'dayName' => $currentDate->format('l'), // Day name (Monday, Tuesday, etc.)
+                    'signatures' => [
+                        Signature::PERIOD_MORNING => null,
+                        Signature::PERIOD_AFTERNOON => null
+                    ]
+                ];
+                $currentDate = $currentDate->modify('+1 day');
+            }
+            
+            // Fill in actual signatures
+            foreach ($serializedSignatures as $signature) {
+                $signatureDate = substr($signature['date'], 0, 10); // Extract YYYY-MM-DD
+                $period = $signature['period'];
+                
+                if (isset($signaturesByDate[$signatureDate])) {
+                    $signaturesByDate[$signatureDate]['signatures'][$period] = $signature;
+                }
+            }
+            
+            return $this->json([
+                'success' => true,
+                'weekStart' => $weekStart->format('Y-m-d'),
+                'weekEnd' => $weekEnd->format('Y-m-d'),
+                'availablePeriods' => Signature::getAvailablePeriods(),
+                'signaturesByDate' => array_values($signaturesByDate) // Convert to indexed array
+            ]);
+        } catch (\Exception $e) {
+            error_log('Error in getWeeklyHistory: ' . $e->getMessage());
+            error_log('Stack trace: ' . $e->getTraceAsString());
+            return $this->json([
+                'success' => false,
+                'message' => 'Error retrieving weekly signature history: ' . $e->getMessage()
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
