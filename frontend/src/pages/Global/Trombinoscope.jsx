@@ -624,93 +624,107 @@ const UsersList = () => {
     switch (layout) {
       case 'list':
         return (
-          <div className="space-y-4">
+          <div className="space-y-6">
             {sortedUsers?.map((user) => (
               <div 
                 key={user.id} 
-                className="bg-white dark:bg-gray-800 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                className="group relative bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer"
                 onClick={() => setSelectedUser(user)}
               >
-                <div className="flex items-center space-x-4 mb-2">
-                  {user.profilePictureUrl ? (
-                    <img
-                      src={user.profilePictureUrl}
-                      alt={`${user.firstName} ${user.lastName}`}
-                      className="w-10 h-10 rounded-full"
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.style.display = 'none';
-                        const defaultImg = document.createElement('img');
-                        defaultImg.src = '/default-avatar.png';
-                        defaultImg.className = 'w-10 h-10 rounded-full object-cover';
-                        e.target.parentNode.insertBefore(defaultImg, e.target);
-                        e.target.remove();
-                      }}
-                    />
-                  ) : (
-                    <ProfileBadge firstName={user.firstName} lastName={user.lastName} />
-                  )}
-                  <div>
-                    <h3 className="font-medium text-gray-900 dark:text-white">{user.firstName} {user.lastName}</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{user.email}</p>
+                <div className="p-4">
+                  <div className="flex items-center gap-4">
+                    {user.profilePictureUrl ? (
+                      <img
+                        src={user.profilePictureUrl}
+                        alt={`${user.firstName} ${user.lastName}`}
+                        className="w-12 h-12 rounded-full ring-2 ring-gray-200 dark:ring-gray-700 transition-transform duration-300 group-hover:scale-105"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.style.display = 'none';
+                          const defaultImg = document.createElement('img');
+                          defaultImg.src = '/default-avatar.png';
+                          defaultImg.className = 'w-12 h-12 rounded-full ring-2 ring-gray-200 dark:ring-gray-700';
+                          e.target.parentNode.insertBefore(defaultImg, e.target);
+                          e.target.remove();
+                        }}
+                      />
+                    ) : (
+                      <ProfileBadge firstName={user.firstName} lastName={user.lastName} className="ring-2 ring-gray-200 dark:ring-gray-700" />
+                    )}
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 transition-colors duration-300">
+                        {user.firstName} {user.lastName}
+                      </h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {user.email}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {user.userRoles?.map((ur, index) => (
+                        <span
+                          key={index}
+                          className={`px-2 py-1 text-xs font-medium rounded-full flex items-center ${getRoleColor(ur.role.name)} group-hover:opacity-80 transition-opacity duration-300`}
+                        >
+                          <Shield className={`w-3 h-3 mr-1 ${getRoleIconColor(ur.role.name)}`} />
+                          {getRoleLabel(ur.role.name)}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {user.userRoles?.map((ur, index) => (
-                    <span
-                      key={index}
-                      className={`px-2 py-1 text-xs font-medium rounded-full flex items-center ${getRoleColor(ur.role.name)}`}
-                    >
-                      <Shield className={`w-3 h-3 mr-1 ${getRoleIconColor(ur.role.name)}`} />
-                      {getRoleLabel(ur.role.name)}
-                    </span>
-                  ))}
-                </div>
+                <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-gray-900/10 dark:to-gray-100/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               </div>
             ))}
           </div>
         );
       case 'compact':
         return (
-          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
             {sortedUsers?.map((user) => (
               <div 
                 key={user.id} 
-                className="bg-white dark:bg-gray-800 rounded-lg p-2 hover:shadow-md transition-shadow cursor-pointer"
+                className="group relative bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer"
                 onClick={() => setSelectedUser(user)}
               >
-                <div className="flex flex-col items-center">
-                  {user.profilePictureUrl ? (
-                    <img
-                      src={user.profilePictureUrl}
-                      alt={`${user.firstName} ${user.lastName}`}
-                      className="w-16 h-16 rounded-full"
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.style.display = 'none';
-                        const defaultImg = document.createElement('img');
-                        defaultImg.src = '/default-avatar.png';
-                        defaultImg.className = 'w-16 h-16 rounded-full object-cover';
-                        e.target.parentNode.insertBefore(defaultImg, e.target);
-                        e.target.remove();
-                      }}
-                    />
-                  ) : (
-                    <ProfileBadge firstName={user.firstName} lastName={user.lastName} size="lg" />
-                  )}
-                  <h3 className="text-sm font-medium text-gray-900 dark:text-white mt-1">{user.firstName} {user.lastName}</h3>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {user.userRoles?.map((ur, index) => (
-                      <span
-                        key={index}
-                        className={`px-1.5 py-0.5 text-xs font-medium rounded ${getRoleColor(ur.role.name)}`}
-                      >
-                        <Shield className={`w-2.5 h-2.5 mr-1 ${getRoleIconColor(ur.role.name)}`} />
-                        {getRoleLabel(ur.role.name)}
-                      </span>
-                    ))}
+                <div className="p-3">
+                  <div className="flex flex-col items-center gap-3">
+                    {user.profilePictureUrl ? (
+                      <img
+                        src={user.profilePictureUrl}
+                        alt={`${user.firstName} ${user.lastName}`}
+                        className="w-16 h-16 rounded-full ring-2 ring-gray-200 dark:ring-gray-700 transition-transform duration-300 group-hover:scale-105"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.style.display = 'none';
+                          const defaultImg = document.createElement('img');
+                          defaultImg.src = '/default-avatar.png';
+                          defaultImg.className = 'w-16 h-16 rounded-full ring-2 ring-gray-200 dark:ring-gray-700';
+                          e.target.parentNode.insertBefore(defaultImg, e.target);
+                          e.target.remove();
+                        }}
+                      />
+                    ) : (
+                      <ProfileBadge firstName={user.firstName} lastName={user.lastName} size="lg" className="ring-2 ring-gray-200 dark:ring-gray-700" />
+                    )}
+                    <div className="text-center">
+                      <h3 className="text-base font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 transition-colors duration-300">
+                        {user.firstName} {user.lastName}
+                      </h3>
+                      <div className="flex flex-wrap justify-center gap-1 mt-1">
+                        {user.userRoles?.map((ur, index) => (
+                          <span
+                            key={index}
+                            className={`px-1.5 py-0.5 text-xs font-medium rounded ${getRoleColor(ur.role.name)} group-hover:opacity-80 transition-opacity duration-300`}
+                          >
+                            <Shield className={`w-2.5 h-2.5 mr-1 ${getRoleIconColor(ur.role.name)}`} />
+                            {getRoleLabel(ur.role.name)}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
+                <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-gray-900/10 dark:to-gray-100/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               </div>
             ))}
           </div>
