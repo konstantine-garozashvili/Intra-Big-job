@@ -49,14 +49,7 @@ The deployment is now set up with the following workflow:
 
 ## Configuration Files
 
-1. Created necessary `.htaccess` files:
-   - Root `.htaccess` to handle routing between frontend and backend
-   - Backend `.htaccess` for Symfony routing
-
-2. Configured environment files:
-   - Backend `.env.local` with production settings and database credentials
-   - Backend `config/parameters.yml` with database connection details
-   - Frontend `.env.production` configured to use production API URL
+we should configut .httacess
 
 ## Access Information
 
@@ -65,9 +58,3 @@ The deployment is now set up with the following workflow:
 - Repository: `https://github.com/konstantine-garozashvili/Intra-Big-job`
 - Database phpMyAdmin: Via OVH Hosting Control Panel > Databases
 
-## Notes
-
-- DNS changes may take up to 24 hours to fully propagate
-- The first deployment may take longer than subsequent ones
-- After initial deployment, database schema needs to be created
-- Make sure JWT keys are properly generated on the server 
