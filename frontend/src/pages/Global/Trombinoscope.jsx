@@ -451,43 +451,46 @@ const UserCard = ({ user, onClick }) => {
   return (
     <div 
       key={user.id} 
-      className="bg-white dark:bg-gray-800 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+      className="group relative bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer"
       onClick={() => onClick(user)}
     >
-      <div className="flex items-center space-x-4 mb-2">
-        {profilePictureUrl ? (
-          <img
-            src={profilePictureUrl}
-            alt={`${user.firstName} ${user.lastName}`}
-            className="w-10 h-10 rounded-full"
-            onError={handleImageError}
-            style={{ 
-              display: hasError ? 'none' : 'block',
-              objectFit: 'cover'
-            }}
-          />
-        ) : (
-          <ProfileBadge firstName={user.firstName} lastName={user.lastName} />
-        )}
-        {hasError && (
-          <ProfileBadge firstName={user.firstName} lastName={user.lastName} />
-        )}
-        <div>
-          <h3 className="font-medium text-gray-900 dark:text-white">{user.firstName} {user.lastName}</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{user.email}</p>
+      <div className="p-4">
+        <div className="flex flex-col items-center gap-3">
+          {profilePictureUrl ? (
+            <img
+              src={profilePictureUrl}
+              alt={`${user.firstName} ${user.lastName}`}
+              className="w-24 h-24 rounded-full ring-2 ring-gray-200 dark:ring-gray-700 transition-transform duration-300 group-hover:scale-105"
+              onError={handleImageError}
+            />
+          ) : (
+            <ProfileBadge firstName={user.firstName} lastName={user.lastName} size="lg" className="ring-2 ring-gray-200 dark:ring-gray-700" />
+          )}
+          {hasError && (
+            <ProfileBadge firstName={user.firstName} lastName={user.lastName} size="lg" className="ring-2 ring-gray-200 dark:ring-gray-700" />
+          )}
+          <div className="text-center">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 transition-colors duration-300">
+              {user.firstName} {user.lastName}
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {user.email}
+            </p>
+          </div>
+          <div className="flex flex-wrap justify-center gap-2 mt-2">
+            {user.userRoles?.map((ur, index) => (
+              <span
+                key={index}
+                className={`px-2 py-1 text-xs font-medium rounded-full flex items-center ${getRoleColor(ur.role.name)} group-hover:opacity-80 transition-opacity duration-300`}
+              >
+                <Shield className={`w-3 h-3 mr-1 ${getRoleIconColor(ur.role.name)}`} />
+                {getRoleLabel(ur.role.name)}
+              </span>
+            ))}
+          </div>
         </div>
       </div>
-      <div className="flex flex-wrap gap-2">
-        {user.userRoles?.map((ur, index) => (
-          <span
-            key={index}
-            className={`px-2 py-1 text-xs font-medium rounded-full flex items-center ${getRoleColor(ur.role.name)}`}
-          >
-            <Shield className={`w-3 h-3 mr-1 ${getRoleIconColor(ur.role.name)}`} />
-            {getRoleLabel(ur.role.name)}
-          </span>
-        ))}
-      </div>
+      <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-gray-900/10 dark:to-gray-100/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
     </div>
   );
 };
@@ -714,7 +717,7 @@ const UsersList = () => {
         );
       default:
         return (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
             {sortedUsers?.map((user) => (
               <UserCard 
                 key={user.id} 
