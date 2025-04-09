@@ -209,32 +209,32 @@ class UserController extends AbstractController
         }
     }
 
-    #[Route('/me', name: 'api_me', methods: ['GET'])]
-    public function getCurrentUser(): JsonResponse
-    {
-        try {
-            $user = $this->getUser();
-            if (!$user) {
-                return $this->json([
-                    'success' => false,
-                    'message' => 'User not authenticated'
-                ], JsonResponse::HTTP_UNAUTHORIZED);
-            }
+#    #[Route('/me', name: 'api_me', methods: ['GET'])]
+#    public function getCurrentUser(): JsonResponse
+#    {
+#        try {
+#            $user = $this->getUser();
+#            if (!$user) {
+#                return $this->json([
+#                    'success' => false,
+#                    'message' => 'User not authenticated'
+#                ], JsonResponse::HTTP_UNAUTHORIZED);
+#            }
 
-            // Serialize user data with necessary groups
-            $userData = $this->serializer->serialize(
-                $user,
-                'json',
-                ['groups' => ['user:read']]
-            );
+#            // Serialize user data with necessary groups
+#            $userData = $this->serializer->serialize(
+#                $user,
+#                'json',
+#                ['groups' => ['user:read']]
+#            );
 
-            return new JsonResponse($userData, JsonResponse::HTTP_OK, [], true);
-        } catch (\Exception $e) {
-            return $this->json([
-                'success' => false,
-                'message' => 'Error fetching user data: ' . $e->getMessage(),
-                'code' => 'SERVER_ERROR'
-            ], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
-        }
-    }
+#            return new JsonResponse($userData, JsonResponse::HTTP_OK, [], true);
+#        } catch (\Exception $e) {
+#            return $this->json([
+#                'success' => false,
+#                'message' => 'Error fetching user data: ' . $e->getMessage(),
+#                'code' => 'SERVER_ERROR'
+#            ], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+#        }
+#    }
 }
