@@ -17,6 +17,7 @@ import ReactQueryHydration from './components/shared/ReactQueryHydration'
 import deduplicationService from './lib/services/deduplicationService'
 import apiService from './lib/services/apiService'
 import PublicProfileView from '@/pages/Global/Profile/views/PublicProfileView'
+import TranslationTest from './components/Translation/TranslationTest'
 
 // Export queryClient to be used elsewhere
 export { queryClient };
@@ -371,6 +372,9 @@ function AppContent() {
                       <Trombinoscope />
                     </RoleGuard>
                   } />
+
+                  {/* Route pour le test de traduction */}
+                  <Route path="/translation" element={<TranslationTest />} />
                 </Route>
                 
                 {/* Ticket routes - fix double MainLayout issue */}
