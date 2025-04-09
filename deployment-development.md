@@ -29,6 +29,24 @@ This document summarizes the deployment setup for the Intra-Big-Job project usin
    - Database host: `konstaxglobal.mysql.db`
    - Database server: MySQL 8.0
 
+## Environment Configuration
+
+The project uses environment-specific configuration files to manage different settings for local development and production:
+
+1. `.env` - Default configuration for local Docker development
+   - Contains development database settings (Docker container)
+   - Local CORS settings
+   - Local frontend URL
+
+2. `.env.dev` - Production configuration for OVH deployment
+   - Contains OVH database connection settings
+   - Production CORS settings for the domain
+   - Production frontend URL
+
+Symfony automatically loads the appropriate configuration based on the environment:
+- For local Docker: Uses `.env` with `APP_ENV=dev`
+- For OVH hosting: Uses `.env.dev` with `APP_ENV=prod`
+
 ## Git Integration
 
 1. Configured Git deployment:
@@ -49,7 +67,9 @@ The deployment is now set up with the following workflow:
 
 ## Configuration Files
 
-we should configut .httacess
+We should configure .htaccess for proper routing.
+
+For production, the server uses the `.env.dev` file which automatically sets the production database and other settings.
 
 ## Access Information
 
