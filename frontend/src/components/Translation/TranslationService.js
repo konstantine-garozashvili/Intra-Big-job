@@ -14,7 +14,8 @@ class TranslationService {
     // Informations du projet pour les logs
     this.projectId = import.meta.env.VITE_GOOGLE_CLOUD_PROJECT_ID;
     
-    console.log('Service de traduction initialisé pour le projet:', this.projectId);
+    // Cache de traduction pour éviter les appels répétés
+    this.translationCache = new Map();
   }
 
   /**
@@ -26,14 +27,78 @@ class TranslationService {
   }
 
   /**
-   * Crée les en-têtes HTTP avec referer pour résoudre le problème de restriction
+   * Obtient les en-têtes HTTP pour les requêtes à l'API
    * @returns {Object} Les en-têtes HTTP
    */
   getHeaders() {
     return {
       'Content-Type': 'application/json',
-      'referer': this.getOrigin() // Ajout d'un referer valide pour passer les restrictions
+      'Accept': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
+      'Referer': this.getOrigin()
     };
+  }
+
+  /**
+   * Génère une clé de cache pour une traduction
+   * @param {string} text - Le texte à traduire
+   * @param {string} targetLang - La langue cible
+   * @param {string|null} sourceLang - La langue source (optionnelle)
+   * @returns {string} La clé de cache
+   */
+  getCacheKey(text, targetLang, sourceLang = null) {
+    return `${text}|${targetLang}${sourceLang ? `|${sourceLang}` : ''}`;
+  }
+
+  /**
+   * Vérifie si un objet est un élément React
+   * @param {any} obj - L'objet à vérifier
+   * @returns {boolean} - True si c'est un élément React
+   */
+  isReactElement(obj) {
+    return obj && (
+      typeof obj === 'object' &&
+      '$$typeof' in obj ||
+      '_owner' in obj ||
+      '_store' in obj ||
+      'props' in obj
+    );
+  }
+
+  /**
+   * Nettoie un objet des références circulaires
+   * @param {any} obj - L'objet à nettoyer
+   * @returns {any} - L'objet nettoyé
+   */
+  cleanCircularReferences(obj) {
+    if (typeof obj !== 'object' || obj === null) {
+      return obj;
+    }
+
+    if (this.isReactElement(obj)) {
+      return String(obj);
+    }
+
+    if (Array.isArray(obj)) {
+      return obj.map(item => this.cleanCircularReferences(item));
+    }
+
+    const cleaned = {};
+    for (const key in obj) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        const value = obj[key];
+        if (typeof value === 'object' && value !== null) {
+          if (this.isReactElement(value)) {
+            cleaned[key] = String(value);
+          } else {
+            cleaned[key] = this.cleanCircularReferences(value);
+          }
+        } else {
+          cleaned[key] = value;
+        }
+      }
+    }
+    return cleaned;
   }
 
   /**
@@ -47,6 +112,17 @@ class TranslationService {
     try {
       if (!text) return '';
       
+      // Si le texte est un objet React ou contient des références circulaires
+      if (typeof text === 'object') {
+        text = String(text);
+      }
+      
+      // Vérifier le cache
+      const cacheKey = this.getCacheKey(text, targetLang, sourceLang);
+      if (this.translationCache.has(cacheKey)) {
+        return this.translationCache.get(cacheKey);
+      }
+
       const url = `${this.baseApiUrl}?key=${this.apiKey}`;
       const body = {
         q: text,
@@ -58,12 +134,10 @@ class TranslationService {
         body.source = sourceLang;
       }
       
-      console.log(`Traduction: "${text}" vers ${targetLang}`);
-      
       const response = await fetch(url, {
         method: 'POST',
         headers: this.getHeaders(),
-        body: JSON.stringify(body),
+        body: JSON.stringify(this.cleanCircularReferences(body)),
       });
       
       if (!response.ok) {
@@ -73,10 +147,15 @@ class TranslationService {
       }
       
       const data = await response.json();
-      return data.data.translations[0].translatedText;
+      const translatedText = data.data.translations[0].translatedText;
+      
+      // Mettre en cache la traduction
+      this.translationCache.set(cacheKey, translatedText);
+      
+      return translatedText;
     } catch (error) {
       console.error('Translation error:', error);
-      throw error;
+      return text; // En cas d'erreur, retourner le texte original
     }
   }
 
@@ -89,13 +168,18 @@ class TranslationService {
     try {
       if (!text) return '';
       
+      // Si le texte est un objet React ou contient des références circulaires
+      if (typeof text === 'object') {
+        text = String(text);
+      }
+      
       const url = `${this.baseApiUrl}/detect?key=${this.apiKey}`;
       const response = await fetch(url, {
         method: 'POST',
         headers: this.getHeaders(),
-        body: JSON.stringify({
+        body: JSON.stringify(this.cleanCircularReferences({
           q: text
-        }),
+        })),
       });
       
       if (!response.ok) {
@@ -137,6 +221,13 @@ class TranslationService {
       console.error('Error fetching languages:', error);
       throw error;
     }
+  }
+
+  /**
+   * Vide le cache de traduction
+   */
+  clearCache() {
+    this.translationCache.clear();
   }
 }
 

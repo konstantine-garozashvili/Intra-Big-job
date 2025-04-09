@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Users, Shield, Book, ChevronRight } from 'lucide-react';
 import { useAdminDashboardData } from '@/hooks/useDashboardQueries';
@@ -16,6 +16,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import apiService from '@/lib/services/apiService';
 import { useTranslation } from '@/contexts/TranslationContext';
 import AsyncTranslation from '@/components/Translation/AsyncTranslation';
+import DashboardHeader from '@/components/shared/DashboardHeader';
 
 const ROLE_COLORS = {
   'ADMIN': 'bg-blue-100 text-blue-800',
@@ -65,32 +66,39 @@ const AdminDashboard = () => {
   const [availableRoles, setAvailableRoles] = useState([]);
   const [selectedRoles, setSelectedRoles] = useState([]);
   const [isLoadingRoles, setIsLoadingRoles] = useState(false);
+  const [translations, setTranslations] = useState({
+    title: '',
+    cards: []
+  });
 
-  // Définir les cartes pour les accès rapides avec traduction
   const quickAccessCards = [
     {
+      id: 1,
       title: 'Gestion des utilisateurs',
-      description: 'Gérer les utilisateurs',
-      icon: Users,
-      color: 'from-blue-500 to-blue-600',
-      textColor: 'text-blue-50',
+      description: 'Gérer les utilisateurs, les rôles et les permissions',
       link: '/admin/users',
+      color: 'bg-blue-500'
     },
     {
-      title: 'Gestion des invités',
-      description: 'Gérer les rôles des étudiants invités',
-      icon: Users,
-      color: 'from-indigo-500 to-indigo-600',
-      textColor: 'text-indigo-50',
-      link: '/recruiter/guest-student-roles',
+      id: 2,
+      title: 'Gestion des entreprises',
+      description: 'Gérer les entreprises partenaires',
+      link: '/admin/companies',
+      color: 'bg-green-500'
     },
     {
-      title: 'Formations',
-      description: 'Gérer et consulter les formations',
-      icon: Book,
-      color: 'from-purple-500 to-purple-600',
-      textColor: 'text-purple-50',
-      link: '/formations',
+      id: 3,
+      title: 'Gestion des offres',
+      description: 'Gérer les offres d\'emploi et de stage',
+      link: '/admin/offers',
+      color: 'bg-purple-500'
+    },
+    {
+      id: 4,
+      title: 'Gestion des événements',
+      description: 'Gérer les événements et les actualités',
+      link: '/admin/events',
+      color: 'bg-yellow-500'
     }
   ];
 
@@ -284,28 +292,29 @@ const AdminDashboard = () => {
     }
   };
 
-  // Wrap quickAccessCards translations
-  const [translatedCards, setTranslatedCards] = useState([]);
-
-  useEffect(() => {
-    const translateCards = async () => {
-      console.log('[Cards] Starting translation of quick access cards');
-      try {
-        const translated = await Promise.all(quickAccessCards.map(async (card) => ({
+  const translateContent = useCallback(async () => {
+    try {
+      const [dashboardTitle, ...cardTranslations] = await Promise.all([
+        translate('Tableau de bord administrateur'),
+        ...quickAccessCards.map(async (card) => ({
           ...card,
           translatedTitle: await translate(card.title),
           translatedDescription: await translate(card.description)
-        })));
-        console.log('[Cards] Translation completed:', translated);
-        setTranslatedCards(translated);
-      } catch (error) {
-        console.error('[Cards] Translation error:', error);
-        setTranslatedCards(quickAccessCards);
-      }
-    };
+        }))
+      ]);
 
-    translateCards();
-  }, [currentLanguage, translate]);
+      setTranslations({
+        title: dashboardTitle,
+        cards: cardTranslations
+      });
+    } catch (error) {
+      console.error('Translation error:', error);
+    }
+  }, [translate]);
+
+  useEffect(() => {
+    translateContent();
+  }, [currentLanguage, translateContent]);
 
   return (
     <DashboardLayout 
@@ -317,15 +326,6 @@ const AdminDashboard = () => {
       headerTitle={<AsyncTranslation text="Tableau de bord administrateur" />}
     >
       <div className="container p-4 mx-auto sm:p-6 lg:p-8 bg-gray-50 dark:bg-gray-900 min-h-screen">
-        {/* Statistiques essentielles */}
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8"
-        >
-          {/* ... existing stats code ... */}
-        </motion.div>
 
         <Card className="border-0 shadow-md mb-6">
           <CardContent className="p-6">
@@ -339,7 +339,7 @@ const AdminDashboard = () => {
               animate="visible"
               className="grid grid-cols-1 md:grid-cols-2 gap-5"
             >
-              {translatedCards.map((card, index) => (
+              {translations.cards.map((card, index) => (
                 <motion.div key={index} variants={itemVariants} className="h-full">
                   <Link to={card.link} className="block h-full">
                     <div className="relative h-full overflow-hidden rounded-xl shadow-sm hover:shadow-md transition-all duration-300 group">
@@ -347,7 +347,7 @@ const AdminDashboard = () => {
                       <div className="relative p-5 h-full flex flex-col">
                         <div className="flex items-center justify-between mb-4">
                           <div className="p-2.5 rounded-lg bg-white/20 backdrop-blur-sm">
-                            <card.icon className="w-5 h-5 text-white" />
+                            <Users className="w-5 h-5 text-white" />
                           </div>
                           <div className="p-1.5 rounded-full bg-white/20 backdrop-blur-sm">
                             <ChevronRight className="w-4 h-4 text-white" />
@@ -369,8 +369,6 @@ const AdminDashboard = () => {
           </CardContent>
         </Card>
         
-
-
         <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
           <DialogContent className="no-focus-outline">
             <DialogHeader>

@@ -1,8 +1,11 @@
 import { Link } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { useTranslation } from '@/contexts/TranslationContext';
 
 const Footer = () => {
+  const { translate, currentLanguage } = useTranslation();
   const [extraPadding, setExtraPadding] = useState(0);
+  const [translations, setTranslations] = useState({});
 
   // Effect to add extra padding when content is minimal
   useEffect(() => {
@@ -32,6 +35,107 @@ const Footer = () => {
     };
   }, []);
 
+  // Memoize translation function to prevent unnecessary re-renders
+  const translateTexts = useCallback(async () => {
+    try {
+      const [
+        description,
+        coordinates,
+        quickLinks,
+        ourServices,
+        partnerships,
+        copyright,
+        address,
+        // Navigation links
+        home,
+        contact,
+        forum,
+        faq,
+        about,
+        formations,
+        legal,
+        terms,
+        partners,
+        becomePartner
+      ] = await Promise.all([
+        translate('Plateforme éducative innovante dédiée à l\'apprentissage et au développement professionnel.'),
+        translate('Nos coordonnées :'),
+        translate('Liens rapides'),
+        translate('Nos Services'),
+        translate('Partenariats'),
+        translate('Tous droits réservés.'),
+        translate('Adresse'),
+        // Navigation links translations
+        translate('Accueil'),
+        translate('Contact'),
+        translate('Forum'),
+        translate('FAQ'),
+        translate('À propos de nous'),
+        translate('Nos formations'),
+        translate('Mentions légales'),
+        translate('CGU'),
+        translate('Nos partenaires'),
+        translate('Devenir partenaire')
+      ]);
+
+      setTranslations({
+        description,
+        coordinates,
+        quickLinks,
+        ourServices,
+        partnerships,
+        copyright,
+        address,
+        // Navigation links
+        home,
+        contact,
+        forum,
+        faq,
+        about,
+        formations,
+        legal,
+        terms,
+        partners,
+        becomePartner
+      });
+    } catch (error) {
+      console.error('Translation error:', error);
+    }
+  }, [translate]);
+
+  // Effect for translations
+  useEffect(() => {
+    translateTexts();
+  }, [currentLanguage, translateTexts]);
+
+  const quickLinksSection = {
+    title: translations.quickLinks,
+    links: [
+      { name: translations.home, href: "/home" },
+      { name: translations.contact, href: "/contact" },
+      { name: translations.forum, href: "/forum" },
+      { name: translations.faq, href: "/faq" },
+    ],
+  };
+
+  const servicesSection = {
+    title: translations.ourServices,
+    links: [
+      { name: translations.about, href: "/about" },
+      { name: translations.formations, href: "/formations" },
+      { name: translations.legal, href: "/mentions-legales" },
+      { name: translations.terms, href: "/cgu" },
+    ],
+  };
+
+  const partnershipsSection = {
+    title: translations.partnerships,
+    links: [
+      { name: translations.partners, href: "/partenaires" },
+      { name: translations.becomePartner, href: "/devenir-partenaire" },
+    ],
+  };
+
   return (
     <footer 
       className="bg-[#02284f] pt-12 pb-6 mt-auto"
@@ -49,44 +153,18 @@ const Footer = () => {
             </Link>
             <div className="mt-4 text-gray-300">
               <p className="mb-4 text-sm">
-                Plateforme éducative innovante dédiée à l'apprentissage et au développement professionnel.
+                {translations.description}
               </p>
-              <h3 className="text-sm font-semibold text-white mb-2">Nos coordonnées :</h3>
+              <h3 className="text-sm font-semibold text-white mb-2">{translations.coordinates}</h3>
               <p className="text-sm mb-1">Email : Bigproject@laplateforme.io</p>
-              <p className="text-sm">Adresse : 30 Place Jules Guesdes, 13003 MARSEILLE</p>
+              <p className="text-sm">{translations.address} : 30 Place Jules Guesdes, 13003 MARSEILLE</p>
             </div>
           </div>
 
           {/* Liens rapides */}
           <div className="md:col-span-8">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
-              {[
-                {
-                  title: "Liens rapides",
-                  links: [
-                    { name: "Accueil", href: "/home" },
-                    { name: "Contact", href: "/contact" },
-                    { name: "Forum", href: "/forum" },
-                    { name: "FAQ", href: "/faq" },
-                  ],
-                },
-                {
-                  title: "Nos Services",
-                  links: [
-                    { name: "À propos de nous", href: "/about" },
-                    { name: "Nos formations", href: "/formations" },
-                    { name: "Mentions légales", href: "/mentions-legales" },
-                    { name: "CGU", href: "/cgu" },
-                  ],
-                },
-                {
-                  title: "Partenariats",
-                  links: [
-                    { name: "Nos partenaires", href: "/partenaires" },
-                    { name: "Devenir partenaire", href: "/devenir-partenaire" },
-                  ],
-                },
-              ].map((section, index) => (
+              {[quickLinksSection, servicesSection, partnershipsSection].map((section, index) => (
                 <div key={index}>
                   <h3 className="text-white font-semibold mb-4 pb-1 border-b border-[#528eb2]/30">
                     {section.title}
@@ -112,7 +190,7 @@ const Footer = () => {
         {/* Footer Bas */}
         <div className="pt-6 border-t border-gray-700 flex flex-col sm:flex-row justify-between items-center">
           <p className="text-sm text-gray-400 mb-4 sm:mb-0">
-            © Copyright 2025 - Big<span className="text-[#528eb2]">Project</span> - Tous droits réservés.
+            © Copyright 2025 - Big<span className="text-[#528eb2]">Project</span> - {translations.copyright}
           </p>
           {/* Icônes Réseaux Sociaux */}
           <div className="flex items-center space-x-4 text-gray-400">
