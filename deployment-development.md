@@ -67,6 +67,7 @@ The deployment is now set up with the following workflow:
 
 ## Configuration Files
 
+
 ### .htaccess Configuration
 
 The project includes two important .htaccess files for OVH hosting:
@@ -87,6 +88,11 @@ The project includes two important .htaccess files for OVH hosting:
 2. Rename /backend/public/.htaccess-ovh to /backend/public/.htaccess on the server
 
 These .htaccess files ensure proper routing between frontend and backend components.
+
+we should configure .httacess
+we should configure vite.config
+we should configure nginx.conf
+
 
 ## Access Information
 
