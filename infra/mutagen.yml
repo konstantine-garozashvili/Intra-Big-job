@@ -18,10 +18,29 @@ sync:
     symlink:
       mode: "portable"
     watch:
-      pollingInterval: 2
+      pollingInterval: 1
     rescan:
-      # Rescan every 10 seconds if file watching fails
-      interval: 10
+      interval: 5
+  
+  # Nouvelle synchronisation du backend vers le volume partagé
+  backend_volume:
+    alpha: "docker://infra-backend-1/var/www/symfony"
+    beta: "volume://backend_code"
+    mode: "one-way-replica"
+    ignore:
+      - "/vendor"
+      - "/var"
+      - "/config/jwt"
+      - "**/*.log"
+    permissions:
+      defaultFileMode: 0644
+      defaultDirectoryMode: 0755
+    symlink:
+      mode: "portable"
+    watch:
+      pollingInterval: 1
+    rescan:
+      interval: 5
   
   frontend:
     alpha: "../frontend"
@@ -40,6 +59,6 @@ sync:
     symlink:
       mode: "portable"
     watch:
-      pollingInterval: 2
+      pollingInterval: 1
     rescan:
-      interval: 10 
+      interval: 5 
