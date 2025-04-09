@@ -50,6 +50,12 @@ when@dev:
             query_cache_driver:
                 type: pool
                 pool: doctrine.system_cache_pool
+    
+    framework:
+        cache:
+            pools:
+                doctrine.system_cache_pool:
+                    adapter: cache.system
 
 when@test:
     doctrine:
