@@ -143,6 +143,7 @@ class UserController extends AbstractController
                 // Add profile picture URL if available
                 if ($user->getProfilePicturePath()) {
                     try {
+                        // Get the S3 URL directly
                         $userData['profilePictureUrl'] = $this->documentStorageFactory->getDocumentUrl($user->getProfilePicturePath());
                     } catch (\Exception $e) {
                         // Continue without URL in case of error

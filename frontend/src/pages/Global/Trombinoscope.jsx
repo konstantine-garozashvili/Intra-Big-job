@@ -4,8 +4,6 @@ import { Users, Search, Loader2, AlertCircle, X, FileText, Download, User, Mail,
 import { Link } from 'react-router-dom';
 import { fetchUsers, useUsersList } from './UsersList/services/usersListService';
 import { getProfilePictureUrl } from '@/lib/utils/profileUtils';
-import documentService from './Profile/services/documentService';
-import { toast } from 'sonner';
 import { useRoles, ROLES } from '../../features/roles/roleContext';
 import { useSearchRoles } from '../../lib/hooks/useSearchRoles';
 
@@ -411,60 +409,56 @@ const UserModal = ({ user, onClose }) => {
 };
 
 const UserCard = ({ user, onClick }) => {
-  const roles = user.userRoles?.map(ur => ur.role.name) || [];
-  
+  const [hasError, setHasError] = useState(false);
+
+  const handleImageError = (e) => {
+    e.target.onerror = null;
+    setHasError(true);
+  };
+
+  const profilePictureUrl = user.profilePictureUrl 
+    ? user.profilePictureUrl 
+    : (user.profilePicturePath ? getProfilePictureUrl(user.profilePicturePath) : '/default-avatar.png');
+
   return (
     <div 
-      className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 hover:shadow-lg shadow-blue-100 transition-all duration-300 cursor-pointer hover:scale-105 aspect-square flex flex-col items-center justify-between"
+      key={user.id} 
+      className="bg-white dark:bg-gray-800 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
       onClick={() => onClick(user)}
     >
-      <div className="w-full flex flex-col items-center space-y-6">
-        <div className="relative">
+      <div className="flex items-center space-x-4 mb-2">
+        <img
+          src={profilePictureUrl}
+          alt={`${user.firstName} ${user.lastName}`}
+          className="w-10 h-10 rounded-full"
+          onError={handleImageError}
+          style={{ 
+            display: hasError ? 'none' : 'block',
+            objectFit: 'cover'
+          }}
+        />
+        {hasError && (
           <img
-            src={getProfilePictureUrl(user.profilePicturePath)}
+            src="/default-avatar.png"
             alt={`${user.firstName} ${user.lastName}`}
-            className="w-24 h-24 rounded-full object-cover shadow-md shadow-blue-100 dark:shadow-blue-900"
-            onError={(e) => {
-              e.target.onerror = null;
-              e.target.src = '/default-avatar.png';
-            }}
+            className="w-10 h-10 rounded-full object-cover"
           />
+        )}
+        <div>
+          <h3 className="font-medium text-gray-900 dark:text-white">{user.firstName} {user.lastName}</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{user.email}</p>
         </div>
-        <div className="text-center">
-          <h3 className="text-base font-semibold text-white relative inline-block mb-2">
-            <span className="relative z-10 px-3">{user.firstName} {user.lastName}</span>
-            <span className="absolute inset-0 bg-gradient-to-r from-blue-400 to-blue-600 rounded-lg px-3"></span>
-          </h3>
-          <div className="flex flex-wrap justify-center gap-2">
-            {roles.map((role, index) => (
-              <span
-                key={index}
-                className={`px-2 py-1 text-xs font-medium rounded-full flex items-center ${
-                  role === 'STUDENT' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
-                  role === 'TEACHER' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200' :
-                  role === 'HR' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
-                  role === 'ADMIN' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' :
-                  role === 'SUPER_ADMIN' || role === 'SUPERADMIN' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
-                  role === 'RECRUITER' ? 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200' :
-                  role === 'GUEST' ? 'bg-blue-50 text-blue-300 dark:bg-blue-800 dark:text-blue-200' :
-                  'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
-                }`}
-              >
-                <Shield className={`w-3 h-3 mr-1 ${
-                  role === 'STUDENT' ? 'text-blue-500' :
-                  role === 'TEACHER' ? 'text-emerald-500' :
-                  role === 'HR' ? 'text-purple-500' :
-                  role === 'ADMIN' ? 'text-amber-500' :
-                  role === 'SUPER_ADMIN' || role === 'SUPERADMIN' ? 'text-red-500' :
-                  role === 'RECRUITER' ? 'text-pink-500' :
-                  role === 'GUEST' ? 'text-blue-300' :
-                  'text-gray-500'
-                }`} />
-                {getRoleLabel(role)}
-              </span>
-            ))}
-          </div>
-        </div>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {user.userRoles?.map((ur, index) => (
+          <span
+            key={index}
+            className={`px-2 py-1 text-xs font-medium rounded-full flex items-center ${getRoleColor(ur.role.name)}`}
+          >
+            <Shield className={`w-3 h-3 mr-1 ${getRoleIconColor(ur.role.name)}`} />
+            {getRoleLabel(ur.role.name)}
+          </span>
+        ))}
       </div>
     </div>
   );
