@@ -8,7 +8,7 @@ Avant de commencer, assurez-vous d'avoir un environnement propre (Attention cett
 
 ```bash
 # Nettoyer le cache Docker et les volumes
-docker system prune -a --volumes
+docker compose down -v && docker system prune -a --volumes
 
 ```
 
