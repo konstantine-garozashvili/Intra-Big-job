@@ -3,6 +3,27 @@
  */
 
 /**
+ * Generates a random background color for default avatar
+ * @param {string} initials - The user's initials
+ * @returns {string} - A CSS color string
+ */
+export const generateAvatarBackgroundColor = (initials) => {
+  // Convert initials to a number (ASCII values)
+  let hash = 0;
+  for (let i = 0; i < initials.length; i++) {
+    hash = initials.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  
+  // Generate a color based on the hash
+  const r = (hash & 0xFF0000) >> 16;
+  const g = (hash & 0x00FF00) >> 8;
+  const b = hash & 0x0000FF;
+  
+  // Return a CSS color string with good contrast
+  return `rgb(${r % 256}, ${g % 256}, ${b % 256})`;
+};
+
+/**
  * Generates a complete URL for a profile picture path
  * @param {string|null} picturePath - The profile picture path from the API
  * @param {string|null} s3Url - The S3 URL for the profile picture

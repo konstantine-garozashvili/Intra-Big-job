@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Users, Search, Loader2, AlertCircle, X, FileText, Download, User, Mail, MapPin, GraduationCap, Shield, LayoutGrid, List, SortAsc, SortDesc, Calendar, ChevronDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { fetchUsers, useUsersList } from './UsersList/services/usersListService';
-import { getProfilePictureUrl } from '@/lib/utils/profileUtils';
+import { getProfilePictureUrl, getUserInitials } from '@/lib/utils/profileUtils';
 import { useRoles, ROLES } from '../../features/roles/roleContext';
 import { useSearchRoles } from '../../lib/hooks/useSearchRoles';
 
@@ -408,6 +408,34 @@ const UserModal = ({ user, onClose }) => {
   );
 };
 
+const ProfileBadge = ({ firstName, lastName, size = 'md' }) => {
+  const initials = getUserInitials({ firstName, lastName });
+  const getColor = (initials) => {
+    const hash = initials.split('').reduce((acc, char) => {
+      return acc + char.charCodeAt(0);
+    }, 0);
+    const colors = [
+      'bg-blue-500', 'bg-red-500', 'bg-green-500', 'bg-purple-500',
+      'bg-yellow-500', 'bg-pink-500', 'bg-teal-500', 'bg-orange-500'
+    ];
+    return colors[hash % colors.length];
+  };
+
+  const sizes = {
+    sm: 'w-8 h-8 text-sm',
+    md: 'w-10 h-10 text-base',
+    lg: 'w-16 h-16 text-xl'
+  };
+
+  return (
+    <div 
+      className={`flex items-center justify-center rounded-full ${sizes[size]} ${getColor(initials)} text-white font-semibold`}
+    >
+      {initials}
+    </div>
+  );
+};
+
 const UserCard = ({ user, onClick }) => {
   const [hasError, setHasError] = useState(false);
 
@@ -418,7 +446,7 @@ const UserCard = ({ user, onClick }) => {
 
   const profilePictureUrl = user.profilePictureUrl 
     ? user.profilePictureUrl 
-    : (user.profilePicturePath ? getProfilePictureUrl(user.profilePicturePath) : '/default-avatar.png');
+    : (user.profilePicturePath ? getProfilePictureUrl(user.profilePicturePath) : null);
 
   return (
     <div 
@@ -427,22 +455,22 @@ const UserCard = ({ user, onClick }) => {
       onClick={() => onClick(user)}
     >
       <div className="flex items-center space-x-4 mb-2">
-        <img
-          src={profilePictureUrl}
-          alt={`${user.firstName} ${user.lastName}`}
-          className="w-10 h-10 rounded-full"
-          onError={handleImageError}
-          style={{ 
-            display: hasError ? 'none' : 'block',
-            objectFit: 'cover'
-          }}
-        />
-        {hasError && (
+        {profilePictureUrl ? (
           <img
-            src="/default-avatar.png"
+            src={profilePictureUrl}
             alt={`${user.firstName} ${user.lastName}`}
-            className="w-10 h-10 rounded-full object-cover"
+            className="w-10 h-10 rounded-full"
+            onError={handleImageError}
+            style={{ 
+              display: hasError ? 'none' : 'block',
+              objectFit: 'cover'
+            }}
           />
+        ) : (
+          <ProfileBadge firstName={user.firstName} lastName={user.lastName} />
+        )}
+        {hasError && (
+          <ProfileBadge firstName={user.firstName} lastName={user.lastName} />
         )}
         <div>
           <h3 className="font-medium text-gray-900 dark:text-white">{user.firstName} {user.lastName}</h3>
@@ -601,15 +629,24 @@ const UsersList = () => {
                 onClick={() => setSelectedUser(user)}
               >
                 <div className="flex items-center space-x-4 mb-2">
-                  <img
-                    src={getProfilePictureUrl(user.profilePicturePath)}
-                    alt={`${user.firstName} ${user.lastName}`}
-                    className="w-10 h-10 rounded-full"
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.src = '/default-avatar.png';
-                    }}
-                  />
+                  {user.profilePictureUrl ? (
+                    <img
+                      src={user.profilePictureUrl}
+                      alt={`${user.firstName} ${user.lastName}`}
+                      className="w-10 h-10 rounded-full"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.style.display = 'none';
+                        const defaultImg = document.createElement('img');
+                        defaultImg.src = '/default-avatar.png';
+                        defaultImg.className = 'w-10 h-10 rounded-full object-cover';
+                        e.target.parentNode.insertBefore(defaultImg, e.target);
+                        e.target.remove();
+                      }}
+                    />
+                  ) : (
+                    <ProfileBadge firstName={user.firstName} lastName={user.lastName} />
+                  )}
                   <div>
                     <h3 className="font-medium text-gray-900 dark:text-white">{user.firstName} {user.lastName}</h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400">{user.email}</p>
@@ -640,15 +677,24 @@ const UsersList = () => {
                 onClick={() => setSelectedUser(user)}
               >
                 <div className="flex flex-col items-center">
-                  <img
-                    src={getProfilePictureUrl(user.profilePicturePath)}
-                    alt={`${user.firstName} ${user.lastName}`}
-                    className="w-16 h-16 rounded-full"
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.src = '/default-avatar.png';
-                    }}
-                  />
+                  {user.profilePictureUrl ? (
+                    <img
+                      src={user.profilePictureUrl}
+                      alt={`${user.firstName} ${user.lastName}`}
+                      className="w-16 h-16 rounded-full"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.style.display = 'none';
+                        const defaultImg = document.createElement('img');
+                        defaultImg.src = '/default-avatar.png';
+                        defaultImg.className = 'w-16 h-16 rounded-full object-cover';
+                        e.target.parentNode.insertBefore(defaultImg, e.target);
+                        e.target.remove();
+                      }}
+                    />
+                  ) : (
+                    <ProfileBadge firstName={user.firstName} lastName={user.lastName} size="lg" />
+                  )}
                   <h3 className="text-sm font-medium text-gray-900 dark:text-white mt-1">{user.firstName} {user.lastName}</h3>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {user.userRoles?.map((ur, index) => (
