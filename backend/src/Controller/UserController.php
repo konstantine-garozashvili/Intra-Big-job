@@ -114,7 +114,7 @@ class UserController extends AbstractController
      */
     #[Route('/users/list', name: 'api_users_list', methods: ['GET'])]
     #[IsGranted('ROLE_STUDENT')]
-    public function listUsers(): JsonResponse
+    public function listUsers(Request $request): JsonResponse
     {
         try {
             $currentUser = $this->getUser();
@@ -122,8 +122,11 @@ class UserController extends AbstractController
                 return $this->json(['message' => 'User not authenticated'], JsonResponse::HTTP_UNAUTHORIZED);
             }
             
+            // Get includeRoles parameter
+            $includeRoles = $request->query->getBoolean('includeRoles', false);
+            
             // Find all users except the current user
-            $users = $this->userRepository->findAllExcept($currentUser->getId());
+            $users = $this->userRepository->findAllExcept($currentUser->getId(), $includeRoles);
             
             // Format users with profile picture URLs
             $formattedUsers = [];
@@ -144,6 +147,19 @@ class UserController extends AbstractController
                     } catch (\Exception $e) {
                         // Continue without URL in case of error
                     }
+                }
+                
+                // Add roles if requested
+                if ($includeRoles) {
+                    $userData['userRoles'] = array_map(function($userRole) {
+                        return [
+                            'id' => $userRole->getId(),
+                            'role' => [
+                                'id' => $userRole->getRole()->getId(),
+                                'name' => $userRole->getRole()->getName()
+                            ]
+                        ];
+                    }, $user->getUserRoles()->toArray());
                 }
                 
                 $formattedUsers[] = $userData;

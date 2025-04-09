@@ -311,20 +311,27 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
      * Find all users except the specified one
      * 
      * @param int $userId ID of the user to exclude
+     * @param bool $includeRoles Include roles in the query
      * @return User[] Returns an array of User objects except the specified one
      */
-    public function findAllExcept(int $userId): array
+    public function findAllExcept(int $userId, bool $includeRoles = false): array
     {
-        return $this->createQueryBuilder('u')
-            ->select('u', 'n', 't', 'ur', 'r')
+        $queryBuilder = $this->createQueryBuilder('u')
+            ->select('u', 'n', 't')
             ->leftJoin('u.nationality', 'n')
             ->leftJoin('u.theme', 't')
-            ->leftJoin('u.userRoles', 'ur')
-            ->leftJoin('ur.role', 'r')
             ->where('u.id != :userId')
             ->setParameter('userId', $userId)
             ->orderBy('u.firstName', 'ASC')
-            ->addOrderBy('u.lastName', 'ASC')
+            ->addOrderBy('u.lastName', 'ASC');
+
+        if ($includeRoles) {
+            $queryBuilder
+                ->leftJoin('u.userRoles', 'ur')
+                ->leftJoin('ur.role', 'r');
+        }
+
+        return $queryBuilder
             ->getQuery()
             ->getResult();
     }
