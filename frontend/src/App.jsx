@@ -484,7 +484,8 @@ function AppContent() {
             <RoleGuard roles={[ROLES.RECRUITER]}>
               <Routes>
                 <Route path="dashboard" element={<RecruiterDashboard />} />
-                <Route path="guest-student-manager" element={<GuestStudentRoleManager />} />
+                <Route path="guest-student-roles" element={<GuestStudentRoleManager />} />
+                <Route path="guest-student-manager" element={<Navigate to="/recruiter/guest-student-roles" replace />} />
               </Routes>
             </RoleGuard>
           } />
