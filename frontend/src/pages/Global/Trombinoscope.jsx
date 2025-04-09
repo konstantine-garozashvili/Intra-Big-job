@@ -331,15 +331,29 @@ const UserModal = ({ user, onClose }) => {
 
           <div className="flex items-start space-x-6">
             <div className="flex-shrink-0">
-              <img
-                src={getProfilePictureUrl(user.profilePicturePath)}
-                alt={`${user.firstName} ${user.lastName}`}
-                className="w-36 h-36 rounded-full object-cover shadow-lg shadow-blue-100 dark:shadow-blue-900 transition-transform duration-300 hover:scale-110"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = '/default-avatar.png';
-                }}
-              />
+              {user.profilePictureUrl ? (
+                <img
+                  src={user.profilePictureUrl}
+                  alt={`${user.firstName} ${user.lastName}`}
+                  className="w-36 h-36 rounded-full object-cover shadow-lg shadow-blue-100 dark:shadow-blue-900 transition-transform duration-300 hover:scale-110"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.style.display = 'none';
+                    const defaultImg = document.createElement('img');
+                    defaultImg.src = '/default-avatar.png';
+                    defaultImg.className = 'w-36 h-36 rounded-full object-cover shadow-lg shadow-blue-100 dark:shadow-blue-900';
+                    e.target.parentNode.insertBefore(defaultImg, e.target);
+                    e.target.remove();
+                  }}
+                />
+              ) : (
+                <ProfileBadge 
+                  firstName={user.firstName} 
+                  lastName={user.lastName} 
+                  size="lg" 
+                  className="w-36 h-36 ring-2 ring-blue-100 dark:ring-blue-900 shadow-lg transition-transform duration-300 hover:scale-110"
+                />
+              )}
             </div>
             <div className="flex-1">
               <h3 className="text-xl font-semibold text-white relative inline-block mb-4">
