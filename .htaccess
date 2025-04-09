@@ -10,8 +10,6 @@
     RewriteCond %{REQUEST_URI} !^/backend/public/
     # Exclude the public directory if deployed in root
     RewriteCond %{REQUEST_URI} !^/public/
-    # Exclude API requests for direct access
-    RewriteCond %{REQUEST_URI} !^/api/
     
     # Redirect everything else to backend/public/index.php
     RewriteRule ^(.*)$ backend/public/index.php [QSA,L]
