@@ -65,7 +65,21 @@ export const authService = {
         }
       }
       
-      const response = await apiService.post('/register', userData);
+      // Vérifier si le token reCAPTCHA est présent
+      if (!userData.recaptchaToken) {
+        console.warn('[authService] Token reCAPTCHA manquant lors de l\'inscription');
+      }
+      
+      // Créer l'objet de données d'inscription avec le token reCAPTCHA
+      const registerData = {
+        ...userData,
+        recaptcha_token: userData.recaptchaToken // Adapter le nom du champ pour le backend
+      };
+      
+      // Supprimer le champ original pour éviter la duplication
+      delete registerData.recaptchaToken;
+      
+      const response = await apiService.post('/register', registerData);
       
       if (import.meta.env.DEV) {
         console.log('[authService] Inscription réussie');
