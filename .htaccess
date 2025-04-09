@@ -4,12 +4,26 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
     
+    # Serve frontend files from frontend/dist directory
+    RewriteCond %{REQUEST_URI} ^/$
+    RewriteRule ^(.*)$ /frontend/dist/index.html [L]
+    
+    # Serve static frontend assets
+    RewriteCond %{REQUEST_URI} ^/assets/
+    RewriteRule ^assets/(.*)$ /frontend/dist/assets/$1 [L]
+    
     # Exclude specific file extensions from redirection
     RewriteCond %{REQUEST_URI} !\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|map)$
     # Exclude the backend/public directory from redirection
     RewriteCond %{REQUEST_URI} !^/backend/public/
     # Exclude the public directory if deployed in root
     RewriteCond %{REQUEST_URI} !^/public/
+    # Exclude the frontend dist directory
+    RewriteCond %{REQUEST_URI} !^/frontend/dist/
+    
+    # API requests go to backend
+    RewriteCond %{REQUEST_URI} ^/api/
+    RewriteRule ^(.*)$ backend/public/index.php [QSA,L]
     
     # Redirect everything else to backend/public/index.php
     RewriteRule ^(.*)$ backend/public/index.php [QSA,L]
