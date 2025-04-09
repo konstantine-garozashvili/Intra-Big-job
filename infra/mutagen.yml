@@ -21,4 +21,10 @@ sync:
       pollingInterval: 2
     rescan:
       # Rescan every 10 seconds if file watching fails
-      interval: 10 
+      interval: 10
+
+forward:
+  database:
+    source: "tcp:localhost:3307"
+    destination: "docker://infra-database-1:tcp:3306"
+    mode: "tcp" 
