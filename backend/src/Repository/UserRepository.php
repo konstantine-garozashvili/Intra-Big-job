@@ -317,9 +317,11 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
     public function findAllExcept(int $userId, bool $includeRoles = false): array
     {
         $queryBuilder = $this->createQueryBuilder('u')
-            ->select('u', 'n', 't')
+            ->select('u', 'n', 't', 'a', 'c')
             ->leftJoin('u.nationality', 'n')
             ->leftJoin('u.theme', 't')
+            ->leftJoin('u.addresses', 'a')
+            ->leftJoin('a.city', 'c')
             ->where('u.id != :userId')
             ->setParameter('userId', $userId)
             ->orderBy('u.firstName', 'ASC')

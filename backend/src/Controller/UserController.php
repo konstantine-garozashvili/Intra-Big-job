@@ -137,7 +137,8 @@ class UserController extends AbstractController
                     'lastName' => $user->getLastName(),
                     'email' => $user->getEmail(),
                     'profilePicturePath' => $user->getProfilePicturePath(),
-                    'profilePictureUrl' => null
+                    'profilePictureUrl' => null,
+                    'city' => $user->getAddresses()->first()?->getCity()?->getName() ?? "Non renseignée"
                 ];
                 
                 // Add profile picture URL if available
@@ -284,6 +285,10 @@ class UserController extends AbstractController
             'email' => $user->getEmail(),
             'profilePicturePath' => $user->getProfilePicturePath(),
             'profilePictureUrl' => $user->getProfilePicturePath() ? $this->documentStorageFactory->getDocumentUrl($user->getProfilePicturePath()) : null,
+            'city' => $user->getCity() ? [
+                'id' => $user->getCity()->getId(),
+                'name' => $user->getCity()->getName()
+            ] : null,
             'userRoles' => array_map(function($userRole) {
                 return [
                     'id' => $userRole->getId(),

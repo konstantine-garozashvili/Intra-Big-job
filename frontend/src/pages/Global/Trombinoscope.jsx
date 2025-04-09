@@ -298,15 +298,8 @@ const LayoutDropdown = ({ layout, setLayout }) => {
 };
 
 const UserModal = ({ user, onClose }) => {
-  // Récupérer l'adresse principale de manière sécurisée
-  const mainAddress = user.addresses?.[0];
-  
-  // Récupérer la ville de manière sécurisée (plusieurs formats possibles)
-  const cityName = 
-    user.city || // Format direct dans user
-    (mainAddress?.city?.name) || // Format objet imbriqué
-    (mainAddress?.city) || // Format chaîne directe
-    "Non renseignée";
+  // Récupérer la ville de manière sécurisée
+  const cityName = user.city || "Non renseignée";
 
   const roles = user.userRoles?.map(ur => ur.role.name) || [];
   const isStudent = roles.some(role => 
