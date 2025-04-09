@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useStudentDashboardData } from '@/hooks/useDashboardQueries';
 import DashboardLayout from '@/components/DashboardLayout';
@@ -8,15 +8,12 @@ import {
   GraduationCap, 
   UserCheck, 
   FolderGit2, 
-  Bell,
   ChevronRight,
-  User,
   BarChart3,
   BookOpen,
   Trophy,
   Clock,
   ArrowRight,
-  Sparkles,
   Zap,
   Activity,
   CheckCircle2,
@@ -27,7 +24,6 @@ import {
 // Import des composants Chart
 import * as RechartsPrimitive from "recharts";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -101,23 +97,6 @@ const StudentDashboard = () => {
       }
     };
   }, [isLoading, user]);
-  
-  // Format current date for display
-  const formattedDate = useMemo(() => {
-    const today = new Date();
-    return today.toLocaleDateString('fr-FR', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    });
-  }, []);
-
-  // Get initials for avatar
-  const userInitials = useMemo(() => {
-    if (!user?.firstName || !user?.lastName) return 'ET';
-    return `${user.firstName[0]}${user.lastName[0]}`;
-  }, [user]);
 
   // Données du graphique radar des compétences
   const competencesData = [
@@ -129,16 +108,6 @@ const StudentDashboard = () => {
     { name: 'Outils', value: 75 },
   ];
 
-  // Configuration pour le graphique radar
-  const chartConfig = useMemo(() => ({
-    system: { label: "Système", color: "hsl(var(--primary))" },
-    devops: { label: "DevOps", color: "hsl(var(--primary))" },
-    database: { label: "Base de données", color: "hsl(var(--primary))" },
-    security: { label: "Cyber Sécurité", color: "hsl(var(--primary))" },
-    development: { label: "Développement", color: "hsl(var(--primary))" },
-    tools: { label: "Outils", color: "hsl(var(--primary))" },
-  }), []);
-
   // Cartes principales
   const mainCards = [
     {
@@ -148,7 +117,7 @@ const StudentDashboard = () => {
       color: 'from-blue-500 to-blue-600',
       textColor: 'text-blue-50',
       link: '/student/schedule',
-      stats: '3 cours aujourd\'hui',
+      stats: '3 cours aujourd&apos;hui',
       progress: 75
     },
     {
@@ -188,7 +157,7 @@ const StudentDashboard = () => {
     { 
       title: 'Développement Web Avancé', 
       type: 'Cours', 
-      time: 'Aujourd\'hui, 14:00 - 17:00',
+      time: 'Aujourd&apos;hui, 14:00 - 17:00',
       location: 'Salle B204',
       icon: BookOpen,
       color: 'text-blue-500',
@@ -214,11 +183,6 @@ const StudentDashboard = () => {
     }
   ];
 
-  // Animation settings for the charts
-  const options = {
-    // Chart options...
-  };
-
   // Composant de carte avec skeleton
   const CardSkeleton = () => (
     <div className="h-full overflow-hidden rounded-xl shadow-sm bg-white dark:bg-gray-800">
@@ -240,7 +204,7 @@ const StudentDashboard = () => {
   return (
     <DashboardLayout 
       loading={isLoading} 
-      error={isError ? error?.message || 'Une erreur est survenue lors du chargement des données' : null}
+      error={isError ? error?.message || "Erreur lors du chargement des données" : null}
       className="p-0"
       user={user}
       headerIcon={GraduationCap}
@@ -381,7 +345,7 @@ const StudentDashboard = () => {
               </div>
               <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-700">
                 <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                  QCP 37873 Bloc 3 - Préparer le déploiement d'une application sécurisée
+                  QCP 37873 Bloc 3 - Préparer le déploiement d&apos;une application sécurisée
                 </p>
               </div>
             </div>
@@ -491,7 +455,7 @@ const StudentDashboard = () => {
                     <h4 className="font-semibold text-lg text-gray-900 dark:text-gray-100">Votre progression</h4>
                   </div>
                   <p className="text-gray-600 dark:text-gray-300 mb-4">
-                    Vous avez déjà validé <span className="font-bold text-green-500">30 ECTS</span> ! Continuez comme ça, vous êtes sur la bonne voie.
+                    Vous avez déjà validé <span className="font-bold text-green-500">30 ECTS</span> ! Continuez comme cela, vous êtes sur la bonne voie.
                   </p>
                   <Button variant="outline" className="w-full">
                     Voir les prochaines étapes
@@ -554,12 +518,12 @@ const StudentDashboard = () => {
                   <Zap className="h-5 w-5" />
                   Continuez sur votre lancée !
                 </h3>
-                <p className="text-white/90 max-w-lg">
-                  Vous avez accompli 75% de vos objectifs ce semestre. Maintenez vos efforts pour terminer en beauté !
+                <p className="text-white/90">
+                  Vous avez fait d&apos;incroyables progrès ce semestre. Votre prochain objectif est à portée de main.
                 </p>
               </div>
-              <Button className="bg-white text-primary hover:bg-white/90 shadow-sm">
-                Voir mes objectifs
+              <Button className="shrink-0 bg-white text-primary hover:bg-white/90 shadow-sm">
+                Voir tous les objectifs
               </Button>
             </div>
           </div>

@@ -7,12 +7,13 @@ import {
   isValidEmail, 
   validatePassword, 
   isValidPhone, 
-  isValidPostalCode,
-  isValidBirthDate,
-  formatPhone,
-  formatPostalCode
+  isValidBirthDate
 } from '@/lib/utils/validation';
+
 import { verifyRecaptchaToken } from '@/lib/recaptcha';
+
+import PropTypes from 'prop-types';
+
 
 // Création des sous-contextes
 const UserDataContext = createContext(null);
@@ -23,7 +24,7 @@ const ValidationContext = createContext(null);
 export const useUserData = () => {
   const context = useContext(UserDataContext);
   if (!context) {
-    throw new Error('useUserData doit être utilisé à l\'intérieur d\'un RegisterProvider');
+    throw new Error('useUserData doit être utilisé à l&apos;intérieur d&apos;un RegisterProvider');
   }
   return context;
 };
@@ -31,7 +32,7 @@ export const useUserData = () => {
 export const useAddress = () => {
   const context = useContext(AddressContext);
   if (!context) {
-    throw new Error('useAddress doit être utilisé à l\'intérieur d\'un RegisterProvider');
+    throw new Error('useAddress doit être utilisé à l&apos;intérieur d&apos;un RegisterProvider');
   }
   return context;
 };
@@ -39,7 +40,7 @@ export const useAddress = () => {
 export const useValidation = () => {
   const context = useContext(ValidationContext);
   if (!context) {
-    throw new Error('useValidation doit être utilisé à l\'intérieur d\'un RegisterProvider');
+    throw new Error('useValidation doit être utilisé à l&apos;intérieur d&apos;un RegisterProvider');
   }
   return context;
 };
@@ -86,7 +87,7 @@ export const RegisterProvider = ({ children }) => {
     minAgeDate.setFullYear(now.getFullYear() - 16);
     
     if (date > minAgeDate) {
-      toast.error("Vous n'êtes pas éligible à l'inscription. Vous devez avoir au moins 16 ans.", {
+      toast.error("Vous n&apos;êtes pas éligible à l&apos;inscription. Vous devez avoir au moins 16 ans.", {
         duration: 5000,
         position: "top-center"
       });
@@ -159,17 +160,24 @@ export const RegisterProvider = ({ children }) => {
     }
     
     if (!email) {
-      newErrors.email = "L'email est requis";
+      newErrors.email = "L&apos;email est requis";
     } else if (!isValidEmail(email)) {
-      newErrors.email = "Format d'email invalide";
+      newErrors.email = "Format d&apos;email invalide";
     }
     
     if (!password) {
       newErrors.password = "Le mot de passe est requis";
+    } else if (password.length > 50) {
+      // Vérifier d'abord la longueur maximale
+      newErrors.password = "Le mot de passe ne doit pas dépasser 50 caractères";
     } else {
       const passwordValidation = validatePassword(password);
       if (!passwordValidation.isValid) {
-        newErrors.password = "Le mot de passe ne respecte pas les critères de sécurité";
+        if (passwordValidation.errors.tooShort) {
+          newErrors.password = "Le mot de passe doit contenir au moins 8 caractères";
+        } else {
+          newErrors.password = "Le mot de passe ne respecte pas les critères de sécurité";
+        }
       }
     }
     
@@ -277,13 +285,16 @@ export const RegisterProvider = ({ children }) => {
           navigate('/login');
         }, 500);
       } else {
-        toast.error("Une erreur s'est produite. Veuillez réessayer.", {
+        toast.error("Une erreur s&apos;est produite. Veuillez réessayer.", {
           duration: 5000,
           position: "top-center"
         });
       }
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Erreur lors de l'inscription. Veuillez réessayer.");
+      toast.error(error?.response?.data?.message || "Erreur lors de l&apos;inscription. Veuillez réessayer.", {
+        duration: 5000,
+        position: "top-center"
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -366,6 +377,10 @@ export const RegisterProvider = ({ children }) => {
       </AddressContext.Provider>
     </UserDataContext.Provider>
   );
+};
+
+RegisterProvider.propTypes = {
+  children: PropTypes.node.isRequired
 };
 
 export default RegisterProvider; 

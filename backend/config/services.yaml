@@ -116,6 +116,7 @@ services:
         tags:
             - { name: kernel.event_listener, event: kernel.terminate, method: onKernelTerminate }
 
+
     # Configuration du contrôleur reCAPTCHA
     App\Controller\RecaptchaController:
         arguments:
@@ -125,3 +126,14 @@ services:
     App\Controller\UserController:
         arguments:
             $recaptchaSecret: '%env(RECAPTCHA_SECRET_KEY)%'
+
+    # Register the PreRequestListener
+    App\EventListener\PreRequestListener:
+        tags:
+            - { name: kernel.event_subscriber }
+
+    # Configuration pour limiter strictement la taille du mot de passe
+    App\EventListener\RequestPasswordFilter:
+        tags:
+            - { name: 'kernel.event_listener', event: 'kernel.request', priority: 255 }
+

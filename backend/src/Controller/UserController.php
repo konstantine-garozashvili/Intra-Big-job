@@ -80,12 +80,17 @@ class UserController extends AbstractController
         }
     }
     
-    #[Route('/register', name: 'app_register', methods: ['POST'])]
-    public function register(
+    /**
+     * Endpoint pour l'inscription d'un nouvel utilisateur
+     * CETTE ROUTE EST DÉSACTIVÉE - Utiliser RegistrationController à la place
+     */
+    // #[Route('/register', name: 'app_register', methods: ['POST'])]
+    private function register(
         Request $request,
         RegistrationService $registrationService,
         ValidatorInterface $validator,
         EntityManagerInterface $entityManager
+
     ): JsonResponse {
         try {
             // Récupérer les données
@@ -146,6 +151,11 @@ class UserController extends AbstractController
                 'message' => 'Une erreur est survenue: ' . $e->getMessage()
             ], 500);
         }
+
+    ): JsonResponse 
+    {
+        throw new \RuntimeException('Cette route est désactivée - Utilisez /api/register à la place.');
+
     }
 
     #[Route('/test', name: 'app_test', methods: ['GET'])]
@@ -170,8 +180,18 @@ class UserController extends AbstractController
                 return $this->json(['message' => 'User not authenticated'], JsonResponse::HTTP_UNAUTHORIZED);
             }
             
+            // Récupérer l'ID de l'utilisateur courant
+            // Utilisation de l'interface UserInterface
+            $currentUserId = null;
+            if ($currentUser instanceof User) {
+                $currentUserId = $currentUser->getId();
+            } else {
+                // Fallback sur l'identifiant utilisateur
+                $currentUserId = $currentUser->getUserIdentifier();
+            }
+            
             // Find all users except the current user
-            $users = $this->userRepository->findAllExcept($currentUser->getId());
+            $users = $this->userRepository->findAllExcept($currentUserId);
             
             // Serialize with user roles included
             $serializedUsers = $this->serializer->serialize(

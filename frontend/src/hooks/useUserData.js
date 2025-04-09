@@ -35,7 +35,7 @@ export function useUserData(options = {}) {
     try {
       const stored = localStorage.getItem('user');
       if (stored) return JSON.parse(stored);
-    } catch (e) {
+    } catch (_) { // eslint-disable-line no-unused-vars
       // Error parsing user from localStorage
     }
     return null;
@@ -79,11 +79,11 @@ export function useUserData(options = {}) {
           try {
             localStorage.setItem('user', JSON.stringify(freshData));
             setLocalStorageUser(freshData);
-          } catch (e) {
+          } catch (_) { // eslint-disable-line no-unused-vars
             // Error saving to localStorage
           }
         }
-      } catch (error) {
+      } catch (_) { // eslint-disable-line no-unused-vars
         // Error in initial data fetch
       }
     };
@@ -112,8 +112,6 @@ export function useUserData(options = {}) {
         routeKey,
         componentId,
         async () => {
-          const existingCache = queryClient.getQueryData(['unified-user-data', routeKey, sessionId]);
-          
           return await apiService.get(routeKey, {
             noCache: true,
             retries: 2,
@@ -172,7 +170,7 @@ export function useUserData(options = {}) {
         try {
           localStorage.setItem('user', JSON.stringify(normalizedData));
           setLocalStorageUser(normalizedData);
-        } catch (e) {
+        } catch (_) { // eslint-disable-line no-unused-vars
           // Error saving user data to localStorage
         }
       }
@@ -209,7 +207,7 @@ export function useUserData(options = {}) {
         try {
           localStorage.setItem('user', JSON.stringify(data));
           setLocalStorageUser(data);
-        } catch (e) {
+        } catch (_) { // eslint-disable-line no-unused-vars
           // Error saving user data to localStorage
         }
       }
@@ -248,7 +246,7 @@ export function useUserData(options = {}) {
         try {
           localStorage.setItem('user', JSON.stringify(freshData));
           setLocalStorageUser(freshData);
-        } catch (e) {
+        } catch (_) { // eslint-disable-line no-unused-vars
           // Error saving user data to localStorage
         }
       }
@@ -476,6 +474,7 @@ export function useUserData(options = {}) {
   // Retourner tout ce dont les composants pourraient avoir besoin
   return {
     user: normalizedUser,
+    userData: normalizedUser, // Alias pour compatibilité
     isLoading: (isQueryLoading || isInitialLoading) && !localStorageUser, // Ne pas afficher loading si on a des données locales
     isInitialLoading: isInitialLoading && !localStorageUser,
     isError,
@@ -483,6 +482,7 @@ export function useUserData(options = {}) {
     refetch,
     forceRefresh,
     hasRole,
+    isLoggedIn: !!localStorage.getItem('token'), // Ajout de la propriété isLoggedIn
     ...derivedData
   };
 }

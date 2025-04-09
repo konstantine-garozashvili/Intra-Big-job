@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Bell, Mail, MessageSquare, Calendar, Clock, Shield } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Bell, Mail, MessageSquare, Clock } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -7,10 +7,46 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { authService } from '@/lib/services/authService';
 import ProfileSettingsSkeleton from '../components/ProfileSettingsSkeleton';
+import PropTypes from 'prop-types';
 
-const NotificationSettings = () => {
+/**
+ * Composant représentant un interrupteur de notification
+ * @param {Object} props - Les propriétés du composant
+ * @returns {JSX.Element} - Le composant d'interrupteur
+ */
+function NotificationSwitch({ category, setting, label, description, checked, onChange }) {
+  return (
+    <div className="flex items-center justify-between space-y-2">
+      <div className="space-y-0.5">
+        <Label htmlFor={`${category}-${setting}`}>{label}</Label>
+        <p className="text-sm text-muted-foreground">
+          {description}
+        </p>
+      </div>
+      <Switch
+        id={`${category}-${setting}`}
+        checked={checked}
+        onCheckedChange={onChange}
+      />
+    </div>
+  );
+}
+
+NotificationSwitch.propTypes = {
+  category: PropTypes.string.isRequired,
+  setting: PropTypes.string.isRequired,
+  label: PropTypes.string.isRequired,
+  description: PropTypes.string.isRequired,
+  checked: PropTypes.bool.isRequired,
+  onChange: PropTypes.func.isRequired
+};
+
+/**
+ * Page de paramètres des notifications
+ * @returns {JSX.Element} - La page de paramètres des notifications
+ */
+export default function NotificationSettings() {
   const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState(null);
   const [savingChanges, setSavingChanges] = useState(false);
@@ -38,7 +74,7 @@ const NotificationSettings = () => {
             immediate: true
           }
         });
-      } catch (error) {
+      } catch {
         toast.error('Erreur lors du chargement des paramètres');
       } finally {
         setLoading(false);
@@ -61,29 +97,15 @@ const NotificationSettings = () => {
   const saveChanges = async () => {
     setSavingChanges(true);
     try {
+      // Simuler une requête d'API pour enregistrer les paramètres
+      await new Promise(resolve => setTimeout(resolve, 1000));
       toast.success('Paramètres de notification mis à jour');
-    } catch (error) {
+    } catch {
       toast.error('Erreur lors de la mise à jour des paramètres');
     } finally {
       setSavingChanges(false);
     }
   };
-
-  const NotificationSwitch = ({ category, setting, label, description }) => (
-    <div className="flex items-center justify-between space-y-2">
-      <div className="space-y-0.5">
-        <Label htmlFor={`${category}-${setting}`}>{label}</Label>
-        <p className="text-sm text-muted-foreground">
-          {description}
-        </p>
-      </div>
-      <Switch
-        id={`${category}-${setting}`}
-        checked={settings[category][setting]}
-        onCheckedChange={() => handleToggleChange(category, setting)}
-      />
-    </div>
-  );
 
   if (loading) {
     return (
@@ -126,6 +148,8 @@ const NotificationSettings = () => {
               setting="newDocuments"
               label="Nouveaux documents"
               description="Recevez des notifications pour les nouveaux documents."
+              checked={settings.email.newDocuments}
+              onChange={() => handleToggleChange('email', 'newDocuments')}
             />
             <Separator />
             <NotificationSwitch
@@ -133,6 +157,8 @@ const NotificationSettings = () => {
               setting="loginAlerts"
               label="Alertes de connexion"
               description="Recevez des notifications pour les alertes de connexion."
+              checked={settings.email.loginAlerts}
+              onChange={() => handleToggleChange('email', 'loginAlerts')}
             />
             <Separator />
             <NotificationSwitch
@@ -140,6 +166,8 @@ const NotificationSettings = () => {
               setting="announcements"
               label="Annonces"
               description="Recevez des notifications pour les annonces importantes."
+              checked={settings.email.announcements}
+              onChange={() => handleToggleChange('email', 'announcements')}
             />
             <Separator />
             <NotificationSwitch
@@ -147,6 +175,8 @@ const NotificationSettings = () => {
               setting="courseUpdates"
               label="Mises à jour de cours"
               description="Recevez des notifications pour les mises à jour de cours."
+              checked={settings.email.courseUpdates}
+              onChange={() => handleToggleChange('email', 'courseUpdates')}
             />
           </CardContent>
         </Card>
@@ -168,13 +198,17 @@ const NotificationSettings = () => {
               setting="newMessages"
               label="Nouveaux messages"
               description="Recevez des notifications pour les nouveaux messages."
+              checked={settings.app.newMessages}
+              onChange={() => handleToggleChange('app', 'newMessages')}
             />
             <Separator />
             <NotificationSwitch
               category="app"
               setting="eventReminders"
-              label="Rappels d'événement"
-              description="Recevez des notifications pour les rappels d'événement."
+              label="Rappels d&apos;événement"
+              description="Recevez des notifications pour les rappels d&apos;événement."
+              checked={settings.app.eventReminders}
+              onChange={() => handleToggleChange('app', 'eventReminders')}
             />
             <Separator />
             <NotificationSwitch
@@ -182,6 +216,8 @@ const NotificationSettings = () => {
               setting="systemUpdates"
               label="Mises à jour du système"
               description="Recevez des notifications pour les mises à jour du système."
+              checked={settings.app.systemUpdates}
+              onChange={() => handleToggleChange('app', 'systemUpdates')}
             />
           </CardContent>
         </Card>
@@ -203,6 +239,8 @@ const NotificationSettings = () => {
               setting="daily"
               label="Résumé quotidien"
               description="Recevez un résumé quotidien de vos notifications."
+              checked={settings.schedule.daily}
+              onChange={() => handleToggleChange('schedule', 'daily')}
             />
             <Separator />
             <NotificationSwitch
@@ -210,6 +248,8 @@ const NotificationSettings = () => {
               setting="weekly"
               label="Résumé hebdomadaire"
               description="Recevez un résumé hebdomadaire de vos activités."
+              checked={settings.schedule.weekly}
+              onChange={() => handleToggleChange('schedule', 'weekly')}
             />
             <Separator />
             <NotificationSwitch
@@ -217,6 +257,8 @@ const NotificationSettings = () => {
               setting="immediate"
               label="Notifications immédiates"
               description="Recevez les notifications en temps réel."
+              checked={settings.schedule.immediate}
+              onChange={() => handleToggleChange('schedule', 'immediate')}
             />
           </CardContent>
         </Card>
@@ -239,6 +281,4 @@ const NotificationSettings = () => {
       </div>
     </div>
   );
-};
-
-export default NotificationSettings; 
+} 

@@ -13,7 +13,7 @@ export const isValidEmail = (email) => {
   // - Les domaines internationaux (IDN)
   // - Les sous-domaines multiples
   // - Les TLD de 2 à 63 caractères
-  const regex = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,63}))$/;
+  const regex = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,63}))$/;
   return regex.test(String(email).toLowerCase());
 };
 
@@ -24,13 +24,48 @@ export const isValidEmail = (email) => {
  */
 export const validatePassword = (password) => {
   const minLength = 8;
+  const maxLength = 50;
+  
+  // Vérification stricte de la longueur pour s'assurer que la limite est respectée
+  if (!password || typeof password !== 'string') {
+    return {
+      isValid: false,
+      errors: {
+        length: true,
+        tooShort: true,
+        tooLong: false,
+        upperCase: true,
+        lowerCase: true,
+        digit: true,
+        specialChar: true
+      }
+    };
+  }
+  
+  // Vérification explicite de la longueur maximale
+  if (password.length > maxLength) {
+    return {
+      isValid: false,
+      errors: {
+        length: true,
+        tooShort: false,
+        tooLong: true,
+        upperCase: false,
+        lowerCase: false,
+        digit: false,
+        specialChar: false
+      }
+    };
+  }
+  
   const hasUpperCase = /[A-Z]/.test(password);
   const hasLowerCase = /[a-z]/.test(password);
   const hasDigit = /\d/.test(password);
-  const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+  const hasSpecialChar = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password);
   
   const isValid = 
     password.length >= minLength && 
+    password.length <= maxLength &&
     hasUpperCase && 
     hasLowerCase && 
     hasDigit && 
@@ -39,7 +74,9 @@ export const validatePassword = (password) => {
   return {
     isValid,
     errors: {
-      length: password.length < minLength,
+      length: password.length < minLength || password.length > maxLength,
+      tooShort: password.length < minLength,
+      tooLong: password.length > maxLength,
       upperCase: !hasUpperCase,
       lowerCase: !hasLowerCase,
       digit: !hasDigit,
@@ -196,7 +233,8 @@ export const isValidLinkedInUrl = (url) => {
     }
     
     return false;
-  } catch (e) {
+  } catch {
+    // Error se produit si l'URL est mal formée
     return false;
   }
 };
@@ -213,7 +251,8 @@ export const isValidUrl = (url) => {
   try {
     const urlObj = new URL(url);
     return urlObj.protocol === 'https:';
-  } catch (e) {
+  } catch {
+    // Error se produit si l'URL est mal formée
     return false;
   }
 };

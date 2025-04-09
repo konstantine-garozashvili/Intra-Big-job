@@ -1,12 +1,9 @@
-import axiosInstance from '@/lib/axios';
 import apiService from './apiService';
 import emailService from './emailService';
 import { clearQueryCache, getQueryClient } from '../utils/queryClientUtils';
 import { showGlobalLoader, hideGlobalLoader } from '../utils/loadingUtils';
 import { toast } from 'sonner';
 import userDataManager from './userDataManager';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
 
 // Générer un identifiant de session unique
 export const generateSessionId = () => {
@@ -18,9 +15,6 @@ let currentSessionId = localStorage.getItem('session_id') || generateSessionId()
 
 // Exposer l'identifiant de session pour l'utiliser dans les clés de requête
 export const getSessionId = () => currentSessionId;
-
-// Lazy loading des informations utilisateur
-let userDataPromise = null;
 
 /**
  * Décode un token JWT
@@ -54,6 +48,21 @@ export const authService = {
     try {
       if (import.meta.env.DEV) {
         console.log('[authService] Début de l\'inscription');
+        // Journalisation sécurisée des données sans exposer le mot de passe
+        const safeData = { ...userData };
+        if (safeData.password) {
+          // Log la longueur du mot de passe pour débogage
+          console.log('[authService] Longueur du mot de passe:', safeData.password.length);
+          safeData.password = '***';
+        }
+        console.log('[authService] Données d\'inscription:', safeData);
+      }
+      
+      // Vérification explicite de la longueur du mot de passe côté client
+      if (userData.password && typeof userData.password === 'string') {
+        if (userData.password.length > 50) {
+          throw new Error('Le mot de passe ne doit pas dépasser 50 caractères.');
+        }
       }
       
       // Vérifier si le token reCAPTCHA est présent
@@ -216,7 +225,7 @@ export const authService = {
               }));
             }
           }
-        } catch (tokenError) {
+        } catch {
           // Silently handle token parsing errors
         }
       }
@@ -343,8 +352,6 @@ export const authService = {
         userData = response.user;
       } else if (response.data && response.data.user) {
         userData = response.data.user;
-      } else if (response.success && response.user) {
-        userData = response.user;
       } else {
         // If there's no user property, assume the entire response is the user data
         userData = response;
@@ -440,7 +447,7 @@ export const authService = {
             // Ignore errors during token revocation
           });
         }
-      } catch (error) {
+      } catch {
         // Ignore errors during logout API calls
       }
       
@@ -456,7 +463,7 @@ export const authService = {
         
         // Clear API cache
         apiService.clearCache();
-      } catch (error) {
+      } catch {
         // Ignore cache clearing errors
       }
       
@@ -475,7 +482,7 @@ export const authService = {
       }, 10);
       
       return true;
-    } catch (error) {
+    } catch {
       // Force localStorage cleanup even on error
       localStorage.clear();
       sessionStorage.clear();
@@ -498,9 +505,6 @@ export const authService = {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       localStorage.removeItem('refresh_token');
-      
-      // Réinitialiser la promesse de chargement des données utilisateur
-      userDataPromise = null;
       
       // Vider le cache React Query
       clearQueryCache();
@@ -554,7 +558,7 @@ export const authService = {
       
       const currentTime = Date.now() / 1000;
       return decodedToken.exp > currentTime;
-    } catch (error) {
+    } catch {
       return false;
     }
   },
@@ -665,12 +669,7 @@ export const authService = {
    * @returns {Promise<Object>} - Réponse de l'API
    */
   async changePassword(passwordData) {
-    try {
-      const response = await apiService.post('/api/change-password', passwordData, apiService.withAuth());
-      return response;
-    } catch (error) {
-      throw error;
-    }
+    return await apiService.post('/api/change-password', passwordData, apiService.withAuth());
   },
 
   /**
@@ -699,14 +698,13 @@ export const authService = {
   // Méthode pour déclencher manuellement une mise à jour des rôles
   triggerRoleUpdate: () => {
     window.dispatchEvent(new Event('role-change'));
-    triggerRoleUpdate();
   },
 
   /**
    * Ensures that all necessary user data is saved to localStorage
    * Call this when encountering issues with missing data
    */
-  ensureUserDataInLocalStorage: async () => {
+  async ensureUserDataInLocalStorage() {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -722,7 +720,7 @@ export const authService = {
       try {
         // First try to get from the basic me endpoint
         userData = await authService.getCurrentUser(true);
-      } catch (err) {
+      } catch {
         console.warn('Failed to get user data from /me endpoint, trying backup methods');
       }
       

@@ -27,6 +27,9 @@ if (typeof window !== 'undefined') {
   window.__recaptchaCallbacks = window.__recaptchaCallbacks || [];
 }
 
+import PropTypes from "prop-types";
+
+
 const Step3Form = ({ goToPrevStep, onSubmit }) => {
   const {
     addressName, setAddressName,
@@ -51,40 +54,31 @@ const Step3Form = ({ goToPrevStep, onSubmit }) => {
 
   // Validation de l'étape 3
   const validateStep3 = () => {
-    
     const newErrors = {};
-    let valid = true;
     
-    // Valider adresse
-    if (!addressName || addressName.trim() === "") {
-      newErrors.addressName = "L'adresse est requise";
-      valid = false;
+    // Valider l'adresse
+    if (!addressName || addressName.trim() === '') {
+      newErrors.addressName = "L&apos;adresse est requise";
     }
     
-    // Valider ville
-    if (!city || city.trim() === "") {
+    // Valider la ville
+    if (!city || city.trim() === '') {
       newErrors.city = "La ville est requise";
-      valid = false;
     }
     
-    // Valider code postal
-    if (!postalCode || postalCode.trim() === "") {
+    // Valider le code postal
+    if (!postalCode || postalCode.trim() === '') {
       newErrors.postalCode = "Le code postal est requis";
-      valid = false;
     } else if (!/^[0-9]{5}$/.test(postalCode.replace(/\s/g, ''))) {
-      newErrors.postalCode = "Veuillez entrer un code postal valide (5 chiffres)";
-      valid = false;
+      newErrors.postalCode = "Le code postal doit contenir 5 chiffres";
     }
     
     // Valider conditions d'utilisation
     if (!acceptTerms) {
-      newErrors.acceptTerms = "Vous devez accepter les conditions d'utilisation";
-      valid = false;
+      newErrors.acceptTerms = "Vous devez accepter les conditions d&apos;utilisation";
     }
     
-    setLocalErrors(newErrors);
-    
-    return valid;
+    return newErrors;
   };
 
   // Fonction de soumission du formulaire
@@ -92,37 +86,22 @@ const Step3Form = ({ goToPrevStep, onSubmit }) => {
     e.preventDefault();
     setStep3Tried(true);
     
-    const isValid = validateStep3();
-    if (isValid) {
-      try {
+    const validationErrors = validateStep3();
+    const isValid = Object.keys(validationErrors).length === 0;
+    
+    if (!isValid) {
+      setLocalErrors(validationErrors);
+      return;
+    }
+    
+    try {
       onSubmit(e);
-      } catch (error) {
-        setLocalErrors({
-          ...localErrors,
-          addressName: "Erreur lors de la validation de l'adresse. Veuillez réessayer."
-        });
-      }
+    } catch {
+      setLocalErrors({
+        ...localErrors,
+        addressName: "Erreur lors de la validation de l&apos;adresse. Veuillez réessayer."
+      });
     }
-  };
-
-  // Validation manuelle de l'adresse si nécessaire
-  const manuallyValidateAddress = () => {
-    if (!addressName || !city || !postalCode) {
-      return false;
-    }
-    return true;
-  };
-  
-  // Gestion spécifique pour la sélection d'adresse
-  const onAddressSelected = (addressData) => {
-    handleAddressSelect(addressData);
-    // Vérifier si nous avons tous les champs nécessaires
-    setLocalErrors({
-      ...localErrors,
-      addressName: null,
-      city: null,
-      postalCode: null
-    });
   };
 
   // Vérifier si une erreur doit être affichée
@@ -210,16 +189,7 @@ const Step3Form = ({ goToPrevStep, onSubmit }) => {
             id="addressName"
             value={addressName}
             onChange={(e) => setAddressName(e.target.value)}
-            onAddressSelect={(data) => {
-              handleAddressSelect(data);
-              // Nettoyer les erreurs après sélection d'une adresse valide
-              setLocalErrors({
-                ...localErrors,
-                addressName: null,
-                city: null,
-                postalCode: null
-              });
-            }}
+            onAddressSelect={handleAddressSelect}
             error={shouldShowError('addressName') ? getErrorMessage('addressName') : null}
             className=""
             inputClassName={`w-full px-4 py-3 rounded-md border ${shouldShowError('addressName') ? 'border-red-500' : 'border-gray-300'}`}
@@ -227,9 +197,9 @@ const Step3Form = ({ goToPrevStep, onSubmit }) => {
         </div>
         
         {/* Complément d'adresse */}
-        <div>
+        <div className="mb-4">
           <label htmlFor="addressComplement" className="block text-sm font-medium text-gray-700 mb-1">
-            Complément d'adresse (optionnel)
+            Complément d&apos;adresse (optionnel)
           </label>
           <input
             id="addressComplement"
@@ -360,7 +330,7 @@ const Step3Form = ({ goToPrevStep, onSubmit }) => {
             htmlFor="terms"
             className="text-sm font-medium leading-tight peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
           >
-            J'accepte les <a href="/terms" className="text-[#528eb2] hover:underline">conditions d'utilisation</a>
+            J&apos;accepte les <a href="/terms" className="text-[#528eb2] hover:underline">conditions d&apos;utilisation</a>
           </label>
         </div>
         {shouldShowError('acceptTerms') && (
@@ -399,6 +369,12 @@ const Step3Form = ({ goToPrevStep, onSubmit }) => {
       </form>
     </div>
   );
+};
+
+// Définition des PropTypes
+Step3Form.propTypes = {
+  goToPrevStep: PropTypes.func.isRequired,
+  onSubmit: PropTypes.func.isRequired
 };
 
 export default Step3Form; 
