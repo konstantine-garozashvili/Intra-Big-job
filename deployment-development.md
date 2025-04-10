@@ -18,7 +18,7 @@ This document summarizes the deployment setup for the Intra-Big-Job project usin
 
 1. Created hosting directories:
    - Added subdomain to OVH hosting
-   - Set root folder to `/bigprjdev`
+   - Set root folder to `www/bigprjdev`
    - SSL certificates generated and enabled for both domains
    - OVH datacenter: eu-west-gra
 
@@ -53,8 +53,8 @@ Symfony automatically loads the appropriate configuration based on the environme
 
 1. Configured Git deployment:
    - Repository: `https://github.com/konstantine-garozashvili/Intra-Big-job.git`
-   - Branch: `master`
-   - Root folder: `bigprjdev`
+   - Branch: `master-dev`
+   - Root folder: `www/bigprjdev`
    - Webhook URL: `https://webhooks-webhosting.eu.ovhapis.com/1.0/vcs/github/push/eyJhbGciOiJFZERTQSIsImtpZCI6IjEiLCJ0eXAiOiJKV1QifQ.eyJ2ZXJzaW9uIjoxLCJuYW1lIjoia29uc3RheC5jbHVzdGVyMDI3Lmhvc3Rpbmcub3ZoLm5ldCIsInBhdGgiOiJiaWdwcmpkZXYiLCJjb3VudGVyIjowLCJzdWIiOiJnaXRodWIvZ2sxNjUxMjgtb3ZoIiwiZXhwIjoyNTI0NjA3OTk5LCJqdGkiOiI3OTg2ZjI4MWRhMDMxMWY4MzYwOTZjMmQzNzIzZmQ1ZTk5MTRkOTAyIn0.qnYsHhBjObkuRAF7_ypHFtG8eSQwunXiVZEAVO-tF-7c-fwW_7vFoXlEKthejmfZZ3mJsqXIwGbwzFPvHbvWCg`
    - Status: Active for both domains
 
