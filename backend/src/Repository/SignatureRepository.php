@@ -53,4 +53,30 @@ class SignatureRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
+    
+    /**
+     * Find signatures for the current week for a specific user
+     */
+    public function findWeeklyByUser(User $user, \DateTimeImmutable $startDate = null)
+    {
+        // Default to current week if no start date is provided
+        if (!$startDate) {
+            $timezone = new \DateTimeZone('Europe/Paris');
+            $startDate = new \DateTimeImmutable('monday this week', $timezone);
+        }
+        
+        // Calculate end date (Sunday of the same week)
+        $endDate = $startDate->modify('+7 days');
+        
+        return $this->createQueryBuilder('s')
+            ->andWhere('s.user = :user')
+            ->andWhere('s.date >= :startDate')
+            ->andWhere('s.date < :endDate')
+            ->setParameter('user', $user)
+            ->setParameter('startDate', $startDate)
+            ->setParameter('endDate', $endDate)
+            ->orderBy('s.date', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
 }

@@ -21,6 +21,10 @@ class Domain
     #[Groups(['domain:read', 'specialization:read'])]
     private ?string $name = null;
 
+    #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['domain:read', 'specialization:read'])]
+    private ?string $description = null;
+
     #[ORM\OneToMany(mappedBy: 'domain', targetEntity: Specialization::class, orphanRemoval: true)]
     #[Groups(['domain:read'])]
     private Collection $specializations;
@@ -43,6 +47,17 @@ class Domain
     public function setName(string $name): static
     {
         $this->name = $name;
+        return $this;
+    }
+
+    public function getDescription(): ?string
+    {
+        return $this->description;
+    }
+
+    public function setDescription(?string $description): static
+    {
+        $this->description = $description;
         return $this;
     }
 

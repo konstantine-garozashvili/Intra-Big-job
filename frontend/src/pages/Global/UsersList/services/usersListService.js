@@ -6,10 +6,12 @@ export const fetchUsers = async (filters = {}) => {
     const response = await axios.get('/api/users/list', {
       params: {
         ...filters,
+        includeRoles: true, // Ajouter ce paramètre pour inclure les rôles
         // Add any default filters here
       }
     });
-    return response.data;
+    // Ensure we always return an array, even if the API response is unexpected
+    return Array.isArray(response.data.data) ? response.data.data : [];
   } catch (error) {
     throw error;
   }

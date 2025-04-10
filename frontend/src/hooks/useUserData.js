@@ -12,6 +12,7 @@ import apiService from '@/lib/services/apiService';
  * @param {boolean} options.enabled - Active ou désactive la requête
  * @param {function} options.onSuccess - Callback appelé en cas de succès
  * @param {function} options.onError - Callback appelé en cas d'erreur
+ * @param {string} options.userId - ID de l'utilisateur à récupérer (facultatif)
  * @returns {Object} - Données et fonctions utilisateur
  */
 export function useUserData(options = {}) {
@@ -19,6 +20,7 @@ export function useUserData(options = {}) {
     enabled = true,
     onSuccess,
     onError,
+    userId,
     ...queryOptions
   } = options;
 
@@ -42,7 +44,8 @@ export function useUserData(options = {}) {
     return null;
   });
 
-  const routeKey = '/api/profile'; // Define routeKey directly
+  // Construire la clé de la requête en fonction de l'ID de l'utilisateur
+  const routeKey = userId ? `/api/public-profile/${userId}` : '/api/profile';
   
   // Add a ref to track the last time we fetched data to prevent too frequent refreshes
   const [lastFetchTime, setLastFetchTime] = useState(0);
@@ -102,7 +105,7 @@ export function useUserData(options = {}) {
     };
     
     fetchData();
-  }, [enabled, sessionId, routeKey, queryClient]);
+  }, [enabled, sessionId, routeKey, queryClient, lastFetchTime]);
 
   const getCachedData = useCallback(() => {
     // Add debouncing/memoization to prevent excessive cache reads

@@ -498,19 +498,42 @@ const MainLayout = () => {
         {/* Only show Navbar for authenticated users */}
         {isAuthenticated && <Navbar />}
         
-        <main
-          style={{
+        {/* Congratulations Modal */}
+        <CongratulationsModal 
+          isOpen={showCongratulations} 
+          onClose={handleCloseCongratulations} 
+        />
+        
+        {/* Navbar conditionally rendered */}
+        {!isFullScreenPage && (
+          <Navbar 
+            user={userData} 
+            isLoading={loadingState !== LOADING_STATES.COMPLETE && isAuthenticated} 
+          />
+        )}
+        
+        {/* Main content avec gestion améliorée de l'espace */}
+        <main 
+          className={`flex-grow ${
+            isFullScreenPage 
+              ? 'px-0 py-0' 
+              : 'container mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full'
+          }`}
+          style={{ 
             minHeight: minContentHeight,
-            paddingTop: isAuthenticated ? '64px' : '0', // Add padding only when navbar is present
+            maxWidth: isFullScreenPage ? '100%' : undefined
           }}
-          className={`relative ${isFullScreenPage ? '' : 'container mx-auto px-4 sm:px-6 lg:px-8'}`}
         >
-          <Outlet />
-          {showProgress && !isFullScreenPage && (
-            <RoleGuard roles={[ROLES.STUDENT]}>
-              <ProfileProgress />
-            </RoleGuard>
-          )}
+          {/* Passer l'état de chargement au contexte Outlet */}
+          <div className="w-full max-w-[2000px] mx-auto">
+            <Outlet context={{ 
+              userData, 
+              profileData, 
+              loadingState,
+              isLoading,
+              hasMinimalData
+            }} />
+          </div>
         </main>
 
         {/* Only show Footer and Chat for authenticated users */}

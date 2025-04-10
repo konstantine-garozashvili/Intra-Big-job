@@ -4,8 +4,15 @@ controllers:
         namespace: App\Controller
     type: attribute
 
+profile_controllers:
+    resource:
+        path: ../src/Controller/Profile/
+        namespace: App\Controller\Profile
+    type: attribute
+
 api_login_check:
     path: /api/login_check
+    methods: ['POST']
 
 api_token_refresh:
     path: /api/token/refresh

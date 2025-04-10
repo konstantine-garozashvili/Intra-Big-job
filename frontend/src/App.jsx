@@ -2,8 +2,10 @@ import React from 'react'
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate, useNavigate } from 'react-router-dom'
 import { lazy, Suspense, useEffect, useRef, useCallback, useState } from 'react'
 import MainLayout from './components/MainLayout'
-import { RoleDashboardRedirect, RoleGuard, ROLES, RoleProvider } from './features/roles'
-import { useQueryClient } from '@tanstack/react-query'
+import { RoleProvider, RoleDashboardRedirect, RoleGuard, ROLES } from './features/roles'
+import { AuthProvider } from './contexts/AuthContext'
+import { TranslationProvider } from './contexts/TranslationContext'
+import { QueryClientProvider, useQueryClient } from '@tanstack/react-query'
 import './index.css'
 import ProtectedRoute from './components/ProtectedRoute'
 import PublicRoute from './components/PublicRoute'
@@ -17,6 +19,10 @@ import apiService from './lib/services/apiService'
 import PublicProfileView from '@/pages/Global/Profile/views/PublicProfileView'
 import { ThemeProvider } from '@/context/ThemeContext'
 import PublicLayout from './layouts/PublicLayout'
+import TranslationTest from './components/Translation/TranslationTest'
+
+// Export queryClient to be used elsewhere
+export { queryClient };
 
 // Composant de chargement personnalisé
 const LoadingFallback = () => (
@@ -59,6 +65,24 @@ class ErrorBoundary extends React.Component {
 
     return this.props.children;
   }
+}
+
+// Fallback component for error boundary
+function ErrorFallback({ error, resetErrorBoundary }) {
+  return (
+    <div role="alert" className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-50">
+      <div className="w-full max-w-md p-6 bg-white rounded-lg shadow-lg">
+        <h2 className="mb-4 text-2xl font-bold text-red-600">Une erreur est survenue</h2>
+        <p className="mb-4 text-red-700">{error?.message || "Une erreur inattendue s'est produite"}</p>
+        <button 
+          onClick={resetErrorBoundary || (() => window.location.reload())}
+          className="px-4 py-2 text-white bg-blue-600 rounded hover:bg-blue-700"
+        >
+          Réessayer
+        </button>
+      </div>
+    </div>
+  );
 }
 
 // Wrapper pour le chargement des composants
@@ -132,30 +156,7 @@ const MobileDevelopment = withSuspense(lazy(() => import('./pages/formations/Mob
 const GameDevelopment = withSuspense(lazy(() => import('./pages/formations/GameDevelopment')));
 const AllFormations = withSuspense(lazy(() => import('./pages/AllFormations')));
 const FormationThemeWrapper = withSuspense(lazy(() => import('./components/formations/FormationThemeWrapper')));
-
-function App() {
-  return (
-    <ThemeProvider>
-      <Router>
-        <RoleProvider>
-          <ErrorBoundary>
-            <div className="relative font-poppins">
-              <AppInitializer />
-              <AppContent />
-              <Toaster />
-            </div>
-          </ErrorBoundary>
-        </RoleProvider>
-      </Router>
-    </ThemeProvider>
-  );
-}
-
-// Export par défaut du composant App
-export default App;
-
-// Export queryClient to be used elsewhere
-export { queryClient };
+const HomePage = withSuspense(lazy(() => import('./pages/Home')));
 
 // Optimisation du préchargement
 function useIntelligentPreload() {
@@ -172,7 +173,7 @@ function useIntelligentPreload() {
 
     const preloadComponent = async (importFn) => {
       try {
-        await lazyWithRetry(importFn);
+        await importFn();
       } catch (error) {
         console.warn('Preload failed:', error);
       }
@@ -347,8 +348,8 @@ function PrefetchHandler() {
   return null;
 }
 
-// Composant de contenu principal
-function AppContent() {
+// Composant de contenu principal avec routes
+function AppRoutes() {
   return (
     <Routes>
       {/* Public Routes */}
@@ -379,6 +380,9 @@ function AppContent() {
       {/* Protected Routes */}
       <Route element={<MainLayout />}>
         <Route element={<ProtectedRoute />}>
+          {/* Dashboard redirect */}
+          <Route path="/dashboard" element={<RoleDashboardRedirect />} />
+          
           {/* Profile Routes */}
           <Route path="/profile" element={<ProfileLayout />}>
             <Route index element={<ProfileView />} />
@@ -388,6 +392,16 @@ function AppContent() {
             <Route path="career" element={<CareerSettings />} />
           </Route>
           <Route path="/profile/:userId" element={<PublicProfileView />} />
+          <Route path="/public-profile/:userId" element={<PublicProfileView />} />
+          
+          {/* Settings routes avec ProfileLayout */}
+          <Route element={<ProfileLayout />}>
+            <Route path="/settings" element={<Navigate to="/settings/profile" replace />} />
+            <Route path="/settings/profile" element={<SettingsProfile />} />
+            <Route path="/settings/career" element={<CareerSettings />} />
+            <Route path="/settings/security" element={<SecuritySettings />} />
+            <Route path="/settings/notifications" element={<NotificationSettings />} />
+          </Route>
           
           {/* Global Routes */}
           <Route path="/trombinoscope" element={<Trombinoscope />} />
@@ -406,6 +420,7 @@ function AppContent() {
                 <Route path="tickets" element={<AdminTicketList />} />
                 <Route path="services" element={<TicketServiceList />} />
                 <Route path="user-role-manager" element={<UserRoleManager />} />
+                <Route path="users" element={<UserRoleManager />} />
               </Routes>
             </RoleGuard>
           } />
@@ -462,32 +477,52 @@ function AppContent() {
               <Routes>
                 <Route path="dashboard" element={<RecruiterDashboard />} />
                 <Route path="guest-student-manager" element={<GuestStudentRoleManager />} />
+                <Route path="guest-student-roles" element={<GuestStudentRoleManager />} />
               </Routes>
             </RoleGuard>
           } />
+          
+          {/* Route pour le test de traduction */}
+          <Route path="/translation" element={<TranslationTest />} />
         </Route>
       </Route>
 
       {/* Fallback route */}
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
 
-// Fallback component for error boundary
-function ErrorFallback({ error, resetErrorBoundary }) {
+// Composant App principal qui configure le Router
+function App() {
   return (
-    <div role="alert" className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-50">
-      <div className="w-full max-w-md p-6 bg-white rounded-lg shadow-lg">
-        <h2 className="mb-4 text-2xl font-bold text-red-600">Une erreur est survenue</h2>
-        <p className="mb-4 text-red-700">{error?.message || "Une erreur inattendue s'est produite"}</p>
-        <button 
-          onClick={resetErrorBoundary || (() => window.location.reload())}
-          className="px-4 py-2 text-white bg-blue-600 rounded hover:bg-blue-700"
-        >
-          Réessayer
-        </button>
-      </div>
-    </div>
+    <ErrorBoundary FallbackComponent={ErrorFallback}>
+      <Router>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <ThemeProvider>
+              <RoleProvider>
+                <TranslationProvider>
+                  {/* Initialisation des services de l'application */}
+                  <AppInitializer />
+                  
+                  {/* Gestionnaire de préchargement */}
+                  <PrefetchHandler />
+                  
+                  <div className="relative font-poppins">
+                    <Suspense fallback={<LoadingFallback />}>
+                      <AppRoutes />
+                    </Suspense>
+                    <Toaster />
+                  </div>
+                </TranslationProvider>
+              </RoleProvider>
+            </ThemeProvider>
+          </AuthProvider>
+        </QueryClientProvider>
+      </Router>
+    </ErrorBoundary>
   );
 }
+
+export default App;
