@@ -29,7 +29,8 @@ security:
         api:
             pattern: ^/api
             stateless: true
-            jwt: ~
+            custom_authenticators:
+                - lexik_jwt_authentication.jwt_token_authenticator
         main:
             lazy: true
             provider: app_user_provider
