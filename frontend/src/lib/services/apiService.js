@@ -260,9 +260,7 @@ export const normalizeApiUrl = (path) => {
  * @param {Object} params - Query parameters
  * @returns {string} - Cache key
  */
-export const generateCacheKey = (method, url, params = {}) => {
-  return `${method}:${url}:${JSON.stringify(params)}`;
-};
+
 
 /**
  * Generates a cache key for a request

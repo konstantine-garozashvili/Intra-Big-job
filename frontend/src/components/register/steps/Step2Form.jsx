@@ -69,7 +69,6 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
   const inputRef = useRef(null);
 
   // Formater la date pour l'affichage
-  const formattedBirthDate = birthDate ? new Intl.DateTimeFormat('fr-FR').format(birthDate) : "";
 
   // Effet pour mettre à jour l'entrée quand birthDate change
   useEffect(() => {

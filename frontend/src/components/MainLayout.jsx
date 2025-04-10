@@ -520,19 +520,9 @@ const MainLayout = () => {
         )}
         
         {/* Main content avec gestion améliorée de l'espace */}
-        <main 
-          className={`flex-grow ${
-            isFullScreenPage 
-              ? 'px-0 py-0' 
-              : 'container mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full'
-          }`}
-          style={{ 
-            minHeight: minContentHeight,
-            maxWidth: isFullScreenPage ? '100%' : undefined
-          }}
-        >
+        <main >
           {/* Passer l'état de chargement au contexte Outlet */}
-          <div className="w-full max-w-[2000px] mx-auto">
+          <div className="w-full mx-auto">
             <Outlet context={{ 
               userData, 
               profileData, 

@@ -4,7 +4,7 @@ import MainLayout from './components/MainLayout'
 import { RoleProvider, RoleDashboardRedirect, RoleGuard, ROLES } from './features/roles'
 import { AuthProvider } from './contexts/AuthContext'
 import { TranslationProvider } from './contexts/TranslationContext'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClientProvider } from '@tanstack/react-query'
 import './index.css'
 import ProtectedRoute from './components/ProtectedRoute'
 import PublicRoute from './components/PublicRoute'
@@ -17,28 +17,11 @@ import ReactQueryHydration from './components/shared/ReactQueryHydration'
 import apiService from './lib/services/apiService'
 import PublicProfileView from '@/pages/Global/Profile/views/PublicProfileView'
 import TranslationTest from './components/Translation/TranslationTest'
+import deduplicationService from './lib/services/deduplicationService'
 
-// Create a shared query client for the entire application
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      cacheTime: 60 * 60 * 1000, // 1 hour
-      retry: 1,
-      refetchOnWindowFocus: false,
-      refetchOnMount: true,
-      logging: false, // Disable query logging in console
-    },
-  },
-  logger: {
-    log: () => {},
-    warn: () => {},
-    error: () => {}
-  }
-});
-
-// Export queryClient to be used elsewhere
-export { queryClient };
+// Import the queryClient from the instance created in main.jsx
+// We don't need to create or export it from here
+// The queryClient is already available globally via window.queryClient
 
 // Import différé des pages pour améliorer les performances
 const Login = lazy(() => import('./pages/Login'))
@@ -114,7 +97,7 @@ const useIntelligentPreload = () => {
       const prefetchUserProfile = async () => {
         try {
           // Attempt to prefetch user profile data
-          await queryClient.prefetchQuery({
+          await window.queryClient.prefetchQuery({
             queryKey: ['session', 'user-profile'],
             queryFn: async () => {
               return await apiService.get('/api/me');
@@ -189,8 +172,11 @@ const useIntelligentPreload = () => {
   // Nettoyer les caches lors de la déconnexion
   useEffect(() => {
     const handleLogout = () => {
+      // Nettoyer le service de déduplication
+      deduplicationService.clear();
+      
       // Nettoyer le cache React Query
-      queryClient.clear();
+      window.queryClient.clear();
       
       // Nettoyer sessionStorage
       sessionStorage.removeItem('APP_QUERY_CACHE');
@@ -622,7 +608,7 @@ const App = () => {
   return (
     <ErrorBoundary FallbackComponent={ErrorFallback}>
       <Router>
-        <QueryClientProvider client={queryClient}>
+        <QueryClientProvider client={window.queryClient}>
           <ReactQueryHydration>
             <AuthProvider>
               <RoleProvider>
