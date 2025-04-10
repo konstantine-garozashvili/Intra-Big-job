@@ -41,6 +41,52 @@ class DiagnosticController extends AbstractController
         ]);
     }
 
+    #[Route('/api/jwt-diagnostic', name: 'api_jwt_diagnostic', methods: ['GET'])]
+    public function jwtDiagnostic(): JsonResponse
+    {
+        $projectDir = $this->getParameter('kernel.project_dir');
+        $privateKeyPath = $projectDir . '/config/jwt/private.pem';
+        $publicKeyPath = $projectDir . '/config/jwt/public.pem';
+        
+        $result = [
+            'private_key_exists' => file_exists($privateKeyPath),
+            'public_key_exists' => file_exists($publicKeyPath),
+            'private_key_readable' => is_readable($privateKeyPath),
+            'public_key_readable' => is_readable($publicKeyPath),
+            'jwt_env_vars' => [
+                'jwt_secret_key' => getenv('JWT_SECRET_KEY') ?: 'not set',
+                'jwt_public_key' => getenv('JWT_PUBLIC_KEY') ?: 'not set',
+                'jwt_passphrase' => !empty(getenv('JWT_PASSPHRASE')) ? 'is set' : 'not set',
+                'jwt_ttl' => getenv('JWT_TTL') ?: 'not set'
+            ]
+        ];
+        
+        // Check if we can actually read the files
+        if ($result['private_key_readable']) {
+            try {
+                $privateKeyContent = file_get_contents($privateKeyPath);
+                $result['private_key_valid'] = !empty($privateKeyContent) && strpos($privateKeyContent, 'BEGIN') !== false;
+            } catch (\Exception $e) {
+                $result['private_key_error'] = $e->getMessage();
+            }
+        }
+        
+        if ($result['public_key_readable']) {
+            try {
+                $publicKeyContent = file_get_contents($publicKeyPath);
+                $result['public_key_valid'] = !empty($publicKeyContent) && strpos($publicKeyContent, 'BEGIN') !== false;
+            } catch (\Exception $e) {
+                $result['public_key_error'] = $e->getMessage();
+            }
+        }
+        
+        return new JsonResponse([
+            'status' => 'ok',
+            'message' => 'JWT diagnostic information',
+            'jwt_configuration' => $result
+        ]);
+    }
+
     #[Route('/api/test-post', name: 'api_test_post', methods: ['POST'])]
     public function testPost(Request $request): JsonResponse
     {
