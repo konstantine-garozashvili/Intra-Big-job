@@ -31,6 +31,11 @@ services:
             - '../src/DependencyInjection/'
             - '../src/Entity/'
             - '../src/Kernel.php'
+            
+    # Explicitly register controllers in subdirectories
+    App\Controller\Profile\:
+        resource: '../src/Controller/Profile/'
+        tags: ['controller.service_arguments']
 
     # Configuration du DocumentController
     App\Domains\Global\Document\Controller\DocumentController:
