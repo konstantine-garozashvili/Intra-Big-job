@@ -28,19 +28,24 @@ header('Content-Type: text/html');
         <h1>API Error Test</h1>
         
         <?php
+        // Correct path for OVH
+        $projectRoot = dirname(__FILE__);
+        
         echo '<div class="card">';
         echo '<h2>Server Environment</h2>';
         echo '<p><strong>PHP Version:</strong> ' . phpversion() . '</p>';
         echo '<p><strong>Server:</strong> ' . ($_SERVER['SERVER_SOFTWARE'] ?? 'Unknown') . '</p>';
         echo '<p><strong>Document Root:</strong> ' . ($_SERVER['DOCUMENT_ROOT'] ?? 'Unknown') . '</p>';
+        echo '<p><strong>Current Directory:</strong> ' . $projectRoot . '</p>';
         echo '</div>';
         
-        // Test if JWT keys exist
-        $privateKeyPath = realpath(__DIR__ . '/../backend/config/jwt/private.pem');
-        $publicKeyPath = realpath(__DIR__ . '/../backend/config/jwt/public.pem');
+        // Test if JWT keys exist - use correct paths for OVH
+        $privateKeyPath = $projectRoot . '/backend/config/jwt/private.pem';
+        $publicKeyPath = $projectRoot . '/backend/config/jwt/public.pem';
         
         echo '<div class="card">';
         echo '<h2>JWT Key Files</h2>';
+        echo '<p><strong>Private Key Path:</strong> ' . $privateKeyPath . '</p>';
         echo '<p><strong>Private Key:</strong> ' . (file_exists($privateKeyPath) ? 
              '<span class="success">Exists</span> (' . substr(sprintf('%o', fileperms($privateKeyPath)), -4) . ')' : 
              '<span class="error">Missing</span>') . '</p>';
@@ -138,9 +143,9 @@ header('Content-Type: text/html');
         echo '<h2>Environment Files</h2>';
         
         $envFiles = [
-            'backend/.env' => realpath(__DIR__ . '/../backend/.env'),
-            'backend/.env.dev' => realpath(__DIR__ . '/../backend/.env.dev'),
-            'backend/.env.local' => realpath(__DIR__ . '/../backend/.env.local')
+            'backend/.env' => $projectRoot . '/backend/.env',
+            'backend/.env.dev' => $projectRoot . '/backend/.env.dev',
+            'backend/.env.local' => $projectRoot . '/backend/.env.local'
         ];
         
         foreach ($envFiles as $name => $path) {

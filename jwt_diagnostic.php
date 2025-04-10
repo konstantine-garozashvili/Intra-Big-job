@@ -36,9 +36,9 @@ function getFilePermissions($filePath) {
     ];
 }
 
-// Get current directory
+// Get current directory - CORRECTED FOR OVH
 $currentDir = dirname(__FILE__);
-$projectRoot = realpath($currentDir . '/../..');
+$projectRoot = $currentDir; // This script should be in the project root
 
 // Test basic JWT configuration
 $results = [
