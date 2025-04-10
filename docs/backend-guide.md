@@ -25,10 +25,10 @@ docker exec -it infra-backend-1 composer require <package-name>
 
 # Créer un contrôleur
 ```bash
-php bin/console make:controller NomDuController
+docker exec -it infra-backend-1 php bin/console make:controller NomDuController
 ```
 
 # Créer une entité
 ```bash
-php bin/console make:entity NomDeLaTable
+docker exec -it infra-backend-1 php bin/console make:entity NomDeLaTable
 ```

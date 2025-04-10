@@ -1,0 +1,404 @@
+import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
+import { authService } from '../../lib/services/authService';
+import { 
+  Table, 
+  TableBody, 
+  TableCaption, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from '@/components/ui/table';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { 
+  CheckCircle, 
+  XCircle, 
+  Loader2, 
+  RefreshCw, 
+  ClipboardList,
+  Calendar,
+  AlertCircle,
+  Clock
+} from 'lucide-react';
+import { Button } from '../ui/button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { motion } from 'framer-motion';
+
+// Variants d'animation
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: { 
+    opacity: 1,
+    transition: { 
+      staggerChildren: 0.05,
+      delayChildren: 0.1
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { y: 10, opacity: 0 },
+  visible: { 
+    y: 0, 
+    opacity: 1,
+    transition: { type: "spring", stiffness: 300, damping: 25 }
+  }
+};
+
+const SignatureHistory = () => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [weeklyData, setWeeklyData] = useState(null);
+  const [error, setError] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const fetchWeeklyHistory = async () => {
+    try {
+      if (isRefreshing) {
+        // Ne pas montrer l'indicateur de chargement complet pendant un rafraîchissement
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
+      setError(null);
+      
+      // Ensure user data is in localStorage
+      await authService.ensureUserDataInLocalStorage();
+      
+      // Get token
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Token d\'authentification non trouvé');
+      }
+      
+      // Fetch weekly signature history
+      const response = await fetch('http://localhost:8000/api/signatures/weekly', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Erreur ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      // Filtrer pour ne garder que les jours de la semaine (lundi à vendredi)
+      if (data && data.signaturesByDate) {
+        data.signaturesByDate = data.signaturesByDate.filter(day => 
+          !['Saturday', 'Sunday'].includes(day.dayName)
+        );
+      }
+      
+      console.log('Weekly signature history:', data);
+      setWeeklyData(data);
+    } catch (error) {
+      console.error('Error fetching weekly history:', error);
+      setError(error.message || 'Erreur de chargement de l\'historique');
+      toast.error('Erreur', {
+        description: error.message || 'Impossible de charger l\'historique des signatures'
+      });
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchWeeklyHistory();
+  }, []);
+  
+  const formatDateToFrench = (dateStr) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('fr-FR', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+  
+  const translateDayName = (dayName) => {
+    const translations = {
+      'Monday': 'Lundi',
+      'Tuesday': 'Mardi',
+      'Wednesday': 'Mercredi',
+      'Thursday': 'Jeudi',
+      'Friday': 'Vendredi'
+    };
+    return translations[dayName] || dayName;
+  };
+  
+  const weekSummary = () => {
+    if (!weeklyData?.signaturesByDate) return { total: 0, present: 0 };
+    
+    let totalPeriods = 0;
+    let presentPeriods = 0;
+    
+    // Compter uniquement les jours ouvrés (lundi à vendredi)
+    weeklyData.signaturesByDate.forEach(day => {      
+      // Compter matin et après-midi comme périodes séparées
+      totalPeriods += 2;
+      
+      // Compter les périodes présentes (où la signature existe)
+      if (day.signatures.morning) presentPeriods++;
+      if (day.signatures.afternoon) presentPeriods++;
+    });
+    
+    return {
+      total: totalPeriods,
+      present: presentPeriods,
+      percentage: totalPeriods > 0 ? Math.round((presentPeriods / totalPeriods) * 100) : 0
+    };
+  };
+  
+  if (isLoading && !isRefreshing) {
+    return (
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="flex flex-col items-center justify-center py-12 space-y-4"
+      >
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <p className="text-gray-500 dark:text-gray-400">Chargement de l'historique des signatures...</p>
+      </motion.div>
+    );
+  }
+
+  if (error) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Erreur</AlertTitle>
+          <AlertDescription>
+            {error}
+            <Button 
+              className="mt-4" 
+              variant="outline" 
+              onClick={fetchWeeklyHistory}
+              size="sm"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Réessayer
+            </Button>
+          </AlertDescription>
+        </Alert>
+      </motion.div>
+    );
+  }
+
+  if (!weeklyData) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ClipboardList className="h-5 w-5 text-muted-foreground" />
+              Aucune donnée
+            </CardTitle>
+            <CardDescription>Aucun historique de signatures n'est disponible</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              variant="outline"
+              onClick={fetchWeeklyHistory}
+              size="sm"
+              className="w-full"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Actualiser les données
+            </Button>
+          </CardContent>
+        </Card>
+      </motion.div>
+    );
+  }
+  
+  const summary = weekSummary();
+
+  return (
+    <motion.div 
+      className="space-y-6"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+    >
+      {/* Summary Card */}
+      <motion.div variants={itemVariants}>
+        <Card className="overflow-hidden border-blue-100 dark:border-blue-900/50">
+          <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-900/30 border-b border-blue-100 dark:border-blue-900/10">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-blue-800 dark:text-blue-400 flex items-center gap-2">
+                <ClipboardList className="h-5 w-5" />
+                Résumé de la semaine
+              </CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-4">              
+            <div className="grid grid-cols-2 gap-3 mt-4">
+              <div className="p-3 bg-gray-50 dark:bg-gray-800/30 rounded-lg border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-2 mb-1">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <span className="text-sm font-medium">Présent</span>
+                </div>
+                <span className="text-2xl font-bold text-green-600">{summary.present}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">périodes</span>
+              </div>
+              
+              <div className="p-3 bg-gray-50 dark:bg-gray-800/30 rounded-lg border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-2 mb-1">
+                  <XCircle className="h-4 w-4 text-red-600" />
+                  <span className="text-sm font-medium">Absent</span>
+                </div>
+                <span className="text-2xl font-bold text-red-600">{summary.total - summary.present}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">périodes</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Detailed Table */}
+      <motion.div variants={itemVariants}>
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-primary" />
+                Détail des signatures
+              </CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setIsRefreshing(true);
+                  fetchWeeklyHistory();
+                }}
+                disabled={isRefreshing}
+                className="gap-1"
+              >
+                {isRefreshing ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3.5 w-3.5" />
+                )}
+                <span>Actualiser</span>
+              </Button>
+            </div>
+            <CardDescription>
+              Historique détaillé des signatures pour la semaine en cours
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[100px]">Jour</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead className="text-center">Matin (9h-12h)</TableHead>
+                    <TableHead className="text-center">Après-midi (13h-17h)</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {weeklyData.signaturesByDate.map((day) => (
+                    <TableRow key={day.date}>
+                      <TableCell className="font-medium">
+                        {translateDayName(day.dayName)}
+                      </TableCell>
+                      <TableCell>
+                        {new Date(day.date).toLocaleDateString('fr-FR')}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger className="cursor-help inline-flex">
+                              {day.signatures.morning ? (
+                                <Badge variant="outline" className="bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800 gap-1">
+                                  <CheckCircle className="h-3.5 w-3.5" />
+                                  <span>Présent</span>
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800 gap-1">
+                                  <XCircle className="h-3.5 w-3.5" />
+                                  <span>Absent</span>
+                                </Badge>
+                              )}
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom">
+                              {day.signatures.morning ? (
+                                <div className="flex items-center gap-2">
+                                  <Clock className="h-4 w-4 text-green-600" />
+                                  <p>Signé à {new Date(day.signatures.morning.date).toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'})}</p>
+                                </div>
+                              ) : (
+                                <p>Aucune signature enregistrée</p>
+                              )}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger className="cursor-help inline-flex">
+                              {day.signatures.afternoon ? (
+                                <Badge variant="outline" className="bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800 gap-1">
+                                  <CheckCircle className="h-3.5 w-3.5" />
+                                  <span>Présent</span>
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800 gap-1">
+                                  <XCircle className="h-3.5 w-3.5" />
+                                  <span>Absent</span>
+                                </Badge>
+                              )}
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom">
+                              {day.signatures.afternoon ? (
+                                <div className="flex items-center gap-2">
+                                  <Clock className="h-4 w-4 text-green-600" />
+                                  <p>Signé à {new Date(day.signatures.afternoon.date).toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'})}</p>
+                                </div>
+                              ) : (
+                                <p>Aucune signature enregistrée</p>
+                              )}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+    </motion.div>
+  );
+};
+
+export default SignatureHistory; 

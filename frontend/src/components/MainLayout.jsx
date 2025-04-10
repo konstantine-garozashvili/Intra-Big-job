@@ -515,19 +515,28 @@ const MainLayout = () => {
           />
         )}
         
-        {/* Main content with minimum height to ensure footer is below viewport */}
+        {/* Main content avec gestion améliorée de l'espace */}
         <main 
-          className={`flex-grow ${isFullScreenPage ? 'px-0 py-0' : 'container mx-auto px-4 py-8'}`}
-          style={{ minHeight: minContentHeight }}
+          className={`flex-grow ${
+            isFullScreenPage 
+              ? 'px-0 py-0' 
+              : 'container mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full'
+          }`}
+          style={{ 
+            minHeight: minContentHeight,
+            maxWidth: isFullScreenPage ? '100%' : undefined
+          }}
         >
           {/* Passer l'état de chargement au contexte Outlet */}
-          <Outlet context={{ 
-            userData, 
-            profileData, 
-            loadingState,
-            isLoading,
-            hasMinimalData
-          }} />
+          <div className="w-full max-w-[2000px] mx-auto">
+            <Outlet context={{ 
+              userData, 
+              profileData, 
+              loadingState,
+              isLoading,
+              hasMinimalData
+            }} />
+          </div>
         </main>
 
         {showProgress && profileData && hasRole(ROLES.GUEST) && (

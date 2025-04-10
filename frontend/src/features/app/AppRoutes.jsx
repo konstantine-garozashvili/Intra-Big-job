@@ -39,6 +39,7 @@ const AppRoutes = ({ lazyComponents }) => {
     CareerSettings,
     ProfileView,
     Dashboard,
+    PublicProfileView,
     
     // Dashboards spécifiques par rôle
     AdminDashboard,
@@ -76,6 +77,8 @@ const AppRoutes = ({ lazyComponents }) => {
           <Route path="reset-password" element={<ResetPasswordRequest />} />
           <Route path="reset-password/confirmation" element={<ResetPasswordConfirmation />} />
           <Route path="reset-password/:token" element={<ResetPassword />} />
+          <Route path="public-profile/:id" element={<PublicProfileView />} />
+          <Route path="profile/view/:id" element={<ProfileView />} />
         </Route>
 
         {/* Routes protégées */}

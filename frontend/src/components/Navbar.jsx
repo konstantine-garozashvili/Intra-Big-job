@@ -12,7 +12,7 @@ import {
   User,
   Bell,
   Search,
-  Clipboard
+  ClipboardPenLine
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -36,6 +36,7 @@ import { useRolePermissions } from "../features/roles/useRolePermissions";
 import { Skeleton } from './ui/skeleton';
 import ProfilePictureDisplay from './ProfilePictureDisplay';
 import { Avatar, AvatarFallback } from './ui/avatar';
+import LanguageSelector from './Translation/LanguageSelector';
 
 // Style personnalisé pour le menu dropdown et le bouton burger
 const customStyles = `
@@ -116,10 +117,29 @@ const customStyles = `
     overflow-x: hidden;
     isolation: isolate;
   }
+
+  /* Responsive styles */
+  @media (max-width: 1280px) {
+    .search-container {
+      max-width: 350px;
+    }
+    
+    .navbar-actions {
+      gap: 0.5rem;
+    }
+  }
   
   @media (max-width: 1024px) {
     .search-container {
       max-width: 300px;
+    }
+    
+    .navbar-brand {
+      font-size: 1.5rem;
+    }
+    
+    .navbar-actions {
+      gap: 0.25rem;
     }
   }
   
@@ -143,6 +163,64 @@ const customStyles = `
     .search-container {
       display: none;
     }
+    
+    .navbar-brand {
+      font-size: 1.25rem;
+    }
+    
+    .desktop-only {
+      display: none;
+    }
+    
+    .mobile-only {
+      display: flex;
+    }
+  }
+  
+  @media (max-width: 640px) {
+    .container {
+      padding-left: 0.5rem;
+      padding-right: 0.5rem;
+    }
+    
+    .navbar-brand {
+      font-size: 1.125rem;
+    }
+    
+    .mobile-auth-buttons {
+      flex-direction: column;
+      position: absolute;
+      top: 100%;
+      right: 0;
+      background: #02284f;
+      padding: 0.5rem;
+      border-radius: 0 0 0.5rem 0.5rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    
+    .mobile-auth-buttons a {
+      width: 100%;
+      text-align: center;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .navbar-actions {
+      gap: 0.25rem;
+    }
+    
+    .notification-button {
+      display: none;
+    }
+  }
+  
+  /* Default states */
+  .mobile-only {
+    display: none;
+  }
+  
+  .desktop-only {
+    display: flex;
   }
 `;
 
@@ -151,13 +229,13 @@ const AuthButtons = () => (
   <>
     <Link
       to="/login"
-      className="px-4 py-2 text-gray-200 transition-colors rounded-md hover:text-white"
+      className="px-4 py-2 text-gray-200 transition-colors rounded-md hover:text-white whitespace-nowrap"
     >
       Connexion
     </Link>
     <Link
       to="/register"
-      className="ml-2 px-4 py-2 bg-[#528eb2] rounded-md text-white font-medium hover:bg-[#528eb2]/90 transition-all transform hover:scale-105"
+      className="ml-2 px-4 py-2 bg-[#528eb2] rounded-md text-white font-medium hover:bg-[#528eb2]/90 transition-all transform hover:scale-105 whitespace-nowrap"
     >
       Inscription
     </Link>
@@ -194,7 +272,10 @@ const UserMenu = ({ onLogout, userData, setLogoutDialogOpen }) => {
 
   return (
     <div className="flex items-center">
-      {/* Notification icon (placeholder) */}
+      {/* Language selector */}
+      <LanguageSelector />
+      
+      {/* Notification icon */}
       <Button
         variant="ghost"
         className="rounded-full w-10 h-10 p-0 bg-transparent text-gray-200 hover:bg-[#02284f]/80 hover:text-white mr-2"
@@ -462,12 +543,8 @@ const Navbar = memo(() => {
                 </div>
                 <div className="flex-shrink-0">
                   <Link
-                    to={
-                      isAuthenticated
-                        ? permissions.getRoleDashboardPath()
-                        : "/login"
-                    }
-                    className="text-2xl font-black tracking-tight text-white"
+                    to={isAuthenticated ? permissions.getRoleDashboardPath() : "/login"}
+                    className="navbar-brand text-2xl font-black tracking-tight text-white whitespace-nowrap"
                   >
                     Big<span className="text-[#528eb2]">Project</span>
                   </Link>
@@ -484,23 +561,27 @@ const Navbar = memo(() => {
               )}
 
               {/* Partie droite: Authentification */}
-              <div className="flex items-center">
+              <div className="flex items-center navbar-actions">
                 {/* Attendance button based on role */}
                 {isAuthenticated && (permissions.isStudent() || permissions.isTeacher()) && (
-                  <Link 
-                    to={permissions.isTeacher() ? "/teacher/attendance" : "/student/attendance"}
-                    className="mr-4 px-4 py-2 rounded-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-medium shadow-md hover:shadow-lg hover:translate-y-[-2px] transition-all duration-300 flex items-center gap-2 group"
-                  >
-                    <Clipboard className="w-4 h-4 group-hover:animate-pulse" />
-                    <span className="group-hover:tracking-wide transition-all duration-300">
-                      Présence
-                    </span>
-                  </Link>
+                  <div className="desktop-only relative">
+                    <button
+                      onClick={() => navigate(permissions.isTeacher() ? "/teacher/attendance" : "/student/attendance")}
+                      className="group flex items-center justify-start w-11 h-11 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-full cursor-pointer relative overflow-hidden transition-all duration-200 shadow-md md:hover:w-32 hover:rounded-[50px] hover:shadow-lg active:translate-x-1 active:translate-y-1"
+                    >
+                      <div className="flex items-center justify-center w-full transition-all duration-300 group-hover:justify-start group-hover:px-3">
+                        <ClipboardPenLine className="w-4 h-4 text-white group-hover:animate-pulse" />
+                      </div>
+                      <div className="absolute right-5 transform translate-x-full opacity-0 text-white text-sm font-medium transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100 hidden md:block">
+                        Présence
+                      </div>
+                    </button>
+                  </div>
                 )}
 
                 {/* Barre de recherche mobile */}
                 {isAuthenticated && (
-                  <div className="md:hidden mr-2">
+                  <div className="md:hidden">
                     <Button
                       variant="ghost"
                       size="icon"
@@ -539,46 +620,44 @@ const Navbar = memo(() => {
               </div>
             )}
           </div>
-
-          {/* Dialogue de confirmation de déconnexion */}
-          {logoutDialogOpen && (
-            <Dialog
-              open={logoutDialogOpen}
-              onOpenChange={(open) => setLogoutDialogOpen(open)}
-            >
-              <DialogContent className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-hidden rounded-2xl border-0 shadow-xl">
-                <div className="overflow-y-auto max-h-[70vh] fade-in-up">
-                  <DialogHeader>
-                    <DialogTitle className="text-xl font-semibold">
-                      Confirmation de déconnexion
-                    </DialogTitle>
-                    <DialogDescription className="text-base mt-2">
-                      Êtes-vous sûr de vouloir vous déconnecter de votre compte ?
-                      Toutes vos sessions actives seront fermées.
-                    </DialogDescription>
-                  </DialogHeader>
-                </div>
-                <DialogFooter className="mt-6 flex justify-end space-x-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => setLogoutDialogOpen(false)}
-                    className="rounded-full border-2 hover:bg-gray-100 transition-all duration-200"
-                  >
-                    Annuler
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    onClick={handleLogout}
-                    className="rounded-full bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 transition-all duration-200"
-                  >
-                    Se déconnecter
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          )}
         </nav>
       </header>
+
+      {/* Dialogue de confirmation de déconnexion */}
+      <Dialog
+        open={logoutDialogOpen}
+        onOpenChange={(open) => setLogoutDialogOpen(open)}
+      >
+        <DialogContent className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-hidden rounded-2xl border-0 shadow-xl">
+          <div className="overflow-y-auto max-h-[70vh] fade-in-up">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-semibold">
+                Confirmation de déconnexion
+              </DialogTitle>
+              <DialogDescription className="text-base mt-2">
+                Êtes-vous sûr de vouloir vous déconnecter de votre compte ?
+                Toutes vos sessions actives seront fermées.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          <DialogFooter className="mt-6 flex justify-end space-x-2">
+            <Button
+              variant="outline"
+              onClick={() => setLogoutDialogOpen(false)}
+              className="rounded-full border-2 hover:bg-gray-100 transition-all duration-200"
+            >
+              Annuler
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleLogout}
+              className="rounded-full bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 transition-all duration-200"
+            >
+              Se déconnecter
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 });

@@ -62,7 +62,7 @@ const customStyles = `
     position: fixed;
     top: 0;
     left: 0;
-    width: 20vw;
+    width: 320px;
     height: 100vh;
     background-color: #00284f;
     color: white;
@@ -73,10 +73,22 @@ const customStyles = `
     will-change: transform;
   }
   
-  @media (max-width: 768px) {
-    .sidebar-menu {
-      width: 80vw;
-    }
+  .scrollable-div {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(82, 142, 178, 0.5) transparent;
+  }
+  
+  .scrollable-div::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .scrollable-div::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .scrollable-div::-webkit-scrollbar-thumb {
+    background-color: rgba(82, 142, 178, 0.5);
+    border-radius: 3px;
   }
   
   .menu-item {
@@ -113,6 +125,49 @@ const customStyles = `
   
   .chevron-icon.open {
     transform: rotate(90deg);
+  }
+  
+  /* Responsive styles */
+  @media (min-width: 1024px) {
+    .sidebar-menu {
+      width: 320px;
+    }
+  }
+  
+  @media (max-width: 1023px) {
+    .sidebar-menu {
+      width: 280px;
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .sidebar-menu {
+      width: 85vw;
+    }
+    
+    .menu-item {
+      margin: 0.125rem 0.25rem;
+    }
+    
+    .submenu-item {
+      margin: 0.125rem 0.25rem;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .sidebar-menu {
+      width: 100vw;
+    }
+    
+    .menu-item, .submenu-item {
+      margin: 0.125rem 0;
+      border-radius: 0;
+    }
+    
+    .menu-item:hover, .submenu-item:hover {
+      transform: none;
+      background-color: rgba(82, 142, 178, 0.15);
+    }
   }
 `;
 
@@ -529,9 +584,10 @@ const MenuBurger = memo(() => {
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ 
-                type: "tween", 
-                ease: "easeInOut",
-                duration: 0.3
+                type: "spring",
+                stiffness: 300,
+                damping: 30,
+                mass: 1
               }}
               className="sidebar-menu"
             >

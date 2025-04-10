@@ -1,0 +1,9 @@
+#!/bin/bash
+# Script de démarrage universel pour Linux/macOS
+
+# Obtenir le chemin du répertoire du script
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+# Lancer le script start.sh dans le dossier actuel
+echo "Démarrage de l'environnement de développement..."
+bash "$SCRIPT_DIR/start.sh" 
