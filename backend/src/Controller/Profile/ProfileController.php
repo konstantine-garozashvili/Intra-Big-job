@@ -4,7 +4,6 @@ namespace App\Controller\Profile;
 
 use App\Entity\User;
 use App\Repository\UserRepository;
-use App\Serializer\UserSerializer;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -17,18 +16,15 @@ class ProfileController extends AbstractController
     private $security;
     private $logger;
     private $userRepository;
-    private $userSerializer;
     
     public function __construct(
         Security $security,
         LoggerInterface $logger,
-        UserRepository $userRepository,
-        UserSerializer $userSerializer
+        UserRepository $userRepository
     ) {
         $this->security = $security;
         $this->logger = $logger;
         $this->userRepository = $userRepository;
-        $this->userSerializer = $userSerializer;
     }
 
     /**
@@ -85,8 +81,13 @@ class ProfileController extends AbstractController
                 'user_roles' => $user->getRoles()
             ]);
 
+            // Return basic user data instead of using serializer
             return $this->json([
-                'user' => $this->userSerializer->serializePublicProfile($user)
+                'user' => [
+                    'id' => $user->getId(),
+                    'email' => $user->getEmail(),
+                    'roles' => $user->getRoles()
+                ]
             ]);
             
         } catch (\Exception $e) {
