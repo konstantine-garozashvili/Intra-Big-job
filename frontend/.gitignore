@@ -6,7 +6,7 @@ node_modules
 # Cache et fichiers générés par Vite
 .vite/
 node_modules/.vite/
-*.local
+
 
 # Fichiers de production
 # /dist  (removed to allow committing dist folder)
