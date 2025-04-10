@@ -36,6 +36,7 @@ import { useRolePermissions } from "../features/roles/useRolePermissions";
 import { Skeleton } from './ui/skeleton';
 import ProfilePictureDisplay from './ProfilePictureDisplay';
 import { Avatar, AvatarFallback } from './ui/avatar';
+import LanguageSelector from './Translation/LanguageSelector';
 
 // Style personnalisé pour le menu dropdown et le bouton burger
 const customStyles = `
@@ -271,7 +272,10 @@ const UserMenu = ({ onLogout, userData, setLogoutDialogOpen }) => {
 
   return (
     <div className="flex items-center">
-      {/* Notification icon (placeholder) */}
+      {/* Language selector */}
+      <LanguageSelector />
+      
+      {/* Notification icon */}
       <Button
         variant="ghost"
         className="rounded-full w-10 h-10 p-0 bg-transparent text-gray-200 hover:bg-[#02284f]/80 hover:text-white mr-2"
