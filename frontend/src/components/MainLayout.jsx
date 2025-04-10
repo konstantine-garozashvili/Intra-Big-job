@@ -504,13 +504,7 @@ const MainLayout = () => {
           onClose={handleCloseCongratulations} 
         />
         
-        {/* Navbar conditionally rendered */}
-        {!isFullScreenPage && (
-          <Navbar 
-            user={userData} 
-            isLoading={loadingState !== LOADING_STATES.COMPLETE && isAuthenticated} 
-          />
-        )}
+
         
         {/* Main content avec gestion améliorée de l'espace */}
         <main 
