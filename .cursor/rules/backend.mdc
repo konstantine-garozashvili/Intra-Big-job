@@ -1,5 +1,10 @@
 ---
 description: 
+globs: .php,.twig.html,.env,.yml
+alwaysApply: false
+---
+---
+description: 
 globs: 
 alwaysApply: false
 ---

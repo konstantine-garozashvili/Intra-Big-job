@@ -3,6 +3,7 @@ import { lazy, Suspense, useEffect } from 'react'
 import MainLayout from './components/MainLayout'
 import { RoleProvider, RoleDashboardRedirect, RoleGuard, ROLES } from './features/roles'
 import { AuthProvider } from './contexts/AuthContext'
+import { TranslationProvider } from './contexts/TranslationContext'
 import { QueryClientProvider, useQueryClient } from '@tanstack/react-query'
 import './index.css'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -17,6 +18,7 @@ import ReactQueryHydration from './components/shared/ReactQueryHydration'
 import deduplicationService from './lib/services/deduplicationService'
 import apiService from './lib/services/apiService'
 import PublicProfileView from '@/pages/Global/Profile/views/PublicProfileView'
+import TranslationTest from './components/Translation/TranslationTest'
 
 // Export queryClient to be used elsewhere
 export { queryClient };
@@ -168,16 +170,18 @@ function App() {
           <ReactQueryHydration>
             <AuthProvider>
               <RoleProvider>
-                {/* Initialisation des services de l'application */}
-                <AppInitializer />
-                
-                {/* Gestionnaire de préchargement */}
-                <PrefetchHandler />
-                
-                <Suspense>
-                  <AppContent />
-                </Suspense>
-                <Toaster />
+                <TranslationProvider>
+                  {/* Initialisation des services de l'application */}
+                  <AppInitializer />
+                  
+                  {/* Gestionnaire de préchargement */}
+                  <PrefetchHandler />
+                  
+                  <Suspense>
+                    <AppContent />
+                  </Suspense>
+                  <Toaster />
+                </TranslationProvider>
               </RoleProvider>
             </AuthProvider>
           </ReactQueryHydration>
@@ -371,6 +375,9 @@ function AppContent() {
                       <Trombinoscope />
                     </RoleGuard>
                   } />
+
+                  {/* Route pour le test de traduction */}
+                  <Route path="/translation" element={<TranslationTest />} />
                 </Route>
                 
                 {/* Ticket routes - fix double MainLayout issue */}
