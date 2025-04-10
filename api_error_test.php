@@ -1,8 +1,6 @@
 <?php
-// Simple API Error Test
-// This script will attempt to login and test authenticated endpoints
-
-// Turn on all error reporting
+// API Error Test Tool
+// Enable error reporting for debugging
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
@@ -12,7 +10,7 @@ header('Content-Type: text/html');
 <!DOCTYPE html>
 <html>
 <head>
-    <title>API Error Test</title>
+    <title>API Error Test Tool</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 0; padding: 20px; line-height: 1.6; }
         .container { max-width: 1000px; margin: 0 auto; }
@@ -21,143 +19,140 @@ header('Content-Type: text/html');
         pre { background: #f5f5f5; padding: 10px; border-radius: 4px; overflow-x: auto; }
         .success { color: green; }
         .error { color: red; }
+        .warning { color: orange; }
+        button { padding: 10px 15px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px; }
+        button:hover { background: #45a049; }
+        input[type="text"] { padding: 8px; width: 100%; margin-bottom: 10px; }
+        .response { max-height: 400px; overflow-y: auto; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>API Error Test</h1>
-        
-        <?php
-        // Correct path for OVH
-        $projectRoot = dirname(__FILE__);
-        
-        echo '<div class="card">';
-        echo '<h2>Server Environment</h2>';
-        echo '<p><strong>PHP Version:</strong> ' . phpversion() . '</p>';
-        echo '<p><strong>Server:</strong> ' . ($_SERVER['SERVER_SOFTWARE'] ?? 'Unknown') . '</p>';
-        echo '<p><strong>Document Root:</strong> ' . ($_SERVER['DOCUMENT_ROOT'] ?? 'Unknown') . '</p>';
-        echo '<p><strong>Current Directory:</strong> ' . $projectRoot . '</p>';
-        echo '</div>';
-        
-        // Test if JWT keys exist - use correct paths for OVH
-        $privateKeyPath = $projectRoot . '/backend/config/jwt/private.pem';
-        $publicKeyPath = $projectRoot . '/backend/config/jwt/public.pem';
-        
-        echo '<div class="card">';
-        echo '<h2>JWT Key Files</h2>';
-        echo '<p><strong>Private Key Path:</strong> ' . $privateKeyPath . '</p>';
-        echo '<p><strong>Private Key:</strong> ' . (file_exists($privateKeyPath) ? 
-             '<span class="success">Exists</span> (' . substr(sprintf('%o', fileperms($privateKeyPath)), -4) . ')' : 
-             '<span class="error">Missing</span>') . '</p>';
-        echo '<p><strong>Public Key:</strong> ' . (file_exists($publicKeyPath) ? 
-             '<span class="success">Exists</span> (' . substr(sprintf('%o', fileperms($publicKeyPath)), -4) . ')' : 
-             '<span class="error">Missing</span>') . '</p>';
-        echo '</div>';
-        
-        // Test login endpoint
-        $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://" . $_SERVER['HTTP_HOST'];
-        
-        echo '<div class="card">';
-        echo '<h2>Login Test</h2>';
-        
-        $ch = curl_init("$baseUrl/api/login_check");
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
-            'username' => 'student@bigproject.com',
-            'password' => 'Password123@'
-        ]));
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-        
-        $response = curl_exec($ch);
-        $info = curl_getinfo($ch);
-        $error = curl_error($ch);
-        curl_close($ch);
-        
-        if ($info['http_code'] === 200 && $response) {
-            echo '<p class="success">Login successful!</p>';
-            $responseData = json_decode($response, true);
-            $token = $responseData['token'] ?? null;
+        <h1>API Error Test Tool</h1>
+
+        <div class="card">
+            <h2>1. Test Login Endpoint</h2>
+            <p>This will test the /api/login_check endpoint with various credentials</p>
             
-            if ($token) {
-                echo '<p><strong>Token received:</strong> ' . substr($token, 0, 20) . '...</p>';
-                
-                // Test authenticated endpoints
-                echo '</div><div class="card">';
-                echo '<h2>Authenticated API Tests</h2>';
-                
-                // Function to test an authenticated endpoint
-                function testAuthEndpoint($url, $token) {
-                    $ch = curl_init($url);
-                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                        'Content-Type: application/json',
-                        "Authorization: Bearer $token"
-                    ]);
-                    
-                    $response = curl_exec($ch);
-                    $info = curl_getinfo($ch);
-                    $error = curl_error($ch);
-                    curl_close($ch);
-                    
-                    echo '<h3>' . basename($url) . ' Endpoint</h3>';
-                    echo '<p><strong>Status Code:</strong> ' . $info['http_code'] . '</p>';
-                    
-                    if ($info['http_code'] === 200) {
-                        echo '<p class="success">Request successful!</p>';
-                    } else {
-                        echo '<p class="error">Request failed with status ' . $info['http_code'] . '</p>';
+            <form id="loginForm" method="post">
+                <div>
+                    <label for="username">Username:</label>
+                    <input type="text" id="username" name="username" value="student@bigproject.com">
+                </div>
+                <div>
+                    <label for="password">Password:</label>
+                    <input type="text" id="password" name="password" value="Password123@">
+                </div>
+                <div>
+                    <label for="endpoint">API Endpoint:</label>
+                    <input type="text" id="endpoint" name="endpoint" value="/api/login_check">
+                </div>
+                <button type="button" onclick="testLogin()">Test Login</button>
+            </form>
+            
+            <div id="loginResponse" class="response">
+                <p>Response will appear here...</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>2. Test Other API Endpoints</h2>
+            <form id="apiForm" method="post">
+                <div>
+                    <label for="apiEndpoint">API Endpoint:</label>
+                    <input type="text" id="apiEndpoint" name="apiEndpoint" value="/api/users">
+                </div>
+                <div>
+                    <label for="token">JWT Token (if needed):</label>
+                    <input type="text" id="token" name="token" placeholder="Paste token here">
+                </div>
+                <button type="button" onclick="testAPI('GET')">GET</button>
+                <button type="button" onclick="testAPI('POST')">POST</button>
+                <button type="button" onclick="testAPI('PUT')">PUT</button>
+                <button type="button" onclick="testAPI('DELETE')">DELETE</button>
+            </form>
+            
+            <div id="apiResponse" class="response">
+                <p>Response will appear here...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function testLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const endpoint = document.getElementById('endpoint').value;
+            const responseEl = document.getElementById('loginResponse');
+            
+            responseEl.innerHTML = '<p>Testing login...</p>';
+            
+            fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            })
+            .then(response => {
+                const status = response.status;
+                return response.text().then(text => {
+                    try {
+                        return { status, data: JSON.parse(text) };
+                    } catch (e) {
+                        return { status, data: text };
                     }
-                    
-                    if ($error) {
-                        echo '<p><strong>Error:</strong> ' . $error . '</p>';
-                    }
-                    
-                    echo '<p><strong>Response:</strong></p>';
-                    echo '<pre>' . htmlspecialchars($response) . '</pre>';
+                });
+            })
+            .then(({ status, data }) => {
+                let html = `<h3>Status: ${status}</h3>`;
+                html += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                
+                if (status === 200 && data.token) {
+                    document.getElementById('token').value = data.token;
+                    html += '<p class="success">✓ Login successful! Token copied to API test.</p>';
                 }
                 
-                // Test /api/me endpoint
-                testAuthEndpoint("$baseUrl/api/me", $token);
-                
-                // Test /api/profile endpoint
-                testAuthEndpoint("$baseUrl/api/profile", $token);
-            } else {
-                echo '<p class="error">No token found in response!</p>';
-                echo '<p><strong>Raw Response:</strong></p>';
-                echo '<pre>' . htmlspecialchars($response) . '</pre>';
-            }
-        } else {
-            echo '<p class="error">Login failed with status code: ' . $info['http_code'] . '</p>';
-            if ($error) {
-                echo '<p><strong>Error:</strong> ' . $error . '</p>';
-            }
-            echo '<p><strong>Response:</strong></p>';
-            echo '<pre>' . htmlspecialchars($response) . '</pre>';
+                responseEl.innerHTML = html;
+            })
+            .catch(error => {
+                responseEl.innerHTML = `<h3 class="error">Error</h3><pre>${error.toString()}</pre>`;
+            });
         }
         
-        echo '</div>';
-        
-        // Check environment files
-        echo '<div class="card">';
-        echo '<h2>Environment Files</h2>';
-        
-        $envFiles = [
-            'backend/.env' => $projectRoot . '/backend/.env',
-            'backend/.env.dev' => $projectRoot . '/backend/.env.dev',
-            'backend/.env.local' => $projectRoot . '/backend/.env.local'
-        ];
-        
-        foreach ($envFiles as $name => $path) {
-            $exists = file_exists($path);
-            $size = $exists ? filesize($path) : 0;
-            echo '<p><strong>' . $name . ':</strong> ' . 
-                ($exists ? '<span class="success">Exists</span> (Size: ' . $size . ' bytes)' : 
-                '<span class="error">Missing</span>') . '</p>';
+        function testAPI(method) {
+            const endpoint = document.getElementById('apiEndpoint').value;
+            const token = document.getElementById('token').value;
+            const responseEl = document.getElementById('apiResponse');
+            
+            responseEl.innerHTML = `<p>Testing ${method} ${endpoint}...</p>`;
+            
+            const headers = { 'Content-Type': 'application/json' };
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+            
+            fetch(endpoint, {
+                method: method,
+                headers: headers
+            })
+            .then(response => {
+                const status = response.status;
+                return response.text().then(text => {
+                    try {
+                        return { status, data: JSON.parse(text) };
+                    } catch (e) {
+                        return { status, data: text };
+                    }
+                });
+            })
+            .then(({ status, data }) => {
+                let html = `<h3>Status: ${status}</h3>`;
+                html += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                responseEl.innerHTML = html;
+            })
+            .catch(error => {
+                responseEl.innerHTML = `<h3 class="error">Error</h3><pre>${error.toString()}</pre>`;
+            });
         }
-        
-        echo '</div>';
-        ?>
-    </div>
+    </script>
 </body>
 </html> 
