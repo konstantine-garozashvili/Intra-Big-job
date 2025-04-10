@@ -22,7 +22,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import PublicLayout from "./layouts/PublicLayout";
 import PublicRoute from "./components/PublicRoute";
-import ProfileLayout from "@/layouts/ProfileLayout";
+import ProfileLayout from "./layouts/ProfileLayout";
 import StudentRoute from "./components/StudentRoute";
 import { Toaster } from "./components/ui/sonner";
 import { ErrorBoundary } from "react-error-boundary";
@@ -353,7 +353,7 @@ function AppContent() {
                   <Route element={<ProfileLayout />}>
                     <Route
                       path="/settings"
-                      element={<Navigate to="/settings/profile" replace />}
+                      element={<Navigate to="/profile" replace />}
                     />
                     <Route
                       path="/settings/profile"
