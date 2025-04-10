@@ -3,9 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Users, Search, Loader2, AlertCircle, X, FileText, Download, User, Mail, MapPin, GraduationCap, Shield, LayoutGrid, List, SortAsc, SortDesc, Calendar, ChevronDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { fetchUsers, useUsersList } from './UsersList/services/usersListService';
-import { getProfilePictureUrl } from '@/lib/utils/profileUtils';
-import documentService from './Profile/services/documentService';
-import { toast } from 'sonner';
+import { getProfilePictureUrl, getUserInitials } from '@/lib/utils/profileUtils';
 import { useRoles, ROLES } from '../../features/roles/roleContext';
 import { useSearchRoles } from '../../lib/hooks/useSearchRoles';
 
@@ -300,15 +298,8 @@ const LayoutDropdown = ({ layout, setLayout }) => {
 };
 
 const UserModal = ({ user, onClose }) => {
-  // Récupérer l'adresse principale de manière sécurisée
-  const mainAddress = user.addresses?.[0];
-  
-  // Récupérer la ville de manière sécurisée (plusieurs formats possibles)
-  const cityName = 
-    user.city || // Format direct dans user
-    (mainAddress?.city?.name) || // Format objet imbriqué
-    (mainAddress?.city) || // Format chaîne directe
-    "Non renseignée";
+  // Récupérer la ville de manière sécurisée
+  const cityName = user.city || "Non renseignée";
 
   const roles = user.userRoles?.map(ur => ur.role.name) || [];
   const isStudent = roles.some(role => 
@@ -333,15 +324,29 @@ const UserModal = ({ user, onClose }) => {
 
           <div className="flex items-start space-x-6">
             <div className="flex-shrink-0">
-              <img
-                src={getProfilePictureUrl(user.profilePicturePath)}
-                alt={`${user.firstName} ${user.lastName}`}
-                className="w-36 h-36 rounded-full object-cover shadow-lg shadow-blue-100 dark:shadow-blue-900 transition-transform duration-300 hover:scale-110"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = '/default-avatar.png';
-                }}
-              />
+              {user.profilePictureUrl ? (
+                <img
+                  src={user.profilePictureUrl}
+                  alt={`${user.firstName} ${user.lastName}`}
+                  className="w-36 h-36 rounded-full object-cover shadow-lg shadow-blue-100 dark:shadow-blue-900 transition-transform duration-300 hover:scale-110"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.style.display = 'none';
+                    const defaultImg = document.createElement('img');
+                    defaultImg.src = '/default-avatar.png';
+                    defaultImg.className = 'w-36 h-36 rounded-full object-cover shadow-lg shadow-blue-100 dark:shadow-blue-900';
+                    e.target.parentNode.insertBefore(defaultImg, e.target);
+                    e.target.remove();
+                  }}
+                />
+              ) : (
+                <ProfileBadge 
+                  firstName={user.firstName} 
+                  lastName={user.lastName} 
+                  size="lg" 
+                  className="w-36 h-36 ring-2 ring-blue-100 dark:ring-blue-900 shadow-lg transition-transform duration-300 hover:scale-110"
+                />
+              )}
             </div>
             <div className="flex-1">
               <h3 className="text-xl font-semibold text-white relative inline-block mb-4">
@@ -396,7 +401,7 @@ const UserModal = ({ user, onClose }) => {
               </div>
 
               <Link
-                to={`/profile/${user.id}`}
+                to={`/public-profile/${user.id}`}
                 className="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
               >
                 <User className="w-4 h-4 mr-2" />
@@ -410,62 +415,89 @@ const UserModal = ({ user, onClose }) => {
   );
 };
 
-const UserCard = ({ user, onClick }) => {
-  const roles = user.userRoles?.map(ur => ur.role.name) || [];
-  
+const ProfileBadge = ({ firstName, lastName, size = 'md' }) => {
+  const initials = getUserInitials({ firstName, lastName });
+  const getColor = (initials) => {
+    const hash = initials.split('').reduce((acc, char) => {
+      return acc + char.charCodeAt(0);
+    }, 0);
+    const colors = [
+      'bg-blue-500', 'bg-red-500', 'bg-green-500', 'bg-purple-500',
+      'bg-yellow-500', 'bg-pink-500', 'bg-teal-500', 'bg-orange-500'
+    ];
+    return colors[hash % colors.length];
+  };
+
+  const sizes = {
+    sm: 'w-8 h-8 text-sm',
+    md: 'w-10 h-10 text-base',
+    lg: 'w-16 h-16 text-xl'
+  };
+
   return (
     <div 
-      className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 hover:shadow-lg shadow-blue-100 transition-all duration-300 cursor-pointer hover:scale-105 aspect-square flex flex-col items-center justify-between"
+      className={`flex items-center justify-center rounded-full ${sizes[size]} ${getColor(initials)} text-white font-semibold`}
+    >
+      {initials}
+    </div>
+  );
+};
+
+const UserCard = ({ user, onClick }) => {
+  const [hasError, setHasError] = useState(false);
+
+  const handleImageError = (e) => {
+    e.target.onerror = null;
+    setHasError(true);
+  };
+
+  const profilePictureUrl = user.profilePictureUrl 
+    ? user.profilePictureUrl 
+    : (user.profilePicturePath ? getProfilePictureUrl(user.profilePicturePath) : null);
+
+  return (
+    <div 
+      key={user.id} 
+      className="group relative bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer"
       onClick={() => onClick(user)}
     >
-      <div className="w-full flex flex-col items-center space-y-6">
-        <div className="relative">
-          <img
-            src={getProfilePictureUrl(user.profilePicturePath)}
-            alt={`${user.firstName} ${user.lastName}`}
-            className="w-24 h-24 rounded-full object-cover shadow-md shadow-blue-100 dark:shadow-blue-900"
-            onError={(e) => {
-              e.target.onerror = null;
-              e.target.src = '/default-avatar.png';
-            }}
-          />
-        </div>
-        <div className="text-center">
-          <h3 className="text-base font-semibold text-white relative inline-block mb-2">
-            <span className="relative z-10 px-3">{user.firstName} {user.lastName}</span>
-            <span className="absolute inset-0 bg-gradient-to-r from-blue-400 to-blue-600 rounded-lg px-3"></span>
-          </h3>
-          <div className="flex flex-wrap justify-center gap-2">
-            {roles.map((role, index) => (
+      <div className="p-4">
+        <div className="flex flex-col items-center gap-3">
+          {profilePictureUrl ? (
+            <img
+              src={profilePictureUrl}
+              alt={`${user.firstName} ${user.lastName}`}
+              className="w-24 h-24 rounded-full ring-2 ring-gray-200 dark:ring-gray-700 transition-transform duration-300 group-hover:scale-105"
+              onError={handleImageError}
+            />
+          ) : (
+            <ProfileBadge firstName={user.firstName} lastName={user.lastName} size="lg" className="ring-2 ring-gray-200 dark:ring-gray-700" />
+          )}
+          {hasError && (
+            <ProfileBadge firstName={user.firstName} lastName={user.lastName} size="lg" className="ring-2 ring-gray-200 dark:ring-gray-700" />
+          )}
+          <div className="text-center">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 transition-colors duration-300">
+              {user.firstName} {user.lastName}
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {user.email}
+            </p>
+          </div>
+          <div className="flex flex-wrap justify-center gap-2 mt-2">
+            {user.userRoles?.map((ur, index) => (
               <span
                 key={index}
-                className={`px-2 py-1 text-xs font-medium rounded-full flex items-center ${
-                  role === 'STUDENT' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
-                  role === 'TEACHER' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200' :
-                  role === 'HR' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
-                  role === 'ADMIN' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' :
-                  role === 'SUPER_ADMIN' || role === 'SUPERADMIN' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
-                  role === 'RECRUITER' ? 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200' :
-                  role === 'GUEST' ? 'bg-blue-50 text-blue-300 dark:bg-blue-800 dark:text-blue-200' :
-                  'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
-                }`}
+                className={`px-2 py-1 text-xs font-medium rounded-full flex items-center ${getRoleColor(ur.role.name)} group-hover:opacity-80 transition-opacity duration-300`}
               >
-                <Shield className={`w-3 h-3 mr-1 ${
-                  role === 'STUDENT' ? 'text-blue-500' :
-                  role === 'TEACHER' ? 'text-emerald-500' :
-                  role === 'HR' ? 'text-purple-500' :
-                  role === 'ADMIN' ? 'text-amber-500' :
-                  role === 'SUPER_ADMIN' || role === 'SUPERADMIN' ? 'text-red-500' :
-                  role === 'RECRUITER' ? 'text-pink-500' :
-                  role === 'GUEST' ? 'text-blue-300' :
-                  'text-gray-500'
-                }`} />
-                {getRoleLabel(role)}
+                <Shield className={`w-3 h-3 mr-1 ${getRoleIconColor(ur.role.name)}`} />
+                {getRoleLabel(ur.role.name)}
               </span>
             ))}
           </div>
         </div>
       </div>
+      <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-gray-900/10 dark:to-gray-100/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
     </div>
   );
 };
@@ -599,82 +631,114 @@ const UsersList = () => {
     switch (layout) {
       case 'list':
         return (
-          <div className="space-y-4">
+          <div className="space-y-6">
             {sortedUsers?.map((user) => (
               <div 
                 key={user.id} 
-                className="bg-white dark:bg-gray-800 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                className="group relative bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer"
                 onClick={() => setSelectedUser(user)}
               >
-                <div className="flex items-center space-x-4 mb-2">
-                  <img
-                    src={getProfilePictureUrl(user.profilePicturePath)}
-                    alt={`${user.firstName} ${user.lastName}`}
-                    className="w-10 h-10 rounded-full"
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.src = '/default-avatar.png';
-                    }}
-                  />
-                  <div>
-                    <h3 className="font-medium text-gray-900 dark:text-white">{user.firstName} {user.lastName}</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{user.email}</p>
+                <div className="p-4">
+                  <div className="flex items-center gap-4">
+                    {user.profilePictureUrl ? (
+                      <img
+                        src={user.profilePictureUrl}
+                        alt={`${user.firstName} ${user.lastName}`}
+                        className="w-12 h-12 rounded-full ring-2 ring-gray-200 dark:ring-gray-700 transition-transform duration-300 group-hover:scale-105"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.style.display = 'none';
+                          const defaultImg = document.createElement('img');
+                          defaultImg.src = '/default-avatar.png';
+                          defaultImg.className = 'w-12 h-12 rounded-full ring-2 ring-gray-200 dark:ring-gray-700';
+                          e.target.parentNode.insertBefore(defaultImg, e.target);
+                          e.target.remove();
+                        }}
+                      />
+                    ) : (
+                      <ProfileBadge firstName={user.firstName} lastName={user.lastName} className="ring-2 ring-gray-200 dark:ring-gray-700" />
+                    )}
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 transition-colors duration-300">
+                        {user.firstName} {user.lastName}
+                      </h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {user.email}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {user.userRoles?.map((ur, index) => (
+                        <span
+                          key={index}
+                          className={`px-2 py-1 text-xs font-medium rounded-full flex items-center ${getRoleColor(ur.role.name)} group-hover:opacity-80 transition-opacity duration-300`}
+                        >
+                          <Shield className={`w-3 h-3 mr-1 ${getRoleIconColor(ur.role.name)}`} />
+                          {getRoleLabel(ur.role.name)}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {user.userRoles?.map((ur, index) => (
-                    <span
-                      key={index}
-                      className={`px-2 py-1 text-xs font-medium rounded-full flex items-center ${getRoleColor(ur.role.name)}`}
-                    >
-                      <Shield className={`w-3 h-3 mr-1 ${getRoleIconColor(ur.role.name)}`} />
-                      {getRoleLabel(ur.role.name)}
-                    </span>
-                  ))}
-                </div>
+                <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-gray-900/10 dark:to-gray-100/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               </div>
             ))}
           </div>
         );
       case 'compact':
         return (
-          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
             {sortedUsers?.map((user) => (
               <div 
                 key={user.id} 
-                className="bg-white dark:bg-gray-800 rounded-lg p-2 hover:shadow-md transition-shadow cursor-pointer"
+                className="group relative bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer"
                 onClick={() => setSelectedUser(user)}
               >
-                <div className="flex flex-col items-center">
-                  <img
-                    src={getProfilePictureUrl(user.profilePicturePath)}
-                    alt={`${user.firstName} ${user.lastName}`}
-                    className="w-16 h-16 rounded-full"
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.src = '/default-avatar.png';
-                    }}
-                  />
-                  <h3 className="text-sm font-medium text-gray-900 dark:text-white mt-1">{user.firstName} {user.lastName}</h3>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {user.userRoles?.map((ur, index) => (
-                      <span
-                        key={index}
-                        className={`px-1.5 py-0.5 text-xs font-medium rounded ${getRoleColor(ur.role.name)}`}
-                      >
-                        <Shield className={`w-2.5 h-2.5 mr-1 ${getRoleIconColor(ur.role.name)}`} />
-                        {getRoleLabel(ur.role.name)}
-                      </span>
-                    ))}
+                <div className="p-3">
+                  <div className="flex flex-col items-center gap-3">
+                    {user.profilePictureUrl ? (
+                      <img
+                        src={user.profilePictureUrl}
+                        alt={`${user.firstName} ${user.lastName}`}
+                        className="w-16 h-16 rounded-full ring-2 ring-gray-200 dark:ring-gray-700 transition-transform duration-300 group-hover:scale-105"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.style.display = 'none';
+                          const defaultImg = document.createElement('img');
+                          defaultImg.src = '/default-avatar.png';
+                          defaultImg.className = 'w-16 h-16 rounded-full ring-2 ring-gray-200 dark:ring-gray-700';
+                          e.target.parentNode.insertBefore(defaultImg, e.target);
+                          e.target.remove();
+                        }}
+                      />
+                    ) : (
+                      <ProfileBadge firstName={user.firstName} lastName={user.lastName} size="lg" className="ring-2 ring-gray-200 dark:ring-gray-700" />
+                    )}
+                    <div className="text-center">
+                      <h3 className="text-base font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 transition-colors duration-300">
+                        {user.firstName} {user.lastName}
+                      </h3>
+                      <div className="flex flex-wrap justify-center gap-1 mt-1">
+                        {user.userRoles?.map((ur, index) => (
+                          <span
+                            key={index}
+                            className={`px-1.5 py-0.5 text-xs font-medium rounded ${getRoleColor(ur.role.name)} group-hover:opacity-80 transition-opacity duration-300`}
+                          >
+                            <Shield className={`w-2.5 h-2.5 mr-1 ${getRoleIconColor(ur.role.name)}`} />
+                            {getRoleLabel(ur.role.name)}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
+                <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-gray-900/10 dark:to-gray-100/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               </div>
             ))}
           </div>
         );
       default:
         return (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
             {sortedUsers?.map((user) => (
               <UserCard 
                 key={user.id} 
