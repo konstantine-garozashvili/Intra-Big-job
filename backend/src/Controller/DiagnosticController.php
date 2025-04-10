@@ -10,9 +10,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class DiagnosticController extends AbstractController
 {
-    /**
-     * @Route("/api/test-route", name="api_test_route", methods={"GET"})
-     */
+    #[Route('/api/test-route', name: 'api_test_route', methods: ['GET'])]
     public function testRoute(): JsonResponse
     {
         return new JsonResponse([
@@ -22,9 +20,7 @@ class DiagnosticController extends AbstractController
         ]);
     }
 
-    /**
-     * @Route("/api/diagnostic", name="api_diagnostic", methods={"GET"})
-     */
+    #[Route('/api/diagnostic', name: 'api_diagnostic', methods: ['GET'])]
     public function diagnostic(Request $request): JsonResponse
     {
         // Environment information
@@ -86,9 +82,7 @@ class DiagnosticController extends AbstractController
         ]);
     }
 
-    /**
-     * @Route("/api/test-post", name="api_test_post", methods={"POST"})
-     */
+    #[Route('/api/test-post', name: 'api_test_post', methods: ['POST'])]
     public function testPost(Request $request): JsonResponse
     {
         // Get the request content
