@@ -47,11 +47,11 @@ export { queryClient };
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { hasError: false, error: null };
   }
 
   static getDerivedStateFromError(error) {
-    return { hasError: true };
+    return { hasError: true, error };
   }
 
   componentDidCatch(error, errorInfo) {
@@ -70,7 +70,7 @@ class ErrorBoundary extends React.Component {
               onClick={() => window.location.reload()}
               className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
             >
-              Recharger la page
+              Réessayer
             </button>
           </div>
         </div>
@@ -457,7 +457,7 @@ function AppRoutes() {
       {/* Public Routes */}
       <Route element={<PublicLayout />}>
         <Route element={<PublicRoute />}>
-          <Route path="/" element={<Home />} />
+          <Route index path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route
@@ -491,6 +491,21 @@ function AppRoutes() {
       {/* Protected Routes */}
       <Route element={<MainLayout />}>
         <Route element={<ProtectedRoute />}>
+          <Route path="/dashboard" element={<RoleDashboardRedirect />} />
+          
+          {/* Profile Routes - Protected and accessible by all authenticated users */}
+          <Route path="/profile" element={<ProfileLayout />}>
+            <Route index element={<ProfileView />} />
+          </Route>
+          <Route path="/profile/:userId" element={<PublicProfileView />} />
+          
+          {/* Settings Routes - Protected and accessible by all authenticated users */}
+          <Route path="/settings" element={<SettingsLayout />}>
+            <Route index element={<Navigate to="/settings/profile" replace />} />
+            <Route path="profile" element={<SettingsProfile />} />
+            <Route path="security" element={<SecuritySettings />} />
+            <Route path="notifications" element={<NotificationSettings />} />
+            <Route path="career" element={<CareerSettings />} />
           {/* Dashboard redirect */}
           <Route path="/dashboard" element={<RoleDashboardRedirect />} />
 
@@ -533,23 +548,17 @@ function AppRoutes() {
           <Route path="/tickets/:id" element={<TicketDetail />} />
 
           {/* Role-Specific Routes */}
-          <Route
-            path="/admin/*"
-            element={
-              <RoleGuard roles={[ROLES.ADMIN]}>
-                <Routes>
-                  <Route path="dashboard" element={<AdminDashboard />} />
-                  <Route path="tickets" element={<AdminTicketList />} />
-                  <Route path="services" element={<TicketServiceList />} />
-                  <Route
-                    path="user-role-manager"
-                    element={<UserRoleManager />}
-                  />
-                  <Route path="users" element={<UserRoleManager />} />
-                </Routes>
-              </RoleGuard>
-            }
-          />
+          <Route path="/admin/*" element={
+            <RoleGuard roles={[ROLES.ADMIN]}>
+              <Routes>
+                <Route path="dashboard" element={<AdminDashboard />} />
+                <Route path="tickets" element={<AdminTicketList />} />
+                <Route path="services" element={<TicketServiceList />} />
+                <Route path="users" element={<UserRoleManager />} />
+                <Route path="user-role-manager" element={<Navigate to="/admin/users" replace />} />
+              </Routes>
+            </RoleGuard>
+          } />
 
           <Route
             path="/student/*"
@@ -616,27 +625,15 @@ function AppRoutes() {
             }
           />
 
-          <Route
-            path="/recruiter/*"
-            element={
-              <RoleGuard roles={[ROLES.RECRUITER]}>
-                <Routes>
-                  <Route path="dashboard" element={<RecruiterDashboard />} />
-                  <Route
-                    path="guest-student-manager"
-                    element={<GuestStudentRoleManager />}
-                  />
-                  <Route
-                    path="guest-student-roles"
-                    element={<GuestStudentRoleManager />}
-                  />
-                </Routes>
-              </RoleGuard>
-            }
-          />
-
-          {/* Route pour le test de traduction */}
-          <Route path="/translation" element={<TranslationTest />} />
+          <Route path="/recruiter/*" element={
+            <RoleGuard roles={[ROLES.RECRUITER]}>
+              <Routes>
+                <Route path="dashboard" element={<RecruiterDashboard />} />
+                <Route path="guest-student-roles" element={<GuestStudentRoleManager />} />
+                <Route path="guest-student-manager" element={<Navigate to="/recruiter/guest-student-roles" replace />} />
+              </Routes>
+            </RoleGuard>
+          } />
         </Route>
       </Route>
 

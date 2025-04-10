@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 
 /**
  * Composant pour protéger les routes publiques (login, register, etc.)
- * Redirige vers la racine si l'utilisateur est déjà connecté
+ * Redirige vers le dashboard si l'utilisateur est déjà connecté
  */
 const PublicRoute = () => {
   const location = useLocation();
@@ -53,12 +53,12 @@ const PublicRoute = () => {
     return null;
   }
 
-  // Si l'utilisateur est authentifié, rediriger vers la page d'accueil
-  if (isAuthenticated) {
-    return <Navigate to="/" replace />;
+  // Si l'utilisateur est authentifié et n'est pas sur la page d'accueil, rediriger vers le dashboard
+  if (isAuthenticated && location.pathname !== '/') {
+    return <Navigate to="/dashboard" replace />;
   }
 
-  // Si l'utilisateur n'est pas authentifié, on affiche la page publique
+  // Si l'utilisateur n'est pas authentifié ou est sur la page d'accueil, on affiche la page publique
   return <Outlet />;
 };
 

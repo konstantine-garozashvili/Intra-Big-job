@@ -428,10 +428,10 @@ const MenuBurger = memo(() => {
       ],
     },
     {
-      key: 'roles_management',
-      label: 'Gestion des rôles',
-      icon: <UserPlus className="w-5 h-5 mr-2 text-[#528eb2]" />,
-      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.RECRUITER],
+      key: 'guest_student_roles',
+      label: 'Gestion Invité/Élève',
+      icon: <Users className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.RECRUITER],
       to: '/recruiter/guest-student-roles',
     },
     {

@@ -4,17 +4,36 @@ import axios from "axios";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
+import DashboardLayout from "@/components/DashboardLayout";
+import RoleBadge from "@/components/ui/RoleBadge";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import authService from "@/lib/services/authService";
 
 // Import extracted components
 import { RoleFilterControls } from "./components/RoleFilterControls";
 import { UserTable } from "./components/UserTable";
 import { PaginationControls } from "./components/PaginationControls";
-import { RoleChangeDialog } from "./components/RoleChangeDialog";
 
 // Create axios instance with auth token
 const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5173/api',
 });
 
 // Add auth token to requests
@@ -28,9 +47,37 @@ axiosInstance.interceptors.request.use(config => {
 
 // API endpoints
 const ENDPOINTS = {
-  ROLES: '/user-roles/roles',
-  USERS_BY_ROLE: (role) => `/user-roles/users/${role}`,
+  USERS_BY_ROLES: '/users',
   CHANGE_ROLE: '/user-roles/change-role'
+};
+
+const RoleChangeDialog = ({ open, onOpenChange, user, onConfirm, isProcessing }) => {
+  const isGuest = user?.roles?.some(r => r.name === 'GUEST' || r.name === 'ROLE_GUEST');
+  
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Confirmation du changement de rôle</DialogTitle>
+          <DialogDescription>
+            {isGuest 
+              ? `Êtes-vous sûr de vouloir promouvoir ${user?.firstName} ${user?.lastName} en tant qu'élève ?`
+              : `Êtes-vous sûr de vouloir rétrograder ${user?.firstName} ${user?.lastName} en tant qu'invité ?`
+            }
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Annuler
+          </Button>
+          <Button onClick={onConfirm} disabled={isProcessing}>
+            {isProcessing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+            Confirmer
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 };
 
 export default function GuestStudentRoleManager() {
@@ -40,224 +87,68 @@ export default function GuestStudentRoleManager() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedRoles, setSelectedRoles] = useState({ guest: true, student: false });
-  const [sortConfig, setSortConfig] = useState({ key: 'lastName', direction: 'ascending' });
-  const [pagination, setPagination] = useState({ currentPage: 1, itemsPerPage: 10 });
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  const [users, setUsers] = useState([]);
 
-  // Fetch roles
-  const { 
-    data: roles = [], 
-    isLoading: isLoadingRoles 
-  } = useQuery({
-    queryKey: ['roles'],
+  // Fetch users based on selected roles
+  const { data: usersData = [], isLoading } = useQuery({
+    queryKey: ['guest-student-users', selectedRoles],
     queryFn: async () => {
       try {
-        const response = await axiosInstance.get(ENDPOINTS.ROLES);
-        
-        // Handle different response formats
-        if (response.status === 200 && response.data) {
-          if (response.data.success && response.data.data) {
-            return response.data.data;
-          } else if (Array.isArray(response.data)) {
-            return response.data;
-          } else if (response.data.data || response.data.roles) {
-            return response.data.data || response.data.roles;
-          } else if (response.data.hydra && response.data['hydra:member']) {
-            return response.data['hydra:member'];
-          }
+        const response = await axiosInstance.get(ENDPOINTS.USERS_BY_ROLES);
+        if (response.data.success) {
+          const users = response.data.data || [];
+          // Filter users based on selected roles
+          return users.filter(user => {
+            const userRoles = user.roles.map(r => r.name);
+            if (selectedRoles.guest && userRoles.includes('GUEST')) return true;
+            if (selectedRoles.student && userRoles.includes('STUDENT')) return true;
+            return false;
+          });
         }
-        
-        // Default fallback
         return [];
       } catch (error) {
-        console.error("Error fetching roles:", error);
-        // Fallback roles
-        return [
-          { id: 1, name: 'ROLE_GUEST' },
-          { id: 2, name: 'ROLE_STUDENT' },
-          { id: 3, name: 'ROLE_RECRUITER' },
-          { id: 4, name: 'ROLE_ADMIN' }
-        ];
-      }
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-
-  // Helper function to normalize API response
-  const normalizeApiResponse = (response) => {
-    if (response.status === 200 && response.data) {
-      if (response.data.success && response.data.data) {
-        return response.data.data;
-      } else if (Array.isArray(response.data)) {
-        return response.data;
-      } else if (response.data.data || response.data.users) {
-        return response.data.data || response.data.users;
-      } else if (response.data.hydra && response.data['hydra:member']) {
-        return response.data['hydra:member'];
+        console.error('Error fetching users:', error);
+        toast.error('Erreur lors de la récupération des utilisateurs');
+        return [];
       }
     }
-    return [];
-  };
-
-  // Fetch guest users
-  const { 
-    data: guestUsers = [], 
-    isLoading: isLoadingGuests 
-  } = useQuery({
-    queryKey: ['users', 'guest'],
-    queryFn: async () => {
-      try {
-        const guestRole = roles.find(r => r.name.toLowerCase().includes('guest'));
-        if (!guestRole) return [];
-        
-        const response = await axiosInstance.get(ENDPOINTS.USERS_BY_ROLE(guestRole.name));
-        return normalizeApiResponse(response);
-      } catch (error) {
-        console.error("Error fetching guest users:", error);
-        // Fallback guest users
-        return [
-          { 
-            id: 1, 
-            firstName: 'Jean', 
-            lastName: 'Dupont', 
-            email: 'jean.dupont@exemple.fr',
-            roles: [{ id: 1, name: 'ROLE_GUEST' }]
-          },
-          { 
-            id: 2, 
-            firstName: 'Marie', 
-            lastName: 'Martin', 
-            email: 'marie.martin@exemple.fr',
-            roles: [{ id: 1, name: 'ROLE_GUEST' }]
-          }
-        ];
-      }
-    },
-    enabled: selectedRoles.guest && roles.length > 0,
-    staleTime: 2 * 60 * 1000, // 2 minutes
-  });
-
-  // Fetch student users
-  const { 
-    data: studentUsers = [], 
-    isLoading: isLoadingStudents 
-  } = useQuery({
-    queryKey: ['users', 'student'],
-    queryFn: async () => {
-      try {
-        const studentRole = roles.find(r => r.name.toLowerCase().includes('student'));
-        if (!studentRole) return [];
-        
-        const response = await axiosInstance.get(ENDPOINTS.USERS_BY_ROLE(studentRole.name));
-        return normalizeApiResponse(response);
-      } catch (error) {
-        console.error("Error fetching student users:", error);
-        // Fallback student users
-        return [
-          { 
-            id: 3, 
-            firstName: 'Pierre', 
-            lastName: 'Leroy', 
-            email: 'pierre.leroy@exemple.fr',
-            roles: [{ id: 2, name: 'ROLE_STUDENT' }]
-          },
-          { 
-            id: 4, 
-            firstName: 'Sophie', 
-            lastName: 'Bernard', 
-            email: 'sophie.bernard@exemple.fr',
-            roles: [{ id: 2, name: 'ROLE_STUDENT' }]
-          }
-        ];
-      }
-    },
-    enabled: selectedRoles.student && roles.length > 0,
-    staleTime: 2 * 60 * 1000, // 2 minutes
   });
 
   // Role change mutation
-  const roleMutation = useMutation({
-    mutationFn: async (data) => {
-      const response = await axiosInstance.post(ENDPOINTS.CHANGE_ROLE, data);
-      return response.data;
+  const mutation = useMutation({
+    mutationFn: async (user) => {
+      const isGuest = user.roles.some(r => r.name === 'GUEST' || r.name === 'ROLE_GUEST');
+      const newRole = isGuest ? 'ROLE_STUDENT' : 'ROLE_GUEST';
+      
+      return axiosInstance.post(ENDPOINTS.CHANGE_ROLE, {
+        userId: user.id,
+        newRole
+      });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['users']);
+    onSuccess: (_, user) => {
+      const isGuest = user.roles.some(r => r.name === 'GUEST' || r.name === 'ROLE_GUEST');
+      toast.success(
+        isGuest 
+          ? `${user.firstName} ${user.lastName} a été promu en élève`
+          : `${user.firstName} ${user.lastName} a été rétrogradé en invité`
+      );
+      queryClient.invalidateQueries(['guest-student-users']);
       setIsDialogOpen(false);
-      
-      const message = getCurrentRole(selectedUser).toLowerCase().includes('guest')
-        ? `${selectedUser.firstName} ${selectedUser.lastName} a été promu en élève`
-        : `${selectedUser.firstName} ${selectedUser.lastName} a été rétrogradé en invité`;
-      
-      toast.success(message);
     },
     onError: (error) => {
-      console.error("Error changing role:", error);
-      toast.error("Erreur lors de la modification du rôle");
+      console.error('Error changing role:', error);
+      toast.error("Une erreur est survenue lors du changement de rôle");
     }
   });
 
-  // Helper functions
-  const getCurrentRole = useCallback((user) => {
-    return user?.roles?.find(role => 
-      role.name.toLowerCase().includes('guest') || 
-      role.name.toLowerCase().includes('student')
-    )?.name || '';
-  }, []);
-  
-  const getNewRole = useCallback((user) => {
-    const currentRoleName = getCurrentRole(user);
-    return currentRoleName.toLowerCase().includes('guest') 
-      ? roles.find(r => r.name.toLowerCase().includes('student'))?.name
-      : roles.find(r => r.name.toLowerCase().includes('guest'))?.name;
-  }, [getCurrentRole, roles]);
-
-  // Handle role change
-  const handleRoleChange = useCallback(() => {
-    if (!selectedUser) return;
-    
-    const currentRoleName = getCurrentRole(selectedUser);
-    const newRoleName = getNewRole(selectedUser);
-    
-    roleMutation.mutate({
-      userId: selectedUser.id,
-      oldRoleName: currentRoleName,
-      newRoleName: newRoleName
-    });
-  }, [selectedUser, getCurrentRole, getNewRole, roleMutation]);
-
-  // Filter and sort users
-  const filteredUsers = useMemo(() => {
-    let users = [];
-    
-    if (selectedRoles.guest) {
-      users.push(...guestUsers);
-    }
-    
-    if (selectedRoles.student) {
-      users.push(...studentUsers);
-    }
-    
-    return [...users].sort((a, b) => {
-      if (a[sortConfig.key] < b[sortConfig.key]) {
-        return sortConfig.direction === 'ascending' ? -1 : 1;
-      }
-      if (a[sortConfig.key] > b[sortConfig.key]) {
-        return sortConfig.direction === 'ascending' ? 1 : -1;
-      }
-      return 0;
-    });
-  }, [guestUsers, studentUsers, selectedRoles, sortConfig]);
-  
-  // Paginate users
-  const currentUsers = useMemo(() => {
-    const startIndex = (pagination.currentPage - 1) * pagination.itemsPerPage;
-    const endIndex = startIndex + pagination.itemsPerPage;
-    return filteredUsers.slice(startIndex, endIndex);
-  }, [filteredUsers, pagination]);
-
-  const totalPages = useMemo(() => {
-    return Math.ceil(filteredUsers.length / pagination.itemsPerPage);
-  }, [filteredUsers.length, pagination.itemsPerPage]);
+  // Calculate pagination
+  const paginatedUsers = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return usersData.slice(startIndex, endIndex);
+  }, [usersData, currentPage]);
 
   // Check if user is authorized (recruiter or admin)
   useEffect(() => {
@@ -285,64 +176,119 @@ export default function GuestStudentRoleManager() {
     checkUserRole();
   }, []);
 
-  const isLoading = isLoadingRoles || isLoadingGuests || (isLoadingStudents && selectedRoles.student);
+  useEffect(() => {
+    if (usersData) {
+      setUsers(usersData);
+    }
+  }, [usersData]);
 
   return (
-    <div className="container mx-auto p-4">
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Gestion des rôles Invité/Élève</CardTitle>
-          <CardDescription>
-            Gérez la promotion des invités en élèves et la rétrogradation des élèves en invités
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <RoleFilterControls 
-            selectedRoles={selectedRoles} 
-            onChange={setSelectedRoles}
-            pagination={pagination}
-            setPagination={setPagination}
-            filteredUsers={filteredUsers}
-          />
-          
-          {isLoading ? (
-            <div className="text-center py-8 flex justify-center">
-              <Loader2 className="w-8 h-8 text-gray-500 animate-spin" />
+    <DashboardLayout>
+      <div className="container mx-auto py-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Gestion des rôles Invité/Élève</CardTitle>
+            <CardDescription>
+              Gérez la promotion des invités en élèves et la rétrogradation des élèves en invités
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center space-x-4 mb-6">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="invites"
+                  checked={selectedRoles.guest}
+                  onCheckedChange={(checked) => 
+                    setSelectedRoles(prev => ({ ...prev, guest: checked }))
+                  }
+                />
+                <label htmlFor="invites">Invités</label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="eleves"
+                  checked={selectedRoles.student}
+                  onCheckedChange={(checked) => 
+                    setSelectedRoles(prev => ({ ...prev, student: checked }))
+                  }
+                />
+                <label htmlFor="eleves">Élèves</label>
+              </div>
+              <div className="ml-auto flex items-center space-x-2">
+                <span>Éléments par page:</span>
+                <select
+                  className="border rounded p-1"
+                  value={itemsPerPage}
+                  disabled
+                >
+                  <option value={10}>10</option>
+                </select>
+                <span>Affichage de {paginatedUsers.length} sur {users.length} utilisateurs</span>
+              </div>
             </div>
-          ) : (
-            <>
-              <UserTable 
-                users={currentUsers}
-                sortConfig={sortConfig}
-                onSort={setSortConfig}
-                onChangeRole={(user) => {
-                  setSelectedUser(user);
-                  setIsDialogOpen(true);
-                }}
-                getCurrentRole={getCurrentRole}
-              />
-              
-              <PaginationControls 
-                currentPage={pagination.currentPage}
-                totalPages={totalPages}
-                onPageChange={(page) => setPagination({...pagination, currentPage: page})}
-                itemsPerPage={pagination.itemsPerPage}
-                onItemsPerPageChange={(value) => setPagination({currentPage: 1, itemsPerPage: value})}
-              />
-            </>
-          )}
-        </CardContent>
-      </Card>
+
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[200px]">Nom ↑</TableHead>
+                  <TableHead>Prénom</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Rôles actuels</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-4">
+                      <Loader2 className="w-6 h-6 animate-spin mx-auto" />
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paginatedUsers.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell>{user.lastName}</TableCell>
+                      <TableCell>{user.firstName}</TableCell>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell>
+                        {user.roles.map((role) => (
+                          <RoleBadge
+                            key={role.id || role.name}
+                            role={role.name}
+                            className="mr-1"
+                          />
+                        ))}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button 
+                          variant="outline" 
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setIsDialogOpen(true);
+                          }}
+                        >
+                          {user.roles.some(r => r.name === 'GUEST' || r.name === 'ROLE_GUEST')
+                            ? 'Promouvoir en élève'
+                            : 'Rétrograder en invité'
+                          }
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
 
       <RoleChangeDialog 
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
         user={selectedUser}
-        getCurrentRole={getCurrentRole}
-        getNewRole={getNewRole}
-        onConfirm={handleRoleChange}
-        isProcessing={roleMutation.isPending}
+        onConfirm={() => mutation.mutate(selectedUser)}
+        isProcessing={mutation.isPending}
       />
-    </div>
+    </DashboardLayout>
   );
 }
