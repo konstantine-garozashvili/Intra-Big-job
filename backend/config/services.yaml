@@ -109,9 +109,9 @@ services:
         tags:
             - { name: kernel.event_listener, event: kernel.exception, method: onKernelException, priority: 100 }
 
-    # Comment out the custom failure handler definition
-    # lexik_jwt_authentication.handler.authentication_failure:
-    #     class: App\Security\AuthenticationFailureHandler
+    # Notre gestionnaire d'erreur d'authentification personnalisé
+    lexik_jwt_authentication.handler.authentication_failure:
+        class: App\Security\AuthenticationFailureHandler
 
     # Générateur de token pour la réinitialisation de mot de passe
     Symfony\Component\Security\Csrf\TokenGenerator\TokenGeneratorInterface:
