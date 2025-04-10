@@ -11,6 +11,7 @@ header('Content-Type: text/html');
 ?>
 <!DOCTYPE html>
 <html>
+<head>
     <title>API Error Test</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 0; padding: 20px; line-height: 1.6; }
