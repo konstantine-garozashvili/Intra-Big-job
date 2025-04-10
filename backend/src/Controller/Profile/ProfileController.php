@@ -68,7 +68,7 @@ class ProfileController extends AbstractController
         ]);
 
         try {
-            $user = $this->userRepository->findOneWithAllRelations($id);
+            $user = $this->userRepository->find($id);
             
             if (!$user) {
                 $this->logger->warning('User not found', ['id' => $id]);
