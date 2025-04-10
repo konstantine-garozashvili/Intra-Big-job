@@ -191,8 +191,9 @@ header('Content-Type: text/html');
             
             // Fix .env.dev if it's missing or empty
             if (!file_exists($envDevPath) || filesize($envDevPath) < 100) {
-                echo '<p class="warning">.env.dev file missing or too small</p>';
-                
+                echo '<p class="warning">.env.dev file missing or too small - skipping automatic creation (manual creation required)</p>';
+                // Création automatique désactivée à la demande de l'utilisateur
+                /*
                 // Create minimal .env.dev
                 $envDevContent = <<<EOT
 ###> symfony/framework-bundle ###
@@ -225,6 +226,7 @@ EOT;
                 
                 file_put_contents($envDevPath, $envDevContent);
                 echo '<p class="success">Created new .env.dev file with correct configuration</p>';
+                */
             } else {
                 echo '<p>.env.dev exists and seems valid</p>';
                 

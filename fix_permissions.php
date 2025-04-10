@@ -154,8 +154,9 @@ header('Content-Type: text/html');
             $envLocalPath = $projectRoot . '/backend/.env.local';
             
             if (!file_exists($envDevPath) || filesize($envDevPath) < 100) {
-                echo '<p class="error">.env.dev is missing or too small</p>';
-                
+                echo '<p class="warning">.env.dev is missing or too small - skipping .env.dev creation (manual creation required)</p>';
+                // Création automatique désactivée à la demande de l'utilisateur
+                /* 
                 // If .env exists, copy it to .env.dev
                 if (file_exists($envPath) && filesize($envPath) > 100) {
                     $envContent = file_get_contents($envPath);
@@ -166,6 +167,7 @@ header('Content-Type: text/html');
                 } else {
                     echo '<p class="error">Cannot fix .env.dev: No valid source found</p>';
                 }
+                */
             } else {
                 echo '<p class="success">.env.dev exists and looks valid</p>';
                 
