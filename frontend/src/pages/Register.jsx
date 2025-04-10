@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useTheme } from '@/context/ThemeContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import PageTransition from '@/components/PageTransition';
 import { RegisterProvider } from "@/components/register/RegisterContext";
 import RegisterForm from "@/components/register/RegisterForm";

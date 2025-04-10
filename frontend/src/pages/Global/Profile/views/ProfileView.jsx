@@ -18,7 +18,6 @@ const ProfileView = () => {
   const [hasLoadedStudentProfile, setHasLoadedStudentProfile] = useState(false);
   const [isLoadingStudentProfile, setIsLoadingStudentProfile] = useState(false);
   const isPublicProfile = !!userId;
-  const [isMounted, setIsMounted] = useState(false);
   
   const { 
     user: currentProfileData, 
@@ -35,21 +34,16 @@ const ProfileView = () => {
   const [publicProfileData, setPublicProfileData] = useState(null);
   const [isLoadingPublicProfile, setIsLoadingPublicProfile] = useState(false);
   const [publicProfileError, setPublicProfileError] = useState(null);
-
-  useEffect(() => {
-    setIsMounted(true);
-    return () => setIsMounted(false);
-  }, []);
   
   const fetchStudentProfile = useCallback(async (forceFresh = true) => {
-    if (isLoadingStudentProfile || !isMounted) return;
+    if (isLoadingStudentProfile) return; // Éviter les appels multiples
     
     try {
       setIsLoadingStudentProfile(true);
       
       const response = await studentProfileService.getMyProfile(forceFresh);
       
-      if (response && response.success && response.data && isMounted) {
+      if (response && response.success && response.data) {
         setStudentProfile(response.data);
         
         if (currentProfileData && !isPublicProfile) {
@@ -60,17 +54,13 @@ const ProfileView = () => {
           });
         }
       }
-      if (isMounted) {
-        setHasLoadedStudentProfile(true);
-      }
+      setHasLoadedStudentProfile(true);
     } catch (error) {
       setHasLoadedStudentProfile(true); 
     } finally {
-      if (isMounted) {
-        setIsLoadingStudentProfile(false);
-      }
+      setIsLoadingStudentProfile(false);
     }
-  }, [isLoadingStudentProfile, currentProfileData, isPublicProfile, isMounted]);
+  }, [isLoadingStudentProfile, currentProfileData, isPublicProfile]);
   
   useEffect(() => {
     if (!isPublicProfile && currentProfileData && !hasLoadedStudentProfile && !isLoadingStudentProfile) {
@@ -89,7 +79,7 @@ const ProfileView = () => {
         setHasLoadedStudentProfile(true);
       }
     }
-  }, [isPublicProfile, currentProfileData, hasLoadedStudentProfile, isLoadingStudentProfile, fetchStudentProfile, isMounted]);
+  }, [isPublicProfile, currentProfileData, hasLoadedStudentProfile, isLoadingStudentProfile, fetchStudentProfile]);
   
   const handleProfileUpdate = useCallback((updatedData) => {
     if (isPublicProfile) {
@@ -119,7 +109,7 @@ const ProfileView = () => {
     if (updatedData.toastMessage !== false) {
       toast.success(updatedData.toastMessage || "Profil mis à jour");
     }
-  }, [isPublicProfile, setCurrentProfileData, refetchCurrentProfile, isMounted]);
+  }, [isPublicProfile, setCurrentProfileData, refetchCurrentProfile]);
   
   useEffect(() => {
     if (isPublicProfile && userId) {

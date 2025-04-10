@@ -1,6 +1,6 @@
 import React from 'react';
 import { User, Calendar, Globe } from 'lucide-react';
-import EditableField from '../personal/EditableField';
+import EditableField from './EditableField';
 import { StaticField } from './StaticField';
 import { formatDate } from './utils';
 import { Button } from '@/components/ui/button';

@@ -142,32 +142,15 @@ const PublicProfileView = () => {
       profilePictureUrl: profilePictureUrl,
       roles: Array.isArray(profileData.roles) 
         ? profileData.roles.map(role => {
-            try {
-              // Handle role object with name property
-              const roleName = typeof role === 'string' 
-                ? role 
-                : (role && typeof role === 'object' && role.name 
-                    ? role.name 
-                    : 'GUEST');
-              
-              // Ensure roleName is a string
-              const normalizedRole = String(roleName).replace(/^ROLE_/i, '');
-              const transformedRole = {
-                name: roleName,
-                displayName: roleUI.translateRoleName(roleName),
-                color: roleUI.getRoleBadgeColor(roleName)
-              };
-              console.log('[PublicProfileView] Role après transformation:', transformedRole);
-              return transformedRole;
-            } catch (error) {
-              console.error('[PublicProfileView] Error transforming role:', error, role);
-              // Return a default role object in case of error
-              return {
-                name: ROLES.GUEST,
-                displayName: roleUI.translateRoleName(ROLES.GUEST),
-                color: roleUI.getRoleBadgeColor(ROLES.GUEST)
-              };
-            }
+            console.log('[PublicProfileView] Role avant transformation:', role);
+            const normalizedRole = role.replace('ROLE_', '');
+            const transformedRole = {
+              name: role,
+              displayName: roleUI.translateRoleName(role),
+              color: roleUI.getRoleBadgeColor(role)
+            };
+            console.log('[PublicProfileView] Role après transformation:', transformedRole);
+            return transformedRole;
           })
         : [{ 
             name: ROLES.GUEST,

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Mail, Phone, MapPin } from 'lucide-react';
-import EditableField from '../personal/EditableField';
+import EditableField from './EditableField';
 import { StaticField } from './StaticField';
 import { AddressAutocompleteField } from './AddressAutocompleteField';
 import { formatAddress } from './utils';

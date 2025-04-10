@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRolePermissions } from '@/features/roles/useRolePermissions';
 import { Link } from 'react-router-dom';
-import { useTheme } from '@/context/ThemeContext';
+import { useTheme } from '@/contexts/ThemeContext';
 
 // Import refactored components
 import BackgroundAnimation from '@/components/home/BackgroundAnimation';

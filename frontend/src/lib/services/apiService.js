@@ -1,6 +1,3 @@
-// Backend API base URL - make sure this points to your backend
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-
 import axios from 'axios';
 
 // Import the low performance mode detection from loadingUtils
