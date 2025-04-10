@@ -3,6 +3,8 @@
 namespace App\Controller\Profile;
 
 use App\Entity\User;
+use App\Repository\UserRepository;
+use App\Serializer\UserSerializer;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -14,13 +16,19 @@ class ProfileController extends AbstractController
 {
     private $security;
     private $logger;
+    private $userRepository;
+    private $userSerializer;
     
     public function __construct(
         Security $security,
-        LoggerInterface $logger
+        LoggerInterface $logger,
+        UserRepository $userRepository,
+        UserSerializer $userSerializer
     ) {
         $this->security = $security;
         $this->logger = $logger;
+        $this->userRepository = $userRepository;
+        $this->userSerializer = $userSerializer;
     }
 
     /**
@@ -54,7 +62,7 @@ class ProfileController extends AbstractController
         ]);
     }
 
-    #[Route('/api/users/{id}/public', name: 'get_public_profile', methods: ['GET'])]
+    #[Route('/users/{id}/public', name: 'get_public_profile', methods: ['GET'])]
     public function getPublicProfile(int $id): JsonResponse
     {
         $this->logger->info('Public profile request received', [
