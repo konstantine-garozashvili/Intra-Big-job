@@ -1,10 +1,10 @@
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate, useNavigate } from 'react-router-dom'
-import { lazy, Suspense, useEffect } from 'react'
+import { lazy, Suspense, useEffect, useRef, useCallback } from 'react'
 import MainLayout from './components/MainLayout'
 import { RoleProvider, RoleDashboardRedirect, RoleGuard, ROLES } from './features/roles'
 import { AuthProvider } from './contexts/AuthContext'
 import { TranslationProvider } from './contexts/TranslationContext'
-import { QueryClientProvider, useQueryClient } from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import './index.css'
 import ProtectedRoute from './components/ProtectedRoute'
 import PublicRoute from './components/PublicRoute'
@@ -13,12 +13,29 @@ import StudentRoute from './components/StudentRoute'
 import { Toaster } from './components/ui/sonner'
 import { ErrorBoundary } from "react-error-boundary"
 import AdminTicketList from './components/admin/AdminTicketList'
-import { queryClient } from './lib/services/queryClient'
 import ReactQueryHydration from './components/shared/ReactQueryHydration'
-import deduplicationService from './lib/services/deduplicationService'
 import apiService from './lib/services/apiService'
 import PublicProfileView from '@/pages/Global/Profile/views/PublicProfileView'
 import TranslationTest from './components/Translation/TranslationTest'
+
+// Create a shared query client for the entire application
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      cacheTime: 60 * 60 * 1000, // 1 hour
+      retry: 1,
+      refetchOnWindowFocus: false,
+      refetchOnMount: true,
+      logging: false, // Disable query logging in console
+    },
+  },
+  logger: {
+    log: () => {},
+    warn: () => {},
+    error: () => {}
+  }
+});
 
 // Export queryClient to be used elsewhere
 export { queryClient };
@@ -79,28 +96,31 @@ const TicketServiceList = lazy(() => import('./components/admin/TicketServiceLis
 
 // Fonction optimisée pour le préchargement intelligent des pages
 // Ne charge que les pages pertinentes en fonction du contexte et du chemin actuel
-function useIntelligentPreload() {
+const useIntelligentPreload = () => {
   const location = useLocation();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const currentPath = location.pathname;
   
   // Preload relevant pages based on location
   useEffect(() => {
+    // Fonction pour précharger des composants spécifiques
+    const preloadComponent = (getComponent) => {
+      // Précharger immédiatement sans délai
+      getComponent();
+    };
+    
     // Only preload if we're in a logged-in area
     if (location.pathname.startsWith('/profile') || location.pathname.startsWith('/dashboard')) {
       // Précharger les données du profil utilisateur
       const prefetchUserProfile = async () => {
         try {
-          // Ne précharger que si les données ne sont pas déjà en cache
-          if (!deduplicationService.hasCache(['user-profile'])) {
-            await queryClient.prefetchQuery({
-              queryKey: ['session', 'user-profile'],
-              queryFn: async () => {
-                return await apiService.get('/api/me');
-              },
-              staleTime: 2 * 60 * 1000 // 2 minutes
-            });
-          }
+          // Attempt to prefetch user profile data
+          await queryClient.prefetchQuery({
+            queryKey: ['session', 'user-profile'],
+            queryFn: async () => {
+              return await apiService.get('/api/me');
+            },
+            staleTime: 2 * 60 * 1000 // 2 minutes
+          });
         } catch (error) {
           // Ignorer silencieusement les erreurs de préchargement
         }
@@ -108,14 +128,67 @@ function useIntelligentPreload() {
       
       prefetchUserProfile();
     }
-  }, [location.pathname, queryClient]);
+    
+    // Préchargement basé sur le chemin actuel
+    if (currentPath.includes('/login') || currentPath === '/') {
+      // Sur la page de login, précharger le dashboard et l'enregistrement
+      preloadComponent(() => import('./pages/Dashboard'));
+      preloadComponent(() => import('./pages/Register'));
+      // Précharger les composants de réinitialisation de mot de passe
+      preloadComponent(() => import('./components/auth/ResetPasswordRequest'));
+    } 
+    else if (currentPath.includes('/register')) {
+      // Sur la page d'enregistrement, précharger la confirmation
+      preloadComponent(() => import('./pages/RegistrationSuccess'));
+    }
+    else if (currentPath.includes('/reset-password')) {
+      // Précharger les composants de réinitialisation de mot de passe
+      if (currentPath === '/reset-password') {
+        preloadComponent(() => import('./components/auth/ResetPasswordConfirmation'));
+      } else if (currentPath.includes('/reset-password/confirmation')) {
+        preloadComponent(() => import('./components/auth/ResetPassword'));
+      }
+    }
+    else if (currentPath.includes('/profile')) {
+      // Sur le profil, précharger les sous-pages de profil
+      const profilePath = currentPath.split('/').pop();
+      
+      // Préchargement contextuel des vues de profil
+      if (profilePath === 'settings') {
+        preloadComponent(() => import('./pages/Global/Profile/views/SecuritySettings'));
+      } 
+      else if (profilePath === 'security') {
+        preloadComponent(() => import('./pages/Global/Profile/views/NotificationSettings'));
+      }
+      else {
+        // Précharger la page de paramètres par défaut
+        preloadComponent(() => import('./pages/Global/Profile/views/SettingsProfile'));
+      }
+    }
+    // Préchargement pour les routes spécifiques aux rôles
+    else if (currentPath.includes('/admin')) {
+      preloadComponent(() => import('./pages/Admin/Dashboard'));
+    }
+    else if (currentPath.includes('/student')) {
+      preloadComponent(() => import('./pages/Student/Dashboard'));
+      preloadComponent(() => import('./pages/Student/Schedule'));
+      preloadComponent(() => import('./pages/Student/Attendance'));
+    }
+    else if (currentPath.includes('/teacher')) {
+      preloadComponent(() => import('./pages/Teacher/Dashboard'));
+      preloadComponent(() => import('./pages/Teacher/SignatureMonitoring'));
+      preloadComponent(() => import('./pages/Teacher/Attendance'));
+    }
+    // Préchargement des tickets si on est sur une page de tickets
+    else if (currentPath.includes('/tickets')) {
+      preloadComponent(() => import('./components/TicketList'));
+      preloadComponent(() => import('./components/TicketDetail'));
+    }
+  }, [location.pathname, currentPath]);
   
   // Nettoyer les caches lors de la déconnexion
   useEffect(() => {
     const handleLogout = () => {
-      // Nettoyer le service de déduplication
-      deduplicationService.clear();
-      
       // Nettoyer le cache React Query
       queryClient.clear();
       
@@ -127,26 +200,97 @@ function useIntelligentPreload() {
     return () => {
       window.removeEventListener('logout', handleLogout);
     };
-  }, [queryClient]);
+  }, []);
   
   return null;
 }
 
 // Component for handling prefetching and setting up environment
-function AppInitializer() {
-  useIntelligentPreload();
-  return null;
-}
-
-// Composant pour gérer les préchargements
-function PrefetchHandler() {
-  const location = useLocation();
+const AppInitializer = () => {
+  useEffect(() => {
+    // Expose queryClient for debugging purposes
+    window.queryClient = queryClient;
+    
+    // Expose userDataManager for debugging
+    import('./lib/services/userDataManager')
+      .then(({ default: userDataManager }) => {
+        window.userDataManager = userDataManager;
+      });
+      
+    // Set up QueryClient
+    import('./lib/services/queryClient')
+      .then(({ setQueryClient }) => {
+        setQueryClient(queryClient);
+      });
+      
+  }, []);
   
   return null;
-}
+};
+
+// Composant pour gérer les préchargements
+const PrefetchHandler = () => {
+  useIntelligentPreload();
+  const location = useLocation();
+  
+  // Effet pour initialiser userDataManager
+  useEffect(() => {
+    // Importer et initialiser userDataManager
+    import('./lib/services/userDataManager')
+      .then(({ default: userDataManager }) => {
+        // Attacher userDataManager à window pour le débogage
+        window.userDataManager = userDataManager;
+      });
+  }, []);
+  
+  // Ajouter un écouteur d'événement pour forcer l'actualisation des données utilisateur lors d'un changement d'utilisateur
+  useEffect(() => {
+    const handleUserChange = () => {
+      // Importer dynamiquement le module userDataManager
+      import('./lib/services/userDataManager')
+        .then(({ default: userDataManager }) => {
+          // Invalider le cache pour forcer un rechargement des données
+          userDataManager.invalidateCache();
+          
+          // Importer React Query pour invalider les requêtes spécifiques
+          import('./lib/services/queryClient').then(({ getQueryClient }) => {
+            const qc = getQueryClient();
+            if (qc) {
+              // Invalider également les requêtes de dashboard
+              qc.invalidateQueries({ queryKey: ['teacher-dashboard'] });
+              qc.invalidateQueries({ queryKey: ['admin-users'] });
+              qc.invalidateQueries({ queryKey: ['admin-dashboard'] });
+              qc.invalidateQueries({ queryKey: ['student-dashboard'] });
+              qc.invalidateQueries({ queryKey: ['hr-dashboard'] });
+            }
+          });
+        });
+    };
+    
+    // Fonction pour gérer le nettoyage complet du cache
+    const handleCacheCleared = () => {
+      // Forcer un rafraîchissement complet des données
+      window.location.reload();
+    };
+    
+    // Ajouter les écouteurs d'événements
+    window.addEventListener('login-success', handleUserChange);
+    window.addEventListener('role-change', handleUserChange);
+    window.addEventListener('query-cache-cleared', handleCacheCleared);
+    
+    // Nettoyer les écouteurs d'événements
+    return () => {
+      window.removeEventListener('login-success', handleUserChange);
+      window.removeEventListener('role-change', handleUserChange);
+      window.removeEventListener('query-cache-cleared', handleCacheCleared);
+    };
+  }, []);
+  
+  return null;
+};
 
 // Fallback component for error boundary
-function ErrorFallback({ error, resetErrorBoundary }) {
+const ErrorFallback = ({ error, resetErrorBoundary }) => {
   return (
     <div role="alert" className="p-4 bg-red-100 border border-red-300 rounded-md m-4">
       <h2 className="text-xl font-semibold text-red-800 mb-2">Une erreur est survenue</h2>
@@ -159,42 +303,119 @@ function ErrorFallback({ error, resetErrorBoundary }) {
       </button>
     </div>
   );
-}
-
-// Composant App principal qui configure le Router
-function App() {
-  return (
-    <ErrorBoundary FallbackComponent={ErrorFallback}>
-      <Router>
-        <QueryClientProvider client={queryClient}>
-          <ReactQueryHydration>
-            <AuthProvider>
-              <RoleProvider>
-                <TranslationProvider>
-                  {/* Initialisation des services de l'application */}
-                  <AppInitializer />
-                  
-                  {/* Gestionnaire de préchargement */}
-                  <PrefetchHandler />
-                  
-                  <Suspense>
-                    <AppContent />
-                  </Suspense>
-                  <Toaster />
-                </TranslationProvider>
-              </RoleProvider>
-            </AuthProvider>
-          </ReactQueryHydration>
-        </QueryClientProvider>
-      </Router>
-    </ErrorBoundary>
-  );
-}
+};
 
 // Composant de contenu principal qui utilise les hooks de React Router
-function AppContent() {
-  const location = useLocation();
+const AppContent = () => {
+  const navigate = useNavigate();
+  const navigationTimeoutRef = useRef(null);
+  const isProcessingRef = useRef(false);
+  const mountedRef = useRef(true);
   
+  // Cache for navigation decisions to avoid redundant token parsing
+  const roleCache = useRef({
+    lastToken: null,
+    dashboardPath: '/dashboard'
+  });
+  
+  // Get dashboard route by role, with caching
+  const getDashboardByRole = useCallback(() => {
+    const token = localStorage.getItem('token');
+    
+    // Return cached result if token hasn't changed
+    if (token === roleCache.current.lastToken && roleCache.current.dashboardPath) {
+      return roleCache.current.dashboardPath;
+    }
+    
+    // Default dashboard path
+    let dashboardPath = '/dashboard';
+    
+    if (token) {
+      try {
+        const tokenParts = token.split('.');
+        if (tokenParts.length === 3) {
+          const payload = JSON.parse(atob(tokenParts[1]));
+          if (payload.roles && payload.roles.length > 0) {
+            const mainRole = payload.roles[0];
+            switch (mainRole) {
+              case 'ROLE_ADMIN': dashboardPath = '/admin/dashboard'; break;
+              case 'ROLE_SUPERADMIN': dashboardPath = '/superadmin/dashboard'; break;
+              case 'ROLE_TEACHER': dashboardPath = '/teacher/dashboard'; break;
+              case 'ROLE_STUDENT': dashboardPath = '/student/dashboard'; break;
+              case 'ROLE_HR': dashboardPath = '/hr/dashboard'; break;
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error parsing token:', error);
+      }
+    }
+    
+    // Cache the result
+    roleCache.current = {
+      lastToken: token,
+      dashboardPath
+    };
+    
+    return dashboardPath;
+  }, []);
+  
+  // Event listeners for authentication events
+  useEffect(() => {
+    const handleLogoutNavigation = () => {
+      if (isProcessingRef.current || !mountedRef.current) return;
+      isProcessingRef.current = true;
+      
+      // Clear any pending navigation first
+      if (navigationTimeoutRef.current) {
+        clearTimeout(navigationTimeoutRef.current);
+      }
+      
+      // Fast navigation - don't rely on the event system here
+      navigationTimeoutRef.current = setTimeout(() => {
+        if (!mountedRef.current) return;
+        isProcessingRef.current = false;
+        navigate('/login', { replace: true });
+      }, 10); // Immediately schedule navigation
+    };
+    
+    const handleLoginSuccess = () => {
+      if (isProcessingRef.current || !mountedRef.current) return;
+      isProcessingRef.current = true;
+      
+      // Clear any pending navigation first
+      if (navigationTimeoutRef.current) {
+        clearTimeout(navigationTimeoutRef.current);
+      }
+      
+      navigationTimeoutRef.current = setTimeout(() => {
+        if (!mountedRef.current) return;
+        isProcessingRef.current = false;
+        
+        const returnTo = sessionStorage.getItem('returnTo');
+        if (returnTo) {
+          sessionStorage.removeItem('returnTo');
+          navigate(returnTo, { replace: true });
+        } else {
+          // Use cached dashboard path for faster navigation
+          navigate(getDashboardByRole(), { replace: true });
+        }
+      }, 10); // Immediately schedule navigation
+    };
+
+    window.addEventListener('logout-success', handleLogoutNavigation);
+    window.addEventListener('login-success', handleLoginSuccess);
+    
+    return () => {
+      mountedRef.current = false;
+      window.removeEventListener('logout-success', handleLogoutNavigation);
+      window.removeEventListener('login-success', handleLoginSuccess);
+      if (navigationTimeoutRef.current) {
+        clearTimeout(navigationTimeoutRef.current);
+      }
+    };
+  }, [navigate, getDashboardByRole]);
+
   return (
     <div className="relative font-poppins">
       <PrefetchHandler />
@@ -220,8 +441,6 @@ function AppContent() {
                   <Route path="/reset-password" element={<ResetPasswordRequest />} />
                   <Route path="/reset-password/confirmation" element={<ResetPasswordConfirmation />} />
                   <Route path="/reset-password/:token" element={<ResetPassword />} />
-                  
-         
                 </Route>
                 
                 <Route element={<ProtectedRoute />}>
@@ -231,6 +450,7 @@ function AppContent() {
                   {/* Profile routes */}
                   <Route path="/profile" element={<ProfileView />} />
                   <Route path="/public-profile/:userId" element={<PublicProfileView />} />
+                  <Route path="/profile/:userId" element={<ProfileView />} />
                   
                   {/* Settings routes avec ProfileLayout */}
                   <Route element={<ProfileLayout />}>
@@ -378,21 +598,49 @@ function AppContent() {
 
                   {/* Route pour le test de traduction */}
                   <Route path="/translation" element={<TranslationTest />} />
+                  
+                  {/* Ticket routes */}
+                  <Route path="/tickets" element={<TicketList />} />
+                  <Route path="/tickets/new" element={<TicketForm />} />
+                  <Route path="/tickets/:id" element={<TicketDetail />} />
                 </Route>
-                
-                {/* Ticket routes - fix double MainLayout issue */}
-                <Route path="/tickets" element={<TicketList />} />
-                <Route path="/tickets/new" element={<TicketForm />} />
-                <Route path="/tickets/:id" element={<TicketDetail />} />
                 
                 {/* Redirection des routes inconnues vers la page d'accueil */}
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Route>
             </Routes>
           </div>
+          <Toaster />
         </Suspense>
       </div>
     </div>
+  );
+};
+
+// Composant App principal qui configure le Router
+const App = () => {
+  return (
+    <ErrorBoundary FallbackComponent={ErrorFallback}>
+      <Router>
+        <QueryClientProvider client={queryClient}>
+          <ReactQueryHydration>
+            <AuthProvider>
+              <RoleProvider>
+                <TranslationProvider>
+                  {/* Initialisation des services de l'application */}
+                  <AppInitializer />
+                  
+                  {/* Composant principal contenant les routes */}
+                  <Suspense>
+                    <AppContent />
+                  </Suspense>
+                </TranslationProvider>
+              </RoleProvider>
+            </AuthProvider>
+          </ReactQueryHydration>
+        </QueryClientProvider>
+      </Router>
+    </ErrorBoundary>
   );
 }
 

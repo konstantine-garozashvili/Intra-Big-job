@@ -18,7 +18,6 @@ export const SearchBar = () => {
   const [isFocused, setIsFocused] = useState(false);
   const [containerWidth, setContainerWidth] = useState(0);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
-
   const { 
     allowedSearchRoles,
     isLoggedIn,

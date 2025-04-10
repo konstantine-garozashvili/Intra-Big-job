@@ -15,8 +15,8 @@ export const formatDate = (dateString) => {
     const timezoneOffset = date.getTimezoneOffset() * 60000;
     const adjustedDate = new Date(date.getTime() - timezoneOffset);
     return format(adjustedDate, 'dd MMMM yyyy', { locale: fr });
-  } catch (e) {
-    // console.error('Error formatting date:', e);
+  } catch {
+    // Erreur silencieuse
     return 'Date invalide';
   }
 };

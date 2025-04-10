@@ -45,7 +45,7 @@ export const adresseApi = {
         autocomplete: 1
       };
       
-      const response = await addressApiInstance.get(`/search`, { params });
+      const response = await axios.get(`${API_ADRESSE_URL}/search`, { params });
       
       if (!response.data || !response.data.features || response.data.features.length === 0) {
         return [];

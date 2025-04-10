@@ -4,9 +4,10 @@ import apiService from '../../lib/services/apiService';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../ui/card';
-import { toast } from 'sonner';
+import { toast as sonnerToast } from 'sonner';
 import { Eye, EyeOff } from 'lucide-react';
 import { PasswordStrengthIndicator } from '../register/RegisterUtils';
+import { toast } from '@/lib/toast';
 
 const ResetPassword = () => {
     const [password, setPassword] = useState('');
@@ -29,21 +30,28 @@ const ResetPassword = () => {
             setIsLoading(true);
             
             try {
-                console.log('Vérification du token:', token);
+                if (import.meta.env.DEV) {
+                    console.log('Vérification du token:', token);
+                }
+                
+                // Vérifier le token avec le backend
                 const response = await apiService.get(`/api/reset-password/verify/${token}`);
-                console.log('Réponse de vérification:', response);
+                
+                if (import.meta.env.DEV) {
+                    console.log('Réponse de vérification:', response);
+                }
                 
                 if (response.success) {
                     setIsValid(true);
-                    toast.success('Vous pouvez maintenant définir votre nouveau mot de passe');
+                    sonnerToast.success('Vous pouvez maintenant définir votre nouveau mot de passe');
                 } else {
                     setIsValid(false);
-                    toast.error(response.message || 'Lien de réinitialisation invalide');
+                    sonnerToast.error(response.message || 'Lien de réinitialisation invalide');
                 }
             } catch (error) {
                 console.error('Erreur de vérification:', error);
                 setIsValid(false);
-                toast.error('Ce lien de réinitialisation est invalide ou a expiré.');
+                sonnerToast.error('Ce lien de réinitialisation est invalide ou a expiré.');
             } finally {
                 setIsLoading(false);
             }
@@ -59,39 +67,44 @@ const ResetPassword = () => {
         
         // Validation de base
         if (password.length < 8) {
-            toast.error('Le mot de passe doit contenir au moins 8 caractères');
+            sonnerToast.error('Le mot de passe doit contenir au moins 8 caractères');
             return;
         }
         
         if (password !== confirmPassword) {
-            toast.error('Les mots de passe ne correspondent pas');
+            sonnerToast.error('Les mots de passe ne correspondent pas');
             return;
         }
         
         setIsSubmitting(true);
         
         try {
-            console.log('Envoi de la réinitialisation pour le token:', token);
+            if (import.meta.env.DEV) {
+                console.log('Envoi de la réinitialisation pour le token:', token);
+            }
             
+            // Envoyer la requête au backend
             const response = await apiService.post(`/api/reset-password/reset/${token}`, { 
                 password
             });
             
-            console.log('Réponse de réinitialisation:', response);
+            if (import.meta.env.DEV) {
+                console.log('Réponse de réinitialisation:', response);
+            }
             
             if (response.success) {
-                toast.success('Votre mot de passe a été réinitialisé avec succès');
+                sonnerToast.success('Votre mot de passe a été réinitialisé avec succès');
                 setTimeout(() => {
                     navigate('/login');
                 }, 2000);
             } else {
-                toast.error(response.message || 'Une erreur est survenue');
+                sonnerToast.error(response.message || 'Une erreur est survenue');
             }
         } catch (error) {
             console.error('Erreur de réinitialisation:', error);
             const errorMessage = error.response?.data?.message || 
                                 'Impossible de réinitialiser votre mot de passe. Veuillez réessayer plus tard.';
-            toast.error(errorMessage);
+            sonnerToast.error(errorMessage);
         } finally {
             setIsSubmitting(false);
         }
@@ -165,6 +178,27 @@ const ResetPassword = () => {
                                         autoComplete="new-password"
                                         required
                                         className="w-full pr-10"
+                                        maxLength={50}
+                                        onPaste={(e) => {
+                                            // Intercepter l'événement de collage
+                                            const clipboardData = e.clipboardData || window.clipboardData;
+                                            const pastedText = clipboardData.getData('text');
+                                            
+                                            // Vérifier si le texte collé dépasse la limite
+                                            if (pastedText.length > 50) {
+                                                // Empêcher le collage
+                                                e.preventDefault();
+                                                
+                                                // Afficher un message d'alerte
+                                                alert(`ATTENTION : Le mot de passe que vous tentez de coller (${pastedText.length} caractères) dépasse la limite de 50 caractères. Veuillez utiliser un mot de passe plus court.`);
+                                                
+                                                // Notification toast personnalisée
+                                                toast.passwordLimitError(`Mot de passe trop long (${pastedText.length} caractères)`);
+                                                
+                                                // Log de sécurité
+                                                console.error(`Tentative bloquée de collage d'un mot de passe trop long (${pastedText.length} caractères)`);
+                                            }
+                                        }}
                                     />
                                     <button
                                         type="button"
@@ -182,6 +216,9 @@ const ResetPassword = () => {
                                 <PasswordStrengthIndicator password={password} />
                                 <p className="text-xs text-gray-500 mt-1">
                                     Le mot de passe doit contenir au moins 8 caractères.
+                                </p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                    <span className="font-semibold">Important :</span> Le mot de passe ne doit pas dépasser 50 caractères.
                                 </p>
                             </div>
                             
@@ -201,6 +238,27 @@ const ResetPassword = () => {
                                         autoComplete="new-password"
                                         required
                                         className="w-full pr-10"
+                                        maxLength={50}
+                                        onPaste={(e) => {
+                                            // Intercepter l'événement de collage
+                                            const clipboardData = e.clipboardData || window.clipboardData;
+                                            const pastedText = clipboardData.getData('text');
+                                            
+                                            // Vérifier si le texte collé dépasse la limite
+                                            if (pastedText.length > 50) {
+                                                // Empêcher le collage
+                                                e.preventDefault();
+                                                
+                                                // Afficher un message d'alerte
+                                                alert(`ATTENTION : Le mot de passe que vous tentez de coller (${pastedText.length} caractères) dépasse la limite de 50 caractères. Veuillez utiliser un mot de passe plus court.`);
+                                                
+                                                // Notification toast personnalisée
+                                                toast.passwordLimitError(`Mot de passe trop long (${pastedText.length} caractères)`);
+                                                
+                                                // Log de sécurité
+                                                console.error(`Tentative bloquée de collage d'un mot de passe trop long (${pastedText.length} caractères)`);
+                                            }
+                                        }}
                                     />
                                     <button
                                         type="button"
@@ -217,12 +275,12 @@ const ResetPassword = () => {
                                 </div>
                             </div>
                             
-                            <Button
-                                type="submit"
+                            <Button 
+                                type="submit" 
                                 className="w-full"
                                 disabled={isSubmitting}
                             >
-                                {isSubmitting ? 'Mise à jour...' : 'Réinitialiser mon mot de passe'}
+                                {isSubmitting ? 'Traitement en cours...' : 'Réinitialiser le mot de passe'}
                             </Button>
                         </div>
                     </form>

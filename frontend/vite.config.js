@@ -1,6 +1,9 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -99,3 +102,6 @@ export default defineConfig({
   },
   cacheDir: 'node_modules/.vite'
 })
+
+// S'assurer que la variable d'environnement du reCAPTCHA est disponible
+console.log('VITE_RECAPTCHA_SITE_KEY:', process.env.VITE_RECAPTCHA_SITE_KEY);

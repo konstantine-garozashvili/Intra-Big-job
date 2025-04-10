@@ -267,6 +267,10 @@ const LOADING_STATES = {
   ERROR: 'error'          // Erreur de chargement
 };
 
+/**
+ * Layout principal qui inclut la barre de navigation et le pied de page
+ * Gère également l'animation entre les différentes pages
+ */
 const MainLayout = () => {
   const [userData, setUserData] = useState(null);
   const [profileData, setProfileData] = useState(null);

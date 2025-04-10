@@ -1,6 +1,7 @@
 // frontend/src/lib/services/authService.js
 import axiosInstance from '@/lib/axios';
 import apiService from './apiService';
+import emailService from './emailService';
 import { clearQueryCache, getQueryClient } from '../utils/queryClientUtils';
 import { showGlobalLoader, hideGlobalLoader } from '../utils/loadingUtils';
 import { toast } from 'sonner';
@@ -9,6 +10,17 @@ import { getOrCreateDeviceId, getDeviceInfo } from '../utils/deviceUtils';
 import { decodeToken } from '../utils/tokenUtils';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
+
+// Générer un identifiant de session unique
+export const generateSessionId = () => {
+  return Date.now().toString(36) + Math.random().toString(36).substring(2);
+};
+
+// Stocker l'identifiant de session actuel
+let currentSessionId = localStorage.getItem('session_id') || generateSessionId();
+
+// Exposer l'identifiant de session pour l'utiliser dans les clés de requête
+export const getSessionId = () => currentSessionId;
 
 // Session management
 let currentSessionId = localStorage.getItem('session_id') || 
@@ -27,10 +39,86 @@ const getCurrentUserState = {
 export const authService = {
   async register(userData) {
     try {
-      const response = await apiService.post('/register', userData);
-      if (response?.token) localStorage.setItem('token', response.token);
-      return { status: response.status || 201, data: response };
+      if (import.meta.env.DEV) {
+        console.log('[authService] Début de l\'inscription');
+        // Journalisation sécurisée des données sans exposer le mot de passe
+        const safeData = { ...userData };
+        if (safeData.password) {
+          // Log la longueur du mot de passe pour débogage
+          console.log('[authService] Longueur du mot de passe:', safeData.password.length);
+          safeData.password = '***';
+        }
+        console.log('[authService] Données d\'inscription:', safeData);
+      }
+      
+      // Vérification explicite de la longueur du mot de passe côté client
+      if (userData.password && typeof userData.password === 'string') {
+        if (userData.password.length > 50) {
+          throw new Error('Le mot de passe ne doit pas dépasser 50 caractères.');
+        }
+      }
+      
+      // Vérifier si le token reCAPTCHA est présent
+      if (!userData.recaptchaToken) {
+        console.warn('[authService] Token reCAPTCHA manquant lors de l\'inscription');
+      }
+      
+      // Créer l'objet de données d'inscription avec le token reCAPTCHA
+      const registerData = {
+        ...userData,
+        recaptcha_token: userData.recaptchaToken // Adapter le nom du champ pour le backend
+      };
+      
+      // Supprimer le champ original pour éviter la duplication
+      delete registerData.recaptchaToken;
+      
+      const response = await apiService.post('/register', registerData);
+      
+      if (import.meta.env.DEV) {
+        console.log('[authService] Inscription réussie');
+      }
+      
+      // Automatically log in after successful registration
+      try {
+        await this.login(userData.email, userData.password);
+      } catch (loginError) {
+        console.error('[authService] Erreur lors de la connexion automatique après inscription:', loginError.message);
+        // Don't block registration if auto-login fails
+      }
+      
+      // Send welcome email
+      try {
+        if (import.meta.env.DEV) {
+          console.log('[authService] Envoi de l\'email de bienvenue...');
+        }
+        
+        const userDataForEmail = response.data?.userData || userData;
+        
+        const emailData = {
+          email: userDataForEmail.email || userData.email,
+          firstName: userDataForEmail.firstName || userData.firstName,
+          lastName: userDataForEmail.lastName || userData.lastName,
+          birthDate: userData.birthDate,
+          nationality: userData.nationality,
+          phoneNumber: userData.phoneNumber,
+          address: userData.address
+        };
+        
+        await emailService.sendWelcomeEmail(emailData);
+        
+        if (import.meta.env.DEV) {
+          console.log('[authService] Email de bienvenue envoyé avec succès');
+        }
+      } catch (emailError) {
+        console.error('[authService] Erreur lors de l\'envoi de l\'email de bienvenue:', emailError.message);
+      }
+      
+      return {
+        status: response.status || 201,
+        data: response
+      };
     } catch (error) {
+      console.error('[authService] Erreur lors de l\'inscription:', error.message);
       throw error;
     }
   },
@@ -43,23 +131,38 @@ export const authService = {
         queryClient.invalidateQueries({ queryKey: ['profile'] });
       }
       
+      // Set login in progress flag to prevent non-critical API calls
       sessionStorage.setItem('login_in_progress', 'true');
+      
+      // Obtain device ID and info
       const deviceId = getOrCreateDeviceId();
       const { deviceName, deviceType } = getDeviceInfo();
       
-      localStorage.clear();
-      currentSessionId = Date.now().toString(36) + Math.random().toString(36).substring(2);
+      // Clean up previous user data
+      localStorage.removeItem('token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user');
+      
+      // Generate a new session ID
+      currentSessionId = generateSessionId();
       localStorage.setItem('session_id', currentSessionId);
+      
+      // Show loader with no delay
       showGlobalLoader();
       
-      const response = await apiService.post('/login_check', {
-        username: email,
+      // Prepare data for the standard JWT route (/login_check)
+      const loginData = {
+        username: email, // Note the field 'username' instead of 'email' for JWT standard
         password,
         device_id: deviceId,
         device_name: deviceName,
         device_type: deviceType
       });
       
+      // Use JWT standard route directly
+      const response = await apiService.post('/login_check', loginData);
+      
+      // Store JWT token in localStorage
       if (response.token) {
         localStorage.setItem('token', response.token);
         const payload = decodeToken(response.token);
@@ -81,19 +184,194 @@ export const authService = {
         }
       }
       
-      if (response.refresh_token) localStorage.setItem('refresh_token', response.refresh_token);
+      // Store refresh token if present
+      if (response.refresh_token) {
+        localStorage.setItem('refresh_token', response.refresh_token);
+      }
       
+      // Extract detailed info from JWT token for immediate use
+      if (response.token) {
+        try {
+          const tokenParts = response.token.split('.');
+          if (tokenParts.length === 3) {
+            const payload = JSON.parse(atob(tokenParts[1]));
+            
+            if (payload.roles) {
+              // Create enhanced user object with token information
+              const enhancedUser = {
+                username: payload.username,
+                roles: payload.roles,
+                // Extract additional information if available
+                id: payload.id,
+                email: payload.username,
+                firstName: payload.firstName,
+                lastName: payload.lastName,
+                // Add token extraction timestamp for tracking freshness
+                _extractedAt: Date.now(),
+                // Mark as minimal data to indicate it's from token
+                _minimal: true
+              };
+              
+              localStorage.setItem('user', JSON.stringify(enhancedUser));
+              
+              // IMPORTANT: Also store roles separately in localStorage
+              localStorage.setItem('userRoles', JSON.stringify(payload.roles));
+              
+              // Pre-populate cache with this minimal data to speed up initial rendering
+              if (queryClient) {
+                queryClient.setQueryData(['user', 'current'], enhancedUser);
+              }
+              
+              // Signal that minimal data is ready for rendering
+              document.dispatchEvent(new CustomEvent('auth:minimal-data-ready', { 
+                detail: { user: enhancedUser } 
+              }));
+            }
+          }
+        } catch {
+          // Silently handle token parsing errors
+        }
+      }
+      
+      // Hide the global loader immediately after basic auth is completed
+      // This will allow the UI to render with skeleton loaders
       hideGlobalLoader();
-      window.dispatchEvent(new Event('login-success'));
-      window.dispatchEvent(new Event('auth-state-change'));
       
-      this.lazyLoadUserData(true).catch(() => {});
+      // Trigger the login success event immediately
+      window.dispatchEvent(new Event('login-success'));
+      
+      // Initiate user data loading in the background without blocking navigation
+      this.lazyLoadUserData(true).catch(err => {
+        console.warn('Background data loading error:', err);
+      });
       
       return response;
     } catch (error) {
+      // Clear login in progress flag on error
       sessionStorage.removeItem('login_in_progress');
+      
       hideGlobalLoader();
+      console.error('Erreur lors de la connexion:', error.message);
       throw error;
+    }
+  },
+  
+  /**
+   * Charge les données utilisateur en arrière-plan sans bloquer l'interface
+   * @param {boolean} isInitialLoad - Indique s'il s'agit du chargement initial après connexion
+   * @returns {Promise<Object>} - Données utilisateur complètes
+   */
+  async lazyLoadUserData(isInitialLoad = false) {
+    const cachedUser = this.getUser();
+    if (!cachedUser) return null;
+    
+    try {
+      // Démarrer le chargement des données en parallèle
+      const loadPromises = [];
+      
+      // 1. Charger les données de profil de base - Priorité haute
+      const profilePromise = this._loadProfileData();
+      loadPromises.push(profilePromise);
+      
+      // 2. Charger d'autres données non critiques en parallèle si ce n'est pas le chargement initial
+      if (!isInitialLoad) {
+        // Ces chargements ne sont pas critiques pour l'affichage initial
+        // Ils peuvent être ajoutés selon les besoins de l'application
+      }
+      
+      // Attendre que les données critiques soient chargées
+      const results = await Promise.allSettled(loadPromises);
+      
+      // Récupérer le résultat du chargement du profil
+      const profileResult = results[0];
+      let enhancedUser = cachedUser;
+      
+      if (profileResult.status === 'fulfilled' && profileResult.value) {
+        enhancedUser = profileResult.value;
+        
+        // Ensure data is properly saved to localStorage
+        localStorage.setItem('user', JSON.stringify(enhancedUser));
+        
+        // Update React Query cache
+        try {
+          const queryClient = getQueryClient();
+          if (queryClient) {
+            const sessionId = getSessionId();
+            queryClient.setQueryData(['user', 'current'], enhancedUser);
+            queryClient.setQueryData(['unified-user-data', '/api/me', sessionId], enhancedUser);
+            queryClient.setQueryData(['user-data', enhancedUser?.id || 'anonymous', sessionId], enhancedUser);
+          }
+        } catch (cacheError) {
+          console.warn('Error updating cache:', cacheError);
+        }
+      }
+      
+      // Terminer le processus de connexion
+      sessionStorage.removeItem('login_in_progress');
+      
+      // Signaler que les données complètes sont disponibles
+      document.dispatchEvent(new CustomEvent('user:data-updated', { 
+        detail: { user: enhancedUser } 
+      }));
+      
+      // Also dispatch the specific event that AuthForm is waiting for
+      window.dispatchEvent(new Event('user-data-loaded'));
+      
+      return enhancedUser;
+    } catch (error) {
+      console.warn('Erreur lors du chargement des données utilisateur:', error);
+      sessionStorage.removeItem('login_in_progress');
+      
+      // Even in case of error, dispatch the event to unblock navigation
+      window.dispatchEvent(new Event('user-data-loaded'));
+      
+      return cachedUser;
+    }
+  },
+  
+  /**
+   * Charge les données de profil utilisateur depuis l'API
+   * @private
+   * @returns {Promise<Object>} - Données de profil
+   */
+  async _loadProfileData() {
+    try {
+      // Éviter de charger les données si l'utilisateur n'est pas connecté
+      if (!this.isLoggedIn()) {
+        return null;
+      }
+      
+      // Get data directly from /api/me endpoint (the most reliable source)
+      const response = await apiService.get('/api/me', { 
+        noCache: true,
+        timeout: 10000,
+        retries: 1
+      });
+      
+      // Extract user data from response
+      let userData = null;
+      
+      if (response.user) {
+        userData = response.user;
+      } else if (response.data && response.data.user) {
+        userData = response.data.user;
+      } else {
+        // If there's no user property, assume the entire response is the user data
+        userData = response;
+      }
+      
+      if (!userData) {
+        console.warn('No valid user data found in response');
+        return null;
+      }
+      
+      // Store the comprehensive user data in localStorage
+      localStorage.setItem('user', JSON.stringify(userData));
+      
+      return userData;
+    } catch (error) {
+      console.error('Error loading profile data:', error);
+      return null;
     }
   },
 
@@ -165,72 +443,124 @@ export const authService = {
       
       return response;
     } catch (error) {
-      if (error.response?.status === 401 || error.response?.status === 403) this.logout();
+      console.error('Erreur lors du rafraîchissement du token:', error.message);
+      // Si le refresh token est invalide, déconnecter l'utilisateur
+      if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+        this.logout();
+      }
       throw error;
     }
   },
-
+  
+  /**
+   * Déconnexion
+   * @param {string} [redirectTo='/login'] - Chemin de redirection après la déconnexion
+   * @returns {Promise<boolean>} - True si la déconnexion est réussie
+   */
   async logout(redirectTo = '/login') {
     try {
+      // Set global navigation flags
       window.__isLoggingOut = true;
       window.__isNavigating = true;
+      
+      // Show global loading state immediately without animation
       showGlobalLoader();
       
+      // Clear all localStorage data in one step - do this before API calls
       localStorage.clear();
       sessionStorage.clear();
       
+      // Try to revoke refresh token on server side
       try {
         const refreshToken = localStorage.getItem('refresh_token');
+        const deviceId = localStorage.getItem('device_id');
+        
         if (refreshToken) {
-          await apiService.post('/token/revoke', {
+          const revokeData = {
             refresh_token: refreshToken,
-            device_id: localStorage.getItem('device_id')
-          }).catch(() => {});
+            device_id: deviceId
+          };
+          
+          await apiService.post('/token/revoke', revokeData).catch(() => {
+            // Ignore errors during token revocation
+          });
         }
-      } catch (error) {}
+      } catch {
+        // Ignore errors during logout API calls
+      }
       
+      // Clear all API and query caches
       try {
+        // Clear React Query cache
         const queryClient = getQueryClient();
         if (queryClient) {
           queryClient.cancelQueries();
           queryClient.removeQueries();
           clearQueryCache();
         }
+        
+        // Clear API cache
         apiService.clearCache();
-      } catch (error) {}
+      } catch {
+        // Ignore cache clearing errors
+      }
       
-      currentSessionId = Date.now().toString(36) + Math.random().toString(36).substring(2);
+      // Create a new session ID for next login
+      currentSessionId = generateSessionId();
       
-      window.dispatchEvent(new CustomEvent('logout-success', { detail: { redirectTo } }));
-      window.dispatchEvent(new Event('auth-state-change'));
+      // Trigger the logout success event
+      window.dispatchEvent(new CustomEvent('logout-success', {
+        detail: { redirectTo }
+      }));
       
-      setTimeout(() => window.location.replace(redirectTo || '/login'), 10);
+      // Use the window.location.replace method for a cleaner page transition
+      // This replaces the current history entry instead of adding a new one
+      setTimeout(() => {
+        window.location.replace(redirectTo || '/login');
+      }, 10);
+      
       return true;
-    } catch (error) {
+    } catch {
+      // Force localStorage cleanup even on error
       localStorage.clear();
       sessionStorage.clear();
+      
+      // Redirect even on error
       window.location.replace('/login');
+      
       return false;
     }
   },
-
+  
+  /**
+   * Déconnexion de tous les appareils
+   */
   async logoutAllDevices() {
     try {
       await apiService.post('/token/revoke-all');
+      
+      // Nettoyer le localStorage
       localStorage.removeItem('token');
-      localStorage.removeItem('refresh_token');
       localStorage.removeItem('user');
-      userDataPromise = null;
+      localStorage.removeItem('refresh_token');
+      
+      // Vider le cache React Query
       clearQueryCache();
     } catch (error) {
+      console.error('Erreur lors de la déconnexion de tous les appareils:', error.message);
       throw error;
     }
   },
-
+  
+  /**
+   * Récupérer la liste des appareils connectés
+   */
   async getDevices() {
     try {
-      return await apiService.get('/token/devices');
+      const devices = await apiService.get('/token/devices');
+      return devices;
     } catch (error) {
+      console.error('Erreur lors de la récupération des appareils:', error.message);
       throw error;
     }
   },
@@ -239,6 +569,10 @@ export const authService = {
     return localStorage.getItem('token');
   },
 
+  /**
+   * Récupère les informations de l'utilisateur connecté
+   * @returns {Object|null} - Informations de l'utilisateur ou null
+   */
   getUser() {
     const userStr = localStorage.getItem('user');
     return userStr ? JSON.parse(userStr) : null;
@@ -249,8 +583,11 @@ export const authService = {
     if (!token) return false;
     try {
       const decodedToken = decodeToken(token);
-      return decodedToken && decodedToken.exp > Date.now() / 1000;
-    } catch (error) {
+      if (!decodedToken) return false;
+      
+      const currentTime = Date.now() / 1000;
+      return decodedToken.exp > currentTime;
+    } catch {
       return false;
     }
   },
@@ -269,6 +606,10 @@ export const authService = {
     
     const searchRole = role.toUpperCase().startsWith('ROLE_') ? role.toUpperCase() : `ROLE_${role.toUpperCase()}`;
     
+    // Normaliser le rôle recherché
+    const searchRole = role.toUpperCase().startsWith('ROLE_') ? role.toUpperCase() : `ROLE_${role.toUpperCase()}`;
+    
+    // Vérifier si l'utilisateur a le rôle spécifié
     return userRoles.some(userRole => {
       if (typeof userRole === 'string') {
         const normalizedUserRole = userRole.toUpperCase().startsWith('ROLE_') ? 
@@ -317,33 +658,50 @@ export const authService = {
       const userData = await userDataManager.getUserData({
         forceRefresh,
         routeKey: '/api/me',
-        requestId: callerId,
-        preventRecursion: options?.preventRecursion || false
+        requestId: `auth_service_${requestSource}_${Date.now()}`
       });
       
-      if (userData.roles?.length > 0) {
+      // Stocker le rôle principal pour référence (maintenir la compatibilité)
+      if (userData.roles && userData.roles.length > 0) {
         localStorage.setItem('last_role', userData.roles[0]);
+        
+        // Stocker également le tableau des rôles séparément
         localStorage.setItem('userRoles', JSON.stringify(userData.roles));
       }
       
       return userData;
     } catch (error) {
+      console.error(`Error in getCurrentUser (source: ${requestSource}):`, error.message);
+      
+      // Essayer d'utiliser les données en cache si disponibles
       const cachedUser = userDataManager.getCachedUserData();
-      if (cachedUser) return cachedUser;
+      if (cachedUser) {
+        if (import.meta.env.DEV) {
+          console.log(`Utilisation des données en cache pour getCurrentUser (source: ${requestSource})`);
+        }
+        return cachedUser;
+      }
+      
       throw error;
-    } finally {
-      getCurrentUserState.callStack = getCurrentUserState.callStack.filter(id => id !== callerId);
     }
   },
-
+  
+  /**
+   * Change le mot de passe de l'utilisateur connecté
+   * @param {Object} passwordData - Données de changement de mot de passe
+   * @param {string} passwordData.currentPassword - Mot de passe actuel
+   * @param {string} passwordData.newPassword - Nouveau mot de passe
+   * @returns {Promise<Object>} - Réponse de l'API
+   */
   async changePassword(passwordData) {
-    try {
-      return await apiService.post('/api/change-password', passwordData, apiService.withAuth());
-    } catch (error) {
-      throw error;
-    }
+    return await apiService.post('/api/change-password', passwordData, apiService.withAuth());
   },
 
+  /**
+   * Nettoie toutes les données d'authentification et redirige vers la page de connexion
+   * @param {boolean} showNotification - Indique si une notification doit être affichée
+   * @param {string} message - Message personnalisé à afficher dans la notification
+   */
   clearAuthData(showNotification = true, message = 'Vous avez été déconnecté.') {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -356,81 +714,147 @@ export const authService = {
     window.location.href = '/login';
   },
 
+  // Méthode pour déclencher manuellement une mise à jour des rôles
   triggerRoleUpdate: () => {
     window.dispatchEvent(new Event('role-change'));
-    triggerRoleUpdate();
   },
 
+  /**
+   * Ensures that all necessary user data is saved to localStorage
+   * Call this when encountering issues with missing data
+   */
   async ensureUserDataInLocalStorage() {
     try {
       const token = localStorage.getItem('token');
-      if (!token) return false;
+      if (!token) {
+        console.warn('Cannot ensure user data - no token found');
+        return false;
+      }
       
+      // Check if the current page is the signature page
       const isSignaturePage = window.location.pathname.includes('/student/attendance');
+      
+      // Get user data from API
       let userData = null;
-      
       try {
+        // First try to get from the basic me endpoint
         userData = await authService.getCurrentUser(true);
-      } catch (err) {}
+      } catch {
+        console.warn('Failed to get user data from /me endpoint, trying backup methods');
+      }
       
+      // If we have user data, save it
       if (userData) {
+        // Store the actual user data
         localStorage.setItem('user', JSON.stringify(userData));
-        let roles = userData.roles;
-        if (isSignaturePage && !roles.includes('ROLE_STUDENT')) {
-          roles.push('ROLE_STUDENT');
+        
+        // Ensure roles are stored
+        if (userData.roles && Array.isArray(userData.roles)) {
+          // If this is the signature page, ensure STUDENT role is included
+          let roles = userData.roles;
+          if (isSignaturePage && !roles.includes('ROLE_STUDENT')) {
+            roles.push('ROLE_STUDENT'); // Add student role for signature page
+          }
+          localStorage.setItem('userRoles', JSON.stringify(roles));
+        } else {
+          // If no roles in response, set default student role for testing
+          localStorage.setItem('userRoles', JSON.stringify(['ROLE_STUDENT']));
         }
-        localStorage.setItem('userRoles', JSON.stringify(roles));
+        
+        if (import.meta.env.DEV) {
+          console.log('Successfully ensured user data in localStorage', {
+            userData, 
+            roles: JSON.parse(localStorage.getItem('userRoles') || '[]')
+          });
+        }
         return true;
       }
       
+      // If we still don't have user data, create minimal data
       if (!localStorage.getItem('user')) {
         const minimalUser = {
           id: '1',
           email: 'student@example.com',
           firstName: 'Test',
           lastName: 'Student',
-          roles: ['ROLE_STUDENT']
+          roles: ['ROLE_STUDENT'] // Always include ROLE_STUDENT
         };
         localStorage.setItem('user', JSON.stringify(minimalUser));
       }
       
+      // Ensure roles exist - default to student role
+      // For signature page, make sure student role is always included
       if (!localStorage.getItem('userRoles') || isSignaturePage) {
         localStorage.setItem('userRoles', JSON.stringify(['ROLE_STUDENT']));
       }
       
+      if (import.meta.env.DEV) {
+        console.log('Created fallback user data in localStorage', {
+          user: JSON.parse(localStorage.getItem('user') || '{}'),
+          roles: JSON.parse(localStorage.getItem('userRoles') || '[]')
+        });
+      }
+      
       return true;
     } catch (error) {
+      console.error('Error ensuring user data:', error);
       return false;
     }
   },
 
+  /**
+   * Add a global helper to diagnose and fix profile data issues
+   * This can be called if users encounter profile data errors
+   */
   async fixProfileDataIssues() {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) return { success: false, message: 'Not authenticated' };
+      if (import.meta.env.DEV) {
+        console.log('Attempting to fix profile data issues...');
+      }
       
+      // Check if user is logged in
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.warn('No authentication token found. User is not logged in.');
+        return { success: false, message: 'Not authenticated' };
+      }
+      
+      // Clear any cached profile data
       const queryClient = getQueryClient();
       if (queryClient) {
         queryClient.invalidateQueries({ queryKey: ['user'] });
         queryClient.invalidateQueries({ queryKey: ['profile'] });
       }
       
+      // Try to fetch fresh profile data
       try {
-        const userData = await apiService.get('/api/profile', {
+        const correctApiPath = '/api/profile';
+        const userData = await apiService.get(correctApiPath, {
           noCache: true,
           retries: 2,
           timeout: 10000
         });
         
         if (userData) {
+          // Update localStorage with fresh data
           localStorage.setItem('user', JSON.stringify(userData));
+          
+          // Update React Query cache
           if (queryClient) {
             queryClient.setQueryData(['user', 'current'], userData);
           }
+          
+          if (import.meta.env.DEV) {
+            console.log('Profile data fixed successfully');
+          }
           return { success: true, message: 'Profile data fixed successfully' };
         }
-      } catch (apiError) {}
+      } catch (apiError) {
+        console.error('Error fetching fresh profile data:', apiError);
+      }
       
+      // If we couldn't fetch fresh data, create minimal profile data
+      // Based on data from token
       try {
         const token = localStorage.getItem('token');
         if (token) {
@@ -446,24 +870,39 @@ export const authService = {
             localStorage.setItem('user', JSON.stringify(minimalUser));
             localStorage.setItem('userRoles', JSON.stringify(minimalUser.roles));
             
+            if (import.meta.env.DEV) {
+              console.log('Created minimal profile data from token');
+            }
             return { success: true, message: 'Created minimal profile data' };
           }
         }
-      } catch (tokenError) {}
+      } catch (tokenError) {
+        console.error('Error creating fallback profile data:', tokenError);
+      }
       
       return { success: false, message: 'Could not fix profile data' };
     } catch (error) {
+      console.error('Error in fixProfileDataIssues:', error);
       return { success: false, message: error.message };
     }
   },
 
+  /**
+   * Récupère les données minimales de l'utilisateur à partir du localStorage
+   * Utilisé comme fallback lorsque les appels API échouent
+   * @returns {Object|null} - Données minimales utilisateur ou null
+   */
   getMinimalUserData() {
     try {
       const userStr = localStorage.getItem('user');
       if (!userStr) return null;
       
       const userData = JSON.parse(userStr);
-      if (!userData || (!userData.firstName && !userData.lastName)) return null;
+      
+      // Vérifier que les données minimales requises sont présentes
+      if (!userData || (!userData.firstName && !userData.lastName)) {
+        return null;
+      }
       
       return {
         ...userData,
@@ -471,9 +910,59 @@ export const authService = {
         _retrievedAt: Date.now()
       };
     } catch (error) {
+      console.error('Erreur lors de la récupération des données minimales:', error);
       return null;
     }
   }
 };
+
+// Générer ou récupérer un identifiant unique pour l'appareil
+function getOrCreateDeviceId() {
+  // Vérifier si un deviceId existe déjà dans le localStorage
+  let deviceId = localStorage.getItem('device_id');
+  
+  // Si non, en créer un nouveau
+  if (!deviceId) {
+    // Générer un identifiant unique (UUID v4)
+    deviceId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+    localStorage.setItem('device_id', deviceId);
+  }
+  
+  return deviceId;
+}
+
+// Obtenir des informations de base sur l'appareil
+function getDeviceInfo() {
+  const userAgent = window.navigator.userAgent;
+  let deviceType = 'web';
+  let deviceName = 'Browser';
+  
+  // Détection simple du type d'appareil
+  if (/Android/i.test(userAgent)) {
+    deviceType = 'mobile';
+    deviceName = 'Android Device';
+  } else if (/iPhone|iPad|iPod/i.test(userAgent)) {
+    deviceType = 'mobile';
+    deviceName = 'iOS Device';
+  } else if (/Windows/i.test(userAgent)) {
+    deviceType = 'desktop';
+    deviceName = 'Windows Device';
+  } else if (/Macintosh/i.test(userAgent)) {
+    deviceType = 'desktop';
+    deviceName = 'Mac Device';
+  } else if (/Linux/i.test(userAgent)) {
+    deviceType = 'desktop';
+    deviceName = 'Linux Device';
+  }
+  
+  return {
+    deviceType,
+    deviceName
+  };
+}
 
 export default authService;

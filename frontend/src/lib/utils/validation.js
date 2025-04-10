@@ -13,7 +13,7 @@ export const isValidEmail = (email) => {
   // - Les domaines internationaux (IDN)
   // - Les sous-domaines multiples
   // - Les TLD de 2 à 63 caractères
-  const regex = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,63}))$/;
+  const regex = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,63}))$/;
   return regex.test(String(email).toLowerCase());
 };
 
@@ -24,13 +24,48 @@ export const isValidEmail = (email) => {
  */
 export const validatePassword = (password) => {
   const minLength = 8;
+  const maxLength = 50;
+  
+  // Vérification stricte de la longueur pour s'assurer que la limite est respectée
+  if (!password || typeof password !== 'string') {
+    return {
+      isValid: false,
+      errors: {
+        length: true,
+        tooShort: true,
+        tooLong: false,
+        upperCase: true,
+        lowerCase: true,
+        digit: true,
+        specialChar: true
+      }
+    };
+  }
+  
+  // Vérification explicite de la longueur maximale
+  if (password.length > maxLength) {
+    return {
+      isValid: false,
+      errors: {
+        length: true,
+        tooShort: false,
+        tooLong: true,
+        upperCase: false,
+        lowerCase: false,
+        digit: false,
+        specialChar: false
+      }
+    };
+  }
+  
   const hasUpperCase = /[A-Z]/.test(password);
   const hasLowerCase = /[a-z]/.test(password);
   const hasDigit = /\d/.test(password);
-  const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+  const hasSpecialChar = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password);
   
   const isValid = 
     password.length >= minLength && 
+    password.length <= maxLength &&
     hasUpperCase && 
     hasLowerCase && 
     hasDigit && 
@@ -39,7 +74,9 @@ export const validatePassword = (password) => {
   return {
     isValid,
     errors: {
-      length: password.length < minLength,
+      length: password.length < minLength || password.length > maxLength,
+      tooShort: password.length < minLength,
+      tooLong: password.length > maxLength,
       upperCase: !hasUpperCase,
       lowerCase: !hasLowerCase,
       digit: !hasDigit,
@@ -85,19 +122,23 @@ export const isValidPhone = (phone) => {
   }
   
   // Cas 2: Format international français (+33 X XX XX XX XX)
-  if (cleanPhone.startsWith('33') && cleanPhone.length === 11) {
+  if ((cleanPhone.startsWith('33') && cleanPhone.length === 11) || 
+      (cleanPhone.startsWith('330') && cleanPhone.length === 12)) {
     // Extraire le numéro sans l'indicatif
-    const withoutPrefix = '0' + cleanPhone.substring(2);
+    const withoutPrefix = cleanPhone.startsWith('330') 
+      ? cleanPhone.substring(3) 
+      : '0' + cleanPhone.substring(2);
+    
     // Vérifier que le deuxième chiffre est entre 1-9
     return /^0[1-9]/.test(withoutPrefix);
   }
   
-  // Limiter à 9 chiffres après le 33
-  if (cleanPhone.startsWith('33') && cleanPhone.length > 11) {
-    return false;
+  // Cas 3: Autres formats internationaux (entre 8 et 15 chiffres)
+  if (cleanPhone.length >= 8 && cleanPhone.length <= 15) {
+    return true;
   }
   
-  return true;
+  return false;
 };
 
 /**
@@ -109,13 +150,27 @@ export const formatPhone = (phone) => {
   // Nettoyer le numéro (enlever les espaces, tirets, etc.)
   let cleanPhone = phone.replace(/\D/g, '');
   
-  // Si le numéro commence par +33, on le garde
+  // Si le numéro commence par 33 (indicatif français), on l'enlève
   if (cleanPhone.startsWith('33')) {
-    // Limiter à 11 chiffres (33 + 9 chiffres)
-    cleanPhone = cleanPhone.substring(0, 11);
-    // Si le numéro est complet (11 chiffres), formater
-    if (cleanPhone.length === 11) {
-      return `+33 ${cleanPhone.substring(2,4)} ${cleanPhone.substring(4,6)} ${cleanPhone.substring(6,8)} ${cleanPhone.substring(8,10)} ${cleanPhone.substring(10)}`;
+    cleanPhone = '0' + cleanPhone.substring(2);
+  }
+  
+  // S'assurer que le numéro commence par 0
+  if (!cleanPhone.startsWith('0') && cleanPhone.length === 9) {
+    cleanPhone = '0' + cleanPhone;
+  }
+  
+  // Limiter à 10 chiffres
+  cleanPhone = cleanPhone.slice(0, 10);
+  
+  // Formater avec des espaces (XX XX XX XX XX)
+  if (cleanPhone.length === 0) return '';
+  
+  let formatted = '';
+  for (let i = 0; i < cleanPhone.length; i += 2) {
+    formatted += cleanPhone.substring(i, Math.min(i+2, cleanPhone.length));
+    if (i+2 < cleanPhone.length) {
+      formatted += ' ';
     }
     // Sinon, juste afficher le numéro tel quel
     return `+33 ${cleanPhone.substring(2)}`;
@@ -186,7 +241,8 @@ export const isValidLinkedInUrl = (url) => {
     }
     
     return false;
-  } catch (e) {
+  } catch {
+    // Error se produit si l'URL est mal formée
     return false;
   }
 };
@@ -203,7 +259,8 @@ export const isValidUrl = (url) => {
   try {
     const urlObj = new URL(url);
     return urlObj.protocol === 'https:';
-  } catch (e) {
+  } catch {
+    // Error se produit si l'URL est mal formée
     return false;
   }
 };

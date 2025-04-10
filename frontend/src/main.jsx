@@ -1,6 +1,8 @@
 import { createRoot } from 'react-dom/client'
 import { StrictMode } from 'react'
-import { QueryClientProvider } from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+import { init as initEmailJS } from '@emailjs/browser'
 import App from './App.jsx'
 import './index.css'
 import { queryClient } from './lib/services/queryClient'
@@ -23,6 +25,27 @@ if (import.meta.env.DEV) {
     status: 'idle'
   });
 }
+
+// Initialisation d'EmailJS
+initEmailJS('D-6tgxf8T9Wd1Cllj');
+
+// Configuration du QueryClient avec des options par défaut optimisées
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60 * 1000, // 1 minute
+      cacheTime: 5 * 60 * 1000, // 5 minutes
+      refetchOnWindowFocus: false,
+      retry: 1,
+      logging: false, // Disable query logging in console
+    },
+  },
+  logger: {
+    log: () => {},
+    warn: () => {},
+    error: () => {}
+  }
+})
 
 // StrictMode est activé pour assurer une meilleure qualité du code
 // Note: Si des problèmes d'interface surviennent pendant le développement (double montage/démontage),

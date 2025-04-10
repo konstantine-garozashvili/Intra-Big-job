@@ -43,49 +43,49 @@ class ResetPasswordService
      * Génère un token de réinitialisation pour l'utilisateur et envoie un email
      * 
      * @param string $email Adresse email de l'utilisateur
-     * @return bool Succès ou échec de l'opération
+     * @return array Tableau contenant le résultat de l'opération et le token généré
      * @throws \Exception si une erreur se produit
      */
-    public function requestReset(string $email): bool
+    public function requestReset(string $email): array
     {
-        // Chercher l'utilisateur par son email (insensible à la casse)
-        $repository = $this->entityManager->getRepository(User::class);
-        $queryBuilder = $repository->createQueryBuilder('u');
-        $user = $queryBuilder
-            ->where('LOWER(u.email) = LOWER(:email)')
-            ->setParameter('email', strtolower($email))
-            ->getQuery()
-            ->getOneOrNullResult();
-        
-        // Si l'utilisateur n'existe pas, ne pas révéler cette information (sécurité)
-        if (!$user) {
-            // Journaliser pour le débogage (à retirer en production)
-            error_log("Aucun utilisateur trouvé avec l'email: " . $email);
-            // On retourne true pour ne pas indiquer si l'email existe ou non
-            return true;
-        }
-        
         try {
-            // Générer un token sécurisé
+            // Chercher l'utilisateur par son email (insensible à la casse)
+            $repository = $this->entityManager->getRepository(User::class);
+            $queryBuilder = $repository->createQueryBuilder('u');
+            $user = $queryBuilder
+                ->where('LOWER(u.email) = LOWER(:email)')
+                ->setParameter('email', strtolower($email))
+                ->getQuery()
+                ->getOneOrNullResult();
+            
+            // Générer un token sécurisé dans tous les cas
             $resetToken = $this->tokenGenerator->generateToken();
             
-            // Définir la date d'expiration (1 heure)
-            $expiresAt = (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->modify('+' . self::TOKEN_TTL . ' seconds'); 
+            // Si l'utilisateur existe, associer le token à cet utilisateur
+            if ($user) {
+                $this->logger->info("Utilisateur trouvé avec l'email: " . $email);
+                
+                // Définir la date d'expiration (1 heure)
+                $expiresAt = (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->modify('+' . self::TOKEN_TTL . ' seconds'); 
 
-            // Stocker le token et la date d'expiration
-            $user->setResetPasswordToken($resetToken);
-            $user->setResetPasswordExpires($expiresAt);
+                // Stocker le token et la date d'expiration
+                $user->setResetPasswordToken($resetToken);
+                $user->setResetPasswordExpires($expiresAt);
+                
+                // Persister les changements
+                $this->entityManager->flush();
+                
+                $this->logger->info("Token associé à l'utilisateur: " . $email);
+            } else {
+                // Si l'utilisateur n'existe pas, journaliser pour le débogage
+                $this->logger->info("Aucun utilisateur trouvé avec l'email: " . $email . ", mais un token est généré quand même");
+            }
             
-            // Persister les changements
-            $this->entityManager->flush();
-            
-            // Envoyer l'email avec le lien de réinitialisation
-            $this->sendResetEmail($user, $resetToken);
-            
-            return true;
+            // Retourner le token dans tous les cas
+            return ['success' => true, 'token' => $resetToken];
         } catch (\Exception $e) {
             // Journaliser l'erreur
-            error_log('Erreur lors de la réinitialisation de mot de passe: ' . $e->getMessage());
+            $this->logger->error('Erreur lors de la réinitialisation de mot de passe: ' . $e->getMessage());
             // Propager l'exception pour que le contrôleur puisse la gérer
             throw $e;
         }

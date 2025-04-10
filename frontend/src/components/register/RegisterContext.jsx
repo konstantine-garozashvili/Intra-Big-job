@@ -7,11 +7,13 @@ import {
   isValidEmail, 
   validatePassword, 
   isValidPhone, 
-  isValidPostalCode,
-  isValidBirthDate,
-  formatPhone,
-  formatPostalCode
+  isValidBirthDate
 } from '@/lib/utils/validation';
+
+import { verifyRecaptchaToken } from '@/lib/recaptcha';
+
+import PropTypes from 'prop-types';
+
 
 // Création des sous-contextes
 const UserDataContext = createContext(null);
@@ -22,7 +24,7 @@ const ValidationContext = createContext(null);
 export const useUserData = () => {
   const context = useContext(UserDataContext);
   if (!context) {
-    throw new Error('useUserData doit être utilisé à l\'intérieur d\'un RegisterProvider');
+    throw new Error('useUserData doit être utilisé à l&apos;intérieur d&apos;un RegisterProvider');
   }
   return context;
 };
@@ -30,7 +32,7 @@ export const useUserData = () => {
 export const useAddress = () => {
   const context = useContext(AddressContext);
   if (!context) {
-    throw new Error('useAddress doit être utilisé à l\'intérieur d\'un RegisterProvider');
+    throw new Error('useAddress doit être utilisé à l&apos;intérieur d&apos;un RegisterProvider');
   }
   return context;
 };
@@ -38,7 +40,7 @@ export const useAddress = () => {
 export const useValidation = () => {
   const context = useContext(ValidationContext);
   if (!context) {
-    throw new Error('useValidation doit être utilisé à l\'intérieur d\'un RegisterProvider');
+    throw new Error('useValidation doit être utilisé à l&apos;intérieur d&apos;un RegisterProvider');
   }
   return context;
 };
@@ -73,8 +75,11 @@ export const RegisterProvider = ({ children }) => {
   const [activeStep, setActiveStep] = useState("step1");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [registerSuccess, setRegisterSuccess] = useState(false);
+  // État pour le reCAPTCHA
+  const [recaptchaToken, setRecaptchaToken] = useState(null);
+  const [recaptchaVerified, setRecaptchaVerified] = useState(false);
 
-  // Callbacks
+  // Fonctions pour gérer les changements de valeurs
   const handleDateChange = useCallback((date) => {
     // Vérification immédiate de l'âge
     const now = new Date();
@@ -82,7 +87,7 @@ export const RegisterProvider = ({ children }) => {
     minAgeDate.setFullYear(now.getFullYear() - 16);
     
     if (date > minAgeDate) {
-      toast.error("Vous n'êtes pas éligible à l'inscription. Vous devez avoir au moins 16 ans.", {
+      toast.error("Vous n&apos;êtes pas éligible à l&apos;inscription. Vous devez avoir au moins 16 ans.", {
         duration: 5000,
         position: "top-center"
       });
@@ -107,6 +112,38 @@ export const RegisterProvider = ({ children }) => {
     setPostalCode(addressData.postcode);
   }, []);
 
+  // Fonction pour gérer le changement de token reCAPTCHA
+  const handleRecaptchaChange = useCallback(async (token) => {
+    setRecaptchaToken(token);
+    
+    // Si le token est null (expiré ou erreur), marquer comme non vérifié
+    if (!token) {
+      setRecaptchaVerified(false);
+      setErrors(prev => ({...prev, recaptcha: "La vérification reCAPTCHA a expiré, veuillez réessayer"}));
+      return;
+    }
+    
+    // Vérifier le token avec notre backend
+    try {
+      const isValid = await verifyRecaptchaToken(token);
+      setRecaptchaVerified(isValid);
+      
+      if (!isValid) {
+        setErrors(prev => ({...prev, recaptcha: "La vérification reCAPTCHA a échoué, veuillez réessayer"}));
+      } else {
+        setErrors(prev => {
+          const newErrors = {...prev};
+          delete newErrors.recaptcha;
+          return newErrors;
+        });
+      }
+    } catch (error) {
+      console.error('Erreur lors de la vérification du reCAPTCHA:', error);
+      setRecaptchaVerified(false);
+      setErrors(prev => ({...prev, recaptcha: "Erreur lors de la vérification, veuillez réessayer"}));
+    }
+  }, []);
+
   const validateStep1 = useCallback(() => {
     const newErrors = {};
     
@@ -123,17 +160,24 @@ export const RegisterProvider = ({ children }) => {
     }
     
     if (!email) {
-      newErrors.email = "L'email est requis";
+      newErrors.email = "L&apos;email est requis";
     } else if (!isValidEmail(email)) {
-      newErrors.email = "Format d'email invalide";
+      newErrors.email = "Format d&apos;email invalide";
     }
     
     if (!password) {
       newErrors.password = "Le mot de passe est requis";
+    } else if (password.length > 50) {
+      // Vérifier d'abord la longueur maximale
+      newErrors.password = "Le mot de passe ne doit pas dépasser 50 caractères";
     } else {
       const passwordValidation = validatePassword(password);
       if (!passwordValidation.isValid) {
-        newErrors.password = "Le mot de passe ne respecte pas les critères de sécurité";
+        if (passwordValidation.errors.tooShort) {
+          newErrors.password = "Le mot de passe doit contenir au moins 8 caractères";
+        } else {
+          newErrors.password = "Le mot de passe ne respecte pas les critères de sécurité";
+        }
       }
     }
     
@@ -174,8 +218,39 @@ export const RegisterProvider = ({ children }) => {
     return isValid;
   }, [birthDate, nationality, phone]);
 
+  // Ajouter validation pour le reCAPTCHA avant soumission finale
+  const validateRecaptcha = useCallback(() => {
+    const newErrors = {};
+    
+    // En développement, on ignore la vérification reCAPTCHA
+    if (import.meta.env.DEV) {
+      return true;
+    }
+    
+    if (!recaptchaToken) {
+      newErrors.recaptcha = "Veuillez compléter le reCAPTCHA";
+    } else if (!recaptchaVerified) {
+      newErrors.recaptcha = "La vérification reCAPTCHA a échoué, veuillez réessayer";
+    }
+    
+    setErrors(prevErrors => ({ ...prevErrors, ...newErrors }));
+    
+    return Object.keys(newErrors).length === 0;
+  }, [recaptchaToken, recaptchaVerified]);
+
   const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
+    
+    // Vérifier le reCAPTCHA avant de soumettre, sauf en mode développement
+    if (!import.meta.env.DEV) {
+      const recaptchaValid = validateRecaptcha();
+      if (!recaptchaValid) {
+        toast.error("Veuillez compléter la vérification reCAPTCHA");
+        return;
+      }
+    } else {
+      console.log("DEV MODE: Validation reCAPTCHA ignorée");
+    }
     
     setIsSubmitting(true);
     
@@ -194,7 +269,8 @@ export const RegisterProvider = ({ children }) => {
           complement: addressComplement ? addressComplement.trim() : '',
           city: city.trim(),
           postalCode: postalCode.trim()
-        }
+        },
+        recaptchaToken: recaptchaToken || "dev-test-token" // Utiliser un token factice en dev
       };
       
       const response = await authService.register(userData);
@@ -209,19 +285,23 @@ export const RegisterProvider = ({ children }) => {
           navigate('/login');
         }, 500);
       } else {
-        toast.error("Une erreur s'est produite. Veuillez réessayer.", {
+        toast.error("Une erreur s&apos;est produite. Veuillez réessayer.", {
           duration: 5000,
           position: "top-center"
         });
       }
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Erreur lors de l'inscription. Veuillez réessayer.");
+      toast.error(error?.response?.data?.message || "Erreur lors de l&apos;inscription. Veuillez réessayer.", {
+        duration: 5000,
+        position: "top-center"
+      });
     } finally {
       setIsSubmitting(false);
     }
   }, [
     firstName, lastName, birthDate, nationality, email, phone, password,
-    addressName, addressComplement, city, postalCode, navigate
+    addressName, addressComplement, city, postalCode, navigate,
+    recaptchaToken, recaptchaVerified, validateRecaptcha
   ]);
 
   // Mémorisation des valeurs du contexte utilisateur
@@ -269,15 +349,23 @@ export const RegisterProvider = ({ children }) => {
     isSubmitting, registerSuccess,
     validateStep1,
     validateStep2,
+    validateRecaptcha,
     handleSubmit,
+    // reCAPTCHA
+    recaptchaToken, setRecaptchaToken,
+    recaptchaVerified, setRecaptchaVerified,
+    handleRecaptchaChange,
   }), [
     step1Valid, step1Attempted,
     step2Valid, step2Attempted,
     step1Tried, step2Tried,
     errors, activeStep,
     isSubmitting, registerSuccess,
-    validateStep1, validateStep2,
-    handleSubmit
+    validateStep1, validateStep2, validateRecaptcha,
+    handleSubmit,
+    // reCAPTCHA
+    recaptchaToken, recaptchaVerified,
+    handleRecaptchaChange
   ]);
 
   return (
@@ -289,6 +377,10 @@ export const RegisterProvider = ({ children }) => {
       </AddressContext.Provider>
     </UserDataContext.Provider>
   );
+};
+
+RegisterProvider.propTypes = {
+  children: PropTypes.node.isRequired
 };
 
 export default RegisterProvider; 

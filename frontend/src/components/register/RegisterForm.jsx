@@ -1,26 +1,12 @@
-import * as React from "react";
-import { lazy, Suspense, memo, useState, useEffect, useRef, useCallback } from "react";
-import { Button } from "@/components/ui/button";
-import { Eye, EyeOff, CheckCircle2, AlertCircle, Calendar as CalendarIcon } from "lucide-react";
+import { useState, useEffect, useRef, useCallback, memo } from "react";
 import { Link } from "react-router-dom";
-import { FloatingInput } from "@/components/ui/floating-input";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
-import { cn } from "@/lib/utils";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import 'react-calendar/dist/Calendar.css';
-import { CountrySelector } from "@/components/ui/country-selector";
-import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import { useUserData, useAddress, useValidation } from "./RegisterContext";
+import { useUserData, useValidation } from "./RegisterContext";
 import Step1Form from "./steps/Step1Form";
 import Step2Form from "./steps/Step2Form";
 import Step3Form from "./steps/Step3Form";
 import FormTransition from "./FormTransition";
-
-// Chargement dynamique du calendrier pour améliorer les performances
-const Calendar = lazy(() => import('react-calendar'));
+import { toast } from "sonner";
+import PropTypes from "prop-types";
 
 // Composant de chargement pour le calendrier - Mémorisé
 const CalendarFallback = memo(() => (
@@ -99,11 +85,16 @@ const PasswordStrengthIndicator = ({ password }) => {
   );
 };
 
+PasswordStrengthIndicator.propTypes = {
+  password: PropTypes.string.isRequired
+};
+
 // Composant principal du formulaire d'inscription
 const RegisterForm = () => {
   // Récupérer les valeurs et fonctions des contextes séparés
   const { setErrors, setStep1Attempted, setStep2Attempted } = useValidation();
-  const { handleSubmit: contextHandleSubmit, isSubmitting } = useValidation();
+  const { handleSubmit: contextHandleSubmit } = useValidation();
+  const { userData: userDataContext } = useUserData();
   
   // Référence pour suivre les changements d'étape
   const prevStepRef = useRef(1);
@@ -161,25 +152,30 @@ const RegisterForm = () => {
   }, [currentStep, setErrors]);
   
   // Version personnalisée de handleSubmit qui utilise notre validation
-  const handleFormSubmit = useCallback((e) => {
+  const handleSubmit = useCallback((e) => {
     e.preventDefault();
-    // console.log("handleFormSubmit appelé dans RegisterForm");
     
-    // Créer une version modifiée de l'événement pour contourner la validation du contexte
-    const customEvent = {
-      ...e,
-      preventDefault: () => {
-        e.preventDefault();
-      },
-      // Ajouter une propriété pour indiquer que la validation a déjà été effectuée
-      validationComplete: true,
-      target: e.target
-    };
+    // Validation finale de toutes les données avant soumission
+    let isValid = true;
+    const errors = {};
     
-    // Utiliser le handleSubmit du contexte
-    // console.log("Appel de contextHandleSubmit avec customEvent");
-    contextHandleSubmit(customEvent);
-  }, [contextHandleSubmit]);
+    // Validation spécifique du mot de passe
+    const { password } = userDataContext;
+    if (password && password.length > 50) {
+      errors.password = "Le mot de passe ne doit pas dépasser 50 caractères";
+      isValid = false;
+    }
+    
+    if (!isValid) {
+      setErrors(errors);
+      toast.error("Veuillez corriger les erreurs avant de continuer", {
+        duration: 3000
+      });
+      return;
+    }
+    
+    contextHandleSubmit(e);
+  }, [contextHandleSubmit, setErrors, userDataContext]);
   
   return (
     <div className="w-full bg-white rounded-lg shadow-lg mx-auto overflow-hidden">
@@ -231,7 +227,7 @@ const RegisterForm = () => {
           {currentStep === 3 && (
             <Step3Form 
               goToPrevStep={goToPrevStep} 
-              onSubmit={handleFormSubmit}
+              onSubmit={handleSubmit}
             />
           )}
           

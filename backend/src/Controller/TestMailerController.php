@@ -28,7 +28,7 @@ class TestMailerController extends AbstractController
     {
         try {
             // Log debug info
-            $this->logger->info('Début testMail: connexion à Mailtrap avec DSN: ' . ($_ENV['MAILER_DSN'] ?? 'Non disponible'));
+            $this->logger->info('Début testMail: envoi d\'email via le service EmailJS côté frontend');
             
             // Remplacez cette adresse par votre adresse email pour tester
             $to = 'lucas.iribaren@laplateforme.io';
@@ -53,7 +53,7 @@ class TestMailerController extends AbstractController
             return new JsonResponse([
                 'success' => true,
                 'message' => 'Email envoyé avec succès à ' . $to,
-                'mailer_dsn' => $_ENV['MAILER_DSN'] ?? 'Non disponible'
+                'note' => 'Les emails sont maintenant gérés par EmailJS côté frontend'
             ]);
         } catch (\Exception $e) {
             // Log complet de l'erreur
@@ -64,7 +64,7 @@ class TestMailerController extends AbstractController
                 'success' => false,
                 'message' => 'Erreur lors de l\'envoi de l\'email: ' . $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
-                'mailer_dsn' => $_ENV['MAILER_DSN'] ?? 'Non disponible'
+                'note' => 'Les emails sont maintenant gérés par EmailJS côté frontend'
             ], 500);
         }
     }
@@ -74,7 +74,7 @@ class TestMailerController extends AbstractController
     {
         try {
             // Log debug info
-            $this->logger->info('Début testMailDirect: connexion à Mailtrap avec DSN: ' . ($_ENV['MAILER_DSN'] ?? 'Non disponible'));
+            $this->logger->info('Début testMailDirect: envoi d\'email direct via le service EmailJS côté frontend');
             
             // Remplacez cette adresse par votre adresse email pour tester
             $to = 'lucas.iribaren@laplateforme.io';
@@ -103,7 +103,7 @@ class TestMailerController extends AbstractController
             return new JsonResponse([
                 'success' => true,
                 'message' => 'Email direct envoyé avec succès à ' . $to,
-                'mailer_dsn' => $_ENV['MAILER_DSN'] ?? 'Non disponible'
+                'note' => 'Les emails sont maintenant gérés par EmailJS côté frontend'
             ]);
         } catch (\Exception $e) {
             // Log complet de l'erreur
@@ -114,7 +114,7 @@ class TestMailerController extends AbstractController
                 'success' => false,
                 'message' => 'Erreur lors de l\'envoi de l\'email direct: ' . $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
-                'mailer_dsn' => $_ENV['MAILER_DSN'] ?? 'Non disponible'
+                'note' => 'Les emails sont maintenant gérés par EmailJS côté frontend'
             ], 500);
         }
     }

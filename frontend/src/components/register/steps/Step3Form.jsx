@@ -3,6 +3,32 @@ import { Button } from "@/components/ui/button";
 import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAddress, useValidation } from "../RegisterContext";
+import ReCaptcha from "@/components/ui/recaptcha";
+import { RECAPTCHA_SITE_KEY } from "@/lib/recaptcha";
+
+// Script global pour le callback reCAPTCHA en secours
+if (typeof window !== 'undefined') {
+  window.onRecaptchaSuccess = (token) => {
+    console.log("Callback global reCAPTCHA appelé avec un token");
+    // On recherche le composant Step3Form dans la hiérarchie React
+    // et on appelle son handler
+    const recaptchaCallbacks = window.__recaptchaCallbacks || [];
+    recaptchaCallbacks.forEach(callback => {
+      if (typeof callback === 'function') {
+        try {
+          callback(token);
+        } catch (e) {
+          console.error("Erreur lors de l'appel du callback:", e);
+        }
+      }
+    });
+  };
+  // Initialiser le tableau de callbacks s'il n'existe pas
+  window.__recaptchaCallbacks = window.__recaptchaCallbacks || [];
+}
+
+import PropTypes from "prop-types";
+
 
 const Step3Form = ({ goToPrevStep, onSubmit }) => {
   const {
@@ -18,6 +44,8 @@ const Step3Form = ({ goToPrevStep, onSubmit }) => {
   const {
     isSubmitting,
     registerSuccess,
+    errors,
+    handleRecaptchaChange,
   } = useValidation();
 
   // État local pour les erreurs et validation
@@ -26,40 +54,31 @@ const Step3Form = ({ goToPrevStep, onSubmit }) => {
 
   // Validation de l'étape 3
   const validateStep3 = () => {
-    
     const newErrors = {};
-    let valid = true;
     
-    // Valider adresse
-    if (!addressName || addressName.trim() === "") {
-      newErrors.addressName = "L'adresse est requise";
-      valid = false;
+    // Valider l'adresse
+    if (!addressName || addressName.trim() === '') {
+      newErrors.addressName = "L&apos;adresse est requise";
     }
     
-    // Valider ville
-    if (!city || city.trim() === "") {
+    // Valider la ville
+    if (!city || city.trim() === '') {
       newErrors.city = "La ville est requise";
-      valid = false;
     }
     
-    // Valider code postal
-    if (!postalCode || postalCode.trim() === "") {
+    // Valider le code postal
+    if (!postalCode || postalCode.trim() === '') {
       newErrors.postalCode = "Le code postal est requis";
-      valid = false;
     } else if (!/^[0-9]{5}$/.test(postalCode.replace(/\s/g, ''))) {
-      newErrors.postalCode = "Veuillez entrer un code postal valide (5 chiffres)";
-      valid = false;
+      newErrors.postalCode = "Le code postal doit contenir 5 chiffres";
     }
     
     // Valider conditions d'utilisation
     if (!acceptTerms) {
-      newErrors.acceptTerms = "Vous devez accepter les conditions d'utilisation";
-      valid = false;
+      newErrors.acceptTerms = "Vous devez accepter les conditions d&apos;utilisation";
     }
     
-    setLocalErrors(newErrors);
-    
-    return valid;
+    return newErrors;
   };
 
   // Fonction de soumission du formulaire
@@ -67,16 +86,21 @@ const Step3Form = ({ goToPrevStep, onSubmit }) => {
     e.preventDefault();
     setStep3Tried(true);
     
-    const isValid = validateStep3();
-    if (isValid) {
-      try {
+    const validationErrors = validateStep3();
+    const isValid = Object.keys(validationErrors).length === 0;
+    
+    if (!isValid) {
+      setLocalErrors(validationErrors);
+      return;
+    }
+    
+    try {
       onSubmit(e);
-      } catch (error) {
-        setLocalErrors({
-          ...localErrors,
-          addressName: "Erreur lors de la validation de l'adresse. Veuillez réessayer."
-        });
-      }
+    } catch {
+      setLocalErrors({
+        ...localErrors,
+        addressName: "Erreur lors de la validation de l&apos;adresse. Veuillez réessayer."
+      });
     }
   };
 
@@ -109,6 +133,48 @@ const Step3Form = ({ goToPrevStep, onSubmit }) => {
   const getErrorMessage = (fieldName) => {
     return localErrors[fieldName] || null;
   };
+
+  // Effet pour initialiser le reCAPTCHA directement lorsque le composant est monté
+  React.useEffect(() => {
+    // Petite astuce pour s'assurer que le script Google reCAPTCHA est bien chargé
+    // Cette méthode est un secours supplémentaire au cas où le composant ReCaptcha ne fonctionne pas
+    const loadDirectRecaptcha = () => {
+      if (window.grecaptcha) {
+        // Si déjà chargé, on ne fait rien de plus
+        console.log("Script reCAPTCHA déjà disponible");
+        return;
+      }
+      
+      // Ajouter le script manuellement
+      const script = document.createElement('script');
+      script.src = "https://www.google.com/recaptcha/api.js";
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
+      
+      console.log("Script reCAPTCHA ajouté manuellement au secours");
+    };
+    
+    // Donner un délai pour que le composant ReCaptcha ait une chance de se charger d'abord
+    const timer = setTimeout(loadDirectRecaptcha, 2000);
+    
+    // Enregistrer notre callback dans la liste globale
+    if (window.__recaptchaCallbacks) {
+      window.__recaptchaCallbacks.push(handleRecaptchaChange);
+    }
+    
+    // Nettoyage
+    return () => {
+      clearTimeout(timer);
+      // Retirer notre callback de la liste globale
+      if (window.__recaptchaCallbacks) {
+        const index = window.__recaptchaCallbacks.indexOf(handleRecaptchaChange);
+        if (index !== -1) {
+          window.__recaptchaCallbacks.splice(index, 1);
+        }
+      }
+    };
+  }, [handleRecaptchaChange]);
 
   return (
     <div className="space-y-6">
@@ -143,16 +209,7 @@ const Step3Form = ({ goToPrevStep, onSubmit }) => {
             id="addressName"
             value={addressName}
             onChange={(e) => setAddressName(e.target.value)}
-            onAddressSelect={(data) => {
-              handleAddressSelect(data);
-              // Nettoyer les erreurs après sélection d'une adresse valide
-              setLocalErrors({
-                ...localErrors,
-                addressName: null,
-                city: null,
-                postalCode: null
-              });
-            }}
+            onAddressSelect={handleAddressSelect}
             error={shouldShowError('addressName') ? getErrorMessage('addressName') : null}
             className=""
             inputClassName={`w-full px-4 py-3 rounded-md border ${shouldShowError('addressName') ? 'border-red-500' : 'border-gray-300'}`}
@@ -160,9 +217,9 @@ const Step3Form = ({ goToPrevStep, onSubmit }) => {
         </div>
         
         {/* Complément d'adresse */}
-        <div>
+        <div className="mb-4">
           <label htmlFor="addressComplement" className="block text-sm font-medium text-gray-700 mb-1">
-            Complément d'adresse (optionnel)
+            Complément d&apos;adresse (optionnel)
           </label>
           <input
             id="addressComplement"
@@ -211,6 +268,76 @@ const Step3Form = ({ goToPrevStep, onSubmit }) => {
           </div>
         </div>
 
+        {/* Google reCAPTCHA */}
+        <div className="mt-6 border p-4 rounded-md bg-gray-50">
+          <h3 className="text-sm font-medium text-gray-700 mb-2">Vérification de sécurité</h3>
+          
+          {/* Message d'info en mode développement */}
+          {import.meta.env.DEV && (
+            <div className="mb-2 p-2 bg-blue-50 text-blue-700 text-sm rounded">
+              <p>Mode développement: La vérification reCAPTCHA est simulée.</p>
+              <p className="text-xs">
+                <button 
+                  type="button"
+                  className="text-blue-600 underline cursor-pointer"
+                  onClick={() => {
+                    handleRecaptchaChange("dev-test-token");
+                  }}
+                >
+                  Cliquez ici pour simuler une validation reCAPTCHA
+                </button>
+              </p>
+            </div>
+          )}
+          
+          <div id="recaptcha-container" className="flex justify-center items-center">
+            <ReCaptcha 
+              siteKey={RECAPTCHA_SITE_KEY}
+              onChange={handleRecaptchaChange}
+              error={errors?.recaptcha ? true : false}
+              errorMessage={errors?.recaptcha}
+            />
+          </div>
+          
+          {/* Élément de secours direct en HTML */}
+          <div id="recaptcha-fallback" className="flex justify-center items-center mt-4">
+            <div className="g-recaptcha" data-sitekey={RECAPTCHA_SITE_KEY} data-callback="onRecaptchaSuccess"></div>
+          </div>
+          
+          <div className="text-center">
+            <button 
+              type="button" 
+              className="mt-2 text-xs text-blue-500 hover:text-blue-700"
+              onClick={() => {
+                // Force rerender du reCAPTCHA
+                const container = document.getElementById('recaptcha-container');
+                if (container) {
+                  container.innerHTML = '';
+                  setTimeout(() => {
+                    // Recréer le composant
+                    const captcha = document.createElement('div');
+                    container.appendChild(captcha);
+                    if (window.grecaptcha) {
+                      try {
+                        window.grecaptcha.render(captcha, {
+                          sitekey: RECAPTCHA_SITE_KEY,
+                          callback: handleRecaptchaChange,
+                          'expired-callback': () => handleRecaptchaChange(null),
+                          theme: 'light'
+                        });
+                      } catch (e) {
+                        console.error("Erreur lors du rendu manuel:", e);
+                      }
+                    }
+                  }, 100);
+                }
+              }}
+            >
+              Problème d'affichage? Cliquez ici pour recharger
+            </button>
+          </div>
+        </div>
+
         {/* Conditions d'utilisation */}
         <div className="flex items-start space-x-2 py-2">
           <Checkbox 
@@ -223,7 +350,7 @@ const Step3Form = ({ goToPrevStep, onSubmit }) => {
             htmlFor="terms"
             className="text-sm font-medium leading-tight peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
           >
-            J'accepte les <a href="/terms" className="text-[#528eb2] hover:underline">conditions d'utilisation</a>
+            J&apos;accepte les <a href="/terms" className="text-[#528eb2] hover:underline">conditions d&apos;utilisation</a>
           </label>
         </div>
         {shouldShowError('acceptTerms') && (
@@ -262,6 +389,12 @@ const Step3Form = ({ goToPrevStep, onSubmit }) => {
       </form>
     </div>
   );
+};
+
+// Définition des PropTypes
+Step3Form.propTypes = {
+  goToPrevStep: PropTypes.func.isRequired,
+  onSubmit: PropTypes.func.isRequired
 };
 
 export default Step3Form; 

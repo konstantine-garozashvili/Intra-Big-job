@@ -17,6 +17,7 @@ use Symfony\Component\Security\Core\Annotation\IsGranted;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 #[Route('/api')]
 class UserController extends AbstractController
@@ -41,12 +42,54 @@ class UserController extends AbstractController
         $this->documentStorageFactory = $documentStorageFactory;
     }
     
-    #[Route('/register', name: 'app_register', methods: ['POST'])]
-    public function register(
+    /**
+     * Méthode pour vérifier un token reCAPTCHA
+     */
+    private function verifyRecaptchaToken(?string $token): bool
+    {
+        // Si pas de token, retourner false
+        if (!$token) {
+            return false;
+        }
+        
+        try {
+            // Appeler l'API Google reCAPTCHA pour vérifier le token
+            $response = $this->httpClient->request('POST', 'https://www.google.com/recaptcha/api/siteverify', [
+                'body' => [
+                    'secret' => $this->recaptchaSecret,
+                    'response' => $token
+                ]
+            ]);
+            
+            // Décoder la réponse JSON
+            $result = $response->toArray();
+            
+            // Journaliser la réponse en développement
+            if ($_ENV['APP_ENV'] === 'dev') {
+                error_log('Réponse de vérification reCAPTCHA: ' . json_encode($result));
+            }
+            
+            // Vérifier si la validation a réussi
+            return $result['success'] === true;
+            
+        } catch (\Exception $e) {
+            // Journaliser l'erreur
+            error_log('Erreur lors de la vérification du reCAPTCHA: ' . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Endpoint pour l'inscription d'un nouvel utilisateur
+     * CETTE ROUTE EST DÉSACTIVÉE - Utiliser RegistrationController à la place
+     */
+    // #[Route('/register', name: 'app_register', methods: ['POST'])]
+    private function register(
         Request $request,
         RegistrationService $registrationService,
         ValidatorInterface $validator,
         EntityManagerInterface $entityManager
+
     ): JsonResponse {
         try {
             // Récupérer les données
@@ -57,6 +100,15 @@ class UserController extends AbstractController
                 return $this->json([
                     'success' => false,
                     'message' => 'Données incomplètes. Email et mot de passe requis.'
+                ], 400);
+            }
+            
+            // Vérifier le token reCAPTCHA
+            $recaptchaToken = $data['recaptcha_token'] ?? null;
+            if (!$this->verifyRecaptchaToken($recaptchaToken)) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Vérification reCAPTCHA échouée. Veuillez réessayer.'
                 ], 400);
             }
 
@@ -98,6 +150,11 @@ class UserController extends AbstractController
                 'message' => 'Une erreur est survenue: ' . $e->getMessage()
             ], 500);
         }
+
+    ): JsonResponse 
+    {
+        throw new \RuntimeException('Cette route est désactivée - Utilisez /api/register à la place.');
+
     }
 
     #[Route('/test', name: 'app_test', methods: ['GET'])]
