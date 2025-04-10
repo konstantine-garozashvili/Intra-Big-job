@@ -10,6 +10,12 @@ profile_controllers:
         namespace: App\Controller\Profile
     type: attribute
 
+# Explicitly register profile test route
+profile_test:
+    path: /api/profile/test
+    controller: App\Controller\Profile\ProfileController::testProfile
+    methods: ['GET']
+
 api_login_check:
     path: /api/login_check
     methods: ['POST']
