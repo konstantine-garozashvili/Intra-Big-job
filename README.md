@@ -4,7 +4,7 @@
 
 ### Préparation initiale
 
-Avant de commencer, assurez-vous d'avoir un environnement propre (Attention cette action supprimera les volumes de vos anciens projets) :
+Avant de commencer, assurez-vous d'avoir un environnement propre (Attention cette action supprimera les volumes de vos anciens projets)m :
 
 ```bash
 # Nettoyer le cache Docker et les volumes
