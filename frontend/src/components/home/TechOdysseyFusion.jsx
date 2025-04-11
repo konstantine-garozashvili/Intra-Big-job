@@ -223,19 +223,6 @@ const TechOdysseyFusion = () => {
         
       case 'leadCapture':
         return <LeadCapturePortal userProfile={userProfile} onComplete={handleLeadCaptureComplete} />;
-        
-      default:
-        return (
-          <div className="text-center py-16">
-            <h2 className="text-3xl font-bold text-white mb-4">Oops! Quelque chose s'est mal passé</h2>
-            <button 
-              className="px-6 py-3 bg-blue-600 rounded-lg text-white font-bold"
-              onClick={() => setCurrentStage('landing')}
-            >
-              Retour à l'accueil
-            </button>
-          </div>
-        );
     }
   };
   

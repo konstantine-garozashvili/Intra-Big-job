@@ -108,18 +108,6 @@ const FormationLayout = ({
       {/* Navigation */}
       <nav className="fixed top-0 left-0 w-full z-40 transition-all duration-300">
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-          <motion.button
-            onClick={() => navigate('/')}
-            className={`flex items-center space-x-2 ${colorMode === 'navy' ? 'text-blue-300' : 'text-purple-300'}`}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            <span>Retour à l'accueil</span>
-          </motion.button>
-          
           <div className="flex items-center space-x-4">
             <Link to="/all-formations">
               <motion.button

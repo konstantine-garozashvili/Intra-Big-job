@@ -5,7 +5,6 @@ import { authService } from "@/lib/services/authService"
 import { toast } from "sonner"
 import { useRolePermissions } from "@/features/roles/useRolePermissions"
 import { useRoles } from "@/features/roles/roleContext"
-import QuickLoginButtons from './QuickLoginButtons'
 
 // Separate input component to prevent re-renders of the entire form
 const FormInput = React.memo(({ 
@@ -23,7 +22,7 @@ const FormInput = React.memo(({
 
   return (
     <div>
-      <label htmlFor={id} className="block text-sm font-medium text-gray-700 mb-1">
+      <label htmlFor={id} className="block text-sm font-medium text-white mb-1">
         {label}
       </label>
       <div className="mt-1 relative">
@@ -63,7 +62,7 @@ const FormInput = React.memo(({
 
 FormInput.displayName = "FormInput"
 
-export function AuthForm() {
+const AuthFormComponent = React.forwardRef((props, ref) => {
   // Use a single form state object to reduce re-renders
   const [formState, setFormState] = React.useState({
     email: "",
@@ -97,6 +96,11 @@ export function AuthForm() {
       }))
     }
   }, [credentials])
+
+  // Expose the quickLogin method via ref
+  React.useImperativeHandle(ref, () => ({
+    quickLogin
+  }))
 
   // Handle input changes with a single handler
   const handleInputChange = React.useCallback((e) => {
@@ -274,18 +278,15 @@ export function AuthForm() {
   }, [])
 
   return (
-    <div className="w-full backdrop-blur-sm rounded-lg mx-auto">
+    <div className="w-full rounded-lg mx-auto">
       <div className="text-center mb-8">
         <h2 className="text-3xl font-extrabold text-blue-300 mb-2">
           Connexion
         </h2>
         <p className="text-sm text-blue-200">
-          Accédez à votre espace <span className="font-bold text-blue-400">Big<span className="text-indigo-400">Project</span></span>
+          Accédez à votre espace <span className="font-bold text-white">Big<span className="text-[#528eb2]">Project</span></span>
         </p>
       </div>
-
-      {/* Use QuickLoginButtons component */}
-      <QuickLoginButtons onQuickLogin={quickLogin} />
 
       {errors.auth && (
         <div className="p-3 mb-5 text-red-400 bg-red-900/30 border border-red-700 rounded">
@@ -306,7 +307,7 @@ export function AuthForm() {
             onChange={handleInputChange}
             error={errors.email}
           />
-          <div className="absolute -right-2 -top-2 w-10 h-10 bg-blue-500 rounded-full filter blur-xl opacity-20"></div>
+          <div className="absolute -right-2 -top-2 w-10 h-10 rounded-full filter blur-xl opacity-20"></div>
         </div>
 
         <div className="relative">
@@ -373,7 +374,7 @@ export function AuthForm() {
             <div className="w-full border-t border-gray-700"></div>
           </div>
           <div className="relative flex justify-center text-sm">
-            <span className="px-2 text-gray-400 bg-gray-900">
+            <span className="px-2 text-gray-400">
               Vous n'avez pas encore de compte?
             </span>
           </div>
@@ -391,4 +392,9 @@ export function AuthForm() {
       </div>
     </div>
   )
-} 
+})
+
+AuthFormComponent.displayName = 'AuthFormComponent'
+
+// Export with the original name for backward compatibility
+export const AuthForm = AuthFormComponent 

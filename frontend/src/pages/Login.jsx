@@ -1,12 +1,21 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/contexts/ThemeContext';
 import { AuthForm } from '@/components/AuthForm';
+import QuickLoginButtons from '@/components/QuickLoginButtons';
 import PageTransition from '@/components/PageTransition';
 
 const Login = () => {
   const { colorMode, currentTheme } = useTheme();
+  const authFormRef = useRef();
+
+  // Function to handle quick login and pass to the auth form
+  const handleQuickLogin = (role) => {
+    if (authFormRef.current && authFormRef.current.quickLogin) {
+      authFormRef.current.quickLogin(role);
+    }
+  };
 
   return (
     <PageTransition>
@@ -78,20 +87,9 @@ const Login = () => {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5 }}
             >
-              <span className="text-blue-400">Big</span>
-              <span className="text-indigo-400">Project</span>
+              Big<span className="text-[#528eb2]">Project</span>
             </motion.div>
           </Link>
-          
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
-            <Link to="/" className="text-gray-300 hover:text-white transition-colors">
-              Retour à l'accueil
-            </Link>
-          </motion.div>
         </div>
         
         {/* Main content */}
@@ -104,38 +102,19 @@ const Login = () => {
               transition={{ duration: 0.7, delay: 0.3 }}
             >
               <motion.div
-                className="absolute inset-0 bg-gradient-to-br from-blue-600/20 to-purple-600/20 rounded-2xl blur-xl"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 1, delay: 0.5 }}
               />
               <div className="relative bg-gray-900/80 backdrop-blur-sm p-8 rounded-2xl shadow-2xl border border-blue-500/30">
-                <AuthForm />
+                <AuthForm ref={authFormRef} />
               </div>
             </motion.div>
           </div>
         </div>
         
-        {/* Floating planet */}
-        <motion.div
-          className="absolute bottom-10 right-10 w-40 h-40 md:w-60 md:h-60 rounded-full bg-gradient-radial from-blue-500 to-blue-900 hidden md:block"
-          style={{ 
-            boxShadow: 'inset 5px -5px 20px rgba(0, 0, 0, 0.4), 0 0 20px rgba(52, 152, 219, 0.5)',
-          }}
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 1, delay: 0.8 }}
-        >
-          {/* Continents */}
-          <div className="absolute w-12 h-8 bg-green-600 opacity-60 rounded-full" style={{ top: '25%', left: '30%' }}></div>
-          <div className="absolute w-10 h-16 bg-green-600 opacity-60 rounded-full" style={{ top: '40%', left: '65%' }}></div>
-          <div className="absolute w-8 h-8 bg-green-600 opacity-60 rounded-full" style={{ top: '70%', left: '40%' }}></div>
-          
-          {/* Clouds */}
-          <div className="absolute w-16 h-4 bg-white opacity-20 rounded-full" style={{ top: '20%', left: '10%' }}></div>
-          <div className="absolute w-10 h-3 bg-white opacity-20 rounded-full" style={{ top: '30%', left: '60%' }}></div>
-          <div className="absolute w-14 h-4 bg-white opacity-20 rounded-full" style={{ top: '60%', left: '35%' }}></div>
-        </motion.div>
+        {/* QuickLoginButtons component - will position itself */}
+        <QuickLoginButtons onQuickLogin={handleQuickLogin} />
       </div>
     </PageTransition>
   );

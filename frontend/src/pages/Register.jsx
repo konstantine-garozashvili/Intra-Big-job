@@ -79,20 +79,9 @@ const Register = () => {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5 }}
             >
-              <span className="text-blue-400">Big</span>
-              <span className="text-indigo-400">Project</span>
+              Big<span className="text-[#528eb2]">Project</span>
             </motion.div>
           </Link>
-          
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
-            <Link to="/" className="text-gray-300 hover:text-white transition-colors">
-              Retour à l'accueil
-            </Link>
-          </motion.div>
         </div>
         
         {/* Left column - Info */}
@@ -241,20 +230,6 @@ const Register = () => {
               </motion.div>
             </div>
             
-            {/* Floating planet */}
-            <motion.div
-              className="absolute bottom-10 left-10 w-20 h-20 rounded-full bg-gradient-radial from-green-500 to-green-900 hidden md:block"
-              style={{ 
-                boxShadow: 'inset 2px -2px 10px rgba(0, 0, 0, 0.4), 0 0 15px rgba(52, 211, 153, 0.5)',
-              }}
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 1, delay: 1 }}
-            >
-              {/* Surface details */}
-              <div className="absolute w-8 h-3 bg-green-300 opacity-30 rounded-full" style={{ top: '30%', left: '20%' }}></div>
-              <div className="absolute w-6 h-2 bg-green-400 opacity-20 rounded-full" style={{ top: '50%', left: '40%' }}></div>
-            </motion.div>
           </div>
         </motion.div>
 

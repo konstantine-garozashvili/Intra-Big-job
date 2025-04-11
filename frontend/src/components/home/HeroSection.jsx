@@ -51,13 +51,13 @@ const HeroSection = ({ onExploreClick }) => {
             </motion.button>
           </Link>
           
-          <Link to="/all-formations">
+          <Link to="/register">
             <motion.button
               className="px-8 py-4 bg-[#001a38]/60 backdrop-blur-sm rounded-full text-white font-medium text-lg border border-[#0a3c6e]/50 hover:border-blue-400"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.98 }}
             >
-              En savoir plus
+              Rejoindre l'aventure
             </motion.button>
           </Link>
         </motion.div>

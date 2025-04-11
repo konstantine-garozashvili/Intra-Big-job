@@ -283,56 +283,6 @@ const Home = () => {
           </div>
         </section>
         
-        {/* Statistics Section */}
-        <section className="py-20 px-4 relative">
-          <div className="max-w-7xl mx-auto">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-              <motion.div 
-                className="bg-gray-800 bg-opacity-30 backdrop-blur-sm rounded-xl p-8 text-center"
-                initial={{ opacity: 0, scale: 0.9 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5 }}
-                viewport={{ once: true }}
-              >
-                <h3 className="text-4xl font-bold text-blue-400 mb-2">15+</h3>
-                <p className="text-gray-300">Formations disponibles</p>
-              </motion.div>
-              
-              <motion.div 
-                className="bg-gray-800 bg-opacity-30 backdrop-blur-sm rounded-xl p-8 text-center"
-                initial={{ opacity: 0, scale: 0.9 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: 0.1 }}
-                viewport={{ once: true }}
-              >
-                <h3 className="text-4xl font-bold text-purple-400 mb-2">5000+</h3>
-                <p className="text-gray-300">Étudiants actifs</p>
-              </motion.div>
-              
-              <motion.div 
-                className="bg-gray-800 bg-opacity-30 backdrop-blur-sm rounded-xl p-8 text-center"
-                initial={{ opacity: 0, scale: 0.9 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-                viewport={{ once: true }}
-              >
-                <h3 className="text-4xl font-bold text-green-400 mb-2">50+</h3>
-                <p className="text-gray-300">Instructeurs experts</p>
-              </motion.div>
-              
-              <motion.div 
-                className="bg-gray-800 bg-opacity-30 backdrop-blur-sm rounded-xl p-8 text-center"
-                initial={{ opacity: 0, scale: 0.9 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: 0.3 }}
-                viewport={{ once: true }}
-              >
-                <h3 className="text-4xl font-bold text-yellow-400 mb-2">98%</h3>
-                <p className="text-gray-300">Taux de satisfaction</p>
-              </motion.div>
-            </div>
-          </div>
-        </section>
         
         {/* Testimonials Section */}
         <section className="py-20 px-4 relative">
@@ -404,7 +354,7 @@ const Home = () => {
               viewport={{ once: true }}
               transition={{ duration: 0.8 }}
             >
-              <h2 className={`text-3xl md:text-4xl font-bold bg-gradient-to-r ${currentTheme.gradientFrom} ${currentTheme.gradientVia} ${currentTheme.gradientTo} bg-clip-text text-transparent mb-4`}>
+              <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-blue-300 to-blue-500 text-transparent bg-clip-text">
                 Explorez l'Univers de l'Apprentissage Numérique
               </h2>
               <p className={`text-xl ${currentTheme.textSecondary} max-w-3xl mx-auto`}>
@@ -471,9 +421,9 @@ const Home = () => {
               viewport={{ once: true }}
               transition={{ duration: 0.8 }}
             >
-              <h2 className={`text-3xl md:text-4xl font-bold bg-gradient-to-r ${currentTheme.gradientFrom} ${currentTheme.gradientVia} ${currentTheme.gradientTo} bg-clip-text text-transparent mb-6`}>
+              <h1 className={`text-2xl font-bold ${colorMode === 'navy' ? 'text-blue-300' : 'text-purple-300'} mb-4`}>
                 Embarquez pour un Voyage Éducatif Stellaire
-              </h2>
+              </h1>
               <p className={`text-xl ${currentTheme.textSecondary} max-w-3xl mx-auto`}>
                 Notre plateforme vous ouvre les portes d'un monde où l'apprentissage devient une aventure captivante et enrichissante.
               </p>
