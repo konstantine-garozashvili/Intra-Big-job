@@ -78,20 +78,6 @@ const Login = () => {
           ))}
         </div>
         
-        {/* Logo and navigation */}
-        <div className="container mx-auto px-4 py-6 flex justify-between items-center z-10">
-          <Link to="/" className="flex items-center">
-            <motion.div
-              className="text-2xl font-bold text-white"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5 }}
-            >
-              Big<span className="text-[#528eb2]">Project</span>
-            </motion.div>
-          </Link>
-        </div>
-        
         {/* Main content */}
         <div className="flex-1 flex items-center justify-center px-4 py-12">
           <div className="w-full max-w-md">
