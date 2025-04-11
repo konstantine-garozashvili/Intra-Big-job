@@ -1,6 +1,10 @@
-# Hostinger Configuration pour Symfony/React
+# OVH Hosting Configuration for Symfony/React
 <IfModule mod_rewrite.c>
     RewriteEngine On
+    
+    # Handle Authorization header for JWT
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
     
     # Si la requête correspond à un fichier ou répertoire existant
     RewriteCond %{REQUEST_FILENAME} -f [OR]
@@ -15,6 +19,10 @@
     RewriteCond %{REQUEST_URI} ^/favicon.webp$
     RewriteRule ^(.*)$ /frontend/dist/favicon.webp [L]
     
+    # Handle CORS Preflight requests
+    RewriteCond %{REQUEST_METHOD} OPTIONS
+    RewriteRule ^(.*)$ $1 [R=200,L]
+    
     # Requêtes API vers le backend
     RewriteCond %{REQUEST_URI} ^/api/
     RewriteRule ^(.*)$ /backend/public/index.php [QSA,L]
@@ -27,6 +35,7 @@
     RewriteCond %{REQUEST_URI} !^/backend/
     RewriteCond %{REQUEST_URI} !^/frontend/dist/
     RewriteCond %{REQUEST_URI} !^/assets/
+    RewriteCond %{REQUEST_URI} !^/api/
     RewriteCond %{REQUEST_URI} !\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|map)$
     RewriteRule ^(.*)$ /frontend/dist/index.html [L]
     
@@ -38,12 +47,33 @@
     RewriteRule ^backend/config/ - [F,L]
 </IfModule>
 
+# CORS Headers
+<IfModule mod_headers.c>
+    # Set CORS headers for all requests
+    SetEnvIf Origin "^https?://(localhost|127\.0\.0\.1|bigproject-development\.konstantine\.fr)(:[0-9]+)?$" CORS_ALLOW_ORIGIN=$0
+    Header set Access-Control-Allow-Origin "%{CORS_ALLOW_ORIGIN}e" env=CORS_ALLOW_ORIGIN
+    Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+    Header set Access-Control-Allow-Headers "Authorization, Content-Type, X-Requested-With, Accept, Origin, X-AUTH-TOKEN"
+    Header set Access-Control-Allow-Credentials "true"
+    Header set Access-Control-Expose-Headers "Link, Location"
+    
+    # Handle OPTIONS method
+    SetEnvIf Request_Method OPTIONS CORS_PREFLIGHT=1
+    Header always set Access-Control-Max-Age "1200" env=CORS_PREFLIGHT
+    Header always set Content-Length "0" env=CORS_PREFLIGHT
+    Header always set Content-Type "text/plain charset=UTF-8" env=CORS_PREFLIGHT
+</IfModule>
+
 # Configuration PHP
 <IfModule mod_php.c>
     php_value upload_max_filesize 10M
     php_value post_max_size 10M
     php_value memory_limit 256M
     php_value max_execution_time 60
+    
+    # Error logging
+    php_flag log_errors on
+    php_value error_log /var/log/php/php_errors.log
 </IfModule>
 
 # Compression
@@ -62,3 +92,11 @@
     ExpiresByType text/css "access plus 1 month"
     ExpiresByType application/javascript "access plus 1 month"
 </IfModule>
+
+# Directory index
+DirectoryIndex frontend/dist/index.html
+
+# Custom error pages
+ErrorDocument 500 "Internal Server Error - Please check the error logs for more details"
+ErrorDocument 404 "Page Not Found - The requested resource could not be found"
+ErrorDocument 403 "Forbidden - You do not have permission to access this resource"

@@ -46,18 +46,23 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: 'http://nginx:80',
+        target: 'https://bigproject-development.konstantine.fr',
         changeOrigin: true,
-        secure: false,
+        secure: true,
+        rewrite: (path) => path.replace(/^\/api/, '/api')
       }
     }
   },
   build: {
     target: 'esnext',
     minify: 'terser',
+    outDir: 'dist',
+    assetsDir: 'assets',
+    emptyOutDir: true,
+    sourcemap: false,
     terserOptions: {
       compress: {
-        drop_console: false,
+        drop_console: true,
         drop_debugger: true
       }
     },
