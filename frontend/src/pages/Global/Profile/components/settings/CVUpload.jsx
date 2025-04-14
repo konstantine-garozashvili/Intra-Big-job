@@ -164,8 +164,53 @@ const CVUpload = memo(({ userData, onUpdate }) => {
     // Close dialog immediately for fluid interaction
     setDeleteDialogOpen(false);
     
+    // Stocker les informations du document avant la suppression
+    const documentInfo = {
+      id: cvDocument.id,
+      name: cvDocument.name
+    };
+    
     deleteCV(cvDocument.id);
-  }, [cvDocument, deleteCV]);
+    
+    // Envoyer la notification de suppression via Mercure
+    fetch(`${import.meta.env.VITE_API_URL}/notify-document-deletion`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({
+        documentId: documentInfo.id,
+        documentName: documentInfo.name,
+        userId: userData?.id,
+        userName: `${userData?.firstName} ${userData?.lastName}`,
+        deletedBy: `${userData?.firstName} ${userData?.lastName}`,
+        notifyAdmin: false // Mettre à true si les administrateurs doivent être notifiés de la suppression
+      })
+    })
+    .catch(error => {
+      console.error('Erreur lors de l\'envoi de la notification de suppression:', error);
+    });
+    
+    // Ajouter une notification locale pour une réponse immédiate
+    const mockNotification = {
+      id: Date.now(),
+      title: 'Document supprimé',
+      message: `Votre document ${documentInfo.name} a été supprimé avec succès.`,
+      type: 'document_deleted',
+      isRead: false,
+      createdAt: new Date().toISOString(),
+      targetUrl: '/documents'
+    };
+    
+    // Ajouter la notification au cache directement
+    if (notificationService.cache.notifications && notificationService.cache.notifications.notifications) {
+      notificationService.cache.notifications.notifications.unshift(mockNotification);
+      notificationService.cache.unreadCount = (notificationService.cache.unreadCount || 0) + 1;
+      notificationService.notifySubscribers();
+    }
+    
+  }, [cvDocument, deleteCV, userData]);
 
   // Handle document download
   const handleDownloadDocument = useCallback(async () => {

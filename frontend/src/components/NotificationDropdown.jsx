@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Check, X, Calendar, File, FileCheck, FileX, Info, Clock } from 'lucide-react';
+import { Bell, Check, X, Calendar, File, FileCheck, FileX, Info, Clock, Trash2 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { notificationService } from '@/lib/services/notificationService';
@@ -18,13 +18,21 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
 const NotificationIcon = ({ type }) => {
+  // Adapter les types de notification Mercure
   switch (type) {
+    case 'DOCUMENT_APPROVED':
     case 'document_approved':
       return <FileCheck className="h-4 w-4 text-green-500" />;
+    case 'DOCUMENT_REJECTED':
     case 'document_rejected':
       return <FileX className="h-4 w-4 text-red-500" />;
+    case 'DOCUMENT_UPLOADED':
     case 'document_uploaded':
+    case 'CV_UPLOADED':
       return <File className="h-4 w-4 text-blue-500" />;
+    case 'DOCUMENT_DELETED':
+    case 'document_deleted':
+      return <Trash2 className="h-4 w-4 text-red-500" />;
     case 'system':
       return <Info className="h-4 w-4 text-gray-500" />;
     case 'announcement':
@@ -41,8 +49,14 @@ const NotificationItem = ({ notification, onRead }) => {
   const handleClick = async () => {
     try {
       // Marquer comme lu avant la navigation
-      if (!notification.isRead) {
-        await notificationService.markAsRead(notification.id);
+      if (!notification.isRead && !notification.readAt) {
+        if (notification.id) {
+          await notificationService.markAsRead(notification.id);
+        } else {
+          // Si c'est une notification Mercure sans ID standard, la marquer comme lue localement
+          notification.isRead = true;
+          notification.readAt = new Date().toISOString();
+        }
       }
       
       // Toujours naviguer vers la page de notifications
@@ -61,7 +75,7 @@ const NotificationItem = ({ notification, onRead }) => {
     <DropdownMenuItem
       className={cn(
         "flex flex-col items-start py-3 px-4 gap-1 border-b last:border-b-0 dark:border-gray-700 cursor-pointer",
-        !notification.isRead ? "bg-blue-50/50 dark:bg-blue-900/10" : ""
+        (!notification.isRead && !notification.readAt) ? "bg-blue-50/50 dark:bg-blue-900/10" : ""
       )}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
@@ -124,19 +138,34 @@ const NotificationDropdown = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   
+  // Initialiser la connexion Mercure au montage
+  useEffect(() => {
+    // Initialiser Mercure lorsque le composant est monté
+    notificationService.initMercure();
+    
+    // Nettoyer la connexion lorsque le composant est démonté
+    return () => {
+      notificationService.closeMercureConnection();
+    };
+  }, []);
+  
   // Fonction pour charger les notifications
   const loadNotifications = useCallback(async () => {
     if (open) {
       setLoading(true);
       try {
-        const result = await notificationService.getNotifications(1, 5, true, true);
-        
-        if (result && result.notifications) {
-          setNotifications(result.notifications);
-          setUnreadCount(result.unread_count || 0);
-        } else {
-          // Fallback pour s'assurer que nous avons au moins un tableau vide
-          setNotifications([]);
+        // Avec Mercure, nous pouvons directement utiliser le cache sans forcer de rafraîchissement
+        if (notificationService.cache.notifications) {
+          // Filtrer les notifications pour n'en prendre que 5
+          const cachedNotifs = notificationService.cache.notifications.notifications || [];
+          const sortedNotifs = [...cachedNotifs].sort(
+            (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+          ).slice(0, 5);
+          
+          setNotifications(sortedNotifs);
+          setUnreadCount(
+            cachedNotifs.filter(n => !n.isRead && !n.readAt).length
+          );
         }
       } catch (error) {
         console.error('Error loading notifications:', error);
@@ -161,7 +190,12 @@ const NotificationDropdown = () => {
       } else {
         // Si le menu est ouvert, mettre à jour les notifications également
         if (data.notifications && Array.isArray(data.notifications)) {
-          setNotifications(data.notifications);
+          // Filtrer pour n'afficher que les 5 dernières
+          const sortedNotifs = [...data.notifications]
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+            .slice(0, 5);
+          
+          setNotifications(sortedNotifs);
           setUnreadCount(data.unreadCount);
         }
       }
@@ -279,9 +313,9 @@ const NotificationDropdown = () => {
               <NotificationSkeleton />
             </>
           ) : notifications.length > 0 ? (
-            notifications.map(notification => (
+            notifications.map((notification, index) => (
               <NotificationItem 
-                key={notification.id} 
+                key={notification.id || `mercure-notification-${index}`} 
                 notification={notification} 
                 onRead={handleNotificationRead}
               />

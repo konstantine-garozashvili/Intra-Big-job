@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { useQueryClient } from '@tanstack/react-query';
 import { profileService } from '../services/profileService';
+import { notificationService } from '@/lib/services/notificationService';
 import ProfilePicture from './settings/ProfilePicture';
 import { isValidEmail, isValidPhone, isValidLinkedInUrl, isValidName, isValidUrl } from '@/lib/utils/validation';
 import { Label } from '@/components/ui/label';
@@ -434,12 +435,50 @@ const UserProfileSettings = () => {
   };
 
   // Fonction pour supprimer un document
-  const handleDeleteDocument = async (documentId) => {
+  const handleDeleteDocument = async (documentId, documentName = 'Document d\'identité') => {
     try {
       const loadingToast = toast.loading('Suppression en cours...');
       
       // Appel API pour supprimer le document
       await profileService.deleteIdentityDocument(documentId);
+      
+      // Envoyer la notification de suppression via Mercure
+      fetch(`${import.meta.env.VITE_API_URL}/notify-document-deletion`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          documentId: documentId,
+          documentName: documentName,
+          userId: userData?.id,
+          userName: `${userData?.firstName} ${userData?.lastName}`,
+          deletedBy: `${userData?.firstName} ${userData?.lastName}`,
+          notifyAdmin: true // Notifier les administrateurs pour les documents d'identité
+        })
+      })
+      .catch(error => {
+        console.error('Erreur lors de l\'envoi de la notification de suppression:', error);
+      });
+      
+      // Créer une notification locale
+      const mockNotification = {
+        id: Date.now(),
+        title: 'Document supprimé',
+        message: `Votre document "${documentName}" a été supprimé avec succès.`,
+        type: 'document_deleted',
+        isRead: false,
+        createdAt: new Date().toISOString(),
+        targetUrl: '/documents'
+      };
+      
+      // Ajouter la notification au cache du service
+      if (notificationService.cache.notifications && notificationService.cache.notifications.notifications) {
+        notificationService.cache.notifications.notifications.unshift(mockNotification);
+        notificationService.cache.unreadCount = (notificationService.cache.unreadCount || 0) + 1;
+        notificationService.notifySubscribers();
+      }
       
       toast.dismiss(loadingToast);
       toast.success('Document supprimé avec succès');
@@ -605,7 +644,7 @@ const UserProfileSettings = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDeleteDocument(doc.id)}
+                        onClick={() => handleDeleteDocument(doc.id, doc.name)}
                         className="text-red-500 hover:text-red-700"
                       >
                         <Trash2 className="h-4 w-4" />

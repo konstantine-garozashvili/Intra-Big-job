@@ -27,6 +27,364 @@ class NotificationService {
     this.pollingInterval = null;
     this.pollingDelay = 60000; // 1 minute
     this.useMockBackend = false; // Added for the new getNotifications method
+    this.mercureEventSource = null; // Source d'événements Mercure
+    this.mercureUrl = null; // URL du hub Mercure
+    this.mercureTopics = []; // Topics auxquels on est abonné
+    this.mercureReconnectTimer = null; // Timer pour les reconnexions Mercure
+  }
+
+  /**
+   * Initialise la connexion Mercure pour les notifications en temps réel
+   */
+  async initMercure() {
+    try {
+      // Si nous sommes déjà connectés, ne rien faire
+      if (this.mercureEventSource && this.mercureEventSource.readyState === 1) {
+        console.log('Mercure connection already established');
+        return true;
+      }
+      
+      // Récupérer les informations du hub Mercure depuis l'API
+      const infoResponse = await apiService.get('/mercure-info');
+      
+      if (!infoResponse.data || !infoResponse.data.mercure_public_url) {
+        console.error('Failed to get Mercure hub URL');
+        return false;
+      }
+      
+      // Récupérer l'utilisateur courant
+      const user = authService.getCurrentUser();
+      
+      if (!user || !user.id) {
+        console.log('No authenticated user, skipping Mercure subscription');
+        return false;
+      }
+      
+      // Stocker l'URL du hub Mercure
+      this.mercureUrl = infoResponse.data.mercure_public_url;
+      
+      // Construire les topics auxquels s'abonner
+      this.mercureTopics = [
+        `https://example.com/users/${user.id}`, // Topic spécifique à l'utilisateur
+        'https://example.com/documents' // Topic général pour les documents (si l'utilisateur y a accès)
+      ];
+      
+      // Si l'utilisateur est admin, ajouter le topic admin
+      if (user.roles && (user.roles.includes('ROLE_ADMIN') || user.roles.includes('ROLE_SUPER_ADMIN'))) {
+        this.mercureTopics.push('https://example.com/admin/documents');
+      }
+      
+      // Créer l'URL du hub avec les topics
+      const url = new URL(this.mercureUrl);
+      this.mercureTopics.forEach(topic => {
+        url.searchParams.append('topic', topic);
+      });
+      
+      // Fermer toute connexion existante
+      this.closeMercureConnection();
+      
+      // Créer la nouvelle connexion EventSource
+      this.mercureEventSource = new EventSource(url, { withCredentials: true });
+      
+      // Configurer les gestionnaires d'événements
+      this.mercureEventSource.onopen = () => {
+        console.log('Mercure connection established');
+        clearTimeout(this.mercureReconnectTimer);
+      };
+      
+      this.mercureEventSource.onerror = (err) => {
+        console.error('Mercure connection error:', err);
+        this.handleMercureConnectionError();
+      };
+      
+      this.mercureEventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          this.handleMercureMessage(data);
+        } catch (error) {
+          console.error('Error handling Mercure message:', error);
+        }
+      };
+      
+      return true;
+    } catch (error) {
+      console.error('Error initializing Mercure:', error);
+      return false;
+    }
+  }
+  
+  /**
+   * Gère une erreur de connexion Mercure et programme une reconnexion
+   */
+  handleMercureConnectionError() {
+    // Fermer la connexion actuelle
+    this.closeMercureConnection();
+    
+    // Attendre 5 secondes avant de réessayer
+    clearTimeout(this.mercureReconnectTimer);
+    this.mercureReconnectTimer = setTimeout(() => {
+      console.log('Attempting to reconnect to Mercure...');
+      this.initMercure();
+    }, 5000);
+  }
+  
+  /**
+   * Ferme la connexion Mercure
+   */
+  closeMercureConnection() {
+    if (this.mercureEventSource) {
+      this.mercureEventSource.close();
+      this.mercureEventSource = null;
+    }
+  }
+  
+  /**
+   * Gère les messages reçus via Mercure
+   */
+  handleMercureMessage(data) {
+    console.log('Received Mercure notification:', data);
+    
+    // Traiter selon le type de notification
+    if (data.type) {
+      switch (data.type) {
+        case 'document_added':
+          this.handleDocumentAddedNotification(data);
+          break;
+        case 'document_status_changed':
+          this.handleDocumentStatusChangedNotification(data);
+          break;
+        case 'cv_uploaded':
+          this.handleCvUploadedNotification(data);
+          break;
+        case 'document_deleted':
+          this.handleDocumentDeletedNotification(data);
+          break;
+        default:
+          this.handleGenericNotification(data);
+          break;
+      }
+    } else {
+      // Si pas de type spécifié, traiter comme notification générique
+      this.handleGenericNotification(data);
+    }
+    
+    // Incrémenter le compteur de notifications non lues
+    this.cache.unreadCount++;
+    
+    // Notifier les abonnés
+    this.notifySubscribers();
+  }
+  
+  /**
+   * Gère les notifications d'ajout de document
+   */
+  handleDocumentAddedNotification(data) {
+    // Créer une notification formatée
+    const notification = {
+      id: `mercure-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type: 'DOCUMENT_UPLOADED',
+      title: 'Nouveau document ajouté',
+      message: `Un nouveau document "${data.documentName}" a été ajouté par ${data.addedBy}`,
+      data: data,
+      targetUrl: `/documents/${data.documentId}`,
+      createdAt: new Date().toISOString(),
+      isRead: false
+    };
+    
+    // Ajouter à notre cache local
+    if (this.cache.notifications && this.cache.notifications.notifications) {
+      this.cache.notifications.notifications.unshift(notification);
+    }
+    
+    // Afficher une notification toast
+    toast.success(notification.message, {
+      action: {
+        label: 'Voir',
+        onClick: () => {
+          window.location.href = notification.targetUrl;
+        }
+      }
+    });
+  }
+  
+  /**
+   * Gère les notifications de changement de statut de document
+   */
+  handleDocumentStatusChangedNotification(data) {
+    // Déterminer le type et le titre selon le statut
+    let type = 'DOCUMENT_STATUS_CHANGED';
+    let title = 'Document mis à jour';
+    let message = `Le statut du document "${data.documentName}" a changé`;
+    
+    if (data.newStatus === 'APPROVED') {
+      type = 'DOCUMENT_APPROVED';
+      title = 'Document approuvé';
+      message = `Votre document "${data.documentName}" a été approuvé`;
+    } else if (data.newStatus === 'REJECTED') {
+      type = 'DOCUMENT_REJECTED';
+      title = 'Document refusé';
+      message = `Votre document "${data.documentName}" a été refusé`;
+      
+      if (data.comment) {
+        message += ` : ${data.comment}`;
+      }
+    }
+    
+    // Créer une notification formatée
+    const notification = {
+      id: `mercure-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type: type,
+      title: title,
+      message: message,
+      data: data,
+      targetUrl: `/documents/${data.documentId}`,
+      createdAt: new Date().toISOString(),
+      isRead: false
+    };
+    
+    // Ajouter à notre cache local
+    if (this.cache.notifications && this.cache.notifications.notifications) {
+      this.cache.notifications.notifications.unshift(notification);
+    }
+    
+    // Afficher une notification toast
+    if (data.newStatus === 'APPROVED') {
+      toast.success(notification.message, {
+        action: {
+          label: 'Voir',
+          onClick: () => {
+            window.location.href = notification.targetUrl;
+          }
+        }
+      });
+    } else if (data.newStatus === 'REJECTED') {
+      toast.error(notification.message, {
+        action: {
+          label: 'Voir',
+          onClick: () => {
+            window.location.href = notification.targetUrl;
+          }
+        }
+      });
+    } else {
+      toast.info(notification.message, {
+        action: {
+          label: 'Voir',
+          onClick: () => {
+            window.location.href = notification.targetUrl;
+          }
+        }
+      });
+    }
+  }
+  
+  /**
+   * Gère les notifications d'upload de CV
+   */
+  handleCvUploadedNotification(data) {
+    // Créer une notification formatée
+    const notification = {
+      id: `mercure-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type: 'CV_UPLOADED',
+      title: 'CV téléchargé',
+      message: data.message || `Votre CV "${data.documentName}" a été téléchargé avec succès`,
+      data: data,
+      targetUrl: `/documents/${data.documentId}`,
+      createdAt: new Date().toISOString(),
+      isRead: false
+    };
+    
+    // Ajouter à notre cache local
+    if (this.cache.notifications && this.cache.notifications.notifications) {
+      this.cache.notifications.notifications.unshift(notification);
+    }
+    
+    // Afficher une notification toast
+    toast.success(notification.message, {
+      action: {
+        label: 'Voir',
+        onClick: () => {
+          window.location.href = notification.targetUrl;
+        }
+      }
+    });
+  }
+  
+  /**
+   * Gère les notifications de suppression de document
+   */
+  handleDocumentDeletedNotification(data) {
+    // Créer une notification formatée
+    const notification = {
+      id: `mercure-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type: 'DOCUMENT_DELETED',
+      title: 'Document supprimé',
+      message: `Le document "${data.documentName}" a été supprimé`,
+      data: data,
+      targetUrl: `/documents`, // Rediriger vers la liste des documents
+      createdAt: new Date().toISOString(),
+      isRead: false
+    };
+    
+    // Ajouter à notre cache local
+    if (this.cache.notifications && this.cache.notifications.notifications) {
+      this.cache.notifications.notifications.unshift(notification);
+    }
+    
+    // Incrémenter le compteur de notifications non lues
+    if (this.cache.unreadCount !== undefined) {
+      this.cache.unreadCount += 1;
+    }
+    
+    // Notifier les abonnés du changement
+    this.notifySubscribers();
+    
+    // Afficher une notification toast
+    toast.info(notification.message, {
+      action: {
+        label: 'Voir tous',
+        onClick: () => {
+          window.location.href = notification.targetUrl;
+        }
+      }
+    });
+  }
+  
+  /**
+   * Gère les notifications génériques
+   */
+  handleGenericNotification(data) {
+    // Extraire les informations de base
+    const title = data.title || 'Nouvelle notification';
+    const message = data.message || 'Vous avez reçu une nouvelle notification';
+    const targetUrl = data.targetUrl || '/dashboard';
+    
+    // Créer une notification formatée
+    const notification = {
+      id: `mercure-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type: data.type || 'GENERIC',
+      title: title,
+      message: message,
+      data: data,
+      targetUrl: targetUrl,
+      createdAt: new Date().toISOString(),
+      isRead: false
+    };
+    
+    // Ajouter à notre cache local
+    if (this.cache.notifications && this.cache.notifications.notifications) {
+      this.cache.notifications.notifications.unshift(notification);
+    }
+    
+    // Afficher une notification toast
+    toast.info(notification.message, {
+      action: {
+        label: 'Voir',
+        onClick: () => {
+          window.location.href = notification.targetUrl;
+        }
+      }
+    });
   }
 
   /**
@@ -305,26 +663,18 @@ class NotificationService {
    */
   startPolling() {
     if (this.pollingInterval) {
-      this.stopPolling();
+      clearInterval(this.pollingInterval);
     }
     
-    // Set up polling interval
-    this.pollingInterval = setInterval(async () => {
-      if (authService.isLoggedIn()) {
-        try {
-          await this.getUnreadCount(true);
-        } catch (error) {
-          console.warn('Error during notification polling:', error);
-        }
-      } else {
-        this.stopPolling();
-      }
+    // Initier Mercure si disponible
+    this.initMercure();
+    
+    // Ensuite démarrer le polling comme fallback
+    this.pollingInterval = setInterval(() => {
+      this.getUnreadCount(true).catch(error => {
+        console.error('Error in notification polling:', error);
+      });
     }, this.pollingDelay);
-    
-    // Fetch initial data
-    if (authService.isLoggedIn()) {
-      this.getUnreadCount(true).catch(console.error);
-    }
   }
 
   /**
@@ -335,6 +685,9 @@ class NotificationService {
       clearInterval(this.pollingInterval);
       this.pollingInterval = null;
     }
+    
+    // Fermer la connexion Mercure
+    this.closeMercureConnection();
   }
 
   /**

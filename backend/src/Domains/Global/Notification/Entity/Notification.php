@@ -15,6 +15,7 @@ class Notification
     public const TYPE_DOCUMENT_APPROVED = 'document_approved';
     public const TYPE_DOCUMENT_REJECTED = 'document_rejected';
     public const TYPE_DOCUMENT_UPLOADED = 'document_uploaded';
+    public const TYPE_DOCUMENT_DELETED = 'document_deleted';
     public const TYPE_SYSTEM = 'system';
     public const TYPE_ANNOUNCEMENT = 'announcement';
 
