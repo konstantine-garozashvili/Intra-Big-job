@@ -94,7 +94,7 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
 
   return (
     <motion.div 
-      className="space-y-6 bg-gray-800"
+      className="space-y-6"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.4 }}
@@ -102,7 +102,7 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
       {/* Date de naissance */}
       <div>
         <label className="block text-sm font-medium text-blue-300 mb-1">
-          Date de naissance
+          Date de naissance <span className="text-red-400">*</span>
         </label>
         <div className="relative">
           <div 
@@ -174,8 +174,10 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
             </DialogContent>
           </Dialog>
           
-          {shouldShowError('birthDate') && (
+          {shouldShowError('birthDate') ? (
             <p className="text-red-400 text-xs mt-1">{getErrorMessage('birthDate')}</p>
+          ) : (
+            <p className="text-gray-500 text-xs mt-1">Champ requis - Vous devez avoir au moins 16 ans</p>
           )}
         </div>
       </div>
@@ -183,23 +185,26 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
       {/* Nationalité */}
       <div>
         <label className="block text-sm font-medium text-blue-300 mb-1">
-          Nationalité
+          Nationalité <span className="text-red-400">*</span>
         </label>
         <CountrySelector
           value={nationality}
           onChange={setNationality}
           error={shouldShowError('nationality') ? getErrorMessage('nationality') : null}
           className="w-full px-4 py-3 rounded-md border bg-gray-800/50 text-white placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500"
+          required
         />
-        {shouldShowError('nationality') && (
+        {shouldShowError('nationality') ? (
           <p className="text-red-400 text-xs mt-1">{getErrorMessage('nationality')}</p>
+        ) : (
+          <p className="text-gray-500 text-xs mt-1">Champ requis</p>
         )}
       </div>
 
       {/* Téléphone */}
       <div className="mb-6">
         <label htmlFor="phone" className="block text-sm font-medium text-blue-300 mb-1">
-          Numéro de téléphone
+          Numéro de téléphone <span className="text-red-400">*</span>
         </label>
         <PhoneInput
           id="phone"
@@ -208,17 +213,20 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
           error={shouldShowError('phone') ? getErrorMessage('phone') : null}
           placeholder="+33 6 12 34 56 78"
           className="w-full px-4 py-3 rounded-md border bg-gray-800/50 text-white placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500"
+          required
         />
-        <p className="text-xs text-gray-500 mt-1">
-          Format français uniquement (+33). Exemple: 06 12 34 56 78
-        </p>
+        {shouldShowError('phone') ? (
+          <p className="text-red-400 text-xs mt-1">{getErrorMessage('phone')}</p>
+        ) : (
+          <p className="text-gray-500 text-xs mt-1">Champ requis - Format français uniquement (+33)</p>
+        )}
       </div>
       
       {/* Boutons de navigation */}
       <div className="flex space-x-4 mt-8">
         <motion.button
           type="button"
-          className="flex-1 h-12 bg-gray-700/50 hover:bg-gray-700 text-blue-300 border border-gray-600"
+          className="flex-1 h-12 bg-gray-700/50 hover:bg-gray-700 text-blue-300 border border-gray-600 rounded-md flex items-center justify-center"
           onClick={goToPrevStep}
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.98 }}

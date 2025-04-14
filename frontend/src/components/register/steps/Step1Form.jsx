@@ -98,7 +98,7 @@ const Step1Form = ({ goToNextStep }) => {
         {/* Prénom */}
         <div>
           <label htmlFor="firstName" className="block text-sm font-medium text-blue-300 mb-1">
-            Prénom
+            Prénom <span className="text-red-400">*</span>
           </label>
           <input
             id="firstName"
@@ -107,16 +107,19 @@ const Step1Form = ({ goToNextStep }) => {
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
             placeholder="Votre prénom"
+            required
           />
-          {shouldShowError('firstName') && (
+          {shouldShowError('firstName') ? (
             <p className="text-red-400 text-xs mt-1">{getErrorMessage('firstName')}</p>
+          ) : (
+            <p className="text-gray-500 text-xs mt-1">Champ requis</p>
           )}
         </div>
         
         {/* Nom */}
         <div>
           <label htmlFor="lastName" className="block text-sm font-medium text-blue-300 mb-1">
-            Nom
+            Nom <span className="text-red-400">*</span>
           </label>
           <input
             id="lastName"
@@ -125,9 +128,12 @@ const Step1Form = ({ goToNextStep }) => {
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}
             placeholder="Votre nom"
+            required
           />
-          {shouldShowError('lastName') && (
+          {shouldShowError('lastName') ? (
             <p className="text-red-400 text-xs mt-1">{getErrorMessage('lastName')}</p>
+          ) : (
+            <p className="text-gray-500 text-xs mt-1">Champ requis</p>
           )}
         </div>
       </div>
@@ -135,7 +141,7 @@ const Step1Form = ({ goToNextStep }) => {
       {/* Email */}
       <div>
         <label htmlFor="email" className="block text-sm font-medium text-blue-300 mb-1">
-          Email
+          Email <span className="text-red-400">*</span>
         </label>
         <input
           id="email"
@@ -144,16 +150,19 @@ const Step1Form = ({ goToNextStep }) => {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="email@exemple.com"
+          required
         />
-        {shouldShowError('email') && (
+        {shouldShowError('email') ? (
           <p className="text-red-400 text-xs mt-1">{getErrorMessage('email')}</p>
+        ) : (
+          <p className="text-gray-500 text-xs mt-1">Champ requis</p>
         )}
       </div>
       
       {/* Mot de passe */}
       <div>
         <label htmlFor="password" className="block text-sm font-medium text-blue-300 mb-1">
-          Mot de passe
+          Mot de passe <span className="text-red-400">*</span>
         </label>
         <div className="relative">
           <input
@@ -163,6 +172,7 @@ const Step1Form = ({ goToNextStep }) => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Minimum 8 caractères"
+            required
           />
           <Button
             type="button"
@@ -178,8 +188,10 @@ const Step1Form = ({ goToNextStep }) => {
             )}
           </Button>
         </div>
-        {shouldShowError('password') && (
+        {shouldShowError('password') ? (
           <p className="text-red-400 text-xs mt-1">{getErrorMessage('password')}</p>
+        ) : (
+          <p className="text-gray-500 text-xs mt-1">Champ requis - Minimum 8 caractères</p>
         )}
         
         {/* Indicateur de force du mot de passe */}
