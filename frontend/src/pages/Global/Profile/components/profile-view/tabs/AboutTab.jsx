@@ -85,24 +85,39 @@ const AboutTab = ({ userData, isPublicProfile = false, documents = [] }) => {
       setIsDownloading(true);
       try {
         const blob = await documentService.downloadDocument(finalCvDocument.id);
+        
+        // Ensure we have a valid blob
+        if (!(blob instanceof Blob)) {
+          throw new Error('Invalid document format received');
+        }
+
+        // Create a safe filename
+        const fileName = finalCvDocument.name || 'cv.pdf';
+        const safeFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
+
+        // Create and click a download link
         const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = url;
-        a.download = finalCvDocument.name || 'cv.pdf';
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = safeFileName;
+        document.body.appendChild(link);
+        link.click();
+        
+        // Cleanup
+        setTimeout(() => {
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(link);
+        }, 100);
+
         toast.success('CV téléchargé avec succès');
       } catch (error) {
         console.error('Erreur lors du téléchargement du CV:', error);
-        toast.error('Échec du téléchargement du CV');
+        toast.error(error.message || 'Erreur lors du téléchargement du CV');
       } finally {
         setIsDownloading(false);
       }
     }
-    // Si nous avons un chemin de fichier direct, l'ouvrir
+    // Si nous avons juste un lien direct vers le CV
     else if (cvFilePath) {
       window.open(cvFilePath, '_blank');
     } else {

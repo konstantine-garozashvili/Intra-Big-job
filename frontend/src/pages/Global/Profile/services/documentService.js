@@ -2,8 +2,8 @@ import axios from 'axios';
 import authService from '@services/authService';
 import apiService from '@/lib/services/apiService';
 
-// Updated to use the base URL without /api as the prefix is already added in apiService
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// Base URL with /api suffix to match other services
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 // Simple event emitter for document updates
 export const documentEvents = {
@@ -220,14 +220,25 @@ class DocumentService {
         responseType: 'blob'
       };
       
-      // Use apiService.get with raw: true option
-      const response = await axios.get(
-        `${API_URL}/api/documents/${documentId}/download`,
-        config
-      );
+      // Use the correct endpoint path without additional /api prefix
+      const url = `${API_URL}/documents/${documentId}/download`;
+      console.log('Downloading document from:', url); // Debug log
+      
+      const response = await axios.get(url, config);
+      
+      if (!(response.data instanceof Blob)) {
+        throw new Error('Invalid response format');
+      }
       
       return response.data;
     } catch (error) {
+      console.error('Download error:', error); // Debug log
+      if (error.response) {
+        const errorMessage = error.response.data instanceof Blob 
+          ? 'Erreur lors du téléchargement'
+          : error.response.data?.message || 'Erreur lors du téléchargement';
+        throw new Error(errorMessage);
+      }
       throw error;
     }
   }
