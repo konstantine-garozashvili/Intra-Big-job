@@ -105,34 +105,8 @@ const FormationLayout = ({
       {/* Background */}
       <CosmicBackground colorMode={colorMode} animationMode="cosmic" />
       
-      {/* Navigation */}
-      <nav className="fixed top-0 left-0 w-full z-40 transition-all duration-300">
-        <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-          <div className="flex items-center space-x-4">
-            <Link to="/all-formations">
-              <motion.button
-                className={`py-2 px-4 rounded-lg ${colors.light} hover:bg-opacity-10 hover:bg-white`}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                Toutes les formations
-              </motion.button>
-            </Link>
-            <Link to="/register">
-              <motion.button
-                className={`py-2 px-4 rounded-lg text-white ${colors.button}`}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                S'inscrire à cette formation
-              </motion.button>
-            </Link>
-          </div>
-        </div>
-      </nav>
-      
       {/* Header Section */}
-      <header className="pt-28 pb-20 px-4 relative">
+      <header className="pt-32 pb-20 px-4 relative">
         <div 
           className="absolute inset-0 z-0"
           style={{
@@ -150,6 +124,18 @@ const FormationLayout = ({
             animate="visible"
             className="text-center max-w-4xl mx-auto"
           >
+            <div className="flex items-center justify-center mb-8">
+              <Link to="/all-formations" className="mr-4">
+                <motion.button
+                  className={`py-2 px-4 rounded-lg ${colors.light} hover:bg-opacity-10 hover:bg-white`}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Toutes les formations
+                </motion.button>
+              </Link>
+            </div>
+            
             <div className={`w-20 h-20 ${colors.accent} rounded-full mx-auto flex items-center justify-center mb-6`}>
               <span className="text-4xl">{icon}</span>
             </div>

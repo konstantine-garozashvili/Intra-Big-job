@@ -61,67 +61,6 @@ const SkillAssessment = () => {
         />
       </div>
       
-      {/* Navigation */}
-      <nav className="fixed top-0 left-0 w-full z-40 backdrop-blur-md bg-opacity-30 border-b border-white/10" style={{ backgroundColor: colorMode === 'navy' ? 'rgba(0, 26, 56, 0.3)' : 'rgba(0, 0, 0, 0.3)' }}>
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center">
-            <Link to="/">
-              <motion.button
-                className={`px-4 py-2 ${currentTheme.buttonAlt} rounded-lg flex items-center gap-2 backdrop-blur-sm`}
-                whileHover={{ scale: 1.05, backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
-                </svg>
-                Retour
-              </motion.button>
-            </Link>
-          </div>
-          
-          <div className="flex items-center space-x-4">
-            {/* Theme toggle with enhanced animation */}
-            <motion.button
-              className="relative w-12 h-12 rounded-full overflow-hidden border border-white/20 backdrop-blur-sm"
-              whileHover={{ scale: 1.1, boxShadow: '0 0 15px rgba(255, 255, 255, 0.2)' }}
-              whileTap={{ scale: 0.9 }}
-              onClick={toggleColorMode}
-            >
-              <div className={`absolute inset-0 ${colorMode === 'navy' ? 'bg-gradient-to-br from-[#0a3c6e] to-[#001a38]' : 'bg-gradient-to-br from-purple-900 to-black'} rounded-full flex items-center justify-center shadow-lg`}>
-                {colorMode === 'navy' ? (
-                  <motion.div 
-                    className="w-7 h-7 bg-blue-200 rounded-full relative overflow-hidden"
-                    initial={{ rotate: 0 }}
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                  >
-                    <div className="absolute -right-2 top-0 w-5 h-5 bg-[#001a38] rounded-full"></div>
-                  </motion.div>
-                ) : (
-                  <motion.div 
-                    className="w-7 h-7 bg-yellow-300 rounded-full relative"
-                    initial={{ rotate: 0 }}
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                  >
-                    {[...Array(8)].map((_, i) => (
-                      <div 
-                        key={i} 
-                        className="absolute w-1 h-2 bg-yellow-300 origin-bottom"
-                        style={{ 
-                          left: '50%', 
-                          top: '-20%',
-                          transform: `translateX(-50%) rotate(${i * 45}deg) translateY(-100%)` 
-                        }}
-                      ></div>
-                    ))}
-                  </motion.div>
-                )}
-              </div>
-            </motion.button>
-          </div>
-        </div>
-      </nav>
       
       {/* Main content with enhanced animations and styling */}
       <div className="relative z-10 pt-28">
