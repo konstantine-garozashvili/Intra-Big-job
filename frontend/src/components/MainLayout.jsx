@@ -533,6 +533,8 @@ const MainLayout = () => {
         {/* Only show Footer and Chat for authenticated users */}
         {isAuthenticated && (
           <>
+            {/* Show ProfileProgress only for GUEST role */}
+            {showProgress && hasRole(ROLES.GUEST) && <ProfileProgress />}
             <Footer />
             <RoleGuard roles={[ROLES.STUDENT, ROLES.TEACHER]}>
               <ChatButton />
