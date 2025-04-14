@@ -172,27 +172,8 @@ const CVUpload = memo(({ userData, onUpdate }) => {
     
     deleteCV(cvDocument.id);
     
-    // Envoyer la notification de suppression via Mercure
-    fetch(`${import.meta.env.VITE_API_URL}/notify-document-deletion`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
-      body: JSON.stringify({
-        documentId: documentInfo.id,
-        documentName: documentInfo.name,
-        userId: userData?.id,
-        userName: `${userData?.firstName} ${userData?.lastName}`,
-        deletedBy: `${userData?.firstName} ${userData?.lastName}`,
-        notifyAdmin: false // Mettre à true si les administrateurs doivent être notifiés de la suppression
-      })
-    })
-    .catch(error => {
-      console.error('Erreur lors de l\'envoi de la notification de suppression:', error);
-    });
-    
-    // Ajouter une notification locale pour une réponse immédiate
+    // Créer directement une notification locale sans appeler l'API externe
+    // qui cause les problèmes CORS
     const mockNotification = {
       id: Date.now(),
       title: 'Document supprimé',
@@ -208,6 +189,16 @@ const CVUpload = memo(({ userData, onUpdate }) => {
       notificationService.cache.notifications.notifications.unshift(mockNotification);
       notificationService.cache.unreadCount = (notificationService.cache.unreadCount || 0) + 1;
       notificationService.notifySubscribers();
+      
+      // Afficher également un toast pour notification immédiate
+      toast.info(mockNotification.message, {
+        action: {
+          label: 'Voir tous',
+          onClick: () => {
+            window.location.href = mockNotification.targetUrl;
+          }
+        }
+      });
     }
     
   }, [cvDocument, deleteCV, userData]);

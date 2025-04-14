@@ -45,10 +45,38 @@ class NotificationService {
       }
       
       // Récupérer les informations du hub Mercure depuis l'API
-      const infoResponse = await apiService.get('/mercure-info');
+      let mercureUrl;
+      try {
+        // Essayer d'abord avec la variable d'environnement
+        mercureUrl = import.meta.env.VITE_HUB_URL;
+        
+        if (!mercureUrl) {
+          // Si pas dans les variables d'environnement, demander à l'API
+          const baseUrl = import.meta.env.VITE_API_URL.replace('/api', '');
+          const response = await fetch(`${baseUrl}/mercure-info`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Failed to get Mercure info: ${response.status}`);
+          }
+          
+          const data = await response.json();
+          mercureUrl = data.mercure_public_url;
+        }
+      } catch (error) {
+        console.error('Error getting Mercure URL:', error);
+        this.useMockBackend = true;
+        return false;
+      }
       
-      if (!infoResponse.data || !infoResponse.data.mercure_public_url) {
+      if (!mercureUrl) {
         console.error('Failed to get Mercure hub URL');
+        this.useMockBackend = true;
         return false;
       }
       
@@ -57,11 +85,12 @@ class NotificationService {
       
       if (!user || !user.id) {
         console.log('No authenticated user, skipping Mercure subscription');
+        this.useMockBackend = true;
         return false;
       }
       
       // Stocker l'URL du hub Mercure
-      this.mercureUrl = infoResponse.data.mercure_public_url;
+      this.mercureUrl = mercureUrl;
       
       // Construire les topics auxquels s'abonner
       this.mercureTopics = [
@@ -90,6 +119,7 @@ class NotificationService {
       this.mercureEventSource.onopen = () => {
         console.log('Mercure connection established');
         clearTimeout(this.mercureReconnectTimer);
+        this.useMockBackend = false;
       };
       
       this.mercureEventSource.onerror = (err) => {
@@ -109,6 +139,7 @@ class NotificationService {
       return true;
     } catch (error) {
       console.error('Error initializing Mercure:', error);
+      this.useMockBackend = true;
       return false;
     }
   }
@@ -552,7 +583,7 @@ class NotificationService {
         // Calculer le compteur actuel basé sur les notifications en cache
         let currentCount = 0;
         if (this.cache.notifications && this.cache.notifications.notifications) {
-          currentCount = this.cache.notifications.notifications.filter(n => !n.readAt).length;
+          currentCount = this.cache.notifications.notifications.filter(n => !n.readAt && !n.isRead).length;
           // Mettre à jour le cache immédiatement
           this.cache.unreadCount = currentCount;
           // Notifier les abonnés immédiatement avec le compteur à jour
@@ -571,35 +602,22 @@ class NotificationService {
         }
       }
 
-      try {
-        // Essayez d'abord d'utiliser l'API réelle
-        const response = await apiService.get('/api/notifications/unread-count');
-        this.cache.unreadCount = response.data.count || 0;
-        this.cache.lastFetch = new Date();
-        
-        // Notify subscribers
-        this.notifySubscribers();
-        
-        return this.cache.unreadCount;
-      } catch (error) {
-        // Si l'accès à l'API échoue, calculez le nombre de notifications non lues dans le cache
-        // en utilisant la propriété readAt de manière cohérente
-        let unreadCount = 0;
-        
-        if (this.cache.notifications && this.cache.notifications.notifications) {
-          unreadCount = this.cache.notifications.notifications.filter(n => !n.readAt).length;
-        }
-        
-        this.cache.unreadCount = unreadCount;
-        this.cache.lastFetch = new Date();
-        
-        // Notify subscribers
-        this.notifySubscribers();
-        
-        return unreadCount;
+      // Calculer le nombre à partir du cache local, car l'API n'existe plus
+      let unreadCount = 0;
+      
+      if (this.cache.notifications && this.cache.notifications.notifications) {
+        unreadCount = this.cache.notifications.notifications.filter(n => !n.readAt && !n.isRead).length;
       }
+      
+      this.cache.unreadCount = unreadCount;
+      this.cache.lastFetch = new Date();
+      
+      // Notify subscribers
+      this.notifySubscribers();
+      
+      return unreadCount;
     } catch (error) {
-      console.error('Error fetching unread notification count:', error);
+      console.error('Error calculating unread notification count:', error);
       return 0; // Toujours retourner 0 par défaut en cas d'erreur
     }
   }
