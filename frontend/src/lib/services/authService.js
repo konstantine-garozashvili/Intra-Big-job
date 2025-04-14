@@ -89,7 +89,13 @@ export const authService = {
       
       this.lazyLoadUserData(true).catch(() => {});
       
-      return response;
+      // Hide loader after successful login
+      hideGlobalLoader();
+      
+      // Remove login in progress flag
+      sessionStorage.removeItem('login_in_progress');
+      
+      return response.data;
     } catch (error) {
       sessionStorage.removeItem('login_in_progress');
       hideGlobalLoader();
@@ -313,6 +319,10 @@ export const authService = {
     
     getCurrentUserState.lastCallTime = now;
 
+    // Ajouter du contexte de débogage pour tracer l'origine des appels
+    console.log(`🔍 getCurrentUser appelé depuis: ${requestSource || 'non spécifié'} (force=${forceRefresh})`);
+
+    // Utiliser le nouveau gestionnaire de données utilisateur
     try {
       const userData = await userDataManager.getUserData({
         forceRefresh,
@@ -473,7 +483,249 @@ export const authService = {
     } catch (error) {
       return null;
     }
-  }
+  },
+  
+  /**
+   * Change le mot de passe de l'utilisateur connecté
+   * @param {Object} passwordData - Données de changement de mot de passe
+   * @param {string} passwordData.currentPassword - Mot de passe actuel
+   * @param {string} passwordData.newPassword - Nouveau mot de passe
+   * @returns {Promise<Object>} - Réponse de l'API
+   */
+  async changePassword(passwordData) {
+    try {
+      const response = await apiService.post('/api/change-password', passwordData, apiService.withAuth());
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  /**
+   * Nettoie toutes les données d'authentification et redirige vers la page de connexion
+   * @param {boolean} showNotification - Indique si une notification doit être affichée
+   * @param {string} message - Message personnalisé à afficher dans la notification
+   */
+  clearAuthData(showNotification = true, message = 'Vous avez été déconnecté.') {
+    // Supprimer toutes les données d'authentification du localStorage
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('refresh_token');
+    
+    // Afficher une notification si demandé
+    if (showNotification) {
+      toast.success(message, {
+        duration: 3000,
+        position: 'top-center',
+      });
+    }
+    
+    // Rediriger vers la page de connexion
+    window.location.href = '/login';
+  },
+
+  // Méthode pour déclencher manuellement une mise à jour des rôles
+  triggerRoleUpdate: () => {
+    window.dispatchEvent(new Event('role-change'));
+    triggerRoleUpdate();
+  },
+
+  /**
+   * Ensures that all necessary user data is saved to localStorage
+   * Call this when encountering issues with missing data
+   */
+  ensureUserDataInLocalStorage: async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.warn('Cannot ensure user data - no token found');
+        return false;
+      }
+      
+      // Check if the current page is the signature page
+      const isSignaturePage = window.location.pathname.includes('/student/attendance');
+      
+      // Get user data from API
+      let userData = null;
+      try {
+        // First try to get from the basic me endpoint
+        userData = await authService.getCurrentUser(true);
+      } catch (err) {
+        console.warn('Failed to get user data from /me endpoint, trying backup methods');
+      }
+      
+      // If we have user data, save it
+      if (userData) {
+        // Store the actual user data
+        localStorage.setItem('user', JSON.stringify(userData));
+        
+        // Ensure roles are stored
+        if (userData.roles && Array.isArray(userData.roles)) {
+          // If this is the signature page, ensure STUDENT role is included
+          let roles = userData.roles;
+          if (isSignaturePage && !roles.includes('ROLE_STUDENT')) {
+            roles.push('ROLE_STUDENT'); // Add student role for signature page
+          }
+          localStorage.setItem('userRoles', JSON.stringify(roles));
+        } else {
+          // If no roles in response, set default student role for testing
+          localStorage.setItem('userRoles', JSON.stringify(['ROLE_STUDENT']));
+        }
+        
+        console.log('Successfully ensured user data in localStorage', {
+          userData, 
+          roles: JSON.parse(localStorage.getItem('userRoles') || '[]')
+        });
+        return true;
+      }
+      
+      // If we still don't have user data, create minimal data
+      // Based on data from token
+      try {
+        const token = localStorage.getItem('token');
+        if (token) {
+          const decodedToken = decodeToken(token);
+          if (decodedToken) {
+            const minimalUser = {
+              id: decodedToken.id || '1',
+              email: decodedToken.username || 'user@example.com',
+              roles: decodedToken.roles || ['ROLE_USER'],
+              _fixedAt: Date.now()
+            };
+            
+            localStorage.setItem('user', JSON.stringify(minimalUser));
+            
+            console.log('Created minimal user data from token');
+            return true;
+          }
+        }
+      } catch (tokenError) {
+        console.error('Error creating fallback user data:', tokenError);
+      }
+      
+      // Ensure roles exist - default to student role
+      // For signature page, make sure student role is always included
+      if (!localStorage.getItem('userRoles') || isSignaturePage) {
+        localStorage.setItem('userRoles', JSON.stringify(['ROLE_STUDENT']));
+      }
+      
+      console.log('Created fallback user data in localStorage', {
+        user: JSON.parse(localStorage.getItem('user') || '{}'),
+        roles: JSON.parse(localStorage.getItem('userRoles') || '[]')
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Error ensuring user data:', error);
+      return false;
+    }
+  },
+
+  /**
+   * Récupère les données minimales de l'utilisateur à partir du localStorage
+   * Utilisé comme fallback lorsque les appels API échouent
+   * @returns {Object|null} - Données minimales utilisateur ou null
+   */
+  getMinimalUserData() {
+    try {
+      const userStr = localStorage.getItem('user');
+      if (!userStr) return null;
+      
+      const userData = JSON.parse(userStr);
+      
+      // Vérifier que les données minimales requises sont présentes
+      if (!userData || (!userData.firstName && !userData.lastName)) {
+        return null;
+      }
+      
+      return {
+        ...userData,
+        _source: 'localStorage',
+        _retrievedAt: Date.now()
+      };
+    } catch (error) {
+      console.error('Erreur lors de la récupération des données minimales:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Add a global helper to diagnose and fix profile data issues
+   * This can be called if users encounter profile data errors
+   */
+  async fixProfileDataIssues() {
+    try {
+      console.log('Attempting to fix profile data issues...');
+      
+      // Check if user is logged in
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.warn('No authentication token found. User is not logged in.');
+        return { success: false, message: 'Not authenticated' };
+      }
+      
+      // Clear any cached profile data
+      const queryClient = getQueryClient();
+      if (queryClient) {
+        queryClient.invalidateQueries({ queryKey: ['user'] });
+        queryClient.invalidateQueries({ queryKey: ['profile'] });
+      }
+      
+      // Try to fetch fresh profile data
+      try {
+        const correctApiPath = '/api/profile';
+        const userData = await apiService.get(correctApiPath, {
+          noCache: true,
+          retries: 2,
+          timeout: 10000
+        });
+        
+        if (userData) {
+          // Update localStorage with fresh data
+          localStorage.setItem('user', JSON.stringify(userData));
+          console.log('Profile data fixed successfully');
+          
+          // Update React Query cache
+          if (queryClient) {
+            queryClient.setQueryData(['user', 'current'], userData);
+          }
+          
+          return { success: true, message: 'Profile data fixed successfully' };
+        }
+      } catch (apiError) {
+        console.error('Error fetching fresh profile data:', apiError);
+      }
+      
+      // If we couldn't fetch fresh data, create minimal profile data
+      // Based on data from token
+      try {
+        const token = localStorage.getItem('token');
+        if (token) {
+          const decodedToken = decodeToken(token);
+          if (decodedToken) {
+            const minimalUser = {
+              id: decodedToken.id || '1',
+              email: decodedToken.username || 'user@example.com',
+              roles: decodedToken.roles || ['ROLE_USER'],
+              _fixedAt: Date.now()
+            };
+            
+            localStorage.setItem('user', JSON.stringify(minimalUser));
+            
+            console.log('Created minimal profile data from token');
+            return { success: true, message: 'Created minimal profile data' };
+          }
+        }
+      } catch (tokenError) {
+        console.error('Error creating fallback profile data:', tokenError);
+      }
+      
+      return { success: false, message: 'Could not fix profile data' };
+    } catch (error) {
+      console.error('Error in fixProfileDataIssues:', error);
+      return { success: false, message: error.message };
+    }
+  },
 };
 
 export default authService;

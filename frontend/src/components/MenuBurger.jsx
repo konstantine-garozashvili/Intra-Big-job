@@ -238,14 +238,14 @@ const MenuBurger = memo(() => {
       label: 'Notifications',
       icon: <Bell className="w-5 h-5 mr-2 text-[#528eb2]" />,
       roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.STUDENT],
-      to: '/notifications',
+      to: '#',
     },
     {
       key: 'messagerie',
       label: 'Messagerie',
       icon: <MessageCircle className="w-5 h-5 mr-2 text-[#528eb2]" />,
       roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.STUDENT, ROLES.RECRUITER],
-      to: '/messagerie',
+      to: '#',
     },
     {
       key: 'trombinoscope',
@@ -277,14 +277,14 @@ const MenuBurger = memo(() => {
       label: 'Mes Cours',
       icon: <Clipboard className="w-5 h-5 mr-2 text-[#528eb2]" />,
       roles: [ROLES.STUDENT, ROLES.TEACHER],
-      to: '/cours',
+      to: '#',
     },
     {
       key: 'projet',
       label: 'Mes Projets',
       icon: <Briefcase className="w-5 h-5 mr-2 text-[#528eb2]" />,
       roles: [ROLES.STUDENT, ROLES.TEACHER],
-      to: '/projet',
+      to: '#',
     },
     {
       key: 'formations_management',
@@ -298,7 +298,7 @@ const MenuBurger = memo(() => {
       label: 'Justifier une absence',
       icon: <Clipboard className="w-5 h-5 mr-2 text-[#528eb2]" />,
       roles: [ROLES.STUDENT],
-      to: '/justification-absence',
+      to: '#',
     },
     
     // --- SECTION PLANIFICATION ---
@@ -355,14 +355,14 @@ const MenuBurger = memo(() => {
       label: 'Cagnottes',
       icon: <PiggyBank className="w-5 h-5 mr-2 text-[#528eb2]" />,
       roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.STUDENT],
-      to: '/cagnottes',
+      to: '#',
     },
     {
       key: 'sponsors',
       label: 'Sponsors',
       icon: <Handshake className="w-5 h-5 mr-2 text-[#528eb2]" />,
       roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.STUDENT],
-      to: '/sponsors',
+      to: '#',
     },
     
     // --- SECTION ADMINISTRATION ET GESTION (Regroupé par type d'utilisateur) ---
@@ -428,10 +428,10 @@ const MenuBurger = memo(() => {
       ],
     },
     {
-      key: 'roles_management',
-      label: 'Gestion des rôles',
-      icon: <UserPlus className="w-5 h-5 mr-2 text-[#528eb2]" />,
-      roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.RECRUITER],
+      key: 'guest_student_roles',
+      label: 'Gestion Invité/Élève',
+      icon: <Users className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.RECRUITER],
       to: '/recruiter/guest-student-roles',
     },
     {

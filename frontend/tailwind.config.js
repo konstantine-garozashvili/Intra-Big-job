@@ -78,35 +78,74 @@ export default {
   					height: '0'
   				}
   			},
-        'fadeIn': {
-          from: {
-            opacity: '0'
-          },
-          to: {
-            opacity: '1'
-          }
-        },
-        'fadeInUp': {
-          from: {
-            opacity: '0',
-            transform: 'translateY(10px)'
-          },
-          to: {
-            opacity: '1',
-            transform: 'translateY(0)'
-          }
-        }
+  			'fadeIn': {
+  				from: {
+  					opacity: '0'
+  				},
+  				to: {
+  					opacity: '1'
+  				}
+  			},
+  			'fadeInUp': {
+  				from: {
+  					opacity: '0',
+  					transform: 'translateY(10px)'
+  				},
+  				to: {
+  					opacity: '1',
+  					transform: 'translateY(0)'
+  				}
+  			},
+  			'twinkle': {
+  				'0%, 100%': {
+  					opacity: '0.2'
+  				},
+  				'50%': {
+  					opacity: '1'
+  				}
+  			},
+  			'rotate-y': {
+  				'0%': {
+  					transform: 'rotateY(0deg)'
+  				},
+  				'100%': {
+  					transform: 'rotateY(180deg)'
+  				}
+  			}
   		},
   		animation: {
   			'accordion-down': 'accordion-down 0.2s ease-out',
   			'accordion-up': 'accordion-up 0.2s ease-out',
-        'fadeIn': 'fadeIn 0.3s ease-in-out',
-        'fadeInUp': 'fadeInUp 0.3s ease-in-out'
+  			'fadeIn': 'fadeIn 0.3s ease-in-out',
+  			'fadeInUp': 'fadeInUp 0.3s ease-in-out',
+  			'twinkle': 'twinkle 3s ease-in-out infinite',
+  			'rotate-y-180': 'rotate-y 0.6s ease-in-out forwards'
+  		},
+  		transformStyle: {
+  			'3d': 'preserve-3d'
+  		},
+  		backfaceVisibility: {
+  			hidden: 'hidden'
   		}
-  	}
+  	},
   },
   plugins: [
     require('tailwind-scrollbar-hide'),
-    require("tailwindcss-animate")
+    require("tailwindcss-animate"),
+    function ({ addUtilities }) {
+      const newUtilities = {
+        '.backface-hidden': {
+          'backface-visibility': 'hidden',
+          '-webkit-backface-visibility': 'hidden',
+        },
+        '.transform-style-3d': {
+          'transform-style': 'preserve-3d',
+        },
+        '.rotate-y-180': {
+          transform: 'rotateY(180deg)',
+        },
+      };
+      addUtilities(newUtilities);
+    },
   ],
 };

@@ -79,27 +79,27 @@ const PhoneInput = forwardRef(({
   const isValid = !value || isValidPhone(value);
   
   return (
-    <div className={cn("w-full space-y-1.5", className)} {...props}>
-      {label && <Label htmlFor={id}>{label}</Label>}
-      <div className={cn(
-        "phone-input-fr",
-        error || !isValid ? "error" : "",
-        disabled && "opacity-50 pointer-events-none"
-      )}>
-        <input
-          id={id}
-          ref={ref}
-          type="tel"
-          value={displayValue}
-          onChange={handleChange}
-          className={cn("flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm w-full")}
-          placeholder={placeholder}
-          disabled={disabled}
-          inputMode="numeric"
-          autoComplete="tel-national"
-          name="phoneNumber"
-        />
-      </div>
+    <div className="w-full">
+      {label && <Label htmlFor={id} className="block text-sm font-medium text-blue-300 mb-1">{label}</Label>}
+      <input
+        id={id}
+        ref={ref}
+        type="tel"
+        value={displayValue}
+        onChange={handleChange}
+        className={cn(
+          "w-full px-4 py-3 rounded-md border bg-gray-800/50 text-white placeholder-gray-400",
+          "focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none",
+          error || !isValid ? "border-red-500" : "border-gray-700",
+          disabled && "opacity-50 cursor-not-allowed",
+          className
+        )}
+        placeholder={placeholder}
+        disabled={disabled}
+        inputMode="numeric"
+        autoComplete="tel-national"
+        name="phoneNumber"
+      />
       {error && (
         <p className="text-red-500 text-xs mt-1">{error}</p>
       )}

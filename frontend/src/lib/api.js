@@ -45,6 +45,9 @@ export const adresseApi = {
         autocomplete: 1
       };
       
+      // DEBUG: Log the query being sent to the API
+      console.log('[adresseApi.searchAddress] Sending query:', trimmedQuery, 'Params:', params);
+      
       const response = await addressApiInstance.get(`/search`, { params });
       
       if (!response.data || !response.data.features || response.data.features.length === 0) {

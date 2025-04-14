@@ -19,7 +19,7 @@ import { lazyComponents } from './lazyComponents';
 const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <ThemeProvider>
           <AuthProvider>
             {/* Initialisation des services et configurations */}

@@ -8,6 +8,7 @@ import { useUserData, useValidation } from "../RegisterContext";
 import 'react-calendar/dist/Calendar.css';
 import '../../../styles/custom-calendar.css'; // Import du CSS personnalisé pour le calendrier
 import { isValidPhone } from "@/lib/utils/validation";
+import { motion } from "framer-motion";
 
 // Chargement dynamique du calendrier pour améliorer les performances
 const Calendar = lazy(() => import('react-calendar'));
@@ -92,19 +93,24 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
   };
 
   return (
-    <div className="space-y-6">
+    <motion.div 
+      className="space-y-6"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.4 }}
+    >
       {/* Date de naissance */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Date de naissance
+        <label className="block text-sm font-medium text-blue-300 mb-1">
+          Date de naissance <span className="text-red-400">*</span>
         </label>
         <div className="relative">
           <div 
-            className={`w-full px-4 py-3 rounded-md border flex items-center cursor-pointer transition-colors hover:border-[#0066ff] ${shouldShowError('birthDate') ? 'border-red-500' : 'border-gray-300'}`}
+            className={`w-full px-4 py-3 rounded-md border flex items-center cursor-pointer transition-colors hover:border-[#0066ff] ${shouldShowError('birthDate') ? 'border-red-500' : 'border-gray-700'}`}
             onClick={() => setCalendarOpen(true)}
           >
             {formattedBirthDate ? (
-              <span className="text-gray-900">
+              <span className="text-blue-300">
                 {formattedBirthDate}
               </span>
             ) : (
@@ -114,9 +120,9 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
           </div>
           
           <Dialog open={calendarOpen} onOpenChange={setCalendarOpen}>
-            <DialogContent className="p-0 sm:max-w-[425px] bg-white rounded-lg shadow-xl border-none overflow-hidden">
+            <DialogContent className="p-0 sm:max-w-[425px] bg-gray-800 rounded-lg shadow-xl border-none overflow-hidden">
               <div className="p-4 pb-0">
-                <DialogTitle className="text-xl font-semibold text-center text-gray-900">
+                <DialogTitle className="text-xl font-semibold text-center text-blue-300">
                   Sélectionnez votre date de naissance
                 </DialogTitle>
                 <DialogDescription className="text-sm text-center text-gray-500 mt-1">
@@ -168,71 +174,84 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
             </DialogContent>
           </Dialog>
           
-          {shouldShowError('birthDate') && (
-            <p className="text-red-500 text-xs mt-1">{getErrorMessage('birthDate')}</p>
+          {shouldShowError('birthDate') ? (
+            <p className="text-red-400 text-xs mt-1">{getErrorMessage('birthDate')}</p>
+          ) : (
+            <p className="text-gray-500 text-xs mt-1">Champ requis - Vous devez avoir au moins 16 ans</p>
           )}
         </div>
       </div>
 
       {/* Nationalité */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Nationalité
+        <label className="block text-sm font-medium text-blue-300 mb-1">
+          Nationalité <span className="text-red-400">*</span>
         </label>
         <CountrySelector
           value={nationality}
           onChange={setNationality}
           error={shouldShowError('nationality') ? getErrorMessage('nationality') : null}
+          className="w-full px-4 py-3 rounded-md border bg-gray-800/50 text-white placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500"
+          required
         />
-        {shouldShowError('nationality') && (
-          <p className="text-red-500 text-xs mt-1">{getErrorMessage('nationality')}</p>
+        {shouldShowError('nationality') ? (
+          <p className="text-red-400 text-xs mt-1">{getErrorMessage('nationality')}</p>
+        ) : (
+          <p className="text-gray-500 text-xs mt-1">Champ requis</p>
         )}
       </div>
 
       {/* Téléphone */}
       <div className="mb-6">
-        <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-          Numéro de téléphone
+        <label htmlFor="phone" className="block text-sm font-medium text-blue-300 mb-1">
+          Numéro de téléphone <span className="text-red-400">*</span>
         </label>
         <PhoneInput
           id="phone"
           value={phone}
           onChange={handlePhoneChange}
           error={shouldShowError('phone') ? getErrorMessage('phone') : null}
-          placeholder="06 12 34 56 78"
+          placeholder="+33 6 12 34 56 78"
+          className="w-full px-4 py-3 rounded-md border bg-gray-800/50 text-white placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500"
+          required
         />
-        <p className="text-xs text-gray-500 mt-1">
-          Format français uniquement (+33). Exemple: 06 12 34 56 78
-        </p>
+        {shouldShowError('phone') ? (
+          <p className="text-red-400 text-xs mt-1">{getErrorMessage('phone')}</p>
+        ) : (
+          <p className="text-gray-500 text-xs mt-1">Champ requis - Format français uniquement (+33)</p>
+        )}
       </div>
       
       {/* Boutons de navigation */}
       <div className="flex space-x-4 mt-8">
-        <Button 
+        <motion.button
           type="button"
-          variant="outline"
-          className="flex-1 h-12 bg-white text-[#02284f] border-[#02284f] hover:bg-gray-50 transition-colors"
+          className="flex-1 h-12 bg-gray-700/50 hover:bg-gray-700 text-blue-300 border border-gray-600 rounded-md flex items-center justify-center"
           onClick={goToPrevStep}
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.98 }}
         >
           <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
           Retour
-        </Button>
+        </motion.button>
         
-        <Button 
+        <motion.button
           type="button"
-          className="flex-1 h-12 bg-[#528eb2] hover:bg-[#528eb2]/90 text-white transition-colors"
+          className="flex-1 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-6 rounded-md flex items-center justify-center shadow-lg shadow-blue-900/20"
           onClick={handleNextStep}
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.98 }}
         >
           Continuer
           <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
           </svg>
-        </Button>
+        </motion.button>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
-export default Step2Form; 
+export default Step2Form;

@@ -111,28 +111,6 @@ const RoleGuard = ({
       : hasAnyRoleNormalized(effectiveRoles);
   }, [effectiveRoles, hasRoleNormalized, hasAnyRoleNormalized, isLoading, initialLoadComplete, requireAll, gracePeriod]);
   
-  // Handle side effects (toast and logging) in useEffect
-  useEffect(() => {
-    if (!roleCheckResult && !toastShownRef.current && initialLoadComplete && !gracePeriod) {
-      // Show toast notification
-      toast.error("Accès non autorisé. Vous n'avez pas les permissions nécessaires pour accéder à cette page.", {
-        duration: 4000,
-        position: 'top-center',
-      });
-      
-      toastShownRef.current = true;
-      
-      // Reset toast flag after delay
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-      
-      timeoutRef.current = setTimeout(() => {
-        toastShownRef.current = false;
-        timeoutRef.current = null;
-      }, 10000);
-    }
-  }, [roleCheckResult, effectiveRoles, requireAll, initialLoadComplete, gracePeriod, userRoles, hasRole, hasAnyRole, hasAllRoles, hasRoleNormalized, hasAnyRoleNormalized, isLoading]);
   
   if (isLoading || gracePeriod) {
     return null;

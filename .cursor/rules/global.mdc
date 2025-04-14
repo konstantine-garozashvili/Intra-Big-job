@@ -1,6 +1,11 @@
 ---
 description: 
 globs: 
+alwaysApply: false
+---
+---
+description: 
+globs: 
 alwaysApply: true
 ---
 ---
@@ -42,7 +47,7 @@ alwaysApply: true
 ### Docker-only development
 - **Severity: CRITICAL**
 - Always use Docker for development (see [Infrastructure Rules](mdc:infrastructure.mdc))
-- Never execute `npm install` directly on host; all dependencies are managed in containers
+- Never execute `npm install` or `npm run dev` directly on host; all dependencies are managed in containers
 - Never modify package.json in the frontend directory
 
 ## High Priority Rules
