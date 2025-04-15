@@ -33,6 +33,7 @@ import deduplicationService from "./lib/services/deduplicationService";
 import apiService from "./lib/services/apiService";
 import PublicProfileView from "@/pages/Global/Profile/views/PublicProfileView";
 import TranslationTest from "./components/Translation/TranslationTest";
+import NotFound from "./pages/NotFound";
 
 // Export queryClient to be used elsewhere
 export { queryClient };
@@ -271,61 +272,22 @@ function AppContent() {
                   <Route index element={<Home />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
-                  <Route
-                    path="/registration-success"
-                    element={<RegistrationSuccess />}
-                  />
-                  <Route
-                    path="/verification-success"
-                    element={<VerificationSuccess />}
-                  />
-                  <Route
-                    path="/verification-error"
-                    element={<VerificationError />}
-                  />
-                  <Route
-                    path="/reset-password"
-                    element={<ResetPasswordRequest />}
-                  />
-                  <Route
-                    path="/reset-password/confirmation"
-                    element={<ResetPasswordConfirmation />}
-                  />
-                  <Route
-                    path="/reset-password/reset"
-                    element={<ResetPassword />}
-                  />
+                  <Route path="/registration-success" element={<RegistrationSuccess />} />
+                  <Route path="/verification-success" element={<VerificationSuccess />} />
+                  <Route path="/verification-error" element={<VerificationError />} />
+                  <Route path="/reset-password" element={<ResetPasswordRequest />} />
+                  <Route path="/reset-password/confirmation" element={<ResetPasswordConfirmation />} />
+                  <Route path="/reset-password/reset" element={<ResetPassword />} />
                   <Route path="/formations" element={<FormationList />} />
-                  <Route
-                    path="/formation-finder"
-                    element={<FormationFinder />}
-                  />
+                  <Route path="/formation-finder" element={<FormationFinder />} />
                   <Route path="/all-formations" element={<AllFormations />} />
                   <Route path="/formations/web" element={<WebDevelopment />} />
-                  <Route
-                    path="/formations/ai"
-                    element={<ArtificialIntelligence />}
-                  />
-                  <Route
-                    path="/formations/cybersecurity"
-                    element={<Cybersecurity />}
-                  />
-                  <Route
-                    path="/formations/mobile"
-                    element={<MobileDevelopment />}
-                  />
-                  <Route
-                    path="/formations/data-science"
-                    element={<DataScience />}
-                  />
-                  <Route
-                    path="/formations/game"
-                    element={<GameDevelopment />}
-                  />
-                  <Route
-                    path="/skill-assessment"
-                    element={<SkillAssessment />}
-                  />
+                  <Route path="/formations/ai" element={<ArtificialIntelligence />} />
+                  <Route path="/formations/cybersecurity" element={<Cybersecurity />} />
+                  <Route path="/formations/mobile" element={<MobileDevelopment />} />
+                  <Route path="/formations/data-science" element={<DataScience />} />
+                  <Route path="/formations/game" element={<GameDevelopment />} />
+                  <Route path="/skill-assessment" element={<SkillAssessment />} />
                 </Route>
               </Route>
               <Route element={<MainLayout />}>
@@ -643,8 +605,9 @@ function AppContent() {
                 <Route path="/tickets/new" element={<TicketForm />} />
                 <Route path="/tickets/:id" element={<TicketDetail />} />
 
-                {/* Redirection des routes inconnues vers la page d'accueil */}
-                <Route path="*" element={<Navigate to="/" replace />} />
+                {/* Route 404 */}
+                <Route path="/404" element={<NotFound />} />
+                <Route path="*" element={<Navigate to="/404" replace />} />
               </Route>
             </Routes>
           </div>
