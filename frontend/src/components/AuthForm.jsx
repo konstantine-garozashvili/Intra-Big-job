@@ -315,4 +315,4 @@ const AuthFormComponent = React.forwardRef(({ onSubmit, onError }, ref) => {
 AuthFormComponent.displayName = 'AuthFormComponent'
 
 // Export with the original name for backward compatibility
-export const AuthForm = AuthFormComponent 
+export const AuthForm = AuthFormComponent

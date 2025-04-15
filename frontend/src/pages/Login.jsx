@@ -15,28 +15,11 @@ const Login = () => {
   const authFormRef = useRef();
   const navigate = useNavigate();
   const permissions = useRolePermissions();
-  const { setIsLoading } = useAuth();
 
-  // Function to handle quick login
-  const handleQuickLogin = async (role) => {
-    try {
-      setIsLoading(true);
-      const response = await authService.login({
-        username: `${role}@bigproject.com`,
-        password: 'Password123@'
-      });
-
-      if (response.token) {
-        // Attendre un court instant pour que les rôles soient chargés
-        await new Promise(resolve => setTimeout(resolve, 100));
-        const dashboardPath = permissions.getRoleDashboardPath();
-        navigate(dashboardPath, { replace: true });
-        toast.success("Connexion réussie");
-      }
-    } catch (error) {
-      toast.error('Erreur lors de la connexion rapide');
-    } finally {
-      setIsLoading(false);
+  // Function to handle quick login - just fills the form
+  const handleQuickLogin = (role) => {
+    if (authFormRef.current) {
+      authFormRef.current.quickLogin(role);
     }
   };
 
