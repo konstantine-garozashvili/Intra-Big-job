@@ -1,10 +1,8 @@
 import * as React from "react"
 import { Loader2 } from "lucide-react"
-import { Link, useNavigate } from "react-router-dom"
+import { Link } from "react-router-dom"
 import { authService } from "@/lib/services/authService"
 import { toast } from "sonner"
-import { useRolePermissions } from "@/features/roles/useRolePermissions"
-import { useRoles } from "@/features/roles/roleContext"
 
 // Separate input component to prevent re-renders of the entire form
 const FormInput = React.memo(({ 
@@ -62,7 +60,7 @@ const FormInput = React.memo(({
 
 FormInput.displayName = "FormInput"
 
-const AuthFormComponent = React.forwardRef((props, ref) => {
+const AuthFormComponent = React.forwardRef(({ onSubmit, onError }, ref) => {
   // Use a single form state object to reduce re-renders
   const [formState, setFormState] = React.useState({
     email: "",
@@ -72,9 +70,6 @@ const AuthFormComponent = React.forwardRef((props, ref) => {
   
   const [isLoading, setIsLoading] = React.useState(false)
   const [errors, setErrors] = React.useState({})
-  const navigate = useNavigate()
-  const permissions = useRolePermissions()
-  const { refreshRoles } = useRoles()
 
   // Memoize the credentials object to prevent recreation on each render
   const credentials = React.useMemo(() => ({
@@ -138,95 +133,10 @@ const AuthFormComponent = React.forwardRef((props, ref) => {
         localStorage.removeItem('rememberedEmail')
       }
       
-      // Dispatch login success event
-      window.dispatchEvent(new Event('login-success'))
-      
-      // Get the return URL if it exists
-      const returnTo = sessionStorage.getItem('returnTo')
-      
-      // Add small delay before navigation - REDUCED from 300ms to 150ms
-      setTimeout(() => {
-        if (returnTo) {
-          sessionStorage.removeItem('returnTo')
-          navigate(returnTo)
-        } else {
-          // Get role from token directly to determine dashboard path
-          const token = localStorage.getItem('token')
-          let dashboardPath = '/dashboard'
-          
-          if (token) {
-            try {
-              const tokenParts = token.split('.')
-              if (tokenParts.length === 3) {
-                const payload = JSON.parse(atob(tokenParts[1]))
-                if (payload.roles && payload.roles.length > 0) {
-                  // Determine dashboard path based on role
-                  const mainRole = payload.roles[0]
-                  switch (mainRole) {
-                    case 'ROLE_ADMIN':
-                      dashboardPath = '/admin/dashboard'
-                      break
-                    case 'ROLE_SUPERADMIN':
-                      dashboardPath = '/superadmin/dashboard'
-                      break
-                    case 'ROLE_TEACHER':
-                      dashboardPath = '/teacher/dashboard'
-                      break
-                    case 'ROLE_STUDENT':
-                      dashboardPath = '/student/dashboard'
-                      break
-                    case 'ROLE_HR':
-                      dashboardPath = '/hr/dashboard'
-                      break
-                    case 'ROLE_GUEST':
-                      dashboardPath = '/guest/dashboard'
-                      break
-                    case 'ROLE_RECRUITER':
-                      dashboardPath = '/recruiter/dashboard'
-                      break
-                    default:
-                      // En cas d'erreur, déconnexion
-                      authService.logout()
-                      navigate('/login')
-                      return
-                  }
-                }
-              }
-            } catch (error) {
-              console.error('Error parsing token:', error)
-            }
-          }
-          
-          // Navigate directly to role-specific dashboard
-          navigate(dashboardPath)
-        }
-        
-        // Show success toast after navigation
-        toast.success("Connexion réussie")
-      }, 150)
-      
-      // Listen for when full user data is loaded
-      const handleUserDataLoaded = () => {
-        refreshRoles()
-        window.removeEventListener('user-data-loaded', handleUserDataLoaded)
+      // Appeler la fonction onSubmit passée en prop
+      if (onSubmit) {
+        onSubmit(response)
       }
-      
-      window.addEventListener('user-data-loaded', handleUserDataLoaded)
-      
-      // After successful login, add some additional error handling for profile data issues
-      const fixProfileIfNeeded = setTimeout(async () => {
-        try {
-          // Check if we can access the user data
-          const user = authService.getUser();
-          if (!user || Object.keys(user).length === 0) {
-            console.warn('User data missing after login, attempting to fix...');
-            await authService.fixProfileDataIssues();
-          }
-        } catch (profileError) {
-          console.error('Error handling profile data after login:', profileError);
-          // No need to show this error to user as login was successful
-        }
-      }, 2000);
       
     } catch (error) {
       if (error.response) {
@@ -239,7 +149,7 @@ const AuthFormComponent = React.forwardRef((props, ref) => {
             description: "Veuillez vérifier votre email avant de vous connecter.",
             action: {
               label: "Renvoyer l'email",
-              onClick: () => navigate('/verification-error')
+              onClick: () => onError && onError('verification-error')
             },
             duration: 5000
           })
@@ -254,11 +164,19 @@ const AuthFormComponent = React.forwardRef((props, ref) => {
             description: "Une erreur est survenue lors de la connexion. Veuillez réessayer."
           })
         }
+        
+        if (onError) {
+          onError(error)
+        }
       } else {
         setErrors({ auth: "Une erreur est survenue lors de la connexion. Veuillez réessayer." })
         toast.error("Erreur de connexion", {
           description: "Une erreur est survenue lors de la connexion. Veuillez réessayer."
         })
+        
+        if (onError) {
+          onError(error)
+        }
       }
     } finally {
       setIsLoading(false)

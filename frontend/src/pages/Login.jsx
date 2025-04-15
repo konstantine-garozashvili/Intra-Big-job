@@ -1,19 +1,75 @@
 import React, { useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/contexts/ThemeContext';
 import { AuthForm } from '@/components/AuthForm';
 import QuickLoginButtons from '@/components/QuickLoginButtons';
 import PageTransition from '@/components/PageTransition';
+import { useRolePermissions } from '@/features/roles';
+import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
+import { authService } from '@/lib/services/authService';
 
 const Login = () => {
   const { colorMode, currentTheme } = useTheme();
   const authFormRef = useRef();
+  const navigate = useNavigate();
+  const permissions = useRolePermissions();
+  const { setIsLoading } = useAuth();
 
-  // Function to handle quick login and pass to the auth form
-  const handleQuickLogin = (role) => {
-    if (authFormRef.current && authFormRef.current.quickLogin) {
-      authFormRef.current.quickLogin(role);
+  // Function to handle quick login
+  const handleQuickLogin = async (role) => {
+    try {
+      setIsLoading(true);
+      const response = await authService.login({
+        username: `${role}@bigproject.com`,
+        password: 'Password123@'
+      });
+
+      if (response.token) {
+        // Attendre un court instant pour que les rôles soient chargés
+        await new Promise(resolve => setTimeout(resolve, 100));
+        const dashboardPath = permissions.getRoleDashboardPath();
+        navigate(dashboardPath, { replace: true });
+        toast.success("Connexion réussie");
+      }
+    } catch (error) {
+      toast.error('Erreur lors de la connexion rapide');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Function to handle form submission
+  const handleSubmit = async (response) => {
+    try {
+      // Attendre un court instant pour que les rôles soient chargés
+      await new Promise(resolve => setTimeout(resolve, 100));
+      const dashboardPath = permissions.getRoleDashboardPath();
+      navigate(dashboardPath, { replace: true });
+      toast.success("Connexion réussie");
+
+      // After successful login, add some additional error handling for profile data issues
+      setTimeout(async () => {
+        try {
+          const user = authService.getUser();
+          if (!user || Object.keys(user).length === 0) {
+            console.warn('User data missing after login, attempting to fix...');
+            await authService.fixProfileDataIssues();
+          }
+        } catch (profileError) {
+          console.error('Error handling profile data after login:', profileError);
+        }
+      }, 2000);
+    } catch (error) {
+      console.error('Error during login:', error);
+    }
+  };
+
+  // Function to handle form errors
+  const handleError = (error) => {
+    if (error === 'verification-error') {
+      navigate('/verification-error');
     }
   };
 
@@ -93,7 +149,11 @@ const Login = () => {
                 transition={{ duration: 1, delay: 0.5 }}
               />
               <div className="relative bg-gray-900/80 backdrop-blur-sm p-8 rounded-2xl shadow-2xl border border-blue-500/30">
-                <AuthForm ref={authFormRef} />
+                <AuthForm 
+                  ref={authFormRef}
+                  onSubmit={handleSubmit}
+                  onError={handleError}
+                />
               </div>
             </motion.div>
           </div>

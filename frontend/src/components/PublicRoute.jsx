@@ -1,6 +1,7 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { authService } from '@/lib/services/authService';
 import { useEffect, useState, useRef } from 'react';
+import { useRolePermissions } from '@/features/roles';
 
 /**
  * Composant pour protéger les routes publiques (login, register, etc.)
@@ -12,6 +13,7 @@ const PublicRoute = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const lastAuthState = useRef(false);
   const isProcessingRef = useRef(false);
+  const permissions = useRolePermissions();
   
   useEffect(() => {
     const checkAuth = async () => {
@@ -53,9 +55,10 @@ const PublicRoute = () => {
     return null;
   }
 
-  // Si l'utilisateur est authentifié, rediriger vers la page 404
+  // Si l'utilisateur est authentifié, rediriger vers le tableau de bord approprié
   if (isAuthenticated) {
-    return <Navigate to="/404" replace />;
+    const dashboardPath = permissions.getRoleDashboardPath();
+    return <Navigate to={dashboardPath} replace />;
   }
 
   // Si l'utilisateur n'est pas authentifié, afficher la page publique
