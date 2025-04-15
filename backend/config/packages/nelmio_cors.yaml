@@ -9,20 +9,6 @@ nelmio_cors:
         allow_credentials: true
         max_age: 3600
     paths:
-        # Règles spécifiques (priorité plus élevée)
-        '^/api/signatures/today':
-            allow_origin: ['http://localhost:5173', 'http://localhost:8000']
-            allow_headers: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
-            allow_methods: ['GET', 'OPTIONS', 'POST', 'PUT', 'PATCH', 'DELETE']
-            allow_credentials: true
-            max_age: 3600
-        '^/api/signatures':
-            allow_origin: ['http://localhost:5173', 'http://localhost:8000']
-            allow_headers: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
-            allow_methods: ['GET', 'OPTIONS', 'POST', 'PUT', 'PATCH', 'DELETE']
-            allow_credentials: true
-            max_age: 3600
-        # Règles génériques (priorité plus basse)
         '^/api/':
             allow_origin: ['http://localhost:5173', 'http://localhost:8000']
             allow_headers: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
