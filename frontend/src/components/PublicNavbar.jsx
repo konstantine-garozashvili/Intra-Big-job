@@ -21,10 +21,10 @@ const PublicNavbar = () => {
         <div className="flex items-center">
           <Link to="/" className="flex items-center">
             <motion.div
-              className="text-2xl font-bold text-white"
-              initial={{ opacity: 0, x: -20 }}
+              className="text-2xl font-bold text-white opacity-100"
+              initial={{ opacity: 1, x: 0 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5 }}
+              transition={{ duration: 0.3 }}
             >
               Big<span className="text-[#528eb2]">Project</span>
             </motion.div>
