@@ -5,40 +5,28 @@ ErrorLog /home/u817324220/domains/peru-ape-766379.hostingersite.com/logs/error.l
 RewriteLog "/home/u817324220/domains/peru-ape-766379.hostingersite.com/logs/rewrite.log"
 RewriteLogLevel 9
 
-<IfModule mod_rewrite.c>
-    RewriteEngine On
-    Options +FollowSymLinks
-    
-    # Permettre l'accès à tous les fichiers statiques
-    RewriteCond %{REQUEST_FILENAME} -f [OR]
-    RewriteCond %{REQUEST_FILENAME} -d
-    RewriteRule ^ - [L]
-    
-    # Servir les assets frontend depuis dist/assets
-    RewriteCond %{REQUEST_URI} ^/assets/
-    RewriteRule ^assets/(.*)$ frontend/dist/assets/$1 [L]
-    
-    # Servir favicon et autres fichiers statiques
-    RewriteCond %{REQUEST_URI} ^/favicon.webp$
-    RewriteRule ^(.*)$ frontend/dist/favicon.webp [L]
-    
-    # Requêtes API vers le backend
-    RewriteCond %{REQUEST_URI} ^/api/
-    RewriteRule ^(.*)$ backend/public/index.php [QSA,L]
-    
-    # Routes pour React Router - doit être en dernier
-    RewriteRule ^(.*)$ frontend/dist/index.html [L]
-    
-    # Protection des fichiers sensibles
-    RewriteCond %{REQUEST_URI} ^/backend/\.env$
-    RewriteCond %{REQUEST_URI} ^/backend/\.env\.local$
-    RewriteCond %{REQUEST_URI} ^/backend/vendor/$
-    RewriteCond %{REQUEST_URI} ^/backend/src/$
-    RewriteCond %{REQUEST_URI} ^/backend/config/$
-    RewriteRule ^ - [F,L]
-</IfModule>
+# Enable rewrite engine
+RewriteEngine On
 
-# Configuration PHP avec logging
+# Set the base for rewrites
+RewriteBase /
+
+# Allow direct access to existing files and directories
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Handle API requests
+RewriteCond %{REQUEST_URI} ^/api/
+RewriteRule ^api/(.*)$ backend/public/index.php [QSA,L]
+
+# Redirect all other requests to index.html
+RewriteCond %{REQUEST_URI} !^/backend/
+RewriteCond %{REQUEST_URI} !^/frontend/dist/assets/
+RewriteCond %{REQUEST_URI} !^/assets/
+RewriteRule ^(.*)$ frontend/dist/index.html [L]
+
+# PHP settings
 <IfModule mod_php.c>
     php_value upload_max_filesize 10M
     php_value post_max_size 10M
@@ -48,22 +36,48 @@ RewriteLogLevel 9
     php_flag log_errors on
 </IfModule>
 
+# Enable CORS
+Header set Access-Control-Allow-Origin "*"
+Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+Header set Access-Control-Allow-Headers "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+
+# Security headers
+Header set X-Content-Type-Options "nosniff"
+Header set X-XSS-Protection "1; mode=block"
+Header set X-Frame-Options "SAMEORIGIN"
+Header set Referrer-Policy "strict-origin-when-cross-origin"
+
 # Compression
 <IfModule mod_deflate.c>
-    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
+    AddOutputFilterByType DEFLATE text/plain text/html text/xml text/css text/javascript application/xml application/xhtml+xml application/rss+xml application/javascript application/x-javascript application/json
 </IfModule>
 
-# Cache pour fichiers statiques
+# Cache Control
 <IfModule mod_expires.c>
     ExpiresActive On
     ExpiresByType image/jpg "access plus 1 year"
     ExpiresByType image/jpeg "access plus 1 year"
     ExpiresByType image/gif "access plus 1 year"
     ExpiresByType image/png "access plus 1 year"
-    ExpiresByType image/svg+xml "access plus 1 year"
+    ExpiresByType image/webp "access plus 1 year"
     ExpiresByType text/css "access plus 1 month"
     ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType image/x-icon "access plus 1 year"
 </IfModule>
+
+# Prevent directory listing
+Options -Indexes
+
+# Prevent access to sensitive files
+<FilesMatch "^\.">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+<FilesMatch "(^#.*#|\.(bak|config|dist|fla|inc|ini|log|psd|sh|sql|sw[op])|~)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
 
 # Autoriser l'accès aux répertoires
 <Directory "/">
@@ -80,11 +94,6 @@ RewriteLogLevel 9
     Require all granted
     Allow from all
 </Directory>
-
-# Headers de sécurité
-Header always set X-Content-Type-Options "nosniff"
-Header always set X-XSS-Protection "1; mode=block"
-Header always set X-Frame-Options "SAMEORIGIN"
 
 # Autoriser l'accès au répertoire frontend/dist et activer le listing pour debug
 <Directory "/frontend/dist">
