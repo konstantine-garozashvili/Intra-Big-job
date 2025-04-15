@@ -5,9 +5,12 @@ export const ThemeContext = createContext();
 
 // Theme provider component
 export const ThemeProvider = ({ children }) => {
+  const [isThemeLoaded, setIsThemeLoaded] = useState(false);
+  
   // Clear any saved theme when component mounts
   useEffect(() => {
     localStorage.removeItem('theme');
+    setIsThemeLoaded(true);
   }, []);
 
   // Initialize state with value from localStorage or default to 'navy'
@@ -65,8 +68,13 @@ export const ThemeProvider = ({ children }) => {
     setColorMode,
     toggleColorMode,
     currentTheme,
-    themes
+    themes,
+    isThemeLoaded
   };
+
+  if (!isThemeLoaded) {
+    return null; // or return a loading spinner
+  }
 
   return (
     <ThemeContext.Provider value={value}>

@@ -4,12 +4,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '@/contexts/ThemeContext';
 
 const PublicNavbar = () => {
-  const { colorMode, toggleColorMode, currentTheme } = useTheme();
+  const { colorMode, toggleColorMode, currentTheme, isThemeLoaded } = useTheme();
   const location = useLocation();
   
   // Déterminer la page courante
   const isLoginPage = location.pathname === '/login';
   const isRegisterPage = location.pathname === '/register';
+
+  if (!isThemeLoaded) {
+    return null; // ou retourner un placeholder avec la même hauteur que la navbar
+  }
 
   return (
     <nav className="fixed top-0 left-0 w-full z-40 transition-all duration-300">
