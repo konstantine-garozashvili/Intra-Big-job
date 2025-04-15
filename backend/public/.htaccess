@@ -1,41 +1,52 @@
 # Configuration pour l'API Symfony sur Hostinger
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    
-    # Déterminer automatiquement le RewriteBase
-    RewriteCond %{REQUEST_URI}::$1 ^(/.+)/(.*)::\2$
-    RewriteRule ^(.*) - [E=BASE:%1]
-    
-    # Rediriger vers l'URI sans contrôleur frontal
-    RewriteCond %{ENV:REDIRECT_STATUS} ^$
-    RewriteRule ^index\.php(?:/(.*)|$) %{ENV:BASE}/$1 [R=301,L]
-    
-    # Si le fichier demandé existe, le servir directement
+    RewriteBase /
+
+    # If the requested filename exists, serve it directly
     RewriteCond %{REQUEST_FILENAME} -f
-    RewriteRule ^ - [L]
-    
-    # Gérer le contrôleur frontal
-    RewriteRule ^ %{ENV:BASE}/index.php [L]
+    RewriteRule .? - [L]
+
+    # Redirect everything else to index.php
+    RewriteRule ^.*$ index.php [QSA,L]
 </IfModule>
 
-# En-têtes CORS pour l'API
+# CORS Headers
 <IfModule mod_headers.c>
-    # Remplacer avec le domaine de votre site sur Hostinger
-    Header always set Access-Control-Allow-Origin "https://peru-ape-766379.hostingersite.com"
-    Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
-    Header always set Access-Control-Allow-Headers "Authorization, Content-Type, X-Requested-With"
-    Header always set Access-Control-Allow-Credentials "true"
-    
-    # Gérer la méthode OPTIONS
+    Header set Access-Control-Allow-Origin "https://peru-ape-766379.hostingersite.com"
+    Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, PATCH, OPTIONS"
+    Header set Access-Control-Allow-Headers "Authorization, Content-Type, X-Requested-With, Cache-Control"
+    Header set Access-Control-Allow-Credentials "true"
+    Header set Access-Control-Max-Age "3600"
+
+    # Handle OPTIONS method
     RewriteEngine On
     RewriteCond %{REQUEST_METHOD} OPTIONS
     RewriteRule ^(.*)$ $1 [R=200,L]
 </IfModule>
 
-# Paramètres PHP
+# Security Headers
+Header set X-Content-Type-Options "nosniff"
+Header set X-XSS-Protection "1; mode=block"
+Header set X-Frame-Options "SAMEORIGIN"
+
+# PHP Settings
 <IfModule mod_php.c>
     php_value upload_max_filesize 10M
     php_value post_max_size 10M
     php_value memory_limit 256M
     php_value max_execution_time 60
 </IfModule>
+
+# Prevent directory listing
+Options -Indexes
+
+# Allow API access
+<Directory "/backend/public">
+    Require all granted
+    Allow from all
+    Options -Indexes +FollowSymLinks
+    
+    # Enable .htaccess overrides
+    AllowOverride All
+</Directory>

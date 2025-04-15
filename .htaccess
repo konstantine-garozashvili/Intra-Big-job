@@ -5,25 +5,30 @@ ErrorLog /home/u817324220/domains/peru-ape-766379.hostingersite.com/logs/error.l
 RewriteLog "/home/u817324220/domains/peru-ape-766379.hostingersite.com/logs/rewrite.log"
 RewriteLogLevel 9
 
-# Enable rewrite engine
+# Enable rewrite engine and follow symlinks
+Options +FollowSymLinks
 RewriteEngine On
 
-# Set the base for rewrites
+# Set base
 RewriteBase /
 
-# Allow direct access to existing files and directories
-RewriteCond %{REQUEST_FILENAME} -f [OR]
-RewriteCond %{REQUEST_FILENAME} -d
-RewriteRule ^ - [L]
+# Allow direct access to assets
+RewriteCond %{REQUEST_URI} \.(js|css|png|jpg|jpeg|gif|ico|svg|webp|woff|woff2|ttf|eot)$
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^(.*)$ frontend/dist/$1 [L]
 
-# Handle API requests
+# API requests - forward to backend
 RewriteCond %{REQUEST_URI} ^/api/
 RewriteRule ^api/(.*)$ backend/public/index.php [QSA,L]
 
-# Redirect all other requests to index.html
-RewriteCond %{REQUEST_URI} !^/backend/
-RewriteCond %{REQUEST_URI} !^/frontend/dist/assets/
-RewriteCond %{REQUEST_URI} !^/assets/
+# If the file/directory exists in frontend/dist, serve it directly
+RewriteCond %{DOCUMENT_ROOT}/frontend/dist%{REQUEST_URI} -f [OR]
+RewriteCond %{DOCUMENT_ROOT}/frontend/dist%{REQUEST_URI} -d
+RewriteRule ^(.*)$ frontend/dist/$1 [L]
+
+# For all other routes - serve the React app
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^(.*)$ frontend/dist/index.html [L]
 
 # PHP settings
@@ -68,42 +73,18 @@ Header set Referrer-Policy "strict-origin-when-cross-origin"
 # Prevent directory listing
 Options -Indexes
 
-# Prevent access to sensitive files
-<FilesMatch "^\.">
-    Order allow,deny
-    Deny from all
-</FilesMatch>
-
-<FilesMatch "(^#.*#|\.(bak|config|dist|fla|inc|ini|log|psd|sh|sql|sw[op])|~)$">
-    Order allow,deny
-    Deny from all
-</FilesMatch>
-
-# Autoriser l'accès aux répertoires
-<Directory "/">
-    Options +Indexes +FollowSymLinks +MultiViews
-    AllowOverride All
-    Require all granted
-    Allow from all
-</Directory>
-
-# Autoriser l'accès spécifique au frontend
-<Directory "/frontend">
-    Options +Indexes +FollowSymLinks +MultiViews
-    AllowOverride All
-    Require all granted
-    Allow from all
-</Directory>
-
-# Autoriser l'accès au répertoire frontend/dist et activer le listing pour debug
+# Allow access to frontend/dist
 <Directory "/frontend/dist">
-    Options +Indexes
     Require all granted
     Allow from all
-    
-    # Log access attempts
-    LogLevel debug
+    Options -Indexes +FollowSymLinks
 </Directory>
+
+# Protect sensitive directories
+<DirectoryMatch "^/.*(git|config|src|tests)/">
+    Order deny,allow
+    Deny from all
+</DirectoryMatch>
 
 # Debug information in server response headers
 Header set X-Debug-Path "%{REQUEST_URI}e"
