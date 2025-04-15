@@ -5,19 +5,32 @@ export const ThemeContext = createContext();
 
 // Theme provider component
 export const ThemeProvider = ({ children }) => {
+  // Initialize theme immediately without waiting for localStorage
+  const [colorMode, setColorMode] = useState('navy'); // Set navy as immediate default
   const [isThemeLoaded, setIsThemeLoaded] = useState(false);
-  
-  // Clear any saved theme when component mounts
+
+  // Sync with localStorage on mount and theme changes
   useEffect(() => {
-    localStorage.removeItem('theme');
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme) {
+      setColorMode(savedTheme);
+    } else {
+      localStorage.setItem('theme', 'navy');
+    }
     setIsThemeLoaded(true);
   }, []);
 
-  // Initialize state with value from localStorage or default to 'navy'
-  const [colorMode, setColorMode] = useState(() => {
-    const savedTheme = localStorage.getItem('theme');
-    return savedTheme || 'navy';
-  });
+  // Update localStorage when theme changes
+  useEffect(() => {
+    if (isThemeLoaded) { // Only update localStorage after initial load
+      localStorage.setItem('theme', colorMode);
+    }
+  }, [colorMode, isThemeLoaded]);
+
+  // Toggle theme function
+  const toggleColorMode = () => {
+    setColorMode(prevMode => prevMode === 'navy' ? 'black' : 'navy');
+  };
 
   // Define theme settings
   const themes = {
@@ -49,17 +62,7 @@ export const ThemeProvider = ({ children }) => {
     }
   };
 
-  // Update localStorage when theme changes
-  useEffect(() => {
-    localStorage.setItem('theme', colorMode);
-  }, [colorMode]);
-
-  // Toggle theme function
-  const toggleColorMode = () => {
-    setColorMode(prevMode => prevMode === 'navy' ? 'black' : 'navy');
-  };
-
-  // Current theme object
+  // Current theme object - always available even before localStorage sync
   const currentTheme = themes[colorMode];
 
   // Context value
@@ -72,10 +75,7 @@ export const ThemeProvider = ({ children }) => {
     isThemeLoaded
   };
 
-  if (!isThemeLoaded) {
-    return null; // or return a loading spinner
-  }
-
+  // Render children immediately with default theme
   return (
     <ThemeContext.Provider value={value}>
       {children}

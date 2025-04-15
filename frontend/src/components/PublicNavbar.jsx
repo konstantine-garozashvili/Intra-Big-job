@@ -4,30 +4,21 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '@/contexts/ThemeContext';
 
 const PublicNavbar = () => {
-  const { colorMode, toggleColorMode, currentTheme, isThemeLoaded } = useTheme();
+  const { colorMode, toggleColorMode, currentTheme } = useTheme();
   const location = useLocation();
   
   // Déterminer la page courante
   const isLoginPage = location.pathname === '/login';
   const isRegisterPage = location.pathname === '/register';
 
-  if (!isThemeLoaded) {
-    return null; // ou retourner un placeholder avec la même hauteur que la navbar
-  }
-
   return (
     <nav className="fixed top-0 left-0 w-full z-40 transition-all duration-300">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         <div className="flex items-center">
           <Link to="/" className="flex items-center">
-            <motion.div
-              className="text-2xl font-bold text-white opacity-100"
-              initial={{ opacity: 1, x: 0 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.3 }}
-            >
+            <div className="text-2xl font-bold text-white">
               Big<span className="text-[#528eb2]">Project</span>
-            </motion.div>
+            </div>
           </Link>
         </div>
         
@@ -40,14 +31,14 @@ const PublicNavbar = () => {
             onClick={toggleColorMode}
           >
             <div className={`absolute inset-0 ${colorMode === 'navy' ? 'bg-gradient-to-br from-[#0a3c6e] to-[#001a38]' : 'bg-gradient-to-br from-gray-800 to-black'} rounded-full flex items-center justify-center shadow-lg ${currentTheme.shadow}`}>
-              <AnimatePresence mode="wait">
+              <AnimatePresence mode="wait" initial={false}>
                 {colorMode === 'navy' ? (
                   <motion.div
                     key="moon"
-                    initial={{ rotate: -45, opacity: 0 }}
+                    initial={{ rotate: 0, opacity: 1 }}
                     animate={{ rotate: 0, opacity: 1 }}
                     exit={{ rotate: 45, opacity: 0 }}
-                    transition={{ duration: 0.3 }}
+                    transition={{ duration: 0.2 }}
                     className="w-full h-full flex items-center justify-center"
                   >
                     <div className="w-6 h-6 bg-blue-200 rounded-full relative overflow-hidden">
