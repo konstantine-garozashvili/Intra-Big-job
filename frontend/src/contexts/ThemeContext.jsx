@@ -5,6 +5,11 @@ export const ThemeContext = createContext();
 
 // Theme provider component
 export const ThemeProvider = ({ children }) => {
+  // Clear any saved theme when component mounts
+  useEffect(() => {
+    localStorage.removeItem('theme');
+  }, []);
+
   // Initialize state with value from localStorage or default to 'navy'
   const [colorMode, setColorMode] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
