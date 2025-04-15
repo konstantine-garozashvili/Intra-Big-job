@@ -5,28 +5,28 @@ ErrorLog /home/u817324220/domains/peru-ape-766379.hostingersite.com/logs/error.l
 RewriteLog "/home/u817324220/domains/peru-ape-766379.hostingersite.com/logs/rewrite.log"
 RewriteLogLevel 9
 
-# Enable rewrite engine and follow symlinks
-Options +FollowSymLinks
+# Enable rewrite engine
 RewriteEngine On
-
-# Set base
 RewriteBase /
 
-# Allow direct access to assets
-RewriteCond %{REQUEST_URI} \.(js|css|png|jpg|jpeg|gif|ico|svg|webp|woff|woff2|ttf|eot)$
+# Allow access to physical files in frontend/dist
 RewriteCond %{REQUEST_FILENAME} !-f
-RewriteRule ^(.*)$ frontend/dist/$1 [L]
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_URI} ^/assets/
+RewriteRule ^assets/(.*)$ frontend/dist/assets/$1 [L]
 
-# API requests - forward to backend
+# Handle API requests
 RewriteCond %{REQUEST_URI} ^/api/
 RewriteRule ^api/(.*)$ backend/public/index.php [QSA,L]
 
-# If the file/directory exists in frontend/dist, serve it directly
-RewriteCond %{DOCUMENT_ROOT}/frontend/dist%{REQUEST_URI} -f [OR]
-RewriteCond %{DOCUMENT_ROOT}/frontend/dist%{REQUEST_URI} -d
+# Serve static files from frontend/dist if they exist
+RewriteCond %{REQUEST_URI} !^/backend/
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{DOCUMENT_ROOT}/frontend/dist%{REQUEST_URI} -f
 RewriteRule ^(.*)$ frontend/dist/$1 [L]
 
-# For all other routes - serve the React app
+# For all other routes, serve the React app
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^(.*)$ frontend/dist/index.html [L]
@@ -41,6 +41,12 @@ RewriteRule ^(.*)$ frontend/dist/index.html [L]
     php_flag log_errors on
 </IfModule>
 
+# Set proper MIME types
+AddType application/javascript .js
+AddType text/css .css
+AddType image/svg+xml .svg
+AddType application/json .json
+
 # Enable CORS
 Header set Access-Control-Allow-Origin "*"
 Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
@@ -52,32 +58,24 @@ Header set X-XSS-Protection "1; mode=block"
 Header set X-Frame-Options "SAMEORIGIN"
 Header set Referrer-Policy "strict-origin-when-cross-origin"
 
-# Compression
-<IfModule mod_deflate.c>
-    AddOutputFilterByType DEFLATE text/plain text/html text/xml text/css text/javascript application/xml application/xhtml+xml application/rss+xml application/javascript application/x-javascript application/json
-</IfModule>
+# Cache control for assets
+<FilesMatch "\.(js|css|png|jpg|jpeg|gif|ico|svg|webp|woff|woff2|ttf|eot)$">
+    Header set Cache-Control "max-age=31536000, public"
+</FilesMatch>
 
-# Cache Control
-<IfModule mod_expires.c>
-    ExpiresActive On
-    ExpiresByType image/jpg "access plus 1 year"
-    ExpiresByType image/jpeg "access plus 1 year"
-    ExpiresByType image/gif "access plus 1 year"
-    ExpiresByType image/png "access plus 1 year"
-    ExpiresByType image/webp "access plus 1 year"
-    ExpiresByType text/css "access plus 1 month"
-    ExpiresByType application/javascript "access plus 1 month"
-    ExpiresByType image/x-icon "access plus 1 year"
-</IfModule>
+# No cache for HTML files
+<FilesMatch "\.html$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires 0
+</FilesMatch>
 
-# Prevent directory listing
-Options -Indexes
-
-# Allow access to frontend/dist
+# Allow access to frontend/dist directory
 <Directory "/frontend/dist">
+    Options -Indexes +FollowSymLinks
+    AllowOverride All
     Require all granted
     Allow from all
-    Options -Indexes +FollowSymLinks
 </Directory>
 
 # Protect sensitive directories
