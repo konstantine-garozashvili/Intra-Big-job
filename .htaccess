@@ -2,9 +2,8 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
     
-    # Si la requête correspond à un fichier ou répertoire existant
-    RewriteCond %{REQUEST_FILENAME} -f [OR]
-    RewriteCond %{REQUEST_FILENAME} -d
+    # Autoriser l'accès aux répertoires nécessaires
+    RewriteCond %{REQUEST_URI} ^/frontend/dist/
     RewriteRule ^ - [L]
     
     # Servir les assets frontend depuis dist/assets
@@ -19,15 +18,9 @@
     RewriteCond %{REQUEST_URI} ^/api/
     RewriteRule ^(.*)$ /backend/public/index.php [QSA,L]
     
-    # URL racine vers frontend
-    RewriteCond %{REQUEST_URI} ^/$
-    RewriteRule ^$ /frontend/dist/index.html [L]
-    
-    # Routes pour React Router
-    RewriteCond %{REQUEST_URI} !^/backend/
-    RewriteCond %{REQUEST_URI} !^/frontend/dist/
-    RewriteCond %{REQUEST_URI} !^/assets/
-    RewriteCond %{REQUEST_URI} !\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|map)$
+    # Routes pour React Router - doit être en dernier
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^(.*)$ /frontend/dist/index.html [L]
     
     # Protection des fichiers sensibles
@@ -62,3 +55,9 @@
     ExpiresByType text/css "access plus 1 month"
     ExpiresByType application/javascript "access plus 1 month"
 </IfModule>
+
+# Autoriser l'accès au répertoire frontend/dist
+<Directory "/frontend/dist">
+    Require all granted
+    Allow from all
+</Directory>
