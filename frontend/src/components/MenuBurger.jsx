@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { useRolePermissions } from '@/features/roles/useRolePermissions';
 import ProfilePictureDisplay from '@/components/ProfilePictureDisplay';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 // Style personnalisé pour les animations et transitions
 const customStyles = `
@@ -58,19 +59,12 @@ const customStyles = `
     transform: scale(0.95);
   }
   
-  .sidebar-menu {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 320px;
-    height: 100vh;
-    background-color: #00284f;
-    color: white;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-    z-index: 50;
-    overflow: hidden;
-    border-right: 1px solid rgba(82, 142, 178, 0.2);
-    will-change: transform;
+  /* Override Sheet styles to match our design */
+  .sidebar-sheet {
+    background-color: #00284f !important;
+    color: white !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+    border-right: 1px solid rgba(82, 142, 178, 0.2) !important;
   }
   
   .scrollable-div {
@@ -129,20 +123,20 @@ const customStyles = `
   
   /* Responsive styles */
   @media (min-width: 1024px) {
-    .sidebar-menu {
-      width: 320px;
+    .sidebar-sheet {
+      width: 320px !important;
     }
   }
   
   @media (max-width: 1023px) {
-    .sidebar-menu {
-      width: 280px;
+    .sidebar-sheet {
+      width: 280px !important;
     }
   }
   
   @media (max-width: 768px) {
-    .sidebar-menu {
-      width: 85vw;
+    .sidebar-sheet {
+      width: 85vw !important;
     }
     
     .menu-item {
@@ -155,8 +149,8 @@ const customStyles = `
   }
   
   @media (max-width: 480px) {
-    .sidebar-menu {
-      width: 100vw;
+    .sidebar-sheet {
+      width: 100vw !important;
     }
     
     .menu-item, .submenu-item {
@@ -168,6 +162,11 @@ const customStyles = `
       transform: none;
       background-color: rgba(82, 142, 178, 0.15);
     }
+  }
+
+  /* Hide the default close button from Sheet */
+  .sidebar-sheet [data-state] > button[type="button"] {
+    display: none;
   }
 `;
 
@@ -554,190 +553,161 @@ const MenuBurger = memo(() => {
       {/* Injection des styles personnalisés */}
       <style>{customStyles}</style>
       
-      <button 
-        ref={buttonRef}
-        className="menu-burger-button text-gray-200 hover:text-white focus:outline-none" 
-        onClick={toggleMenu}
-        aria-label="Menu principal"
-      >
-        <Menu className="w-6 h-6" />
-      </button>
-
-      <AnimatePresence>
-        {menuOpen && (
-          <>
-            {/* Backdrop overlay with blur effect */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
-              onClick={() => setMenuOpen(false)}
-            />
-            
-            {/* Menu sidebar with improved animation */}
-            <motion.div
-              ref={menuRef}
-              initial={{ x: '-100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '-100%' }}
-              transition={{ 
-                type: "spring",
-                stiffness: 300,
-                damping: 30,
-                mass: 1
-              }}
-              className="sidebar-menu"
-            >
-              <div className="flex flex-col h-full">
-                {roles.length > 0 && (
-                  <div className="flex items-center p-4 border-b border-blue-700 bg-gradient-to-r from-[#00284f] to-[#003a6b]">
-                    <div className="w-14 h-14 bg-white/20 rounded-full mr-3 flex items-center justify-center cursor-pointer hover:bg-white/30 transition-colors" 
-                         onClick={() => {
-                           setMenuOpen(false);
-                           navigate('/profile');
-                         }}>
-                      <ProfilePictureDisplay className="w-full h-full" />
-                    </div>
-                    <div className="cursor-pointer" 
-                         onClick={() => {
-                           setMenuOpen(false);
-                           navigate('/profile');
-                         }}>
-                      <p className="font-semibold hover:underline transition-all">
-                        {userData ? `${userData.firstName} ${userData.lastName}` : 'Chargement...'}
-                      </p>
-                      <p className="text-sm text-blue-200">{translateRoleName(roles[0])}</p>
-                    </div>
-                    <button 
-                      className="ml-auto text-white p-2 rounded-full hover:bg-blue-800/50 transition-colors" 
-                      onClick={toggleMenu}
-                      aria-label="Fermer le menu"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  </div>
-                )}
-                
-                {!roles.length && !isLoading && (
-                  <div className="p-4 border-b border-blue-700 bg-gradient-to-r from-[#00284f] to-[#003a6b]">
-                    <div className="flex items-center justify-between mb-3">
-                      <h2 className="text-xl font-semibold text-white">Bienvenue</h2>
-                      <button 
-                        className="text-white p-2 rounded-full hover:bg-blue-800/50 transition-colors" 
-                        onClick={toggleMenu}
-                        aria-label="Fermer le menu"
-                      >
-                        <X className="w-5 h-5" />
-                      </button>
-                    </div>
-                    <p className="text-sm text-blue-200 mb-3">Connectez-vous pour accéder à toutes les fonctionnalités</p>
-                    <Link 
-                      to="/login" 
-                      className="flex items-center justify-center w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      <User className="w-4 h-4 mr-2" />
-                      Se connecter
-                    </Link>
-                  </div>
-                )}
-
-                <div className="scrollable-div overflow-y-auto flex-grow">
-                  <ul className="py-2">
-                    {menuItems.map(({ key, icon, label, roles: itemRoles, links, to, onClick }) => {
-                      // Si l'élément n'a pas de rôles définis ou si l'utilisateur a les rôles requis
-                      if (!itemRoles || hasAnyRole(itemRoles)) {
-                        return (
-                          <React.Fragment key={`menu-${key}`}>
-                            {to ? (
-                              // Élément de menu simple avec lien direct
-                              <li className="menu-item">
-                                {key === 'support' ? (
-                                  // Special handler for support item
-                                  <div 
-                                    className="flex items-center px-4 py-2.5 w-full cursor-pointer" 
-                                    onClick={() => {
-                                      setMenuOpen(false);
-                                      navigate('/tickets');
-                                    }}
-                                  >
-                                    {icon}
-                                    <span>{label}</span>
-                                  </div>
-                                ) : (
-                                  <Link 
-                                    to={to} 
-                                    className="flex items-center px-4 py-2.5 w-full" 
-                                    onClick={() => setMenuOpen(false)}
-                                  >
-                                    {icon}
-                                    <span>{label}</span>
-                                  </Link>
-                                )}
-                              </li>
-                            ) : (
-                              // Élément de menu avec sous-menu
-                              <>
-                                <li
-                                  className={`menu-item ${openSubMenus[key] ? 'active' : ''}`}
-                                  onClick={() => toggleSubMenu(key)}
-                                >
-                                  <div className="flex items-center px-4 py-2.5 w-full cursor-pointer">
-                                    {icon}
-                                    <span>{label}</span>
-                                    <div className="ml-auto">
-                                      {openSubMenus[key] ? (
-                                        <ChevronDown className="w-4 h-4 text-[#528eb2]" />
-                                      ) : (
-                                        <ChevronRight className={`w-4 h-4 text-[#528eb2] chevron-icon ${openSubMenus[key] ? 'open' : ''}`} />
-                                      )}
-                                    </div>
-                                  </div>
-                                  <AnimatePresence>
-                                    {openSubMenus[key] && links && (
-                                      <motion.ul
-                                        initial={{ height: 0, opacity: 0 }}
-                                        animate={{ height: 'auto', opacity: 1 }}
-                                        exit={{ height: 0, opacity: 0 }}
-                                        transition={{ duration: 0.2 }}
-                                        className="bg-[#001f3d] pl-4"
-                                      >
-                                        {links.map((link) => {
-                                          if (!link.roles || hasAnyRole(link.roles)) {
-                                            return (
-                                              <li key={link.to} className="submenu-item">
-                                                <Link
-                                                  to={link.to}
-                                                  className="flex items-center px-4 py-2 text-sm"
-                                                  onClick={() => setMenuOpen(false)}
-                                                >
-                                                  {link.name}
-                                                </Link>
-                                              </li>
-                                            );
-                                          }
-                                          return null;
-                                        })}
-                                      </motion.ul>
-                                    )}
-                                  </AnimatePresence>
-                                </li>
-                              </>
-                            )}
-                          </React.Fragment>
-                        );
-                      }
-                      return null;
-                    })}
-                  </ul>
+      <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+        <SheetTrigger asChild>
+          <button 
+            ref={buttonRef}
+            className="menu-burger-button text-gray-200 hover:text-white focus:outline-none" 
+            aria-label="Menu principal"
+          >
+            <Menu className="w-6 h-6" />
+          </button>
+        </SheetTrigger>
+        <SheetContent 
+          side="left" 
+          className="sidebar-sheet p-0 border-0"
+          showClose={false}
+        >
+          <div className="flex flex-col h-full">
+            {roles.length > 0 && (
+              <div className="flex items-center p-4 border-b border-blue-700 bg-gradient-to-r from-[#00284f] to-[#003a6b]">
+                <div className="w-14 h-14 bg-white/20 rounded-full mr-3 flex items-center justify-center cursor-pointer hover:bg-white/30 transition-colors" 
+                     onClick={() => {
+                       setMenuOpen(false);
+                       navigate('/profile');
+                     }}>
+                  <ProfilePictureDisplay className="w-full h-full" />
                 </div>
+                <div className="cursor-pointer" 
+                     onClick={() => {
+                       setMenuOpen(false);
+                       navigate('/profile');
+                     }}>
+                  <p className="font-semibold hover:underline transition-all text-white">
+                    {userData ? `${userData.firstName} ${userData.lastName}` : 'Chargement...'}
+                  </p>
+                  <p className="text-sm text-blue-200">{translateRoleName(roles[0])}</p>
+                </div>
+                <button 
+                  className="ml-auto text-white p-2 rounded-full hover:bg-blue-800/50 transition-colors" 
+                  onClick={() => setMenuOpen(false)}
+                  aria-label="Fermer le menu"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+            )}
+            
+            {!roles.length && (
+              <div className="p-4 border-b border-blue-700 bg-gradient-to-r from-[#00284f] to-[#003a6b]">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-xl font-semibold text-white">Bienvenue</h2>
+                  <button 
+                    className="text-white p-2 rounded-full hover:bg-blue-800/50 transition-colors" 
+                    onClick={() => setMenuOpen(false)}
+                    aria-label="Fermer le menu"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <p className="text-sm text-blue-200 mb-3">Connectez-vous pour accéder à toutes les fonctionnalités</p>
+                <Link 
+                  to="/login" 
+                  className="flex items-center justify-center w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  <User className="w-4 h-4 mr-2" />
+                  Se connecter
+                </Link>
+              </div>
+            )}
+
+            <div className="scrollable-div overflow-y-auto flex-grow">
+              <ul className="py-2">
+                {menuItems.map(({ key, icon, label, roles: itemRoles, links, to, onClick }) => {
+                  if (!itemRoles || hasAnyRole(itemRoles)) {
+                    return (
+                      <React.Fragment key={`menu-${key}`}>
+                        {to ? (
+                          <li className="menu-item">
+                            {key === 'support' ? (
+                              <div 
+                                className="flex items-center px-4 py-2.5 w-full cursor-pointer" 
+                                onClick={() => {
+                                  setMenuOpen(false);
+                                  navigate('/tickets');
+                                }}
+                              >
+                                {icon}
+                                <span>{label}</span>
+                              </div>
+                            ) : (
+                              <Link 
+                                to={to} 
+                                className="flex items-center px-4 py-2.5 w-full" 
+                                onClick={() => setMenuOpen(false)}
+                              >
+                                {icon}
+                                <span>{label}</span>
+                              </Link>
+                            )}
+                          </li>
+                        ) : (
+                          <li
+                            className={`menu-item ${openSubMenus[key] ? 'active' : ''}`}
+                            onClick={() => toggleSubMenu(key)}
+                          >
+                            <div className="flex items-center px-4 py-2.5 w-full cursor-pointer">
+                              {icon}
+                              <span>{label}</span>
+                              <div className="ml-auto">
+                                {openSubMenus[key] ? (
+                                  <ChevronDown className="w-4 h-4 text-[#528eb2]" />
+                                ) : (
+                                  <ChevronRight className={`w-4 h-4 text-[#528eb2] chevron-icon ${openSubMenus[key] ? 'open' : ''}`} />
+                                )}
+                              </div>
+                            </div>
+                            <AnimatePresence>
+                              {openSubMenus[key] && links && (
+                                <motion.ul
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: 'auto', opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  transition={{ duration: 0.2 }}
+                                  className="bg-[#001f3d] pl-4"
+                                >
+                                  {links.map((link) => {
+                                    if (!link.roles || hasAnyRole(link.roles)) {
+                                      return (
+                                        <li key={link.to} className="submenu-item">
+                                          <Link
+                                            to={link.to}
+                                            className="flex items-center px-4 py-2 text-sm"
+                                            onClick={() => setMenuOpen(false)}
+                                          >
+                                            {link.name}
+                                          </Link>
+                                        </li>
+                                      );
+                                    }
+                                    return null;
+                                  })}
+                                </motion.ul>
+                              )}
+                            </AnimatePresence>
+                          </li>
+                        )}
+                      </React.Fragment>
+                    );
+                  }
+                  return null;
+                })}
+              </ul>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 });
