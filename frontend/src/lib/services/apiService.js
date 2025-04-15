@@ -316,9 +316,53 @@ const apiService = {
    */
   async post(path, data = {}, options = {}) {
     try {
+      // Normaliser l'URL et ajouter le préfixe /api si nécessaire
       const url = normalizeApiUrl(path);
-      const response = await axios.post(url, data, options);
-      return response.data;
+      
+      // Option pour les requêtes qui potentiellement causent des problèmes CORS
+      const corsOptions = {
+        ...options,
+        headers: {
+          ...options.headers,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      };
+      
+      try {
+        // Première tentative avec URL normalisée
+        const response = await axios.post(url, data, corsOptions);
+        return response.data;
+      } catch (firstError) {
+        // Si l'erreur est liée à CORS, essayer avec l'URL complète
+        if (firstError.message && (
+            firstError.message.includes('Network Error') ||
+            firstError.message.includes('Failed to fetch') ||
+            firstError.message.includes('CORS')
+        )) {
+          console.warn('CORS error detected, retrying with full URL');
+          
+          // Utiliser l'URL complète avec http://localhost:8000 explicitement
+          // mais seulement si l'URL ne commence pas déjà par http
+          const baseApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+          const fullUrl = !url.startsWith('http') 
+            ? `${baseApiUrl}${url.startsWith('/') ? url : '/' + url}`.replace('/api/api/', '/api/')
+            : url;
+          
+          console.log('Retrying with URL:', fullUrl);
+          
+          const retryResponse = await axios.post(fullUrl, data, {
+            ...corsOptions,
+            withCredentials: true
+          });
+          
+          return retryResponse.data;
+        }
+        
+        // Sinon, propager l'erreur
+        throw firstError;
+      }
     } catch (error) {
       // Pour login_check, on ne doit PAS transformer l'erreur, mais la rejeter
       // afin que le composant d'authentification puisse la traiter correctement
@@ -326,17 +370,19 @@ const apiService = {
         throw error;
       }
       
+      console.error('API POST error:', error);
+      
       // Gestion spécifique des erreurs CORS
-      if (error.message && error.message.includes('Network Error')) {
-        return { success: false, message: 'Erreur de communication avec le serveur' };
+      if (error.message && (error.message.includes('Network Error') || error.message.includes('CORS'))) {
+        throw new Error('Erreur CORS: Impossible de communiquer avec le serveur. Veuillez contacter l\'administrateur.');
       }
       
       // Retourner une réponse formatée en cas d'erreur pour éviter les crashes
       if (error.response && error.response.data) {
-        return { success: false, message: error.response.data.message || 'Une erreur est survenue' };
+        throw new Error(error.response.data.message || 'Une erreur est survenue');
       }
       
-      return { success: false, message: 'Une erreur est survenue' };
+      throw new Error('Une erreur est survenue lors de la communication avec le serveur');
     }
   },
   

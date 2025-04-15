@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, forwardRef } from 'react';
+import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { toast } from 'sonner';
 import { Button } from '../ui/button';
 import { Loader2, MapPin, CheckCircle, AlertCircle } from 'lucide-react';
@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { authService } from '../../lib/services/authService';
 import { useRoles } from '@/features/roles/roleContext';
 import { useRolePermissions } from '@/features/roles/useRolePermissions';
+import apiService from '@/lib/services/apiService';
 
 // Custom fallback implementation for SignatureCanvas
 const FallbackSignatureCanvas = forwardRef((props, ref) => {
@@ -165,72 +166,6 @@ const DocumentSignature = () => {
     }
   }, [hasRole, navigate]);
   
-  // Add this function near the beginning of the DocumentSignature component
-  const fetchDataWithRetry = async (url, options, retries = 3) => {
-    for (let attempt = 0; attempt < retries; attempt++) {
-      try {
-        const response = await fetch(url, options);
-        
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          console.warn(`API call failed (attempt ${attempt + 1}/${retries}):`, errorData);
-          
-          // If this is the last attempt, throw the error
-          if (attempt === retries - 1) {
-            throw new Error(errorData.message || `Request failed with status ${response.status}`);
-          }
-          
-          // Wait before retrying (exponential backoff)
-          await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt)));
-          continue;
-        }
-        
-        return await response.json();
-      } catch (error) {
-        console.error(`API call error (attempt ${attempt + 1}/${retries}):`, error);
-        
-        // If this is the last attempt, rethrow the error
-        if (attempt === retries - 1) {
-          throw error;
-        }
-        
-        // Wait before retrying
-        await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt)));
-      }
-    }
-  };
-  
-  // Function to clear any potentially cached signature state
-  const clearCachedSignatureState = () => {
-    try {
-      // Check if there are any localStorage keys related to signatures
-      const keys = Object.keys(localStorage);
-      const signatureKeys = keys.filter(key => 
-        key.includes('signature') || 
-        key.includes('signed') || 
-        key.includes('period')
-      );
-      
-      // Log any found keys
-      if (signatureKeys.length > 0) {
-        console.log('Found potential signature-related localStorage keys:', signatureKeys);
-        
-        // Clear these keys
-        signatureKeys.forEach(key => {
-          localStorage.removeItem(key);
-          console.log(`Removed localStorage key: ${key}`);
-        });
-      }
-    } catch (error) {
-      console.error('Error clearing cached signature state:', error);
-    }
-  };
-  
-  // Clear cache when component mounts
-  useEffect(() => {
-    clearCachedSignatureState();
-  }, []);
-  
   // Ensure user data is properly stored in localStorage
   useEffect(() => {
     const setupUserData = async () => {
@@ -243,60 +178,39 @@ const DocumentSignature = () => {
     
     setupUserData();
     
+    // Fonction modifiée pour récupérer les signatures depuis la base de données via l'API
     const checkTodaySignatures = async () => {
       try {
         setIsLoading(true);
-        console.log('Checking today signatures - starting API request');
-        
-        // Create a failsafe timeout
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error("API request timeout")), 10000)
-        );
-        
-        // Get token
-        const token = localStorage.getItem('token');
-        if (!token) {
-          throw new Error('Authentication token not found');
-        }
+        console.log('Vérification des signatures du jour - démarrage de la requête API');
         
         try {
-          console.log('Fetching signature data from API...');
+          console.log('Récupération des données de signature depuis l\'API...');
           
-          // Race the fetch against a timeout
-          const data = await Promise.race([
-            fetchDataWithRetry('http://localhost:8000/api/signatures/today', {
-              method: 'GET',
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-              }
-            }),
-            timeoutPromise
-          ]);
+          // Utiliser apiService pour récupérer les données depuis le backend
+          const data = await apiService.get('/signatures/today');
           
-          console.log('Signature data returned from API:', data);
-          console.log('Current period from API:', data?.currentPeriod);
-          console.log('Signed periods from API:', data?.signedPeriods);
+          console.log('Données de signature retournées par l\'API:', data);
           
-          // Set the data even if it's partial
+          // Définir les données même si elles sont partielles
           if (data) {
             if (data.currentPeriod) {
-              console.log('Setting current period to:', data.currentPeriod);
+              console.log('Définition de la période actuelle:', data.currentPeriod);
               setCurrentPeriod(data.currentPeriod);
             }
             
             if (data.signedPeriods) {
-              console.log('Setting signed periods to:', data.signedPeriods);
+              console.log('Définition des périodes signées:', data.signedPeriods);
               setSignedPeriods(data.signedPeriods || []);
             }
             
             if (data.availablePeriods) {
-              console.log('Setting available periods to:', data.availablePeriods);
+              console.log('Définition des périodes disponibles:', data.availablePeriods);
               setAvailablePeriods(data.availablePeriods);
             }
           } else {
-            // Fallback defaults
-            setCurrentPeriod('afternoon'); // Default to afternoon
+            // Valeurs par défaut
+            setCurrentPeriod('afternoon'); // Par défaut à l'après-midi
             setSignedPeriods([]);
             setAvailablePeriods({
               morning: 'Matin (9h-12h)',
@@ -304,10 +218,10 @@ const DocumentSignature = () => {
             });
           }
         } catch (error) {
-          console.error('Error checking today\'s signatures:', error);
+          console.error('Erreur lors de la vérification des signatures du jour:', error);
           
-          // Fallback to default values
-          setCurrentPeriod('afternoon'); // Default to afternoon
+          // Valeurs par défaut en cas d'erreur
+          setCurrentPeriod('afternoon');
           setSignedPeriods([]);
           setAvailablePeriods({
             morning: 'Matin (9h-12h)',
@@ -321,11 +235,11 @@ const DocumentSignature = () => {
           setIsLoading(false);
         }
       } catch (error) {
-        console.error('Error in signature setup:', error);
+        console.error('Erreur lors de la configuration des signatures:', error);
         setIsLoading(false);
         
-        // Fallback to default values
-        setCurrentPeriod('afternoon'); // Default to afternoon
+        // Valeurs par défaut
+        setCurrentPeriod('afternoon');
         setSignedPeriods([]);
         setAvailablePeriods({
           morning: 'Matin (9h-12h)',
@@ -398,7 +312,7 @@ const DocumentSignature = () => {
     }
   };
   
-  // Submit signature
+  // Submit signature - Modification pour ne pas mettre à jour l'état local mais recharger depuis l'API
   const submitSignature = async () => {
     if (!location) {
       toast.error("Erreur", {
@@ -433,77 +347,47 @@ const DocumentSignature = () => {
       
       // Get signature data URL
       const signatureData = signatureRef.current.toDataURL();
-      console.log(`Signature data size: ${signatureData.length} characters`);
+      console.log(`Taille des données de signature: ${signatureData.length} caractères`);
       
-      // Prepare the request data
+      // Préparer les données de la requête
       const requestData = {
         location,
         drawing: signatureData
       };
       
-      console.log('Sending signature request with data:', requestData);
+      console.log('Envoi de la requête de signature avec les données:', requestData);
       
-      // Get the token from localStorage
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Authentication token not found');
-      }
-
-      // Send the actual API request to the backend
-      console.log('Sending actual API request to backend');
+      // Envoyer la requête API au backend
+      console.log('Envoi de la requête API au backend');
       
-      try {
-        const response = await fetch('http://localhost:8000/api/signatures', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify(requestData)
-        });
-        
-        console.log('API Response status:', response.status);
-        
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to create signature');
-        }
-        
-        const data = await response.json();
-        console.log('Signature created successfully:', data);
-        
-        // Update local state
-        setSignedPeriods([...signedPeriods, currentPeriod]);
-        setSubmissionSuccess(true);
-        
-        // Clear the signature
-        clearSignature();
-        
-        // Show success message
-        toast.success("Succès", {
-          description: `Signature enregistrée pour la période ${availablePeriods[currentPeriod]}.`
-        });
-        
-        const userRoles = JSON.parse(localStorage.getItem('userRoles') || '[]');
-        if (userRoles.includes('ROLE_TEACHER')) {
-          navigate('/teacher/dashboard');
-        } else if (userRoles.includes('ROLE_STUDENT')) {
-          navigate('/student/dashboard');
-        } else {
-          navigate('/dashboard');
-        }
-        
-      } catch (error) {
-        console.error('API request failed:', error);
-        toast.error("Erreur", {
-          description: error.message || "Une erreur est survenue lors de l'envoi de la signature."
-        });
+      // Utiliser apiService pour envoyer les données au backend
+      const response = await apiService.post('/signatures', requestData);
+      
+      console.log('Signature créée avec succès:', response.data);
+      
+      // Clear the signature
+      clearSignature();
+      
+      // Afficher un message de succès
+      toast.success("Succès", {
+        description: `Signature enregistrée pour la période ${availablePeriods[currentPeriod]}.`
+      });
+      
+      // Recharger les données depuis le backend au lieu de mettre à jour localement
+      await checkTodaySignatures();
+      
+      const userRoles = JSON.parse(localStorage.getItem('userRoles') || '[]');
+      if (userRoles.includes('ROLE_TEACHER')) {
+        navigate('/teacher/dashboard');
+      } else if (userRoles.includes('ROLE_STUDENT')) {
+        navigate('/student/dashboard');
+      } else {
+        navigate('/dashboard');
       }
     } catch (error) {
-      console.error('Error submitting signature:', error);
+      console.error('Erreur lors de la soumission de la signature:', error);
       toast.error("Erreur", {
-        description: "Une erreur est survenue lors de la soumission de la signature."
+        description: error.message || "Une erreur est survenue lors de la soumission de la signature."
       });
     } finally {
       setIsSubmitting(false);
