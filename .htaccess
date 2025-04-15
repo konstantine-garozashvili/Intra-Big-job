@@ -9,24 +9,28 @@ RewriteLogLevel 9
 RewriteEngine On
 RewriteBase /
 
-# Allow access to physical files in frontend/dist
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteCond %{REQUEST_URI} ^/assets/
-RewriteRule ^assets/(.*)$ frontend/dist/assets/$1 [L]
+# Allow direct access to frontend/dist directory
+<Directory "/home/u817324220/domains/peru-ape-766379.hostingersite.com/public_html/frontend/dist">
+    Require all granted
+    Allow from all
+    Options +FollowSymLinks
+</Directory>
+
+# If the request is for an actual file or directory in frontend/dist, serve it
+RewriteCond %{DOCUMENT_ROOT}/frontend/dist%{REQUEST_URI} -f [OR]
+RewriteCond %{DOCUMENT_ROOT}/frontend/dist%{REQUEST_URI} -d
+RewriteRule ^(.*)$ frontend/dist/$1 [L]
 
 # Handle API requests
 RewriteCond %{REQUEST_URI} ^/api/
 RewriteRule ^api/(.*)$ backend/public/index.php [QSA,L]
 
-# Serve static files from frontend/dist if they exist
-RewriteCond %{REQUEST_URI} !^/backend/
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteCond %{DOCUMENT_ROOT}/frontend/dist%{REQUEST_URI} -f
-RewriteRule ^(.*)$ frontend/dist/$1 [L]
+# If requesting assets, serve from frontend/dist/assets
+RewriteCond %{REQUEST_URI} ^/assets/
+RewriteRule ^assets/(.*)$ frontend/dist/assets/$1 [L]
 
-# For all other routes, serve the React app
+# For the root URL or any non-existing path, serve index.html
+RewriteCond %{REQUEST_URI} ^/$ [OR]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^(.*)$ frontend/dist/index.html [L]
@@ -71,11 +75,14 @@ Header set Referrer-Policy "strict-origin-when-cross-origin"
 </FilesMatch>
 
 # Allow access to frontend/dist directory
-<Directory "/frontend/dist">
+<Directory "${DOCUMENT_ROOT}/frontend/dist">
     Options -Indexes +FollowSymLinks
-    AllowOverride All
+    AllowOverride None
     Require all granted
-    Allow from all
+    
+    # Additional security headers for this directory
+    Header set X-Content-Security-Policy "default-src 'self'"
+    Header set X-WebKit-CSP "default-src 'self'"
 </Directory>
 
 # Protect sensitive directories
@@ -87,3 +94,6 @@ Header set Referrer-Policy "strict-origin-when-cross-origin"
 # Debug information in server response headers
 Header set X-Debug-Path "%{REQUEST_URI}e"
 Header set X-Debug-Rule "%{DEBUG}e"
+
+# Prevent directory listing
+Options -Indexes
