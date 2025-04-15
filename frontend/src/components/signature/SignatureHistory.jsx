@@ -148,14 +148,37 @@ const SignatureHistory = () => {
     let totalPeriods = 0;
     let presentPeriods = 0;
     
+    // Get today's date for comparison
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const currentHour = new Date().getHours();
+    
     // Compter uniquement les jours ouvrés (lundi à vendredi)
     weeklyData.signaturesByDate.forEach(day => {      
-      // Compter matin et après-midi comme périodes séparées
-      totalPeriods += 2;
+      const dayDate = new Date(day.date);
+      dayDate.setHours(0, 0, 0, 0);
       
-      // Compter les périodes présentes (où la signature existe)
-      if (day.signatures.morning) presentPeriods++;
-      if (day.signatures.afternoon) presentPeriods++;
+      // Don't count future days in the total
+      const isFutureDay = dayDate > today;
+      
+      // For today, check morning/afternoon based on current time
+      const isMorningPast = !(dayDate.getTime() === today.getTime() && currentHour < 12);
+      const isAfternoonPast = !(dayDate.getTime() === today.getTime() && currentHour < 17);
+      
+      // Only count past periods in the total
+      if (!isFutureDay) {
+        // Always count morning for past days
+        if (isMorningPast) {
+          totalPeriods += 1;
+          if (day.signatures.morning) presentPeriods += 1;
+        }
+        
+        // Always count afternoon for past days
+        if (isAfternoonPast) {
+          totalPeriods += 1;
+          if (day.signatures.afternoon) presentPeriods += 1;
+        }
+      }
     });
     
     return {
@@ -341,10 +364,29 @@ const SignatureHistory = () => {
                                   <span>Présent</span>
                                 </Badge>
                               ) : (
-                                <Badge variant="outline" className="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800 gap-1">
-                                  <XCircle className="h-3.5 w-3.5" />
-                                  <span>Absent</span>
-                                </Badge>
+                                (() => {
+                                  // Check if this day is in the future
+                                  const today = new Date();
+                                  today.setHours(0, 0, 0, 0);
+                                  const dayDate = new Date(day.date);
+                                  dayDate.setHours(0, 0, 0, 0);
+                                  
+                                  // For the morning period - if it's today, check if it's before noon
+                                  const isFuture = dayDate > today || 
+                                    (dayDate.getTime() === today.getTime() && new Date().getHours() < 12);
+                                    
+                                  return isFuture ? (
+                                    <Badge variant="outline" className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800 gap-1">
+                                      <Calendar className="h-3.5 w-3.5" />
+                                      <span>À venir</span>
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline" className="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800 gap-1">
+                                      <XCircle className="h-3.5 w-3.5" />
+                                      <span>Absent</span>
+                                    </Badge>
+                                  );
+                                })()
                               )}
                             </TooltipTrigger>
                             <TooltipContent side="bottom">
@@ -354,7 +396,23 @@ const SignatureHistory = () => {
                                   <p>Signé à {new Date(day.signatures.morning.date).toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'})}</p>
                                 </div>
                               ) : (
-                                <p>Aucune signature enregistrée</p>
+                                (() => {
+                                  // Check if this day is in the future
+                                  const today = new Date();
+                                  today.setHours(0, 0, 0, 0);
+                                  const dayDate = new Date(day.date);
+                                  dayDate.setHours(0, 0, 0, 0);
+                                  
+                                  // For the morning period - if it's today, check if it's before noon
+                                  const isFuture = dayDate > today || 
+                                    (dayDate.getTime() === today.getTime() && new Date().getHours() < 12);
+                                    
+                                  return isFuture ? (
+                                    <p>Période à venir</p>
+                                  ) : (
+                                    <p>Aucune signature enregistrée</p>
+                                  );
+                                })()
                               )}
                             </TooltipContent>
                           </Tooltip>
@@ -370,10 +428,29 @@ const SignatureHistory = () => {
                                   <span>Présent</span>
                                 </Badge>
                               ) : (
-                                <Badge variant="outline" className="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800 gap-1">
-                                  <XCircle className="h-3.5 w-3.5" />
-                                  <span>Absent</span>
-                                </Badge>
+                                (() => {
+                                  // Check if this day is in the future
+                                  const today = new Date();
+                                  today.setHours(0, 0, 0, 0);
+                                  const dayDate = new Date(day.date);
+                                  dayDate.setHours(0, 0, 0, 0);
+                                  
+                                  // For the afternoon period - if it's today, check if it's before 5pm
+                                  const isFuture = dayDate > today || 
+                                    (dayDate.getTime() === today.getTime() && new Date().getHours() < 17);
+                                    
+                                  return isFuture ? (
+                                    <Badge variant="outline" className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800 gap-1">
+                                      <Calendar className="h-3.5 w-3.5" />
+                                      <span>À venir</span>
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline" className="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800 gap-1">
+                                      <XCircle className="h-3.5 w-3.5" />
+                                      <span>Absent</span>
+                                    </Badge>
+                                  );
+                                })()
                               )}
                             </TooltipTrigger>
                             <TooltipContent side="bottom">
@@ -383,7 +460,23 @@ const SignatureHistory = () => {
                                   <p>Signé à {new Date(day.signatures.afternoon.date).toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'})}</p>
                                 </div>
                               ) : (
-                                <p>Aucune signature enregistrée</p>
+                                (() => {
+                                  // Check if this day is in the future
+                                  const today = new Date();
+                                  today.setHours(0, 0, 0, 0);
+                                  const dayDate = new Date(day.date);
+                                  dayDate.setHours(0, 0, 0, 0);
+                                  
+                                  // For the afternoon period - if it's today, check if it's before 5pm
+                                  const isFuture = dayDate > today || 
+                                    (dayDate.getTime() === today.getTime() && new Date().getHours() < 17);
+                                    
+                                  return isFuture ? (
+                                    <p>Période à venir</p>
+                                  ) : (
+                                    <p>Aucune signature enregistrée</p>
+                                  );
+                                })()
                               )}
                             </TooltipContent>
                           </Tooltip>

@@ -275,7 +275,6 @@ const MainLayout = () => {
   const { hasRole, isLoading: rolesLoading } = useRoles();
   const location = useLocation();
   const [isAuthenticated, setIsAuthenticated] = useState(authService.isLoggedIn());
-  const [isTransitioning, setIsTransitioning] = useState(false);
   const [minContentHeight, setMinContentHeight] = useState('100vh');
   const [initialRender, setInitialRender] = useState(true);
   const [isShowingConfetti, setIsShowingConfetti] = useState(false);
@@ -495,11 +494,9 @@ const MainLayout = () => {
 
   return (
     <ProfileContext.Provider value={profileContextValue}>
-      <div className="flex flex-col min-h-screen bg-gray-50">
-        {/* Layout-wide Confetti Animation */}
-        {isShowingConfetti && (
-          <LayoutConfetti isActive={isShowingConfetti} />
-        )}
+      <div className="min-h-screen bg-background">
+        {/* Only show Navbar for authenticated users */}
+        {isAuthenticated && <Navbar />}
         
         {/* Congratulations Modal */}
         <CongratulationsModal 
@@ -507,13 +504,7 @@ const MainLayout = () => {
           onClose={handleCloseCongratulations} 
         />
         
-        {/* Navbar conditionally rendered */}
-        {!isFullScreenPage && (
-          <Navbar 
-            user={userData} 
-            isLoading={loadingState !== LOADING_STATES.COMPLETE && isAuthenticated} 
-          />
-        )}
+
         
         {/* Main content avec gestion améliorée de l'espace */}
         <main 
@@ -539,15 +530,24 @@ const MainLayout = () => {
           </div>
         </main>
 
-        {showProgress && profileData && hasRole(ROLES.GUEST) && (
-          <ProfileProgress userData={profileData} />
+        {/* Only show Footer and Chat for authenticated users */}
+        {isAuthenticated && (
+          <>
+            {/* Show ProfileProgress only for GUEST role */}
+            {showProgress && hasRole(ROLES.GUEST) && <ProfileProgress />}
+            <Footer />
+            <RoleGuard roles={[ROLES.STUDENT, ROLES.TEACHER]}>
+              <ChatButton />
+            </RoleGuard>
+          </>
         )}
-        
-        {/* Add ChatButton for authenticated users */}
-        {isAuthenticated && !isFullScreenPage && <ChatButton />}
-        
-        {/* Footer */}
-        <Footer />
+
+        {/* Confetti and congratulations modal */}
+        <LayoutConfetti isActive={isShowingConfetti} />
+        <CongratulationsModal
+          isOpen={showCongratulations}
+          onClose={handleCloseCongratulations}
+        />
       </div>
     </ProfileContext.Provider>
   );

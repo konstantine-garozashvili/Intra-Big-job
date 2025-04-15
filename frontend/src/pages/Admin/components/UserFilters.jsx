@@ -16,9 +16,9 @@ import {
 } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
-import { getFrenchRoleDisplayName } from "@/lib/utils/roleDisplay";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useState, useMemo } from "react";
+import { getFrenchRoleDisplayName } from '@/lib/utils/roleDisplay';
 
 export function UserFilters({ 
     roles, 

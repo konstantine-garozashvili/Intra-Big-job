@@ -164,7 +164,7 @@ Intra-Bigjob-Group-5/
 │   │   ├── services/     # Services partagés (API, auth, etc.)
 │   │   ├── layouts/      # Layouts de l'application
 │   │   ├── hooks/        # Hooks React personnalisés
-│   │   └── context/      # Contextes React
+│   │   └── contexts/      # Contextes React
 │   ├── Dockerfile        # Configuration Docker pour le frontend
 │   └── vite.config.js    # Configuration de Vite
 │

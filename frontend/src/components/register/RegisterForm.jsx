@@ -182,63 +182,87 @@ const RegisterForm = () => {
   }, [contextHandleSubmit]);
   
   return (
-    <div className="w-full bg-white rounded-lg shadow-lg mx-auto overflow-hidden">
-      {/* Bandeau supérieur bleu avec titre et progression - SANS animation */}
-      <div className="bg-[#02284f] text-white p-6">
-        <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-bold">
+    <div className="w-full bg-gray-900/80 backdrop-blur-sm rounded-lg shadow-2xl mx-auto overflow-hidden border border-blue-500/30">
+      {/* Bandeau supérieur bleu avec titre et progression - AVEC animation */}
+      <div className="bg-[#02284f]/90 text-white p-6 relative overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-1/4 right-1/4 w-20 h-20 bg-blue-500 rounded-full filter blur-3xl opacity-10 animate-pulse"></div>
+          <div className="absolute bottom-1/3 left-1/4 w-16 h-16 bg-indigo-500 rounded-full filter blur-3xl opacity-10 animate-pulse" style={{animationDelay: '1.5s'}}></div>
+        </div>
+        
+        <div className="flex justify-between items-center relative z-10">
+          <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-300 to-indigo-400">
             Créez votre compte
           </h2>
-          <span className="text-sm font-medium">
+          <span className="text-sm font-medium text-blue-200">
             Étape {currentStep}/{totalSteps}
           </span>
         </div>
         
         {/* Barre de progression */}
-        <div className="mt-6">
+        <div className="mt-6 relative z-10">
           <div className="flex justify-between items-center mb-1">
-            <span className="text-sm font-medium">
+            <span className="text-sm font-medium text-blue-200">
               {stepTitles[currentStep - 1]}
             </span>
-            <span className="text-sm font-medium">
+            <span className="text-sm font-medium text-blue-200">
               {progressPercentage}%
             </span>
           </div>
-          <div className="w-full bg-[#1a3c61] rounded-full h-2">
+          <div className="w-full bg-[#1a3c61] rounded-full h-2 overflow-hidden">
             <div 
-              className="bg-[#528eb2] h-2 rounded-full transition-all duration-300 ease-in-out" 
+              className="bg-gradient-to-r from-blue-500 to-indigo-500 h-2 rounded-full transition-all duration-300 ease-in-out" 
               style={{ width: `${progressPercentage}%` }}
             ></div>
           </div>
         </div>
       </div>
       
-      {/* Corps du formulaire sur fond blanc - AVEC animation */}
+      {/* Corps du formulaire sur fond sombre - AVEC animation */}
       <FormTransition>
-        <div className="p-6">
+        <div className="p-6 relative">
+          <div className="absolute inset-0 pointer-events-none">
+            {/* Subtle background stars */}
+            {[...Array(10)].map((_, i) => (
+              <div
+                key={i}
+                className="absolute bg-white rounded-full"
+                style={{
+                  top: `${Math.random() * 100}%`,
+                  left: `${Math.random() * 100}%`,
+                  width: `${Math.random() * 1.5 + 0.5}px`,
+                  height: `${Math.random() * 1.5 + 0.5}px`,
+                  opacity: Math.random() * 0.3 + 0.1,
+                }}
+              />
+            ))}
+          </div>
+          
           {/* Afficher le composant approprié selon l'étape actuelle */}
-          {currentStep === 1 && (
-            <Step1Form goToNextStep={goToNextStep} />
-          )}
-          
-          {currentStep === 2 && (
-            <Step2Form 
-              goToNextStep={goToNextStep} 
-              goToPrevStep={goToPrevStep} 
-            />
-          )}
-          
-          {currentStep === 3 && (
-            <Step3Form 
-              goToPrevStep={goToPrevStep} 
-              onSubmit={handleFormSubmit}
-            />
-          )}
-          
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Déjà inscrit ? <Link to="/login" className="text-[#528eb2] font-medium hover:underline">Se connecter</Link>
-            </p>
+          <div className="relative z-10">
+            {currentStep === 1 && (
+              <Step1Form goToNextStep={goToNextStep} />
+            )}
+            
+            {currentStep === 2 && (
+              <Step2Form 
+                goToNextStep={goToNextStep} 
+                goToPrevStep={goToPrevStep} 
+              />
+            )}
+            
+            {currentStep === 3 && (
+              <Step3Form 
+                goToPrevStep={goToPrevStep} 
+                onSubmit={handleFormSubmit}
+              />
+            )}
+            
+            <div className="mt-6 text-center">
+              <p className="text-sm text-blue-200">
+                Déjà inscrit ? <Link to="/login" className="text-blue-400 font-medium hover:underline">Se connecter</Link>
+              </p>
+            </div>
           </div>
         </div>
       </FormTransition>

@@ -146,8 +146,8 @@ export const SearchBar = () => {
         inputRef.current.disabled = true;
       }
       
-      // Navigation vers le profil public
-      await navigate(`/public-profile/${userId}`);
+      // Navigation vers le profil public avec le bon chemin
+      await navigate(`/profile/${userId}`);
       
       // Réactiver l'input après la navigation
       if (inputRef.current) {
@@ -156,7 +156,7 @@ export const SearchBar = () => {
     } catch (error) {
       console.error('Navigation error:', error);
       // En cas d'erreur, tenter une redirection directe
-      window.location.href = `/public-profile/${userId}`;
+      window.location.href = `/profile/${userId}`;
     }
   };
 

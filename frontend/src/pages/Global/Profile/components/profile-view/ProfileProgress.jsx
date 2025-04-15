@@ -17,35 +17,27 @@ const ProfileProgress = () => {
 
   // Add event listeners for profile updates
   useEffect(() => {
-    // This function will be called when any part of the profile is updated
     const handleProfileUpdate = () => {
       refreshProfileData();
     };
 
-    // Listen for events that indicate profile changes
     document.addEventListener('user:data-updated', handleProfileUpdate);
     
-    // Clean up event listeners on component unmount
     return () => {
       document.removeEventListener('user:data-updated', handleProfileUpdate);
     };
   }, [refreshProfileData]);
 
   const { completedItems, completionItems } = useMemo(() => {
-   
-    if (!profileData) {
-     
-      return { completedItems: 0, completionItems: [] };
-    }
-
-    const hasLinkedIn = Boolean(profileData?.linkedinUrl);
-    const hasCv = Boolean(profileData?.hasCvDocument);
-    // Improved diploma check
+    // Même si profileData est null, on continue avec des valeurs par défaut
+    const data = profileData || {};
+    
+    const hasLinkedIn = Boolean(data?.linkedinUrl);
+    const hasCv = Boolean(data?.hasCvDocument);
     const hasDiploma = (() => {
-      const isDiplomaArray = Array.isArray(profileData?.diplomas);
-      const diplomaCount = isDiplomaArray ? profileData.diplomas.length : 0;
-      const result = isDiplomaArray && diplomaCount > 0;
-      return result;
+      const isDiplomaArray = Array.isArray(data?.diplomas);
+      const diplomaCount = isDiplomaArray ? data.diplomas.length : 0;
+      return isDiplomaArray && diplomaCount > 0;
     })();
     
     const items = [
@@ -117,7 +109,7 @@ const ProfileProgress = () => {
     }
   }, [isProfileLoading, isRefreshing]);
 
-  // If profile is complete, don't render the widget at all
+  // Si le profil est complet, ne pas afficher le widget
   if (isProfileComplete && completedItems === 3) {
     return null;
   }
@@ -136,10 +128,7 @@ const ProfileProgress = () => {
     );
   }
 
-  if (!profileData) {
-    return null;
-  }
-
+  // Toujours afficher le composant, même sans données
   const percentage = Math.round((completedItems / 3) * 100);
   const itemsToComplete = 3 - completedItems;
 
