@@ -92,7 +92,7 @@ const TindevNeural = ({ onComplete }) => {
       });
       setTimeout(() => {
         nextQuestion();
-      }, 500);
+      }, 300);
     } else if (info.offset.x < -100) {
       setIsAnimating(true);
       setExitX(-200);
@@ -106,7 +106,7 @@ const TindevNeural = ({ onComplete }) => {
       });
       setTimeout(() => {
         nextQuestion();
-      }, 500);
+      }, 300);
     } else {
       // Pas assez de déplacement : retour à la position d'origine sans animation de sortie
       setExitX(0);
@@ -161,7 +161,7 @@ const TindevNeural = ({ onComplete }) => {
             initial={{ x: 0, opacity: 1 }}
             animate={isAnimating ? { x: exitX, opacity: 0 } : { x: 0, opacity: 1 }}
             exit={{ x: exitX, opacity: 0 }}
-            transition={{ duration: 0.3 }}
+            transition={{ duration: 0.15 }}
           >
             <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl overflow-hidden shadow-xl border border-gray-700 flex flex-col">
               <div className="flex-1 p-6 flex flex-col justify-center items-center text-center">
