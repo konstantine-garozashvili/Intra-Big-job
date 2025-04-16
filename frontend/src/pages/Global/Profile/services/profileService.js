@@ -92,11 +92,84 @@ class ProfileService {
     }
   }
 
-  async getStats() {
+  /**
+   * Get statistics for the profile
+   */
+  async getStats(options = {}) {
+    const { preventRecursion = true, forceRefresh = false } = options;
+    
     try {
-      const response = await apiService.get('/profile/stats');
-      return response.data;
+      // Add cache busting parameter to the URL for forceRefresh
+      let endpoint = '/api/profile/stats';
+      if (forceRefresh) {
+        endpoint = `${endpoint}?_t=${Date.now()}`;
+      }
+      
+      const response = await apiService.get(endpoint, {
+        ...apiService.withAuth(),
+        preventRecursion,
+        forceRefresh,
+        // Add cache control headers
+        headers: forceRefresh ? {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        } : undefined
+      });
+      
+      // Store acknowledgment in localStorage if it's true
+      if (response?.stats?.profile?.isAcknowledged) {
+        try {
+          localStorage.setItem('profile_completion_acknowledged', 'true');
+        } catch (e) {
+          // Ignore localStorage errors
+        }
+      }
+      
+      return {
+        stats: response.stats || { profile: { completionPercentage: 0 } }
+      };
     } catch (error) {
+      console.error('Error fetching profile stats:', error);
+      return {
+        stats: { profile: { completionPercentage: 0 } }
+      };
+    }
+  }
+
+  /**
+   * Acknowledge profile completion
+   * This will mark the profile completion message as seen
+   */
+  async acknowledgeProfileCompletion() {
+    try {
+      // Immediately set localStorage flag to prevent showing the message on refresh
+      try {
+        localStorage.setItem('profile_completion_acknowledged', 'true');
+      } catch (e) {
+        // Ignore localStorage errors
+      }
+      
+      // Call the server API
+      const response = await apiService.post('/api/profile/acknowledge-completion', {}, {
+        ...apiService.withAuth(),
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
+      
+      // Force refresh stats
+      await this.getStats({ forceRefresh: true });
+      
+      // Clear caches
+      this.invalidateCache('profile_data');
+      apiService.invalidateCache('/api/profile/stats');
+      
+      return response;
+    } catch (error) {
+      console.error('Error acknowledging profile completion:', error);
       throw error;
     }
   }

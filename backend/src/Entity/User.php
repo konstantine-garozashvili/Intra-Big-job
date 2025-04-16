@@ -62,6 +62,10 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     #[Groups(['user:read'])]
     private bool $isEmailVerified = false;
 
+    #[ORM\Column(type: 'boolean', options: ['default' => false])]
+    #[Groups(['user:read'])]
+    private bool $isProfileCompletionAcknowledged = false;
+
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $verificationToken = null;
 
@@ -736,6 +740,18 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
                 $ticket->setAssignedTo(null);
             }
         }
+
+        return $this;
+    }
+
+    public function isProfileCompletionAcknowledged(): bool
+    {
+        return $this->isProfileCompletionAcknowledged;
+    }
+
+    public function setProfileCompletionAcknowledged(bool $isProfileCompletionAcknowledged): static
+    {
+        $this->isProfileCompletionAcknowledged = $isProfileCompletionAcknowledged;
 
         return $this;
     }
