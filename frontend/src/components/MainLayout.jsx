@@ -10,7 +10,7 @@ import { profileService } from '../pages/Global/Profile/services/profileService'
 import Footer from './Footer';
 import ChatButton from './chat/ChatButton';
 import { Button } from './ui/button';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from '../contexts/ThemeContext';
 
 // Create a context for profile data and refresh function
 export const ProfileContext = createContext({

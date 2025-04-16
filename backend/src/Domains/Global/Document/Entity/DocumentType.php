@@ -47,10 +47,6 @@ class DocumentType
     #[Groups(['document:read', 'document_type:read'])]
     private ?\DateTimeInterface $deadlineAt = null;
 
-    #[ORM\Column(nullable: true)]
-    #[Groups(['document:read', 'document_type:read'])]
-    private ?int $notificationDays = 7;
-
     #[ORM\Column]
     #[Groups(['document:read', 'document_type:read'])]
     private bool $isActive = true;
@@ -164,17 +160,6 @@ class DocumentType
     public function setDeadlineAt(?\DateTimeInterface $deadlineAt): self
     {
         $this->deadlineAt = $deadlineAt;
-        return $this;
-    }
-
-    public function getNotificationDays(): ?int
-    {
-        return $this->notificationDays;
-    }
-
-    public function setNotificationDays(?int $notificationDays): self
-    {
-        $this->notificationDays = $notificationDays;
         return $this;
     }
 

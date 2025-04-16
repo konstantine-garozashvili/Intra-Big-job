@@ -1,8 +1,10 @@
 import * as React from "react"
 import { Loader2 } from "lucide-react"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { authService } from "@/lib/services/authService"
 import { toast } from "sonner"
+import { useRolePermissions } from "@/features/roles/useRolePermissions"
+import { useRoles } from "@/features/roles/roleContext"
 
 // Separate input component to prevent re-renders of the entire form
 const FormInput = React.memo(({ 
@@ -20,7 +22,7 @@ const FormInput = React.memo(({
 
   return (
     <div>
-      <label htmlFor={id} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+      <label htmlFor={id} className="block text-sm font-medium text-white mb-1">
         {label}
       </label>
       <div className="mt-1 relative">
@@ -31,13 +33,13 @@ const FormInput = React.memo(({
           value={value}
           onChange={onChange}
           onBlur={onBlur}
-          className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-[#528eb2] focus:border-[#528eb2] dark:focus:ring-[#78b9dd] dark:focus:border-[#78b9dd] dark:bg-gray-700 dark:text-white sm:text-sm"
+          className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#528eb2] focus:border-[#528eb2] sm:text-sm"
           {...props}
         />
         {type === "password" && (
           <button
             type="button"
-            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-500 dark:text-gray-400 dark:hover:text-gray-300"
+            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-500"
             onClick={() => setShowPassword(!showPassword)}
           >
             {showPassword ? (
@@ -52,7 +54,7 @@ const FormInput = React.memo(({
             )}
           </button>
         )}
-        {error && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{error}</p>}
+        {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
       </div>
     </div>
   )
@@ -60,7 +62,7 @@ const FormInput = React.memo(({
 
 FormInput.displayName = "FormInput"
 
-const AuthFormComponent = React.forwardRef(({ onSubmit, onError }, ref) => {
+const AuthFormComponent = React.forwardRef((props, ref) => {
   // Use a single form state object to reduce re-renders
   const [formState, setFormState] = React.useState({
     email: "",
@@ -70,6 +72,9 @@ const AuthFormComponent = React.forwardRef(({ onSubmit, onError }, ref) => {
   
   const [isLoading, setIsLoading] = React.useState(false)
   const [errors, setErrors] = React.useState({})
+  const navigate = useNavigate()
+  const permissions = useRolePermissions()
+  const { refreshRoles } = useRoles()
 
   // Memoize the credentials object to prevent recreation on each render
   const credentials = React.useMemo(() => ({
@@ -133,10 +138,95 @@ const AuthFormComponent = React.forwardRef(({ onSubmit, onError }, ref) => {
         localStorage.removeItem('rememberedEmail')
       }
       
-      // Appeler la fonction onSubmit passée en prop
-      if (onSubmit) {
-        onSubmit(response)
+      // Dispatch login success event
+      window.dispatchEvent(new Event('login-success'))
+      
+      // Get the return URL if it exists
+      const returnTo = sessionStorage.getItem('returnTo')
+      
+      // Add small delay before navigation - REDUCED from 300ms to 150ms
+      setTimeout(() => {
+        if (returnTo) {
+          sessionStorage.removeItem('returnTo')
+          navigate(returnTo)
+        } else {
+          // Get role from token directly to determine dashboard path
+          const token = localStorage.getItem('token')
+          let dashboardPath = '/dashboard'
+          
+          if (token) {
+            try {
+              const tokenParts = token.split('.')
+              if (tokenParts.length === 3) {
+                const payload = JSON.parse(atob(tokenParts[1]))
+                if (payload.roles && payload.roles.length > 0) {
+                  // Determine dashboard path based on role
+                  const mainRole = payload.roles[0]
+                  switch (mainRole) {
+                    case 'ROLE_ADMIN':
+                      dashboardPath = '/admin/dashboard'
+                      break
+                    case 'ROLE_SUPERADMIN':
+                      dashboardPath = '/superadmin/dashboard'
+                      break
+                    case 'ROLE_TEACHER':
+                      dashboardPath = '/teacher/dashboard'
+                      break
+                    case 'ROLE_STUDENT':
+                      dashboardPath = '/student/dashboard'
+                      break
+                    case 'ROLE_HR':
+                      dashboardPath = '/hr/dashboard'
+                      break
+                    case 'ROLE_GUEST':
+                      dashboardPath = '/guest/dashboard'
+                      break
+                    case 'ROLE_RECRUITER':
+                      dashboardPath = '/recruiter/dashboard'
+                      break
+                    default:
+                      // En cas d'erreur, déconnexion
+                      authService.logout()
+                      navigate('/login')
+                      return
+                  }
+                }
+              }
+            } catch (error) {
+              console.error('Error parsing token:', error)
+            }
+          }
+          
+          // Navigate directly to role-specific dashboard
+          navigate(dashboardPath)
+        }
+        
+        // Show success toast after navigation
+        toast.success("Connexion réussie")
+      }, 150)
+      
+      // Listen for when full user data is loaded
+      const handleUserDataLoaded = () => {
+        refreshRoles()
+        window.removeEventListener('user-data-loaded', handleUserDataLoaded)
       }
+      
+      window.addEventListener('user-data-loaded', handleUserDataLoaded)
+      
+      // After successful login, add some additional error handling for profile data issues
+      const fixProfileIfNeeded = setTimeout(async () => {
+        try {
+          // Check if we can access the user data
+          const user = authService.getUser();
+          if (!user || Object.keys(user).length === 0) {
+            console.warn('User data missing after login, attempting to fix...');
+            await authService.fixProfileDataIssues();
+          }
+        } catch (profileError) {
+          console.error('Error handling profile data after login:', profileError);
+          // No need to show this error to user as login was successful
+        }
+      }, 2000);
       
     } catch (error) {
       if (error.response) {
@@ -149,7 +239,7 @@ const AuthFormComponent = React.forwardRef(({ onSubmit, onError }, ref) => {
             description: "Veuillez vérifier votre email avant de vous connecter.",
             action: {
               label: "Renvoyer l'email",
-              onClick: () => onError && onError('verification-error')
+              onClick: () => navigate('/verification-error')
             },
             duration: 5000
           })
@@ -164,19 +254,11 @@ const AuthFormComponent = React.forwardRef(({ onSubmit, onError }, ref) => {
             description: "Une erreur est survenue lors de la connexion. Veuillez réessayer."
           })
         }
-        
-        if (onError) {
-          onError(error)
-        }
       } else {
         setErrors({ auth: "Une erreur est survenue lors de la connexion. Veuillez réessayer." })
         toast.error("Erreur de connexion", {
           description: "Une erreur est survenue lors de la connexion. Veuillez réessayer."
         })
-        
-        if (onError) {
-          onError(error)
-        }
       }
     } finally {
       setIsLoading(false)
@@ -196,18 +278,18 @@ const AuthFormComponent = React.forwardRef(({ onSubmit, onError }, ref) => {
   }, [])
 
   return (
-    <div className="w-full bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg mx-auto">
+    <div className="w-full rounded-lg mx-auto">
       <div className="text-center mb-8">
-        <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-2">
+        <h2 className="text-3xl font-extrabold text-blue-300 mb-2">
           Connexion
         </h2>
-        <p className="text-sm text-gray-600 dark:text-gray-300">
-          Accédez à votre espace <span className="font-bold text-[#02284f] dark:text-white">Big<span className="text-[#528eb2] dark:text-[#78b9dd]">Project</span></span>
+        <p className="text-sm text-blue-200">
+          Accédez à votre espace <span className="font-bold text-white">Big<span className="text-[#528eb2]">Project</span></span>
         </p>
       </div>
 
       {errors.auth && (
-        <div className="p-3 mb-5 text-red-700 bg-red-100 dark:text-red-400 dark:bg-red-900/30 dark:border-red-800 border border-red-400 rounded">
+        <div className="p-3 mb-5 text-red-400 bg-red-900/30 border border-red-700 rounded">
           {errors.auth}
         </div>
       )}
@@ -251,15 +333,15 @@ const AuthFormComponent = React.forwardRef(({ onSubmit, onError }, ref) => {
               type="checkbox"
               checked={formState.rememberMe}
               onChange={handleInputChange}
-              className="h-4 w-4 text-[#528eb2] dark:text-[#78b9dd] focus:ring-[#528eb2] dark:focus:ring-[#78b9dd] border-gray-300 dark:border-gray-600 rounded"
+              className="h-4 w-4 text-blue-500 focus:ring-blue-500 border-gray-700 rounded bg-gray-800"
             />
-            <label htmlFor="rememberMe" className="block ml-2 text-sm text-gray-700 dark:text-gray-300">
+            <label htmlFor="rememberMe" className="block ml-2 text-sm text-gray-300">
               Se souvenir de moi
             </label>
           </div>
 
           <div className="text-sm">
-            <Link to="/reset-password" className="font-medium text-[#528eb2] hover:text-[#02284f] dark:text-[#78b9dd] dark:hover:text-white">
+            <Link to="/reset-password" className="font-medium text-blue-400 hover:text-blue-300">
               Mot de passe oublié?
             </Link>
           </div>
@@ -269,7 +351,7 @@ const AuthFormComponent = React.forwardRef(({ onSubmit, onError }, ref) => {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#528eb2] hover:bg-[#528eb2]/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#528eb2] transition-all transform hover:scale-105 disabled:opacity-70 disabled:cursor-not-allowed dark:bg-[#004080] dark:hover:bg-[#004d99] dark:hover:shadow-[0_0_10px_rgba(120,185,221,0.3)]"
+            className="relative w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all transform hover:scale-105 disabled:opacity-70 disabled:cursor-not-allowed overflow-hidden group"
           >
             <span className="relative z-10">
               {isLoading ? (
@@ -289,10 +371,10 @@ const AuthFormComponent = React.forwardRef(({ onSubmit, onError }, ref) => {
       <div className="mt-8">
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
+            <div className="w-full border-t border-gray-700"></div>
           </div>
           <div className="relative flex justify-center text-sm">
-            <span className="px-2 text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800">
+            <span className="px-2 text-gray-400">
               Vous n'avez pas encore de compte?
             </span>
           </div>
@@ -301,7 +383,7 @@ const AuthFormComponent = React.forwardRef(({ onSubmit, onError }, ref) => {
         <div className="mt-6">
           <Link
             to="/register"
-            className="w-full flex justify-center py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-white bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#528eb2] dark:focus:ring-[#78b9dd] dark:focus:ring-offset-gray-800 transition-all dark:hover:shadow-[0_0_8px_rgba(120,185,221,0.2)]"
+            className="relative w-full flex justify-center py-3 px-4 border border-gray-700 rounded-md shadow-sm text-sm font-medium text-gray-300 bg-gray-800/50 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all transform hover:scale-105 overflow-hidden group"
           >
             <span className="relative z-10">S'inscrire</span>
             <div className="absolute inset-0 bg-gradient-to-r from-gray-800 via-blue-900/30 to-gray-800 opacity-0 group-hover:opacity-100 transition-opacity"></div>
@@ -315,4 +397,4 @@ const AuthFormComponent = React.forwardRef(({ onSubmit, onError }, ref) => {
 AuthFormComponent.displayName = 'AuthFormComponent'
 
 // Export with the original name for backward compatibility
-export const AuthForm = AuthFormComponent
+export const AuthForm = AuthFormComponent 

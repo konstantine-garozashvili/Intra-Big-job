@@ -1,0 +1,73 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+I'm currently merging my repository, which is the project's global repository, with work from a repository belonging to one of the developer groups.
+
+It's important to know that with this merge, I don't want to merge all of the group's work; I only want to recover the theme functionality and nothing else. However, I would like to keep the "Current" theme for everything related to the pages on the public route. Here are the files in question:
+
+           <Route element={<PublicRoute />}>
+                  {/* Route racine pour les utilisateurs non connectés */}
+                  <Route index element={<Home />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
+                  <Route
+                    path="/registration-success"
+                    element={<RegistrationSuccess />}
+                  />
+                  <Route
+                    path="/verification-success"
+                    element={<VerificationSuccess />}
+                  />
+                  <Route
+                    path="/verification-error"
+                    element={<VerificationError />}
+                  />
+                  <Route
+                    path="/reset-password"
+                    element={<ResetPasswordRequest />}
+                  />
+                  <Route
+                    path="/reset-password/confirmation"
+                    element={<ResetPasswordConfirmation />}
+                  />
+                  <Route
+                    path="/reset-password/reset"
+                    element={<ResetPassword />}
+                  />
+                  <Route path="/formations" element={<FormationList />} />
+                  <Route
+                    path="/formation-finder"
+                    element={<FormationFinder />}
+                  />
+                  <Route path="/all-formations" element={<AllFormations />} />
+                  <Route path="/formations/web" element={<WebDevelopment />} />
+                  <Route
+                    path="/formations/ai"
+                    element={<ArtificialIntelligence />}
+                  />
+                  <Route
+                    path="/formations/cybersecurity"
+                    element={<Cybersecurity />}
+                  />
+                  <Route
+                    path="/formations/mobile"
+                    element={<MobileDevelopment />}
+                  />
+                  <Route
+                    path="/formations/data-science"
+                    element={<DataScience />}
+                  />
+                  <Route
+                    path="/formations/game"
+                    element={<GameDevelopment />}
+                  />
+                  <Route
+                    path="/skill-assessment"
+                    element={<SkillAssessment />}
+                  />
+                </Route>
+
+For the rest of it we need to use the theme feature from the “Incoming” work. Right now we may have some inconcistencies.
+

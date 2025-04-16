@@ -2,7 +2,6 @@ import React, { useMemo, useState, useEffect } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useUserData } from '@/hooks/useDashboardQueries';
 import { motion } from 'framer-motion';
-import mercureService, { TOPICS } from '@/lib/services/mercureService';
 import DocumentNotifications from '@/components/DocumentNotifications';
 import axios from 'axios';
 
@@ -33,54 +32,9 @@ const GuestDashboard = () => {
     return roleAliases[role] || role;
   }, [user]);
 
-  // Abonnement aux notifications Mercure
-  useEffect(() => {
-    // Définir le topic pour les notifications
-    const topic = TOPICS.GENERAL;
-    
-    // Callback pour les messages reçus
-    const handleMessage = (data) => {
-      // Ajouter la nouvelle notification à notre état avec un timestamp
-      setNotifications(prev => [...prev, {
-        id: Date.now(),
-        message: data.status,
-        timestamp: new Date().toLocaleTimeString()
-      }]);
-    };
-    
-    // S'abonner au topic avec le service Mercure
-    const { close } = mercureService.subscribe(topic, handleMessage);
-    
-    // Nettoyage à la désactivation du composant
-    return close;
-  }, []);
 
-  // Fonction pour tester l'envoi de notifications
-  const testNotification = async () => {
-    try {
-      const response = await axios.get('http://localhost:8000/publish');
-      console.log('Notification sent:', response.data);
-    } catch (error) {
-      console.error('Error sending notification:', error);
-    }
-  };
 
-  // Fonction pour tester une notification de document
-  const testDocumentNotification = async () => {
-    try {
-      // Simuler l'ajout d'un document
-      const documentData = {
-        documentId: Math.floor(Math.random() * 1000), // ID aléatoire pour les tests
-        documentName: "Rapport Guest.pdf",
-        addedBy: user?.firstName ? `${user.firstName} ${user.lastName || ''}` : "Invité"
-      };
-      
-      const response = await mercureService.notifyDocumentAdded(documentData);
-      console.log('Document notification sent:', response);
-    } catch (error) {
-      console.error('Error sending document notification:', error);
-    }
-  };
+
 
   return (
     <DashboardLayout loading={isLoading} error={error?.message}>

@@ -69,15 +69,6 @@ services:
         arguments:
             $s3Service: '@App\Service\S3StorageService'
             $params: '@parameter_bag'
-            
-    # Configuration du service de notification
-    App\Domains\Global\Notification\Service\NotificationService:
-        arguments:
-            $entityManager: '@doctrine.orm.entity_manager'
-            $notificationRepository: '@App\Domains\Global\Notification\Repository\NotificationRepository'
-            $urlGenerator: '@router'
-            $hub: '@Symfony\Component\Mercure\HubInterface'
-            $httpClient: '@Symfony\Contracts\HttpClient\HttpClientInterface'
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones

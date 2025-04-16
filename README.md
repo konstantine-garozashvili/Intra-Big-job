@@ -4,7 +4,7 @@
 
 ### Préparation initiale
 
-Avant de commencer, assurez-vous d'avoir un environnement propre (Attention cette action supprimera les volumes de vos anciens projets)m :
+Avant de commencer, assurez-vous d'avoir un environnement propre (Attention cette action supprimera les volumes de vos anciens projets) :
 
 ```bash
 # Nettoyer le cache Docker et les volumes
@@ -15,10 +15,10 @@ docker-compose down -v && docker system prune -a --volumes
 
 ```bash
 # Reconstruire les images Docker
-docker-compose -f infra/docker-compose.yml build --no-cache
+docker-compose build --no-cache
 
 # Démarrer les conteneurs
-docker-compose -f infra/docker-compose.yml up -d
+docker-compose up -d
 
 ## 📝 Commandes fréquentes
 

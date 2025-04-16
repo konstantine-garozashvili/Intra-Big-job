@@ -478,8 +478,8 @@ class TicketController extends AbstractController
         $this->entityManager->persist($ticket);
         $this->entityManager->flush();
         
-        // Send email notification to user
-        $this->sendEmailNotification($user, $ticket);
+                // Send email notification to user
+                $this->sendEmailNotification($user, $ticket);
         
         // Notify admins about all new tickets
         $this->notifyAdmins($ticket);
@@ -801,18 +801,6 @@ class TicketController extends AbstractController
                 'message' => 'Error updating tickets: ' . $e->getMessage()
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
-    }
-
-    private function sendEmailNotification(User $user, Ticket $ticket): void
-    {
-        $email = (new Email())
-            ->from('noreply@yourcompany.com')
-            ->to($user->getEmail())
-            ->subject('Your Support Ticket Has Been Created')
-            ->text("Hello {$user->getFirstName()},\n\nYour support ticket has been created with the following details:\n\nTitle: {$ticket->getTitle()}\nID: {$ticket->getId()}\n\nWe will get back to you as soon as possible.")
-            ->html("<p>Hello {$user->getFirstName()},</p><p>Your support ticket has been created with the following details:</p><p><strong>Title:</strong> {$ticket->getTitle()}<br><strong>ID:</strong> {$ticket->getId()}</p><p>We will get back to you as soon as possible.</p>");
-        
-        $this->mailer->send($email);
     }
 
     private function notifyAdmins(Ticket $ticket): void

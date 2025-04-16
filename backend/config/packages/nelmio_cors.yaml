@@ -27,9 +27,3 @@ nelmio_cors:
             allow_methods: ['GET', 'OPTIONS', 'POST']
             allow_credentials: true
             max_age: 3600
-        '^/mercure-info':
-            allow_origin: ['http://localhost:5173', 'http://localhost:8000']
-            allow_headers: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
-            allow_methods: ['GET', 'OPTIONS']
-            allow_credentials: true
-            max_age: 3600

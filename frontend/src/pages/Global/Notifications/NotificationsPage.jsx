@@ -156,38 +156,21 @@ const NotificationsPage = () => {
   // État pour suivre si nous sommes en mode simulé
   const [isSimulatedMode, setIsSimulatedMode] = useState(false);
   
-  // Initialiser Mercure au montage
-  useEffect(() => {
-    // Initialiser la connexion Mercure
-    notificationService.initMercure();
-    
-    // Nettoyer la connexion au démontage
-    return () => {
-      notificationService.closeMercureConnection();
-    };
-  }, []);
-  
-  // Fonction pour charger les notifications
   const loadNotifications = async (page = 1, includeRead = true) => {
-    // Si nous sommes déjà en train de charger, ne pas relancer
     if (loading && hasFetchedRef.current) return;
     
     setLoading(true);
     try {
-      // Obtenir les notifications de notre cache Mercure
       const cachedNotifications = notificationService.cache.notifications.notifications || [];
       
-      // Filtrer selon includeRead
       const filteredNotifications = includeRead 
         ? cachedNotifications 
         : cachedNotifications.filter(n => !n.isRead && !n.readAt);
       
-      // Trier par date (plus récent en premier)
       const sortedNotifications = [...filteredNotifications].sort(
         (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
       );
       
-      // Calculer la pagination
       const total = sortedNotifications.length;
       const pages = Math.max(1, Math.ceil(total / pagination.limit));
       const startIndex = (page - 1) * pagination.limit;
@@ -196,7 +179,6 @@ const NotificationsPage = () => {
         startIndex + pagination.limit
       );
       
-      // Mettre à jour l'état
       setNotifications(paginatedNotifications);
       setPagination({
         page: page,
@@ -205,10 +187,8 @@ const NotificationsPage = () => {
         pages: pages,
       });
       
-      // Mettre à jour le compteur de non lus
       const unreadCount = cachedNotifications.filter(n => !n.isRead && !n.readAt).length;
       
-      // Mettre à jour le mode simulé
       setIsSimulatedMode(notificationService.useMockBackend);
       
       setError(null);
@@ -216,29 +196,23 @@ const NotificationsPage = () => {
     } catch (error) {
       console.error('Error loading notifications:', error);
       
-      // Ne pas montrer d'erreur si nous avons déjà des données à afficher
       if (notifications.length === 0) {
         setError('Erreur lors du chargement des notifications. Veuillez réessayer.');
       }
       
-      // Mettre à jour le mode simulé
       setIsSimulatedMode(notificationService.useMockBackend);
     } finally {
       setLoading(false);
     }
   };
   
-  // Charger les notifications au chargement de la page
   useEffect(() => {
     const includeRead = activeTab === 'all';
     loadNotifications(1, includeRead);
   }, [activeTab]);
   
-  // Surveiller les modifications du compteur de notifications non lues
   useEffect(() => {
-    // S'abonner aux mises à jour des notifications
     const unsubscribe = notificationService.subscribe(data => {
-      // Recharger les notifications quand on reçoit une mise à jour
       const includeRead = activeTab === 'all';
       loadNotifications(pagination.page, includeRead);
     });
@@ -246,7 +220,6 @@ const NotificationsPage = () => {
     return () => unsubscribe();
   }, [activeTab, pagination.page]);
   
-  // Gérer le changement de page
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= pagination.pages) {
       const includeRead = activeTab === 'all';
@@ -254,20 +227,16 @@ const NotificationsPage = () => {
     }
   };
   
-  // Gérer le marquage de toutes les notifications comme lues
   const handleMarkAllAsRead = async () => {
     try {
-      // Marquage local pour toutes les notifications
       notificationService.markAllNotificationsAsReadLocally();
       
-      // Mettre à jour les notifications affichées
       setNotifications(notifications.map(notification => ({
         ...notification,
         readAt: new Date().toISOString(),
         isRead: true
       })));
       
-      // Si on est sur l'onglet "non lues", recharger pour les retirer
       if (activeTab === 'unread') {
         loadNotifications(1, false);
       }
@@ -279,22 +248,18 @@ const NotificationsPage = () => {
     }
   };
   
-  // Gestion des onglets
   const handleTabChange = (value) => {
     setActiveTab(value);
   };
   
-  // Fonction pour créer une notification de test
   const createTestNotification = async (type = 'document', targetUrl = '/dashboard') => {
     try {
       await notificationService.createTestNotification(type, targetUrl);
       toast.success(`Notification de test (${type}) créée avec succès`);
       
-      // Forcer un rafraîchissement complet du cache
       notificationService.resetCache();
       hasFetchedRef.current = false;
       
-      // Recharger les notifications avec une légère pause pour laisser le temps au service de se réinitialiser
       setTimeout(() => {
         loadNotifications(1, activeTab === 'all');
       }, 100);
@@ -304,41 +269,32 @@ const NotificationsPage = () => {
     }
   };
   
-  // Fonction pour marquer une notification comme lue et naviguer vers sa cible
   const handleClick = async (notification) => {
     try {
       if (!notification.readAt && !notification.isRead) {
-        // Mettre à jour l'interface immédiatement pour un retour visuel instantané
         const updatedNotifications = notifications.map(n => 
           n.id === notification.id ? { ...n, readAt: new Date().toISOString(), isRead: true } : n
         );
         setNotifications(updatedNotifications);
         
-        // Marquer comme lue localement
         notificationService.markNotificationAsReadLocally(notification.id);
       }
       
-      // Vérifier si l'URL cible est valide avant de rediriger
       if (notification.targetUrl && notification.targetUrl.startsWith('/')) {
         navigate(notification.targetUrl);
       } else {
-        // Si l'URL n'est pas valide, rester sur la page des notifications
         console.warn('Invalid targetUrl in notification:', notification.targetUrl);
       }
     } catch (error) {
       console.error('Error marking notification as read:', error);
-      // Ne pas afficher de message d'erreur à l'utilisateur pour ne pas perturber l'expérience
-      // La navigation doit quand même se faire même si le marquage échoue
       if (notification.targetUrl && notification.targetUrl.startsWith('/')) {
         navigate(notification.targetUrl);
       }
     }
   };
   
-  // Calculer le nombre de notifications non lues
   const unreadCount = notifications.filter(n => !n.readAt && !n.isRead).length;
   
-  // Rendu des notifications ou des états alternatifs
   const renderNotifications = () => {
     if (loading) {
       return (
@@ -397,9 +353,7 @@ const NotificationsPage = () => {
             key={notification.id || `notification-${index}`} 
             notification={notification} 
             onRead={() => {
-              // Rafraîchir la liste si on est dans l'onglet non lues
               if (activeTab === 'unread') {
-                // Ajouter un petit délai pour que l'effet visuel soit visible
                 setTimeout(() => {
                   loadNotifications(pagination.page, false);
                 }, 300);
@@ -494,7 +448,6 @@ const NotificationsPage = () => {
         </TabsContent>
       </Tabs>
       
-      {/* Pagination */}
       {pagination.pages > 1 && (
         <div className="flex items-center justify-center space-x-2 mt-8">
           <Button

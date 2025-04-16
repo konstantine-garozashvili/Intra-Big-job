@@ -43,5 +43,3 @@ api_token_devices:
 document_routes:
     resource: './routes/document.yaml'
 
-notification_routes:
-    resource: './routes/notification.yaml'

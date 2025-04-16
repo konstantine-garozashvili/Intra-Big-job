@@ -1,47 +1,50 @@
-import { Moon, Sun } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useTheme } from "@/context/ThemeContext";
-import { useEffect, useState } from "react";
+import { useLocation } from 'react-router-dom';
+import { usePublicTheme } from '@/contexts/PublicThemeContext';
+import { useProtectedTheme } from '@/contexts/ProtectedThemeContext';
+import { Moon, Sun } from 'lucide-react';
+import { Button } from './button';
 
-export function ThemeToggle({ variant = "ghost", size = "icon", className = "" }) {
-  const { theme, toggleTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
+export function ThemeToggle() {
+  const location = useLocation();
+  const { colorMode: publicColorMode, toggleColorMode: togglePublicMode } = usePublicTheme();
+  const { theme: protectedTheme, toggleTheme: toggleProtectedTheme } = useProtectedTheme();
 
-  // Attendre que le composant soit monté pour éviter les problèmes d'hydratation
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const isPublicRoute = location.pathname === '/' || 
+    location.pathname.startsWith('/login') || 
+    location.pathname.startsWith('/register') ||
+    location.pathname.startsWith('/reset-password') ||
+    location.pathname.startsWith('/verification') ||
+    location.pathname.startsWith('/formations') ||
+    location.pathname.startsWith('/formation-finder') ||
+    location.pathname.startsWith('/skill-assessment');
 
-  // Ne rien afficher pendant le montage pour éviter un rendu incorrect côté serveur
-  if (!mounted) {
-    return null;
-  }
+  const handleToggle = () => {
+    if (isPublicRoute) {
+      togglePublicMode();
+    } else {
+      toggleProtectedTheme();
+    }
+  };
 
   return (
-    <Button 
-      variant={variant} 
-      size={size} 
-      onClick={toggleTheme}
-      aria-label={
-        theme === "light"
-          ? "Basculer vers le mode sombre"
-          : "Basculer vers le mode clair"
-      }
-      title={
-        theme === "light"
-          ? "Basculer vers le mode sombre"
-          : "Basculer vers le mode clair"
-      }
-      className={`hover:bg-accent/80 transition-colors duration-300 ${className}`}
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={handleToggle}
+      className="h-9 w-9 px-0"
     >
-      {theme === "light" ? (
-        <Sun className="h-5 w-5 text-amber-500" />
+      {isPublicRoute ? (
+        publicColorMode === 'navy' ? (
+          <Sun className="h-4 w-4 text-blue-100" />
+        ) : (
+          <Moon className="h-4 w-4 text-gray-100" />
+        )
+      ) : protectedTheme === 'light' ? (
+        <Sun className="h-4 w-4" />
       ) : (
-        <Moon className="h-5 w-5 text-indigo-300" />
+        <Moon className="h-4 w-4" />
       )}
-      <span className="sr-only">
-        {theme === "light" ? "Mode sombre" : "Mode clair"}
-      </span>
+      <span className="sr-only">Toggle theme</span>
     </Button>
   );
 }
