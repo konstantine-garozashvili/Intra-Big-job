@@ -78,15 +78,10 @@ const TindevNeural = ({ onComplete }) => {
   // Handle drag end
   const handleDragEnd = (_, info) => {
     if (isAnimating) return;
-    
-    setIsAnimating(true);
-    
-    const currentQuestion = questions[currentQuestionIndex];
-    
+    // Si le seuil n'est pas dépassé, la carte revient simplement à sa position d'origine
     if (info.offset.x > 100) {
-      // Swiped right
+      setIsAnimating(true);
       setExitX(200);
-      
       // Update swipe results based on right mapping
       setSwipeResults(prev => {
         const newResults = { ...prev };
@@ -95,14 +90,12 @@ const TindevNeural = ({ onComplete }) => {
         });
         return newResults;
       });
-      
       setTimeout(() => {
         nextQuestion();
       }, 500);
     } else if (info.offset.x < -100) {
-      // Swiped left
+      setIsAnimating(true);
       setExitX(-200);
-      
       // Update swipe results based on left mapping
       setSwipeResults(prev => {
         const newResults = { ...prev };
@@ -111,16 +104,16 @@ const TindevNeural = ({ onComplete }) => {
         });
         return newResults;
       });
-      
       setTimeout(() => {
         nextQuestion();
       }, 500);
     } else {
-      // Reset position
+      // Pas assez de déplacement : retour à la position d'origine sans animation de sortie
       setExitX(0);
       setIsAnimating(false);
     }
   };
+
   
   // Go to next question or complete
   const nextQuestion = () => {
@@ -157,41 +150,16 @@ const TindevNeural = ({ onComplete }) => {
       </div>
       
       <div className="relative w-full max-w-md h-96 mx-auto">
-        {/* Swipe indicators */}
-        <div className="absolute top-1/2 left-4 transform -translate-y-1/2 z-10">
-          <motion.div
-            className="w-16 h-16 bg-red-500 bg-opacity-20 rounded-full flex items-center justify-center"
-            animate={{
-              opacity: x.get() < -50 ? 1 : 0.5,
-              scale: x.get() < -50 ? 1.2 : 1
-            }}
-          >
-            <span className="text-2xl">👈</span>
-          </motion.div>
-        </div>
-        
-        <div className="absolute top-1/2 right-4 transform -translate-y-1/2 z-10">
-          <motion.div
-            className="w-16 h-16 bg-green-500 bg-opacity-20 rounded-full flex items-center justify-center"
-            animate={{
-              opacity: x.get() > 50 ? 1 : 0.5,
-              scale: x.get() > 50 ? 1.2 : 1
-            }}
-          >
-            <span className="text-2xl">👉</span>
-          </motion.div>
-        </div>
-        
-        <AnimatePresence mode="wait">
+      <AnimatePresence mode="wait">
           <motion.div
             key={currentQuestion.id}
-            className="absolute w-full h-full"
+            className={`absolute w-full h-full ${isAnimating ? 'pointer-events-none opacity-70' : ''}`}
             style={{ x, rotate, opacity }}
-            drag="x"
+            drag={isAnimating ? false : "x"}
             dragConstraints={{ left: 0, right: 0 }}
-            onDragEnd={handleDragEnd}
+            onDragEnd={isAnimating ? undefined : handleDragEnd}
             initial={{ x: 0, opacity: 1 }}
-            animate={{ x: 0, opacity: 1 }}
+            animate={isAnimating ? { x: exitX, opacity: 0 } : { x: 0, opacity: 1 }}
             exit={{ x: exitX, opacity: 0 }}
             transition={{ duration: 0.3 }}
           >
