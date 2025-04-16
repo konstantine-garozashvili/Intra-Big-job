@@ -74,7 +74,7 @@ const Computer3D = () => {
               ['', '', '', '', '', '', '', '', '', '', '', ''], // Row 1
               ['', '', '', '', '', '', '', '', '', '', '', ''], // Row 2
               ['', '', '', '', '', '', '', '', '', '', 'enter'], // Row 3
-              ['shift', '', '', '', '', '', '', '', '', '', ''], // Row 4 (shift/enter col-span-2)
+              ['', '', '', '', '', '', '', '', '', '', ''], // Row 4
               [null, null, 'space', 'space', 'space', 'space', 'space', 'space', 'space', null, null, null], // Row 5 (space col-span-6)
             ].map((row, rowIdx) =>
               row.map((keyType, colIdx) => {
