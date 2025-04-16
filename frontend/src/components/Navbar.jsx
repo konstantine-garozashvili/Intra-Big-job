@@ -255,6 +255,15 @@ const UserMenu = ({ onLogout, userData, setLogoutDialogOpen }) => {
   useEffect(() => {
     const checkSignatureStatus = async () => {
       try {
+        // Check if user is a teacher or student
+        const userRoles = JSON.parse(localStorage.getItem('userRoles') || '[]');
+        const canSign = userRoles.some(role => ['ROLE_TEACHER', 'ROLE_STUDENT'].includes(role));
+        
+        if (!canSign) {
+          setHasUnsignedPeriod(false);
+          return;
+        }
+
         const response = await axios.get('/api/signatures/today');
         const data = response.data;
         console.log('Signature check response:', data);
@@ -329,11 +338,43 @@ const UserMenu = ({ onLogout, userData, setLogoutDialogOpen }) => {
       <LanguageSelector />
       
       {/* Notification dropdown */}
-      <div className="hidden md:block">
-        <DropdownMenu open={showNotifications} onOpenChange={setShowNotifications}>
-          <DropdownMenuTrigger asChild>
+      {userData?.roles?.some(role => ['ROLE_TEACHER', 'ROLE_STUDENT'].includes(role)) && (
+        <>
+          <div className="hidden md:block">
+            <DropdownMenu open={showNotifications} onOpenChange={setShowNotifications}>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="relative rounded-full w-10 h-10 p-0 bg-transparent text-gray-200 hover:bg-[#02284f]/80 hover:text-white mr-2"
+                >
+                  <Bell className="h-5 w-5" />
+                  {hasUnsignedPeriod && (
+                    <span className="absolute top-0 right-0 h-3 w-3 bg-red-500 rounded-full" />
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-72">
+                {hasUnsignedPeriod ? (
+                  <DropdownMenuItem asChild>
+                    <Link to="/signature" className="flex items-center space-x-2 text-red-600">
+                      <ClipboardPenLine className="h-4 w-4" />
+                      <span>Vous devez signer votre présence</span>
+                    </Link>
+                  </DropdownMenuItem>
+                ) : (
+                  <div className="px-2 py-4 text-center text-sm text-gray-500">
+                    Pas de notifications
+                  </div>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          {/* Mobile notification button */}
+          <div className="md:hidden">
             <Button
               variant="ghost"
+              onClick={() => setShowNotifications(!showNotifications)}
               className="relative rounded-full w-10 h-10 p-0 bg-transparent text-gray-200 hover:bg-[#02284f]/80 hover:text-white mr-2"
             >
               <Bell className="h-5 w-5" />
@@ -341,37 +382,9 @@ const UserMenu = ({ onLogout, userData, setLogoutDialogOpen }) => {
                 <span className="absolute top-0 right-0 h-3 w-3 bg-red-500 rounded-full" />
               )}
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-72">
-            {hasUnsignedPeriod ? (
-              <DropdownMenuItem asChild>
-                <Link to="/signature" className="flex items-center space-x-2 text-red-600">
-                  <ClipboardPenLine className="h-4 w-4" />
-                  <span>Vous devez signer votre présence</span>
-                </Link>
-              </DropdownMenuItem>
-            ) : (
-              <div className="px-2 py-4 text-center text-sm text-gray-500">
-                Pas de notifications
-              </div>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
-      {/* Mobile notification button */}
-      <div className="md:hidden">
-        <Button
-          variant="ghost"
-          onClick={() => setShowNotifications(!showNotifications)}
-          className="relative rounded-full w-10 h-10 p-0 bg-transparent text-gray-200 hover:bg-[#02284f]/80 hover:text-white mr-2"
-        >
-          <Bell className="h-5 w-5" />
-          {hasUnsignedPeriod && (
-            <span className="absolute top-0 right-0 h-3 w-3 bg-red-500 rounded-full" />
-          )}
-        </Button>
-      </div>
+          </div>
+        </>
+      )}
 
       {/* Dropdown menu */}
       <DropdownMenu modal={true}>
