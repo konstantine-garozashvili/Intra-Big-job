@@ -167,8 +167,14 @@ export function useUserManagement(initialFilter = "ALL") {
             const response = await apiService.changeUserRole(userId, oldRoleName, newRoleName);
             if (response.success) {
                 toast.success("Rôle modifié avec succès");
-                // Dispatch the role change event
-                window.dispatchEvent(new CustomEvent('roleChanged', { detail: response }));
+                // Dispatch the role change event with user ID and new role name
+                window.dispatchEvent(new CustomEvent('roleChanged', { 
+                    detail: {
+                        ...response,
+                        targetUserId: userId,
+                        newRole: newRoleName
+                    }
+                }));
                 // Pas besoin de rafraîchir toute la liste puisque nous avons déjà mis à jour localement
             } else {
                 toast.error("Impossible de modifier le rôle: " + (response.message || "Erreur inconnue"));

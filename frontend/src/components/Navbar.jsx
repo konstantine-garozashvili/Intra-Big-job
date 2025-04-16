@@ -4,6 +4,7 @@ import { authService } from "../lib/services/authService";
 import userDataManager from "../lib/services/userDataManager";
 import axios from 'axios';
 import { profileService } from "../pages/Global/Profile/services/profileService";
+import apiService from '../lib/services/apiService';
 import { Button } from "./ui/button";
 import {
   UserRound,
@@ -265,24 +266,125 @@ const UserMenu = ({ onLogout, userData, setLogoutDialogOpen }) => {
     }
   };
 
-  // Listen for role change events
+  // State to store the last known role
+  const [lastKnownRole, setLastKnownRole] = useState(userData?.roles?.[0]?.name);
+
+  // Listen for role change events and poll for role changes
   useEffect(() => {
+    // Only set up polling if we have user data
+    if (!userData?.id) return;
+
+    console.log('🔄 Setting up role polling...', {
+      userId: userData.id,
+      currentRole: userData?.roles?.[0]?.name
+    });
+
     const handleRoleChange = (event) => {
       const { detail } = event;
-      if (detail && detail.success) {
-        const newNotification = {
-          id: Date.now(),
-          message: 'Rôle modifié avec succès',
-          timestamp: new Date(),
-          type: 'success'
-        };
-        setAdminNotifications(prev => [newNotification, ...prev].slice(0, 5)); // Keep last 5 notifications
+      if (detail?.success) {
+        console.log('📢 Role change event received:', {
+          isTargetUser: detail.targetUserId === userData.id,
+          newRole: detail.newRole
+        });
+
+        // Only show notification if this is the target user or if the current user is an admin
+        if (detail.targetUserId === userData.id || userData.roles?.[0]?.name === 'ADMIN') {
+          const newNotification = {
+            id: Date.now(),
+            message: detail.targetUserId === userData.id ? 
+              `Votre rôle a été modifié en: ${detail.newRole}` : 
+              'Rôle modifié avec succès',
+            timestamp: new Date(),
+            type: 'success'
+          };
+          setAdminNotifications(prev => [newNotification, ...prev].slice(0, 5));
+        }
       }
     };
 
+    const checkRoleChange = async () => {
+      try {
+        // Use userDataManager to get fresh user data
+        const response = await apiService.get('/api/me');
+        console.log('📥 Raw API Response:', response);
+
+        // Try to find user data in different response formats
+        let userData;
+        if (response?.user) {
+          userData = response.user;
+        } else if (response?.data) {
+          userData = response.data;
+        } else {
+          userData = response;
+        }
+
+        console.log('👤 Extracted User Data:', userData);
+
+        // Debug the exact structure of roles
+        console.log('🔍 Roles debug:', {
+          roles: userData?.roles,
+          firstRole: userData?.roles?.[0],
+          roleKeys: userData?.roles?.[0] ? Object.keys(userData.roles[0]) : [],
+        });
+
+        // Try to find roles in different possible structures
+        let currentRole;
+        if (userData?.roles && Array.isArray(userData.roles) && userData.roles.length > 0) {
+          // Check if role is in a 'role' property of the first role object
+          if (userData.roles[0].role) {
+            currentRole = userData.roles[0].role;
+          } 
+          // Check if role is directly the value of the first role object
+          else if (typeof userData.roles[0] === 'string') {
+            currentRole = userData.roles[0];
+          }
+          // Check if role is in a 'name' property
+          else if (userData.roles[0].name) {
+            currentRole = userData.roles[0].name;
+          }
+        } else if (userData?.role) {
+          currentRole = userData.role;
+        }
+
+        console.log('🔄 Role Detection:', {
+          lastKnownRole,
+          currentRole,
+          'userData.roles': userData?.roles,
+          'userData.role': userData?.role
+        });
+
+        if (currentRole && lastKnownRole !== currentRole) {
+          console.log('🔔 Role change detected:', { from: lastKnownRole, to: currentRole });
+          
+          const newNotification = {
+            id: Date.now(),
+            message: `Votre rôle a été modifié en: ${currentRole}`,
+            timestamp: new Date(),
+            type: 'success'
+          };
+          
+          setAdminNotifications(prev => [newNotification, ...prev].slice(0, 5));
+          setLastKnownRole(currentRole);
+        }
+      } catch (error) {
+        console.error('❌ Error checking role:', error);
+      }
+    };
+
+    // Set up event listener for immediate changes
     window.addEventListener('roleChanged', handleRoleChange);
-    return () => window.removeEventListener('roleChanged', handleRoleChange);
-  }, []);
+    
+    // Start polling every 30 seconds
+    const pollInterval = setInterval(checkRoleChange, 30000);
+    
+    // Run an initial check
+    checkRoleChange();
+    
+    return () => {
+      window.removeEventListener('roleChanged', handleRoleChange);
+      clearInterval(pollInterval);
+    };
+  }, [userData?.id, lastKnownRole]); // Only re-run if user ID or last known role changes
 
   // Check for unsigned periods
   useEffect(() => {
@@ -370,56 +472,9 @@ const UserMenu = ({ onLogout, userData, setLogoutDialogOpen }) => {
       {/* Language selector */}
       <LanguageSelector />
       
-      {/* Notification dropdown */}
-      {userData?.roles?.some(role => ['ROLE_TEACHER', 'ROLE_STUDENT'].includes(role)) ? (
-        <>
-          <div className="hidden md:block">
-            <DropdownMenu open={showNotifications} onOpenChange={setShowNotifications}>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="relative rounded-full w-10 h-10 p-0 bg-transparent text-gray-200 hover:bg-[#02284f]/80 hover:text-white mr-2"
-                >
-                  <Bell className="h-5 w-5" />
-                  {hasUnsignedPeriod && (
-                    <span className="absolute top-0 right-0 h-3 w-3 bg-red-500 rounded-full" />
-                  )}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-72">
-                {hasUnsignedPeriod ? (
-                  <DropdownMenuItem asChild>
-                    <Link to="/signature" className="flex items-center space-x-2 text-red-600">
-                      <ClipboardPenLine className="h-4 w-4" />
-                      <span>Vous devez signer votre présence</span>
-                    </Link>
-                  </DropdownMenuItem>
-                ) : (
-                  <div className="px-2 py-4 text-center text-sm text-gray-500">
-                    Pas de notifications
-                  </div>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-
-          {/* Mobile notification button */}
-          <div className="md:hidden">
-            <Button
-              variant="ghost"
-              onClick={() => setShowNotifications(!showNotifications)}
-              className="relative rounded-full w-10 h-10 p-0 bg-transparent text-gray-200 hover:bg-[#02284f]/80 hover:text-white mr-2"
-            >
-              <Bell className="h-5 w-5" />
-              {hasUnsignedPeriod && (
-                <span className="absolute top-0 right-0 h-3 w-3 bg-red-500 rounded-full" />
-              )}
-            </Button>
-          </div>
-        </>
-      ) : userData?.roles?.some(role => ['ROLE_ADMIN', 'ROLE_SUPER_ADMIN'].includes(role)) && (
-        <>
-          {/* Admin notification button */}
+      {/* Notification dropdown for all users */}
+      <>
+        <div className="hidden md:block">
           <DropdownMenu modal={false} open={showAdminNotifications} onOpenChange={handleNotificationsOpen}>
             <DropdownMenuTrigger asChild>
               <Button
@@ -427,7 +482,7 @@ const UserMenu = ({ onLogout, userData, setLogoutDialogOpen }) => {
                 className="relative rounded-full w-10 h-10 p-0 bg-transparent text-gray-200 hover:bg-[#02284f]/80 hover:text-white mr-2"
               >
                 <Bell className="h-5 w-5" />
-                {adminNotifications.length > 0 && (
+                {(adminNotifications.length > 0 || hasUnsignedPeriod) && (
                   <span className="absolute top-0 right-0 h-3 w-3 bg-green-500 rounded-full" />
                 )}
               </Button>
@@ -447,15 +502,37 @@ const UserMenu = ({ onLogout, userData, setLogoutDialogOpen }) => {
                     </div>
                   ))}
                 </div>
+              ) : hasUnsignedPeriod && userData?.roles?.some(role => ['ROLE_TEACHER', 'ROLE_STUDENT'].includes(role)) ? (
+                <DropdownMenuItem asChild>
+                  <Link to="/signature" className="flex items-center space-x-2 text-red-600">
+                    <ClipboardPenLine className="h-4 w-4" />
+                    <span>Vous devez signer votre présence</span>
+                  </Link>
+                </DropdownMenuItem>
               ) : (
                 <div className="px-2 py-4 text-center text-sm text-gray-500">
-                  Pas de notifications
+                  <p>Aucune notification</p>
+                  <p className="mt-1 text-xs">Les notifications apparaîtront ici lorsque votre rôle sera modifié</p>
                 </div>
               )}
             </DropdownMenuContent>
           </DropdownMenu>
-        </>
-      )}
+        </div>
+
+        {/* Mobile notification button */}
+        <div className="md:hidden">
+          <Button
+            variant="ghost"
+            onClick={() => setShowAdminNotifications(!showAdminNotifications)}
+            className="relative rounded-full w-10 h-10 p-0 bg-transparent text-gray-200 hover:bg-[#02284f]/80 hover:text-white mr-2"
+          >
+            <Bell className="h-5 w-5" />
+            {(adminNotifications.length > 0 || hasUnsignedPeriod) && (
+              <span className="absolute top-0 right-0 h-3 w-3 bg-green-500 rounded-full" />
+            )}
+          </Button>
+        </div>
+      </>
 
       {/* Dropdown menu */}
       <DropdownMenu modal={true}>

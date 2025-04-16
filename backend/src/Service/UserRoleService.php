@@ -142,6 +142,17 @@ class UserRoleService
         }
         
         $this->entityManager->flush();
+
+        // --- NOTIFICATION LOGIC USING NOTIFICATIONS TABLE ---
+        $notification = new \App\Entity\Notification();
+        $notification->setUser($user);
+        $notification->setMessage('Votre rôle a été modifié en : ' . $newRoleName);
+        $notification->setType('role_changed');
+        $notification->setIsRead(false);
+        $notification->setCreatedAt(new \DateTimeImmutable());
+        $this->entityManager->persist($notification);
+        $this->entityManager->flush();
+        // --- END NOTIFICATION LOGIC ---
     }
     
     /**
