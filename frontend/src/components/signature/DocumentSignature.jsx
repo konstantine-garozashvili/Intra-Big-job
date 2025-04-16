@@ -484,10 +484,14 @@ const DocumentSignature = () => {
         }
         
         const data = await response.json();
-        console.log('Signature created successfully:', data);
+        console.log('Signature created successfully:', response.data);
+        setSignatureStatus('success');
+        setSignatureMessage('Signature enregistrée avec succès');
+        setLoading(false);
         
-        // Update local state
-        setSignedPeriods([...signedPeriods, currentPeriod]);
+        // Dispatch event to update notifications
+        window.dispatchEvent(new Event('signatureCreated'));
+        
         setSubmissionSuccess(true);
         
         // Clear the signature

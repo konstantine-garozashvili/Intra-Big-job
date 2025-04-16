@@ -2,6 +2,7 @@ import React, { memo, useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { authService } from "../lib/services/authService";
 import userDataManager from "../lib/services/userDataManager";
+import axios from 'axios';
 import { profileService } from "../pages/Global/Profile/services/profileService";
 import { Button } from "./ui/button";
 import {
@@ -245,8 +246,60 @@ const AuthButtons = () => (
 // Composant pour le menu utilisateur
 const UserMenu = ({ onLogout, userData, setLogoutDialogOpen }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [hasUnsignedPeriod, setHasUnsignedPeriod] = useState(false);
   const navigate = useNavigate();
   const dropdownMenuRef = useRef(null);
+
+  // Check for unsigned periods
+  useEffect(() => {
+    const checkSignatureStatus = async () => {
+      try {
+        const response = await axios.get('/api/signatures/today');
+        const data = response.data;
+        console.log('Signature check response:', data);
+
+        // Get current hour
+        const now = new Date();
+        const currentHour = now.getHours();
+
+        // Determine current period
+        let currentPeriod = null;
+        if (currentHour >= 9 && currentHour < 12) {
+          currentPeriod = 'morning';
+        } else if (currentHour >= 13 && currentHour < 17) {
+          currentPeriod = 'afternoon';
+        }
+
+        // Check if user needs to sign
+        const signedPeriods = data.signedPeriods || [];
+        const needsToSign = currentPeriod && !signedPeriods.includes(currentPeriod);
+        console.log('Current period:', currentPeriod, 'Signed periods:', signedPeriods, 'Needs to sign:', needsToSign);
+
+        setHasUnsignedPeriod(needsToSign);
+      } catch (error) {
+        console.error('Error checking signature status:', error);
+        setHasUnsignedPeriod(false);
+      }
+    };
+
+    checkSignatureStatus();
+    // Check every minute
+    const interval = setInterval(checkSignatureStatus, 60 * 1000);
+
+    // Listen for signature events
+    const handleSignatureCreated = () => {
+      console.log('Signature created, updating notification state');
+      checkSignatureStatus();
+    };
+
+    window.addEventListener('signatureCreated', handleSignatureCreated);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('signatureCreated', handleSignatureCreated);
+    };
+  }, []);
 
   // Style personnalisé pour le menu dropdown
   const dropdownMenuStyles = {
@@ -275,13 +328,50 @@ const UserMenu = ({ onLogout, userData, setLogoutDialogOpen }) => {
       {/* Language selector */}
       <LanguageSelector />
       
-      {/* Notification icon */}
-      <Button
-        variant="ghost"
-        className="rounded-full w-10 h-10 p-0 bg-transparent text-gray-200 hover:bg-[#02284f]/80 hover:text-white mr-2"
-      >
-        <Bell className="h-5 w-5" />
-      </Button>
+      {/* Notification dropdown */}
+      <div className="hidden md:block">
+        <DropdownMenu open={showNotifications} onOpenChange={setShowNotifications}>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              className="relative rounded-full w-10 h-10 p-0 bg-transparent text-gray-200 hover:bg-[#02284f]/80 hover:text-white mr-2"
+            >
+              <Bell className="h-5 w-5" />
+              {hasUnsignedPeriod && (
+                <span className="absolute top-0 right-0 h-3 w-3 bg-red-500 rounded-full" />
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-72">
+            {hasUnsignedPeriod ? (
+              <DropdownMenuItem asChild>
+                <Link to="/signature" className="flex items-center space-x-2 text-red-600">
+                  <ClipboardPenLine className="h-4 w-4" />
+                  <span>Vous devez signer votre présence</span>
+                </Link>
+              </DropdownMenuItem>
+            ) : (
+              <div className="px-2 py-4 text-center text-sm text-gray-500">
+                Pas de notifications
+              </div>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {/* Mobile notification button */}
+      <div className="md:hidden">
+        <Button
+          variant="ghost"
+          onClick={() => setShowNotifications(!showNotifications)}
+          className="relative rounded-full w-10 h-10 p-0 bg-transparent text-gray-200 hover:bg-[#02284f]/80 hover:text-white mr-2"
+        >
+          <Bell className="h-5 w-5" />
+          {hasUnsignedPeriod && (
+            <span className="absolute top-0 right-0 h-3 w-3 bg-red-500 rounded-full" />
+          )}
+        </Button>
+      </div>
 
       {/* Dropdown menu */}
       <DropdownMenu modal={true}>
@@ -490,6 +580,8 @@ const Navbar = memo(() => {
   useEffect(() => {
     checkAuthStatus();
   }, [location.pathname]);
+
+
 
   // Ajouter un écouteur pour l'événement de connexion réussie
   useEffect(() => {
