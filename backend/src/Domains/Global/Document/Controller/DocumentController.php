@@ -7,6 +7,8 @@ use App\Domains\Global\Document\Entity\DocumentType;
 use App\Domains\Global\Document\Entity\DocumentHistory;
 use App\Domains\Global\Document\Repository\DocumentRepository;
 use App\Domains\Global\Document\Repository\DocumentTypeRepository;
+use App\Domains\Global\Notification\Service\NotificationService;
+use App\Domains\Global\Notification\Entity\Notification;
 use App\Entity\User;
 use App\Enum\DocumentStatus;
 use App\Enum\DocumentAction;
@@ -24,6 +26,7 @@ use Symfony\Component\String\Slugger\SluggerInterface;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 #[Route('/documents')]
 class DocumentController extends AbstractController
@@ -37,7 +40,9 @@ class DocumentController extends AbstractController
         private UserRepository $userRepository,
         private SluggerInterface $slugger,
         private string $documentDirectory,
-        private DocumentStorageFactory $storageFactory
+        private DocumentStorageFactory $storageFactory,
+        private ?NotificationService $notificationService = null,
+        private ?HttpClientInterface $httpClient = null
     ) {
         // The $documentDirectory will need to be configured in services.yaml
     }
@@ -260,6 +265,9 @@ class DocumentController extends AbstractController
             
             $this->entityManager->flush();
             
+            // Envoyer uniquement une notification Mercure en temps réel
+            $this->sendCvUploadMercureNotification($document, $user);
+            
             return $this->json([
                 'success' => true,
                 'message' => 'CV uploaded successfully',
@@ -275,6 +283,42 @@ class DocumentController extends AbstractController
                 'success' => false,
                 'message' => 'Failed to upload file: ' . $e->getMessage()
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+    
+    /**
+     * Send real-time notification for CV upload via Mercure
+     */
+    private function sendCvUploadMercureNotification(Document $document, User $user): void
+    {
+        if (!$this->httpClient) {
+            return;
+        }
+        
+        try {
+            // Préparer les données pour la notification
+            $notificationData = [
+                'documentId' => $document->getId(),
+                'userId' => $user->getId(),
+                'documentName' => $document->getName(),
+                'userName' => $user->getFirstName() . ' ' . $user->getLastName(),
+                'status' => $document->getStatus()->value
+            ];
+            
+            // Envoyer la notification via l'API Mercure
+            $this->httpClient->request(
+                'POST',
+                'http://localhost:8000/notify-cv-upload',
+                [
+                    'json' => $notificationData,
+                    'headers' => [
+                        'Content-Type' => 'application/json'
+                    ]
+                ]
+            );
+        } catch (\Exception $e) {
+            // Logger l'erreur mais ne pas interrompre le flux
+            error_log('Failed to send Mercure notification: ' . $e->getMessage());
         }
     }
     
@@ -355,6 +399,14 @@ class DocumentController extends AbstractController
         $this->checkDocumentAccessPermission($document);
         
         try {
+            // Sauvegarder les informations dont nous aurons besoin après la suppression
+            $documentInfo = [
+                'id' => $document->getId(),
+                'name' => $document->getName(),
+                'type' => $document->getDocumentType() ? $document->getDocumentType()->getCode() : null,
+                'userId' => $document->getUser()->getId()
+            ];
+            
             // Delete the file using the storage factory
             $filename = $document->getFilename();
             $this->storageFactory->delete($filename);
@@ -362,6 +414,9 @@ class DocumentController extends AbstractController
             // Remove the document from the database
             $this->entityManager->remove($document);
             $this->entityManager->flush();
+            
+            // Envoyer la notification de suppression
+            $this->sendDocumentDeletedMercureNotification($documentInfo);
             
             return $this->json([
                 'success' => true,
@@ -461,6 +516,214 @@ class DocumentController extends AbstractController
                 'success' => false,
                 'message' => 'Failed to fetch documents: ' . $e->getMessage()
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * Approve a document
+     */
+    #[Route('/{id}/approve', name: 'app_document_approve', methods: ['POST'])]
+    #[IsGranted('ROLE_ADMIN')]
+    public function approveDocument(int $id, Request $request): JsonResponse
+    {
+        $document = $this->documentRepository->find($id);
+        
+        if (!$document) {
+            throw new NotFoundHttpException('Document not found');
+        }
+        
+        // Only documents in PENDING status can be approved
+        if ($document->getStatus() !== DocumentStatus::PENDING) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Only pending documents can be approved',
+                'code' => 'INVALID_STATUS'
+            ], Response::HTTP_BAD_REQUEST);
+        }
+        
+        try {
+            // Update document status
+            $document->setStatus(DocumentStatus::APPROVED);
+            $document->setValidatedAt(new \DateTime());
+            $document->setValidatedBy($this->getUser());
+            
+            // Add comment if provided
+            $data = json_decode($request->getContent(), true);
+            if (!empty($data['comment'])) {
+                $document->setComment($data['comment']);
+            }
+            
+            // Create history entry
+            $history = new DocumentHistory();
+            $history->setDocument($document);
+            $history->setUser($this->getUser());
+            $history->setAction(DocumentAction::VALIDATED);
+            $history->setDetails([
+                'comment' => $document->getComment(),
+                'previousStatus' => DocumentStatus::PENDING->value
+            ]);
+            
+            $this->entityManager->persist($history);
+            $this->entityManager->flush();
+            
+            // Send real-time notification via Mercure
+            $this->sendDocumentStatusChangeMercureNotification($document, 'APPROVED');
+            
+            return $this->json([
+                'success' => true,
+                'message' => 'Document approved successfully',
+                'document' => $document
+            ], Response::HTTP_OK, [], ['groups' => ['document:read']]);
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Failed to approve document: ' . $e->getMessage(),
+                'code' => 'SERVER_ERROR'
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+    
+    /**
+     * Reject a document
+     */
+    #[Route('/{id}/reject', name: 'app_document_reject', methods: ['POST'])]
+    #[IsGranted('ROLE_ADMIN')]
+    public function rejectDocument(int $id, Request $request): JsonResponse
+    {
+        $document = $this->documentRepository->find($id);
+        
+        if (!$document) {
+            throw new NotFoundHttpException('Document not found');
+        }
+        
+        // Only documents in PENDING status can be rejected
+        if ($document->getStatus() !== DocumentStatus::PENDING) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Only pending documents can be rejected',
+                'code' => 'INVALID_STATUS'
+            ], Response::HTTP_BAD_REQUEST);
+        }
+        
+        // Comment is required for rejection
+        $data = json_decode($request->getContent(), true);
+        if (empty($data['comment'])) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Comment is required when rejecting a document',
+                'code' => 'MISSING_COMMENT'
+            ], Response::HTTP_BAD_REQUEST);
+        }
+        
+        try {
+            // Update document status
+            $document->setStatus(DocumentStatus::REJECTED);
+            $document->setValidatedAt(new \DateTime());
+            $document->setValidatedBy($this->getUser());
+            $document->setComment($data['comment']);
+            
+            // Create history entry
+            $history = new DocumentHistory();
+            $history->setDocument($document);
+            $history->setUser($this->getUser());
+            $history->setAction(DocumentAction::REJECTED);
+            $history->setDetails([
+                'comment' => $document->getComment(),
+                'previousStatus' => DocumentStatus::PENDING->value
+            ]);
+            
+            $this->entityManager->persist($history);
+            $this->entityManager->flush();
+            
+            // Send real-time notification via Mercure
+            $this->sendDocumentStatusChangeMercureNotification($document, 'REJECTED');
+            
+            return $this->json([
+                'success' => true,
+                'message' => 'Document rejected successfully',
+                'document' => $document
+            ], Response::HTTP_OK, [], ['groups' => ['document:read']]);
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Failed to reject document: ' . $e->getMessage(),
+                'code' => 'SERVER_ERROR'
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+    
+    /**
+     * Send notification for document status change via Mercure
+     */
+    private function sendDocumentStatusChangeMercureNotification(Document $document, string $status): void
+    {
+        if (!$this->httpClient) {
+            return;
+        }
+        
+        try {
+            $user = $document->getUser();
+            
+            // Préparer les données pour la notification
+            $notificationData = [
+                'documentId' => $document->getId(),
+                'userId' => $user->getId(),
+                'documentName' => $document->getName(),
+                'status' => $status,
+                'oldStatus' => 'PENDING',
+                'comment' => $document->getComment()
+            ];
+            
+            // Envoyer la notification via l'API Mercure
+            $this->httpClient->request(
+                'POST',
+                'http://localhost:8000/notify-document-status-change',
+                [
+                    'json' => $notificationData,
+                    'headers' => [
+                        'Content-Type' => 'application/json'
+                    ]
+                ]
+            );
+        } catch (\Exception $e) {
+            // Logger l'erreur mais ne pas interrompre le flux
+            error_log('Failed to send Mercure notification: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Send notification for document deletion via Mercure
+     */
+    private function sendDocumentDeletedMercureNotification(array $documentInfo): void
+    {
+        if (!$this->httpClient) {
+            return;
+        }
+        
+        try {
+            // Préparer les données pour la notification
+            $notificationData = [
+                'documentId' => $documentInfo['id'],
+                'userId' => $documentInfo['userId'],
+                'documentName' => $documentInfo['name'],
+                'documentType' => $documentInfo['type'],
+                'deletedBy' => $this->getUser() ? $this->getUser()->getFirstName() . ' ' . $this->getUser()->getLastName() : 'vous'
+            ];
+            
+            // Envoyer la notification via l'API Mercure
+            $this->httpClient->request(
+                'POST',
+                'http://localhost:8000/notify-document-deletion',
+                [
+                    'json' => $notificationData,
+                    'headers' => [
+                        'Content-Type' => 'application/json'
+                    ]
+                ]
+            );
+        } catch (\Exception $e) {
+            // Logger l'erreur mais ne pas interrompre le flux
+            error_log('Failed to send document deletion notification: ' . $e->getMessage());
         }
     }
 } 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, createContext, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useCallback, createContext, useMemo, useLayoutEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PartyPopper } from 'lucide-react';
@@ -10,6 +10,7 @@ import { profileService } from '../pages/Global/Profile/services/profileService'
 import Footer from './Footer';
 import ChatButton from './chat/ChatButton';
 import { Button } from './ui/button';
+import { useTheme } from '../context/ThemeContext';
 
 // Create a context for profile data and refresh function
 export const ProfileContext = createContext({
@@ -279,6 +280,7 @@ const MainLayout = () => {
   const [initialRender, setInitialRender] = useState(true);
   const [isShowingConfetti, setIsShowingConfetti] = useState(false);
   const [showCongratulations, setShowCongratulations] = useState(false);
+  const { theme } = useTheme(); // Accéder au thème actuel
 
   // Pages qui doivent être affichées en plein écran sans marges internes
   const fullScreenPages = []; // Removed '/register'
@@ -494,8 +496,8 @@ const MainLayout = () => {
 
   return (
     <ProfileContext.Provider value={profileContextValue}>
-      <div className="min-h-screen bg-background">
-        {/* Only show Navbar for authenticated users */}
+      <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+      {/* Only show Navbar for authenticated users */}
         {isAuthenticated && <Navbar />}
         
         {/* Congratulations Modal */}

@@ -91,25 +91,25 @@ const SecuritySkeleton = memo(() => {
       
       {/* Password Change Section */}
       <div className="space-y-6">
-        <Skeleton className="h-6 w-40 mb-4" />
-        <div className="space-y-4">
-          <Skeleton className="h-14 w-full" />
-          <Skeleton className="h-14 w-full" />
-          <Skeleton className="h-14 w-full" />
-          <Skeleton className="h-10 w-40 mt-2" />
+        <Skeleton className="h-6 w-40 mb-4 dark:bg-gray-700" />
+        <div className="space-y-4 rounded-lg border dark:border-gray-700 p-6 dark:bg-gray-800/50">
+          <Skeleton className="h-14 w-full dark:bg-gray-700" />
+          <Skeleton className="h-14 w-full dark:bg-gray-700" />
+          <Skeleton className="h-14 w-full dark:bg-gray-700" />
+          <Skeleton className="h-10 w-40 mt-2 dark:bg-gray-700" />
         </div>
       </div>
       
       {/* Separator */}
-      <Skeleton className="h-px w-full my-8" />
+      <Skeleton className="h-px w-full my-8 dark:bg-gray-700" />
       
       {/* 2FA Section */}
       <div className="space-y-6">
-        <Skeleton className="h-6 w-56 mb-4" />
-        <div className="p-6 border rounded-lg">
-          <Skeleton className="h-6 w-64 mb-2" />
-          <Skeleton className="h-4 w-full mb-4" />
-          <Skeleton className="h-10 w-48" />
+        <Skeleton className="h-6 w-56 mb-4 dark:bg-gray-700" />
+        <div className="p-6 border rounded-lg dark:border-gray-700 dark:bg-gray-800/50">
+          <Skeleton className="h-6 w-64 mb-2 dark:bg-gray-700" />
+          <Skeleton className="h-4 w-full mb-4 dark:bg-gray-700/70" />
+          <Skeleton className="h-10 w-48 dark:bg-gray-700" />
         </div>
       </div>
     </>
@@ -125,34 +125,34 @@ const NotificationsSkeleton = memo(() => {
       
       {/* Email Notifications */}
       <div className="space-y-6">
-        <Skeleton className="h-6 w-40 mb-4" />
-        <div className="space-y-6">
+        <Skeleton className="h-6 w-40 mb-4 dark:bg-gray-700" />
+        <div className="space-y-6 rounded-lg border dark:border-gray-700 p-6 dark:bg-gray-800/50">
           {Array(4).fill().map((_, i) => (
             <div key={i} className="flex justify-between items-center">
               <div>
-                <Skeleton className="h-5 w-48 mb-1" />
-                <Skeleton className="h-4 w-64" />
+                <Skeleton className="h-5 w-48 mb-1 dark:bg-gray-700" />
+                <Skeleton className="h-4 w-64 dark:bg-gray-700/70" />
               </div>
-              <Skeleton className="h-6 w-12" />
+              <Skeleton className="h-6 w-12 rounded-full dark:bg-gray-700" />
             </div>
           ))}
         </div>
       </div>
       
       {/* Separator */}
-      <Skeleton className="h-px w-full my-8" />
+      <Skeleton className="h-px w-full my-8 dark:bg-gray-700" />
       
       {/* App Notifications */}
       <div className="space-y-6">
-        <Skeleton className="h-6 w-40 mb-4" />
-        <div className="space-y-6">
+        <Skeleton className="h-6 w-40 mb-4 dark:bg-gray-700" />
+        <div className="space-y-6 rounded-lg border dark:border-gray-700 p-6 dark:bg-gray-800/50">
           {Array(3).fill().map((_, i) => (
             <div key={i} className="flex justify-between items-center">
               <div>
-                <Skeleton className="h-5 w-48 mb-1" />
-                <Skeleton className="h-4 w-64" />
+                <Skeleton className="h-5 w-48 mb-1 dark:bg-gray-700" />
+                <Skeleton className="h-4 w-64 dark:bg-gray-700/70" />
               </div>
-              <Skeleton className="h-6 w-12" />
+              <Skeleton className="h-6 w-12 rounded-full dark:bg-gray-700" />
             </div>
           ))}
         </div>

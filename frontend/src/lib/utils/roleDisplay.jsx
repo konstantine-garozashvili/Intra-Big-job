@@ -31,17 +31,17 @@ export const getRoleIcon = (role) => {
   switch (normalizedRole) {
     case 'admin':
     case 'super_admin':
-      return <Briefcase className="w-3 h-3 mr-1 text-blue-600" />;
+      return <Briefcase className="w-3 h-3 mr-1 text-blue-600 dark:text-blue-400" />;
     case 'teacher':
-      return <Briefcase className="w-3 h-3 mr-1 text-green-600" />;
+      return <Briefcase className="w-3 h-3 mr-1 text-green-600 dark:text-green-400" />;
     case 'student':
-      return <UserCircle2 className="w-3 h-3 mr-1 text-amber-600" />;
+      return <UserCircle2 className="w-3 h-3 mr-1 text-amber-600 dark:text-amber-400" />;
     case 'hr':
-      return <Briefcase className="w-3 h-3 mr-1 text-purple-600" />;
+      return <Briefcase className="w-3 h-3 mr-1 text-purple-600 dark:text-purple-400" />;
     case 'recruiter':
-      return <Briefcase className="w-3 h-3 mr-1 text-indigo-600" />;
+      return <Briefcase className="w-3 h-3 mr-1 text-indigo-600 dark:text-indigo-400" />;
     default:
-      return <UserCircle2 className="w-3 h-3 mr-1 text-gray-600" />;
+      return <UserCircle2 className="w-3 h-3 mr-1 text-gray-600 dark:text-gray-400" />;
   }
 };
 
@@ -54,22 +54,22 @@ export const getRoleColor = (role) => {
   
   switch (normalizedRole) {
     case 'admin':
-      return 'bg-blue-50 text-blue-700';
+      return 'bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300';
     case 'super_admin':
     case 'superadmin':
-      return 'bg-red-50 text-red-700';
+      return 'bg-red-50 text-red-700 dark:bg-red-900/40 dark:text-red-300';
     case 'teacher':
-      return 'bg-green-50 text-green-700';
+      return 'bg-green-50 text-green-700 dark:bg-green-900/40 dark:text-green-300';
     case 'student':
-      return 'bg-amber-50 text-amber-700';
+      return 'bg-amber-50 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300';
     case 'hr':
-      return 'bg-purple-50 text-purple-700';
+      return 'bg-purple-50 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300';
     case 'recruiter':
-      return 'bg-indigo-50 text-indigo-700';
+      return 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300';
     case 'guest':
-      return 'bg-gray-50 text-gray-700';
+      return 'bg-gray-50 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
     default:
-      return 'bg-gray-50 text-gray-700';
+      return 'bg-gray-50 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
   }
 };
 

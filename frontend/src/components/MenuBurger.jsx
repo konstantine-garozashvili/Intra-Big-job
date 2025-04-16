@@ -168,6 +168,42 @@ const customStyles = `
   .sidebar-sheet [data-state] > button[type="button"] {
     display: none;
   }
+  
+  .menu-item {
+    position: relative;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 0.375rem;
+    margin: 0.25rem 0.5rem;
+  }
+  
+  .menu-item:hover {
+    background-color: rgba(82, 142, 178, 0.2);
+    transform: translateX(4px);
+  }
+  
+  .menu-item.active {
+    background-color: rgba(82, 142, 178, 0.3);
+    border-left: 3px solid #528eb2;
+  }
+  
+  .submenu-item {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 0.375rem;
+    margin: 0.25rem 0.5rem;
+  }
+  
+  .submenu-item:hover {
+    background-color: rgba(82, 142, 178, 0.3);
+    transform: translateX(4px);
+  }
+  
+  .chevron-icon {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .chevron-icon.open {
+    transform: rotate(90deg);
+  }
 `;
 
 const MenuBurger = memo(() => {

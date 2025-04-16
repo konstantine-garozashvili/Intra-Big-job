@@ -66,14 +66,14 @@ export const PersonalInfoSection = ({
       {/* Birth Date - Toujours afficher en mode statique pour éviter les problèmes */}
       <StaticField 
         label="Date de naissance"
-        icon={<Calendar className="h-4 w-4 mr-2 text-blue-500" />}
+        icon={<Calendar className="h-4 w-4 mr-2 text-blue-500 dark:text-[#78b9dd]" />}
         value={`${formatDate(userData.birthDate)}${userData.age ? ` (${userData.age} ans)` : ''}`}
       />
 
       {/* Nationality */}
       <StaticField 
         label="Nationalité"
-        icon={<Globe className="h-4 w-4 mr-2 text-blue-500" />}
+        icon={<Globe className="h-4 w-4 mr-2 text-blue-500 dark:text-[#78b9dd]" />}
         value={userData.nationality?.name || 'Non renseignée'}
       />
     </div>

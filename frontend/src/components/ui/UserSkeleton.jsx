@@ -28,15 +28,15 @@ const UserSkeleton = ({ variant = 'default' }) => {
 
   // Style détaillé par défaut
   return (
-    <div className="bg-white rounded-lg shadow-sm p-4 w-full max-w-md">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 w-full max-w-md">
       <div className="flex items-start space-x-4">
-        <Skeleton className="h-12 w-12 rounded-full" />
+        <Skeleton className="h-12 w-12 rounded-full dark:bg-gray-700" />
         <div className="space-y-2 flex-1">
-          <Skeleton className="h-5 w-40" />
-          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-5 w-40 dark:bg-gray-700" />
+          <Skeleton className="h-4 w-32 dark:bg-gray-700" />
           <div className="flex space-x-2 pt-2">
-            <Skeleton className="h-8 w-20 rounded-md" />
-            <Skeleton className="h-8 w-20 rounded-md" />
+            <Skeleton className="h-8 w-20 rounded-md dark:bg-gray-700" />
+            <Skeleton className="h-8 w-20 rounded-md dark:bg-gray-700" />
           </div>
         </div>
       </div>
