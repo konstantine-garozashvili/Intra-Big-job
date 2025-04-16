@@ -13,7 +13,8 @@ import {
   User,
   Bell,
   Search,
-  ClipboardPenLine
+  ClipboardPenLine,
+  CheckCircle
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -247,9 +248,41 @@ const AuthButtons = () => (
 const UserMenu = ({ onLogout, userData, setLogoutDialogOpen }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showAdminNotifications, setShowAdminNotifications] = useState(false);
+  const [adminNotifications, setAdminNotifications] = useState([]);
   const [hasUnsignedPeriod, setHasUnsignedPeriod] = useState(false);
   const navigate = useNavigate();
   const dropdownMenuRef = useRef(null);
+
+  // Clear notifications when dropdown is opened
+  const handleNotificationsOpen = (open) => {
+    setShowAdminNotifications(open);
+    if (open) {
+      // Clear notifications after a short delay to ensure they're seen
+      setTimeout(() => {
+        setAdminNotifications([]);
+      }, 2000);
+    }
+  };
+
+  // Listen for role change events
+  useEffect(() => {
+    const handleRoleChange = (event) => {
+      const { detail } = event;
+      if (detail && detail.success) {
+        const newNotification = {
+          id: Date.now(),
+          message: 'Rôle modifié avec succès',
+          timestamp: new Date(),
+          type: 'success'
+        };
+        setAdminNotifications(prev => [newNotification, ...prev].slice(0, 5)); // Keep last 5 notifications
+      }
+    };
+
+    window.addEventListener('roleChanged', handleRoleChange);
+    return () => window.removeEventListener('roleChanged', handleRoleChange);
+  }, []);
 
   // Check for unsigned periods
   useEffect(() => {
@@ -338,7 +371,7 @@ const UserMenu = ({ onLogout, userData, setLogoutDialogOpen }) => {
       <LanguageSelector />
       
       {/* Notification dropdown */}
-      {userData?.roles?.some(role => ['ROLE_TEACHER', 'ROLE_STUDENT'].includes(role)) && (
+      {userData?.roles?.some(role => ['ROLE_TEACHER', 'ROLE_STUDENT'].includes(role)) ? (
         <>
           <div className="hidden md:block">
             <DropdownMenu open={showNotifications} onOpenChange={setShowNotifications}>
@@ -383,6 +416,44 @@ const UserMenu = ({ onLogout, userData, setLogoutDialogOpen }) => {
               )}
             </Button>
           </div>
+        </>
+      ) : userData?.roles?.some(role => ['ROLE_ADMIN', 'ROLE_SUPER_ADMIN'].includes(role)) && (
+        <>
+          {/* Admin notification button */}
+          <DropdownMenu modal={false} open={showAdminNotifications} onOpenChange={handleNotificationsOpen}>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                className="relative rounded-full w-10 h-10 p-0 bg-transparent text-gray-200 hover:bg-[#02284f]/80 hover:text-white mr-2"
+              >
+                <Bell className="h-5 w-5" />
+                {adminNotifications.length > 0 && (
+                  <span className="absolute top-0 right-0 h-3 w-3 bg-green-500 rounded-full" />
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-72">
+              {adminNotifications.length > 0 ? (
+                <div className="py-1">
+                  {adminNotifications.map((notification) => (
+                    <div key={notification.id} className="px-3 py-2 hover:bg-accent hover:text-accent-foreground">
+                      <div className="flex items-center gap-2 text-green-600">
+                        <CheckCircle className="h-4 w-4" />
+                        <span className="text-sm">{notification.message}</span>
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {new Date(notification.timestamp).toLocaleTimeString()}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="px-2 py-4 text-center text-sm text-gray-500">
+                  Pas de notifications
+                </div>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </>
       )}
 
