@@ -1,10 +1,59 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Briefcase, GraduationCap, Linkedin, Link, Globe } from 'lucide-react';
 import EditableField from './EditableField';
 import { StaticField } from './StaticField';
 import { studentProfileService } from '@/lib/services';
 import { synchronizePortfolioUpdate } from '@/lib/utils/profileUtils';
 import { toast } from 'sonner';
+
+// Helper function to format LinkedIn URL
+const formatLinkedinUrl = (input) => {
+  if (!input) return '';
+  let trimmedInput = input.trim();
+
+  // Remove placeholder if user didn't add anything after it
+  if (trimmedInput === 'https://www.linkedin.com/in/') {
+      return ''; // Treat as empty if only placeholder remains
+  }
+
+  // Check if it already looks like a valid LinkedIn profile URL
+  if (/^https?:\/\/(www\.)?linkedin\.com\/in\/[^\/\s]+(\/?)$/i.test(trimmedInput)) {
+    // Ensure it starts with https
+    if (trimmedInput.startsWith('http://')) {
+      trimmedInput = trimmedInput.replace('http://', 'https://');
+    }
+    // Remove trailing slash if present
+    return trimmedInput.replace(/\/$/, '');
+  }
+
+  // Check if it's just the username part (potentially pasted after the pre-filled base)
+  if (trimmedInput.startsWith('https://www.linkedin.com/in/')) {
+      const usernamePart = trimmedInput.substring('https://www.linkedin.com/in/'.length);
+      // Ensure the extracted part is not empty and looks like a valid username part
+      if (usernamePart && /^[a-z0-9_-]{3,100}$/i.test(usernamePart)) {
+          return `https://www.linkedin.com/in/${usernamePart}`;
+      }
+      // If only the base URL was present after trimming, consider it empty or invalid
+      if (!usernamePart) return '';
+  }
+
+  // Check if it looks like just the username part (basic check)
+  if (/^[a-z0-9_-]{3,100}$/i.test(trimmedInput)) {
+    return `https://www.linkedin.com/in/${trimmedInput}`;
+  }
+
+  // Check if it's a partial URL like linkedin.com/in/username or www.linkedin.com/in/username
+  const match = trimmedInput.match(/(?:www\.)?linkedin\.com\/in\/([^\/\s]+)/i);
+  if (match && match[1]) {
+    // Remove trailing slash from extracted username if present
+    const username = match[1].replace(/\/$/, '');
+    return `https://www.linkedin.com/in/${username}`;
+  }
+
+  // If it doesn't match expected formats, show an error
+  toast.error("Format LinkedIn invalide. Utilisez l'identifiant ou le lien complet.");
+  return null; // Indicate invalid format
+};
 
 export const ProfessionalInfoSection = ({ 
   userData, 
@@ -18,8 +67,8 @@ export const ProfessionalInfoSection = ({
   handleInputChange, 
   onSave 
 }) => {
-  const [loading, setLoading] = React.useState(false);
-  const [localPortfolioUrl, setLocalPortfolioUrl] = React.useState('');
+  const [loading, setLoading] = useState(false);
+  const [localPortfolioUrl, setLocalPortfolioUrl] = useState('');
 
   // Utiliser useMemo pour calculer la valeur actuelle du portfolio
   const currentPortfolioUrl = useMemo(() => {
@@ -94,6 +143,51 @@ export const ProfessionalInfoSection = ({
     }
   };
 
+  // Modified onEdit handler for LinkedIn
+  const handleEditLinkedin = () => {
+    const currentValue = userData.linkedinUrl || '';
+    // Pre-fill with base URL only if the current value is empty
+    const initialEditValue = currentValue ? currentValue : 'https://www.linkedin.com/in/';
+    handleInputChange('linkedinUrl', initialEditValue);
+    toggleFieldEdit('linkedinUrl');
+  };
+
+  // Modified onSave handler for LinkedIn
+  const handleSaveLinkedin = () => {
+    const rawValue = editedData.personal.linkedinUrl;
+    const formattedValue = formatLinkedinUrl(rawValue);
+
+    // If formatting returned null (invalid), don't save and keep editing
+    if (formattedValue === null) {
+      // Optionally keep the input field in edit mode or clear it
+      // toast.error is already shown by formatLinkedinUrl
+      return;
+    }
+
+    // Update the state with the formatted value before saving
+    // This ensures the input field shows the final formatted URL after saving
+    handleInputChange('linkedinUrl', formattedValue);
+
+    // Call the parent save function ONLY if the value changed 
+    if (formattedValue !== userData.linkedinUrl) {
+        onSave('linkedinUrl', formattedValue);
+    } else {
+        // If value hasn't changed, just exit edit mode
+        toggleFieldEdit('linkedinUrl'); // Ensure edit mode is toggled off
+    }
+  };
+
+  // Handler for LinkedIn input changes to manage the placeholder
+  const handleLinkedinInputChange = (value) => {
+    // When editing an empty field, don't allow deleting the pre-filled base URL.
+    if (editMode.linkedinUrl && !userData.linkedinUrl && value.length < 'https://www.linkedin.com/in/'.length) {
+       // If trying to delete part of the placeholder, reset it.
+       handleInputChange('linkedinUrl', 'https://www.linkedin.com/in/');
+    } else {
+       handleInputChange('linkedinUrl', value);
+    }
+  };
+
   // Pour débogage - loguer les valeurs importantes
   useEffect(() => {
     console.log('ProfessionalInfoSection - studentProfile?.portfolioUrl:', studentProfile?.portfolioUrl);
@@ -119,15 +213,17 @@ export const ProfessionalInfoSection = ({
         field="linkedinUrl"
         label="LinkedIn"
         icon={<Linkedin className="h-4 w-4" />}
-        value={userData.linkedinUrl}
+        value={editMode.linkedinUrl ? editedData.personal.linkedinUrl : (userData.linkedinUrl || '')}
         editedValue={editedData.personal.linkedinUrl}
-        type="url"
+        type="text"
+        placeholder="Lien complet ou identifiant"
         isEditing={editMode.linkedinUrl}
         isEditable={true}
-        onEdit={() => toggleFieldEdit('linkedinUrl')}
-        onSave={() => onSave('linkedinUrl', editedData.personal.linkedinUrl)}
+        displayAsLink={true}
+        onEdit={handleEditLinkedin}
+        onSave={handleSaveLinkedin}
         onCancel={() => handleCancelField('linkedinUrl')}
-        onChange={(value) => handleInputChange('linkedinUrl', value)}
+        onChange={handleLinkedinInputChange}
       />
 
       {isStudent && (

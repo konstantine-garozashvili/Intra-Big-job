@@ -23,7 +23,8 @@ const EditableField = memo(({
   onCancel,
   onChange,
   className = '',
-  loading = false
+  loading = false,
+  displayAsLink = false
 }) => {
   // Local state for optimistic updates
   const [localValue, setLocalValue] = useState(value);
@@ -177,7 +178,7 @@ const EditableField = memo(({
           {loading ? (
             <Skeleton className="h-5 w-full" />
           ) : displayValue ? (
-            type === 'url' ? (
+            (type === 'url' || displayAsLink) ? (
               <a
                 href={displayValue}
                 target="_blank"
@@ -199,12 +200,13 @@ const EditableField = memo(({
   );
 }, (prevProps, nextProps) => {
   // Custom comparison function for memo
-  // N'inclure que les propriétés essentielles pour éviter des re-rendus inutiles
+  // Include displayAsLink if its changes should trigger re-render
   return (
     prevProps.value === nextProps.value &&
     prevProps.isEditing === nextProps.isEditing &&
     prevProps.editedValue === nextProps.editedValue &&
-    prevProps.loading === nextProps.loading
+    prevProps.loading === nextProps.loading &&
+    prevProps.displayAsLink === nextProps.displayAsLink
   );
 });
 
