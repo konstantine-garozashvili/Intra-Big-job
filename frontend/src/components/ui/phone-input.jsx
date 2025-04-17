@@ -45,37 +45,66 @@ const PhoneInput = forwardRef(({
   const handleChange = (e) => {
     const inputVal = e.target.value;
     
-    // Autorise uniquement les chiffres et les espaces
-    const sanitizedInput = inputVal.replace(/[^\d\s+]/g, "");
-    
-    // Si le numéro ne commence pas par +33, on l'ajoute
-    if (!sanitizedInput.startsWith('+33')) {
-      // Si c'est un numéro français (commence par 0), convertir en format international
-      if (sanitizedInput.startsWith('0')) {
-        const international = `+33${sanitizedInput.substring(1)}`;
-        const formatted = formatPhone(international);
-        setDisplayValue(formatted);
-        onChange(international.replace(/\s/g, ""));
-        return;
-      }
-      // Sinon, ajouter +33 au début
-      const withPrefix = `+33${sanitizedInput}`;
-      const formatted = formatPhone(withPrefix);
-      setDisplayValue(formatted);
-      onChange(withPrefix.replace(/\s/g, ""));
-      return;
+    // Autorise uniquement les chiffres, +, et espaces initiaux pour le formatage
+    // Keep the + if it's the first character
+    const initialPlus = inputVal.startsWith('+') ? '+' : '';
+    let sanitizedInput = initialPlus + inputVal.replace(/[^\d]/g, ""); // Keep only digits after potential +
+
+    // *** ADDED: Prevent typing '0' immediately after '+33' ***
+    if (sanitizedInput === '+330') {
+      // Reset display to just "+33 " to block the zero
+      setDisplayValue('+33 '); 
+      // Do not call onChange, effectively ignoring the '0'
+      return; 
     }
     
-    // Si le numéro commence déjà par +33
-    const formattedValue = formatPhone(sanitizedInput);
-    setDisplayValue(formattedValue);
+    // Si le numéro ne commence pas par +33, essayer de le préfixer
+    if (!sanitizedInput.startsWith('+33')) {
+      // Handle case where user types '0' first
+      if (sanitizedInput.startsWith('0')) {
+        const international = `+33${sanitizedInput.substring(1)}`;
+        const formatted = formatPhone(international); // Use formatPhone from validation utils
+        const rawValue = international.replace(/\s/g, ""); // Get raw value for parent
+        // Only update if the raw value is potentially valid (up to +33 + 9 digits)
+        if (rawValue.length <= 12) { 
+          setDisplayValue(formatted);
+          onChange(rawValue);
+        }
+        return;
+      }
+      // Handle case where user types digits directly (assume French number)
+      else if (/^\d+$/.test(sanitizedInput)) { 
+         const withPrefix = `+33${sanitizedInput}`;
+         const formatted = formatPhone(withPrefix);
+         const rawValue = withPrefix.replace(/\s/g, "");
+         if (rawValue.length <= 12) {
+            setDisplayValue(formatted);
+            onChange(rawValue);
+         }
+         return;
+      }
+      // Handle case where user just typed '+' or '+3' or '+33'
+      else if (sanitizedInput === '+' || sanitizedInput === '+3' || sanitizedInput === '+33') {
+         setDisplayValue(sanitizedInput);
+         // Don't call onChange yet, wait for more digits
+         return;
+      }
+    }
     
-    // Transmet la valeur sans les espaces au parent
-    const rawValue = formattedValue.replace(/\s/g, "");
-    onChange(rawValue);
+    // Si le numéro commence déjà par +33 (ou a été formaté ci-dessus)
+    // Ensure formatPhone is called on the potentially prefixed number
+    const formattedValue = formatPhone(sanitizedInput); // formatPhone handles stripping extra digits
+    const rawValue = formattedValue.replace(/[^\d+]/g, "").substring(0, 12); // Get raw value, limit length
+
+    // Only update if the raw value length is acceptable
+    if (rawValue.length <= 12) {
+        setDisplayValue(formattedValue);
+        onChange(rawValue);
+    }
   };
   
   // Indique si le numéro de téléphone est valide
+  // Use the raw value passed from parent for validation check
   const isValid = !value || isValidPhone(value);
   
   return (
