@@ -496,8 +496,8 @@ const MainLayout = () => {
 
   return (
     <ProfileContext.Provider value={profileContextValue}>
-      <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
-      {/* Only show Navbar for authenticated users */}
+      <div className={`flex flex-col min-h-screen ${theme === 'dark' ? 'dark bg-gray-900 text-gray-100' : 'bg-gray-50 text-gray-900'} transition-colors duration-300`}>
+        {/* Only show Navbar for authenticated users */}
         {isAuthenticated && <Navbar />}
         
         {/* Congratulations Modal */}
@@ -506,15 +506,13 @@ const MainLayout = () => {
           onClose={handleCloseCongratulations} 
         />
         
-
-        
         {/* Main content avec gestion améliorée de l'espace */}
         <main 
           className={`flex-grow ${
             isFullScreenPage 
               ? 'px-0 py-0' 
               : 'container mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full'
-          }`}
+          } ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'}`}
           style={{ 
             minHeight: minContentHeight,
             maxWidth: isFullScreenPage ? '100%' : undefined
@@ -527,7 +525,9 @@ const MainLayout = () => {
               profileData, 
               loadingState,
               isLoading,
-              hasMinimalData
+              hasMinimalData,
+              theme,
+              isDark: theme === 'dark'
             }} />
           </div>
         </main>
