@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Users, Search, Loader2, AlertCircle, X, User, Mail, MapPin, GraduationCap, Shield, LayoutGrid,Grid3x3, List, SortAsc, SortDesc, ChevronDown } from 'lucide-react';
+import { Users, Search, Loader2, AlertCircle, X, User, Mail, MapPin, GraduationCap, Shield, LayoutGrid, Grid3x3, List, SortAsc, SortDesc, ChevronDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { fetchUsers, useUsersList } from './UsersList/services/usersListService';
 import { getProfilePictureUrl, getUserInitials } from '@/lib/utils/profileUtils';
@@ -64,7 +64,7 @@ const RoleDropdown = ({ selectedRole, setSelectedRole, uniqueRoles }) => {
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
-    
+
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
@@ -125,25 +125,33 @@ const RoleDropdown = ({ selectedRole, setSelectedRole, uniqueRoles }) => {
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 w-full md:w-64 md:right-0 md:left-auto mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50">
+        <div className="absolute top-full rounded-lg left-0 w-48 md:w-64 md:right-0 md:left-auto mt-1 bg-white dark:bg-gray-800 shadow-xl border border-gray-200 dark:border-gray-700 z-50">
           <div className="p-2">
-            {uniqueRoles.map((role) => (
-              <button
-                key={role}
-                onClick={() => {
-                  setSelectedRole(role);
-                  setIsOpen(false);
-                }}
-                className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-colors ${selectedRole === role
-                  ? 'bg-blue-500 text-white'
-                  : getRoleColor(role)
-                  }`}
-              >
-                <Shield className={`w-5 h-5 ${selectedRole === role ? 'text-white' : getRoleIconColor(role)
-                  }`} />
-                <span>{getRoleLabel(role)}</span>
-              </button>
-            ))}
+            {uniqueRoles.map((role, index) => {
+              // Créer des boutons avec des styles différents pour le premier et dernier élément
+              const isFirst = index === 0;
+              const isLast = index === uniqueRoles.length - 1;
+
+              return (
+                <button
+                  key={role}
+                  onClick={() => {
+                    setSelectedRole(role);
+                    setIsOpen(false);
+                  }}
+                  className={`w-full flex items-center space-x-3 px-3 py-2.5 transition-colors
+                    ${isFirst ? 'rounded-t-lg' : ''}
+                    ${isLast ? 'rounded-b-lg' : ''}
+                    ${selectedRole === role
+                      ? 'bg-blue-500 text-white'
+                      : getRoleColor(role)
+                    }`}
+                >
+                  <Shield className={`w-5 h-5 ${selectedRole === role ? 'text-white' : getRoleIconColor(role)}`} />
+                  <span>{getRoleLabel(role)}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
@@ -165,7 +173,7 @@ const SortDropdown = ({ sortOption, setSortOption }) => {
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
-    
+
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
@@ -209,7 +217,7 @@ const SortDropdown = ({ sortOption, setSortOption }) => {
                 setSortOption('nameAsc');
                 setIsOpen(false);
               }}
-              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-colors ${sortOption === 'nameAsc'
+              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-t-lg transition-colors ${sortOption === 'nameAsc'
                 ? 'bg-blue-500 text-white'
                 : sortColors['nameAsc']
                 }`}
@@ -222,7 +230,7 @@ const SortDropdown = ({ sortOption, setSortOption }) => {
                 setSortOption('nameDesc');
                 setIsOpen(false);
               }}
-              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-colors ${sortOption === 'nameDesc'
+              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-b-lg transition-colors ${sortOption === 'nameDesc'
                 ? 'bg-blue-500 text-white'
                 : sortColors['nameDesc']
                 }`}
@@ -251,7 +259,7 @@ const LayoutDropdown = ({ layout, setLayout }) => {
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
-    
+
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
@@ -290,14 +298,14 @@ const LayoutDropdown = ({ layout, setLayout }) => {
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 w-full md:w-64 md:right-0 md:left-auto mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50">
+        <div className="absolute top-full left-0 w-48 md:w-64 md:right-0 md:left-auto mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50">
           <div className="p-2">
             <button
               onClick={() => {
                 setLayout('card');
                 setIsOpen(false);
               }}
-              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-colors ${layout === 'card'
+              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-t-lg transition-colors ${layout === 'card'
                 ? 'bg-blue-500 text-white'
                 : layoutColors['card']
                 }`}
@@ -310,7 +318,7 @@ const LayoutDropdown = ({ layout, setLayout }) => {
                 setLayout('list');
                 setIsOpen(false);
               }}
-              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-colors ${layout === 'list'
+              className={`w-full flex items-center space-x-3 px-3 py-2.5 transition-colors ${layout === 'list'
                 ? 'bg-blue-500 text-white'
                 : layoutColors['list']
                 }`}
@@ -323,7 +331,7 @@ const LayoutDropdown = ({ layout, setLayout }) => {
                 setLayout('compact');
                 setIsOpen(false);
               }}
-              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-colors ${layout === 'compact'
+              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-b-lg transition-colors ${layout === 'compact'
                 ? 'bg-blue-500 text-white'
                 : layoutColors['compact']
                 }`}
