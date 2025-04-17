@@ -353,11 +353,11 @@ const AuthFormComponent = React.forwardRef((props, ref) => {
             disabled={isLoading}
             className="relative w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all transform hover:scale-105 disabled:opacity-70 disabled:cursor-not-allowed overflow-hidden group"
           >
-            <span className="relative z-10">
+            <span className="relative z-10 flex items-center justify-center">
               {isLoading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Connexion en cours...
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin inline-block" />
+                  <span>Connexion en cours...</span>
                 </>
               ) : (
                 "Se connecter"
