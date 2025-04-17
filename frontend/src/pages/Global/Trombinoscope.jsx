@@ -725,14 +725,14 @@ const UsersList = () => {
         );
       case 'compact':
         return (
-          <div className="flex flex-wrap justify-center gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
             {sortedUsers?.map((user) => (
               <div
                 key={user.id}
-                className="group relative bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer min-w-[150px] max-w-[200px] w-full"
+                className="group relative bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer w-full"
                 onClick={() => setSelectedUser(user)}
               >
-                <div className="p-3">
+                <div className="p-2">
                   <div className="flex flex-col items-center gap-2 w-full">
                     {user.profilePictureUrl ? (
                       <img
@@ -749,9 +749,7 @@ const UsersList = () => {
                           e.target.remove();
                         }}
                       />
-                    ) : (
-                      <ProfileBadge firstName={user.firstName} lastName={user.lastName} size="lg" className="ring-2 ring-gray-200 dark:ring-gray-700" />
-                    )}
+                    ) : null}
                     <div className="text-center w-full overflow-hidden">
                       <h3 className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 transition-colors duration-300 truncate mb-1">
                         {user.firstName} {user.lastName}
@@ -777,13 +775,9 @@ const UsersList = () => {
         );
       default:
         return (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
             {sortedUsers?.map((user) => (
-              <UserCard
-                key={user.id}
-                user={user}
-                onClick={setSelectedUser}
-              />
+              <UserCard key={user.id} user={user} onClick={setSelectedUser} />
             ))}
           </div>
         );
@@ -888,7 +882,7 @@ const UsersList = () => {
             Aucun utilisateur trouvé
           </div>
         ) : (
-          <div className="bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900 dark:to-blue-800 p-8 rounded-xl">
+          <div className="bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900 dark:to-blue-800 p-4 md:p-8 rounded-xl">
             {renderUserList()}
           </div>
         )}
