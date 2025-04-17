@@ -12,7 +12,7 @@ const PublicNavbar = () => {
   const isRegisterPage = location.pathname === '/register';
 
   return (
-    <nav className="public-nav fixed top-0 left-0 w-full z-40">
+    <nav className="public-nav fixed top-0 left-0 w-full z-40 bg-transparent backdrop-blur-none">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         <div className="flex items-center">
           <Link to="/" className="flex items-center">
