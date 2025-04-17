@@ -94,9 +94,6 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     #[Groups(['user:read'])]
     private ?Theme $theme = null;
 
-    #[ORM\OneToMany(mappedBy: 'user', targetEntity: Diploma::class, orphanRemoval: true)]
-    private Collection $diplomas;
-
     #[ORM\OneToMany(mappedBy: 'user', targetEntity: Address::class, orphanRemoval: true)]
     private Collection $addresses;
 
@@ -127,11 +124,16 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     #[ORM\OneToMany(mappedBy: 'assignedTo', targetEntity: Ticket::class)]
     private Collection $assignedTickets;
 
+    /**
+     * @var Collection<int, Message> Messages sent by this user.
+     */
+    #[ORM\OneToMany(mappedBy: 'sender', targetEntity: Message::class)]
+    private Collection $sentMessages;
+
     public function __construct()
     {
         $this->createdAt = new \DateTimeImmutable();
         $this->userRoles = new ArrayCollection();
-        $this->diplomas = new ArrayCollection();
         $this->addresses = new ArrayCollection();
         $this->signatures = new ArrayCollection();
         $this->createdGroups = new ArrayCollection();
@@ -140,6 +142,7 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
         $this->formations = new ArrayCollection();
         $this->tickets = new ArrayCollection();
         $this->assignedTickets = new ArrayCollection();
+        $this->sentMessages = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -341,60 +344,6 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     public function setTheme(?Theme $theme): static
     {
         $this->theme = $theme;
-
-        return $this;
-    }
-
-    /**
-     * Get user diplomas, optionally processed with obtained dates
-     * 
-     * @return Collection<int, Diploma>|array
-     */
-    public function getDiplomas(): Collection|array
-    {
-        if (func_num_args() > 0) {
-            // When called with arguments, return the processed diplomas array
-            $diplomas = [];
-            foreach ($this->userDiplomas as $userDiploma) {
-                $diploma = $userDiploma->getDiploma();
-                // Add the obtained date to the diploma object
-                $diploma->obtainedAt = $userDiploma->getObtainedDate();
-                $diplomas[] = $diploma;
-            }
-            
-            // Trier les diplômes par date d'obtention (du plus récent au plus ancien)
-            usort($diplomas, function($a, $b) {
-                if (!$a->obtainedAt || !$b->obtainedAt) {
-                    return 0;
-                }
-                return $b->obtainedAt <=> $a->obtainedAt;
-            });
-            
-            return $diplomas;
-        }
-        
-        // When called without arguments, return the collection
-        return $this->diplomas;
-    }
-
-    public function addDiploma(Diploma $diploma): static
-    {
-        if (!$this->diplomas->contains($diploma)) {
-            $this->diplomas->add($diploma);
-            $diploma->setUser($this);
-        }
-
-        return $this;
-    }
-
-    public function removeDiploma(Diploma $diploma): static
-    {
-        if ($this->diplomas->removeElement($diploma)) {
-            // set the owning side to null (unless already changed)
-            if ($diploma->getUser() === $this) {
-                $diploma->setUser(null);
-            }
-        }
 
         return $this;
     }
@@ -752,6 +701,36 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     public function setProfileCompletionAcknowledged(bool $isProfileCompletionAcknowledged): static
     {
         $this->isProfileCompletionAcknowledged = $isProfileCompletionAcknowledged;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Message>
+     */
+    public function getSentMessages(): Collection
+    {
+        return $this->sentMessages;
+    }
+
+    public function addSentMessage(Message $message): static
+    {
+        if (!$this->sentMessages->contains($message)) {
+            $this->sentMessages->add($message);
+            $message->setSender($this);
+        }
+
+        return $this;
+    }
+
+    public function removeSentMessage(Message $message): static
+    {
+        if ($this->sentMessages->removeElement($message)) {
+            // set the owning side to null (unless already changed)
+            if ($message->getSender() === $this) {
+                $message->setSender(null);
+            }
+        }
 
         return $this;
     }

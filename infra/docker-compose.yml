@@ -19,6 +19,7 @@ services:
       context: ../backend
       dockerfile: Dockerfile
     volumes:
+      - ../backend:/var/www/symfony
       - backend_vendor:/var/www/symfony/vendor
       - backend_var:/var/www/symfony/var
       - jwt_keys:/var/www/symfony/config/jwt
