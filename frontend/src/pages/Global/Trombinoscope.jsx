@@ -371,7 +371,7 @@ const UserModal = ({ user, onClose }) => {
             </button>
           </div>
 
-          <div className="flex items-start space-x-6">
+          <div className="flex flex-col sm:flex-row items-start space-y-4 sm:space-y-0 sm:space-x-6">
             <div className="flex-shrink-0">
               {user.profilePictureUrl ? (
                 <img
@@ -835,7 +835,7 @@ const UsersList = () => {
         </div>
 
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="relative flex-1">
+          <div className="relative flex-1 ">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
               type="text"
