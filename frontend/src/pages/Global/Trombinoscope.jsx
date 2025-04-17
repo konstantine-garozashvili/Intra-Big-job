@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Users, Search, Loader2, AlertCircle, X, FileText, Download, User, Mail, MapPin, GraduationCap, Shield, LayoutGrid, List, SortAsc, SortDesc, Calendar, ChevronDown } from 'lucide-react';
+import { Users, Search, Loader2, AlertCircle, X, User, Mail, MapPin, GraduationCap, Shield, LayoutGrid,Grid3x3, List, SortAsc, SortDesc, ChevronDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { fetchUsers, useUsersList } from './UsersList/services/usersListService';
 import { getProfilePictureUrl, getUserInitials } from '@/lib/utils/profileUtils';
@@ -52,6 +52,23 @@ const isAdminRole = (role) => {
 
 const RoleDropdown = ({ selectedRole, setSelectedRole, uniqueRoles }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
 
   const roleLabels = {
     'STUDENT': 'Étudiant',
@@ -94,12 +111,11 @@ const RoleDropdown = ({ selectedRole, setSelectedRole, uniqueRoles }) => {
   const toggleDropdown = () => setIsOpen(!isOpen);
 
   return (
-    <div className="relative">
+    <div className="relative" ref={dropdownRef}>
       <button
         onClick={toggleDropdown}
-        className={`px-4 py-2.5 rounded-lg flex items-center justify-between w-full transition-all ${
-          selectedRole ? getRoleColor(selectedRole) : 'bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-200 dark:hover:bg-blue-800'
-        }`}
+        className={`px-4 py-2.5 rounded-lg flex items-center justify-between w-full transition-all ${selectedRole ? getRoleColor(selectedRole) : 'bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-200 dark:hover:bg-blue-800'
+          }`}
       >
         <div className="flex items-center space-x-2">
           <Shield className={`w-5 h-5 ${selectedRole ? getRoleIconColor(selectedRole) : 'text-blue-600'}`} />
@@ -109,7 +125,7 @@ const RoleDropdown = ({ selectedRole, setSelectedRole, uniqueRoles }) => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-1 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50">
+        <div className="absolute top-full left-0 w-full md:w-64 md:right-0 md:left-auto mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50">
           <div className="p-2">
             {uniqueRoles.map((role) => (
               <button
@@ -118,15 +134,13 @@ const RoleDropdown = ({ selectedRole, setSelectedRole, uniqueRoles }) => {
                   setSelectedRole(role);
                   setIsOpen(false);
                 }}
-                className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-colors ${
-                  selectedRole === role
-                    ? 'bg-blue-500 text-white' 
-                    : getRoleColor(role)
-                }`}
+                className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-colors ${selectedRole === role
+                  ? 'bg-blue-500 text-white'
+                  : getRoleColor(role)
+                  }`}
               >
-                <Shield className={`w-5 h-5 ${
-                  selectedRole === role ? 'text-white' : getRoleIconColor(role)
-                }`} />
+                <Shield className={`w-5 h-5 ${selectedRole === role ? 'text-white' : getRoleIconColor(role)
+                  }`} />
                 <span>{getRoleLabel(role)}</span>
               </button>
             ))}
@@ -139,6 +153,23 @@ const RoleDropdown = ({ selectedRole, setSelectedRole, uniqueRoles }) => {
 
 const SortDropdown = ({ sortOption, setSortOption }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
 
   const sortLabels = {
     'nameAsc': 'Nom A-Z',
@@ -151,12 +182,11 @@ const SortDropdown = ({ sortOption, setSortOption }) => {
   };
 
   return (
-    <div className="relative">
+    <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`px-4 py-2.5 rounded-lg flex items-center justify-between w-full transition-all ${
-          sortOption ? sortColors[sortOption] : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
-        }`}
+        className={`px-4 py-2.5 rounded-lg flex items-center justify-between w-full transition-all ${sortOption ? sortColors[sortOption] : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+          }`}
       >
         <div className="flex items-center space-x-2">
           {sortOption === 'nameAsc' ? (
@@ -172,35 +202,33 @@ const SortDropdown = ({ sortOption, setSortOption }) => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-1 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50">
+        <div className="absolute top-full left-0 w-full md:w-64 md:right-0 md:left-auto mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50">
           <div className="p-2">
             <button
               onClick={() => {
                 setSortOption('nameAsc');
                 setIsOpen(false);
               }}
-              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-colors ${
-                sortOption === 'nameAsc'
-                  ? 'bg-blue-500 text-white' 
-                  : sortColors['nameAsc']
-              }`}
+              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-colors ${sortOption === 'nameAsc'
+                ? 'bg-blue-500 text-white'
+                : sortColors['nameAsc']
+                }`}
             >
-              <SortAsc className="w-5 h-5 text-blue-500" />
-              <span>Nom A-Z</span>
+              <SortAsc className={`w-5 h-5 ${sortOption === 'nameAsc' ? 'text-white' : 'text-blue-500'}`} />
+              <span className={`${sortOption === 'nameAsc' ? 'text-white' : 'text-blue-500'}`}>Nom A-Z</span>
             </button>
             <button
               onClick={() => {
                 setSortOption('nameDesc');
                 setIsOpen(false);
               }}
-              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-colors ${
-                sortOption === 'nameDesc'
-                  ? 'bg-blue-500 text-white' 
-                  : sortColors['nameDesc']
-              }`}
+              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-colors ${sortOption === 'nameDesc'
+                ? 'bg-blue-500 text-white'
+                : sortColors['nameDesc']
+                }`}
             >
-              <SortDesc className="w-5 h-5 text-blue-500" />
-              <span>Nom Z-A</span>
+              <SortDesc className={`w-5 h-5 ${sortOption === 'nameDesc' ? 'text-white' : 'text-blue-500'}`} />
+              <span className={`${sortOption === 'nameDesc' ? 'text-white' : 'text-blue-500'}`}>Nom Z-A</span>
             </button>
           </div>
         </div>
@@ -211,6 +239,23 @@ const SortDropdown = ({ sortOption, setSortOption }) => {
 
 const LayoutDropdown = ({ layout, setLayout }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
 
   const layoutLabels = {
     'card': 'Grille',
@@ -227,16 +272,15 @@ const LayoutDropdown = ({ layout, setLayout }) => {
   const layoutIcons = {
     'card': <LayoutGrid className="w-5 h-5" />,
     'list': <List className="w-5 h-5" />,
-    'compact': <LayoutGrid className="w-5 h-5" />
+    'compact': <Grid3x3 className="w-5 h-5" />
   };
 
   return (
-    <div className="relative">
+    <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`px-4 py-2.5 rounded-lg flex items-center justify-between w-full transition-all ${
-          layout ? layoutColors[layout] : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
-        }`}
+        className={`px-4 py-2.5 rounded-lg flex items-center justify-between w-full transition-all ${layout ? layoutColors[layout] : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+          }`}
       >
         <div className="flex items-center space-x-2">
           {layout ? layoutIcons[layout] : <LayoutGrid className="w-5 h-5 text-gray-500" />}
@@ -246,49 +290,46 @@ const LayoutDropdown = ({ layout, setLayout }) => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-1 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50">
+        <div className="absolute top-full left-0 w-full md:w-64 md:right-0 md:left-auto mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50">
           <div className="p-2">
             <button
               onClick={() => {
                 setLayout('card');
                 setIsOpen(false);
               }}
-              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-colors ${
-                layout === 'card'
-                  ? 'bg-blue-500 text-white' 
-                  : layoutColors['card']
-              }`}
+              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-colors ${layout === 'card'
+                ? 'bg-blue-500 text-white'
+                : layoutColors['card']
+                }`}
             >
-              <LayoutGrid className="w-5 h-5 text-blue-500" />
-              <span>Grille</span>
+              <LayoutGrid className={`w-5 h-5 ${layout === 'card' ? 'text-white' : 'text-blue-500'}`} />
+              <span className={`${layout === 'card' ? 'text-white' : 'text-blue-500'}`}>Grille</span>
             </button>
             <button
               onClick={() => {
                 setLayout('list');
                 setIsOpen(false);
               }}
-              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-colors ${
-                layout === 'list'
-                  ? 'bg-blue-500 text-white' 
-                  : layoutColors['list']
-              }`}
+              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-colors ${layout === 'list'
+                ? 'bg-blue-500 text-white'
+                : layoutColors['list']
+                }`}
             >
-              <List className="w-5 h-5 text-blue-500" />
-              <span>Liste</span>
+              <List className={`w-5 h-5 ${layout === 'list' ? 'text-white' : 'text-blue-500'}`} />
+              <span className={`${layout === 'list' ? 'text-white' : 'text-blue-500'}`}>Liste</span>
             </button>
             <button
               onClick={() => {
                 setLayout('compact');
                 setIsOpen(false);
               }}
-              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-colors ${
-                layout === 'compact'
-                  ? 'bg-blue-500 text-white' 
-                  : layoutColors['compact']
-              }`}
+              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-colors ${layout === 'compact'
+                ? 'bg-blue-500 text-white'
+                : layoutColors['compact']
+                }`}
             >
-              <LayoutGrid className="w-5 h-5 text-blue-500" />
-              <span>Compact</span>
+              <Grid3x3 className={`w-5 h-5 ${layout === 'compact' ? 'text-white' : 'text-blue-500'}`} />
+              <span className={`${layout === 'compact' ? 'text-white' : 'text-blue-500'}`}>Compact</span>
             </button>
           </div>
         </div>
@@ -302,7 +343,7 @@ const UserModal = ({ user, onClose }) => {
   const cityName = user.city || "Non renseignée";
 
   const roles = user.userRoles?.map(ur => ur.role.name) || [];
-  const isStudent = roles.some(role => 
+  const isStudent = roles.some(role =>
     typeof role === 'object' ? role.name === "STUDENT" : role === "STUDENT"
   );
 
@@ -340,10 +381,10 @@ const UserModal = ({ user, onClose }) => {
                   }}
                 />
               ) : (
-                <ProfileBadge 
-                  firstName={user.firstName} 
-                  lastName={user.lastName} 
-                  size="lg" 
+                <ProfileBadge
+                  firstName={user.firstName}
+                  lastName={user.lastName}
+                  size="lg"
                   className="w-36 h-36 ring-2 ring-blue-100 dark:ring-blue-900 shadow-lg transition-transform duration-300 hover:scale-110"
                 />
               )}
@@ -374,27 +415,25 @@ const UserModal = ({ user, onClose }) => {
                 {roles.map((role, index) => (
                   <span
                     key={index}
-                    className={`px-2 py-1 text-xs font-medium rounded-full flex items-center ${
-                      role === 'STUDENT' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                    className={`px-2 py-1 text-xs font-medium rounded-full flex items-center ${role === 'STUDENT' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
                       role === 'TEACHER' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200' :
-                      role === 'HR' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
-                      role === 'ADMIN' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' :
-                      role === 'SUPER_ADMIN' || role === 'SUPERADMIN' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
-                      role === 'RECRUITER' ? 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200' :
-                      role === 'GUEST' ? 'bg-blue-50 text-blue-300 dark:bg-blue-800 dark:text-blue-200' :
-                      'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
-                    }`}
+                        role === 'HR' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
+                          role === 'ADMIN' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' :
+                            role === 'SUPER_ADMIN' || role === 'SUPERADMIN' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                              role === 'RECRUITER' ? 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200' :
+                                role === 'GUEST' ? 'bg-blue-50 text-blue-300 dark:bg-blue-800 dark:text-blue-200' :
+                                  'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+                      }`}
                   >
-                    <Shield className={`w-3 h-3 mr-1 ${
-                      role === 'STUDENT' ? 'text-blue-500' :
+                    <Shield className={`w-3 h-3 mr-1 ${role === 'STUDENT' ? 'text-blue-500' :
                       role === 'TEACHER' ? 'text-emerald-500' :
-                      role === 'HR' ? 'text-purple-500' :
-                      role === 'ADMIN' ? 'text-amber-500' :
-                      role === 'SUPER_ADMIN' || role === 'SUPERADMIN' ? 'text-red-500' :
-                      role === 'RECRUITER' ? 'text-pink-500' :
-                      role === 'GUEST' ? 'text-blue-300' :
-                      'text-gray-500'
-                    }`} />
+                        role === 'HR' ? 'text-purple-500' :
+                          role === 'ADMIN' ? 'text-amber-500' :
+                            role === 'SUPER_ADMIN' || role === 'SUPERADMIN' ? 'text-red-500' :
+                              role === 'RECRUITER' ? 'text-pink-500' :
+                                role === 'GUEST' ? 'text-blue-300' :
+                                  'text-gray-500'
+                      }`} />
                     {getRoleLabel(role)}
                   </span>
                 ))}
@@ -435,7 +474,7 @@ const ProfileBadge = ({ firstName, lastName, size = 'md' }) => {
   };
 
   return (
-    <div 
+    <div
       className={`flex items-center justify-center rounded-full ${sizes[size]} ${getColor(initials)} text-white font-semibold`}
     >
       {initials}
@@ -451,14 +490,14 @@ const UserCard = ({ user, onClick }) => {
     setHasError(true);
   };
 
-  const profilePictureUrl = user.profilePictureUrl 
-    ? user.profilePictureUrl 
+  const profilePictureUrl = user.profilePictureUrl
+    ? user.profilePictureUrl
     : (user.profilePicturePath ? getProfilePictureUrl(user.profilePicturePath) : null);
 
   return (
-    <div 
-      key={user.id} 
-      className="group relative bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer"
+    <div
+      key={user.id}
+      className="group relative bg-white dark:bg-gray-800 rounded-2xl  shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer"
       onClick={() => onClick(user)}
     >
       <div className="p-4">
@@ -476,11 +515,11 @@ const UserCard = ({ user, onClick }) => {
           {hasError && (
             <ProfileBadge firstName={user.firstName} lastName={user.lastName} size="lg" className="ring-2 ring-gray-200 dark:ring-gray-700" />
           )}
-          <div className="text-center">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 transition-colors duration-300">
+          <div className="text-center w-full overflow-hidden">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 transition-colors duration-300 truncate">
               {user.firstName} {user.lastName}
             </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
               {user.email}
             </p>
           </div>
@@ -520,18 +559,18 @@ const UsersList = () => {
 
   const uniqueRoles = useMemo(() => {
     if (!users) return [];
-    
+
     // Filter roles based on allowedSearchRoles
-    const roles = users.flatMap(user => 
+    const roles = users.flatMap(user =>
       user.userRoles?.map(ur => ur.role.name).filter(role => {
         // Always show GUEST role
         if (role === 'GUEST') return true;
-        
+
         // Check if role is in allowedSearchRoles
         return allowedSearchRoles.includes(role);
       })
     );
-    
+
     return [...new Set(roles) || []];
   }, [users, allowedSearchRoles]);
 
@@ -560,44 +599,44 @@ const UsersList = () => {
       return filtered.filter(user => {
         // Get user's roles
         const userRoles = user.userRoles?.map(ur => ur.role.name) || [];
-        
+
         // Students can only see TEACHER, STUDENT, RECRUITER, and HR
         if (hasRole(ROLES.STUDENT)) {
-          return userRoles.some(role => 
+          return userRoles.some(role =>
             ['TEACHER', 'STUDENT', 'RECRUITER', 'HR'].includes(role)
           );
         }
-        
+
         // HR can only see TEACHER, STUDENT, and RECRUITER
         if (hasRole(ROLES.HR)) {
-          return userRoles.some(role => 
+          return userRoles.some(role =>
             ['TEACHER', 'STUDENT', 'RECRUITER'].includes(role)
           );
         }
-        
+
         // Recruiters can only see TEACHER and STUDENT
         if (hasRole(ROLES.RECRUITER)) {
-          return userRoles.some(role => 
+          return userRoles.some(role =>
             ['TEACHER', 'STUDENT'].includes(role)
           );
         }
-        
+
         // Teachers can only see STUDENT and HR
         if (hasRole(ROLES.TEACHER)) {
-          return userRoles.some(role => 
+          return userRoles.some(role =>
             ['STUDENT', 'HR'].includes(role)
           );
         }
-        
+
         // Guests can only see RECRUITER
         if (hasRole(ROLES.GUEST)) {
-          return userRoles.some(role => 
+          return userRoles.some(role =>
             ['RECRUITER'].includes(role)
           );
         }
-        
+
         // Default case - show all non-admin users
-        return !userRoles.some(role => 
+        return !userRoles.some(role =>
           ['ADMIN', 'SUPERADMIN', 'SUPER_ADMIN'].includes(role)
         );
       });
@@ -611,11 +650,11 @@ const UsersList = () => {
 
     switch (sortOption) {
       case 'nameAsc':
-        return [...filteredUsers].sort((a, b) => 
+        return [...filteredUsers].sort((a, b) =>
           `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`)
         );
       case 'nameDesc':
-        return [...filteredUsers].sort((a, b) => 
+        return [...filteredUsers].sort((a, b) =>
           `${b.firstName} ${b.lastName}`.localeCompare(`${a.firstName} ${a.lastName}`)
         );
       default:
@@ -633,9 +672,9 @@ const UsersList = () => {
         return (
           <div className="space-y-6">
             {sortedUsers?.map((user) => (
-              <div 
-                key={user.id} 
-                className="group relative bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer"
+              <div
+                key={user.id}
+                className="group relative bg-white dark:bg-gray-800 rounded-2xl  shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer"
                 onClick={() => setSelectedUser(user)}
               >
                 <div className="p-4">
@@ -658,22 +697,22 @@ const UsersList = () => {
                     ) : (
                       <ProfileBadge firstName={user.firstName} lastName={user.lastName} className="ring-2 ring-gray-200 dark:ring-gray-700" />
                     )}
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 transition-colors duration-300">
+                    <div className="flex-1 overflow-hidden">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 transition-colors duration-300 truncate">
                         {user.firstName} {user.lastName}
                       </h3>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                      <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
                         {user.email}
                       </p>
                     </div>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2 overflow-hidden">
                       {user.userRoles?.map((ur, index) => (
                         <span
                           key={index}
-                          className={`px-2 py-1 text-xs font-medium rounded-full flex items-center ${getRoleColor(ur.role.name)} group-hover:opacity-80 transition-opacity duration-300`}
+                          className={`px-2 py-1 text-xs font-medium rounded-full inline-flex items-center ${getRoleColor(ur.role.name)} group-hover:opacity-80 transition-opacity duration-300 max-w-full`}
                         >
-                          <Shield className={`w-3 h-3 mr-1 ${getRoleIconColor(ur.role.name)}`} />
-                          {getRoleLabel(ur.role.name)}
+                          <Shield className={`w-3 h-3 mr-1 flex-shrink-0 ${getRoleIconColor(ur.role.name)}`} />
+                          <span className="truncate">{getRoleLabel(ur.role.name)}</span>
                         </span>
                       ))}
                     </div>
@@ -686,15 +725,15 @@ const UsersList = () => {
         );
       case 'compact':
         return (
-          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+          <div className="flex flex-wrap justify-center gap-4">
             {sortedUsers?.map((user) => (
-              <div 
-                key={user.id} 
-                className="group relative bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer"
+              <div
+                key={user.id}
+                className="group relative bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer min-w-[150px] max-w-[200px] w-full"
                 onClick={() => setSelectedUser(user)}
               >
                 <div className="p-3">
-                  <div className="flex flex-col items-center gap-3">
+                  <div className="flex flex-col items-center gap-2 w-full">
                     {user.profilePictureUrl ? (
                       <img
                         src={user.profilePictureUrl}
@@ -713,18 +752,18 @@ const UsersList = () => {
                     ) : (
                       <ProfileBadge firstName={user.firstName} lastName={user.lastName} size="lg" className="ring-2 ring-gray-200 dark:ring-gray-700" />
                     )}
-                    <div className="text-center">
-                      <h3 className="text-base font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 transition-colors duration-300">
+                    <div className="text-center w-full overflow-hidden">
+                      <h3 className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 transition-colors duration-300 truncate mb-1">
                         {user.firstName} {user.lastName}
                       </h3>
-                      <div className="flex flex-wrap justify-center gap-1 mt-1">
+                      <div className="flex flex-wrap justify-center gap-1 overflow-hidden">
                         {user.userRoles?.map((ur, index) => (
                           <span
                             key={index}
-                            className={`px-1.5 py-0.5 text-xs font-medium rounded ${getRoleColor(ur.role.name)} group-hover:opacity-80 transition-opacity duration-300`}
+                            className={`inline-flex items-center px-1.5 py-0.5 text-xs font-medium rounded ${getRoleColor(ur.role.name)} group-hover:opacity-80 transition-opacity duration-300 max-w-full`}
                           >
-                            <Shield className={`w-2.5 h-2.5 mr-1 ${getRoleIconColor(ur.role.name)}`} />
-                            {getRoleLabel(ur.role.name)}
+                            <Shield className={`w-2.5 h-2.5 mr-1 flex-shrink-0 ${getRoleIconColor(ur.role.name)}`} />
+                            <span className="truncate">{getRoleLabel(ur.role.name)}</span>
                           </span>
                         ))}
                       </div>
@@ -740,9 +779,9 @@ const UsersList = () => {
         return (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
             {sortedUsers?.map((user) => (
-              <UserCard 
-                key={user.id} 
-                user={user} 
+              <UserCard
+                key={user.id}
+                user={user}
                 onClick={setSelectedUser}
               />
             ))}
@@ -807,7 +846,7 @@ const UsersList = () => {
 
           <div className="flex-1 hidden md:block" />
 
-          <div className="flex flex-col md:flex-row gap-4 md:gap-2">
+          <div className="flex flex-wrap gap-4 md:gap-2">
             {/* Layout Buttons */}
             <div className="flex flex-wrap gap-2">
               <LayoutDropdown
@@ -817,7 +856,7 @@ const UsersList = () => {
             </div>
 
             {/* Sorting Buttons */}
-            <div className="flex flex-wrap gap-2 mt-2 md:mt-0">
+            <div className="flex flex-wrap gap-2">
               <SortDropdown
                 sortOption={sortOption}
                 setSortOption={setSortOption}
@@ -825,7 +864,7 @@ const UsersList = () => {
             </div>
 
             {/* Role Filter */}
-            <div className="flex flex-wrap gap-2 mt-2 md:mt-0">
+            <div className="flex flex-wrap gap-2">
               <RoleDropdown
                 selectedRole={selectedRole}
                 setSelectedRole={setSelectedRole}
@@ -855,9 +894,9 @@ const UsersList = () => {
         )}
 
         {selectedUser && (
-          <UserModal 
-            user={selectedUser} 
-            onClose={() => setSelectedUser(null)} 
+          <UserModal
+            user={selectedUser}
+            onClose={() => setSelectedUser(null)}
           />
         )}
       </div>
