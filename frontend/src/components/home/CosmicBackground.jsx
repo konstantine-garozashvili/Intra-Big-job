@@ -56,16 +56,37 @@ const CosmicBackground = ({ colorMode = 'navy', animationMode = 'cosmic' }) => {
     
     // Shooting stars
     const shootingStars = [];
+    const shootingStarParticles = [];
     const createShootingStar = () => {
       if (shootingStars.length < 3 && Math.random() < 0.01) {
+        // Variation taille/luminosité tête
+        const headRadius = 1.2 + Math.random() * 1.5;
+        const headBlur = 6 + Math.random() * 14;
+        const angle = (Math.PI / 4) + (Math.random() * Math.PI / 4);
         shootingStars.push({
           x: Math.random() * canvas.width,
           y: 0,
           length: 80 + Math.random() * 70,
           speed: 5 + Math.random() * 7,
-          angle: (Math.PI / 4) + (Math.random() * Math.PI / 4)
+          angle: angle,
+          headRadius,
+          headBlur,
+          vibratePhase: Math.random() * Math.PI * 2 // Pour effet de vibration
         });
       }
+    };
+
+    // Ajout d'étincelles (particules) derrière la tête
+    const spawnShootingStarParticle = (x, y, angle) => {
+      shootingStarParticles.push({
+        x,
+        y,
+        vx: -Math.cos(angle) * (0.5 + Math.random()),
+        vy: -Math.sin(angle) * (0.5 + Math.random()),
+        alpha: 0.8 + Math.random() * 0.2,
+        radius: 0.6 + Math.random() * 0.7,
+        life: 12 + Math.floor(Math.random() * 8)
+      });
     };
     
     // Nebulas (cloud-like structures)
@@ -130,25 +151,77 @@ const CosmicBackground = ({ colorMode = 'navy', animationMode = 'cosmic' }) => {
       createShootingStar();
       for (let i = shootingStars.length - 1; i >= 0; i--) {
         const star = shootingStars[i];
+        // Effet vibration/scintillement : légère oscillation sur la trajectoire
+        const vibration = Math.sin(Date.now() / 60 + star.vibratePhase) * 1.3;
+        const vibrAngle = star.angle + vibration * 0.01; // angle légèrement modifié
+
+        // Calcul position tête (fin de la traînée)
+        const endX = star.x + Math.cos(vibrAngle) * star.length;
+        const endY = star.y + Math.sin(vibrAngle) * star.length;
+
+        // Traînée avec dégradé coloré et dissipation progressive
         ctx.beginPath();
         ctx.moveTo(star.x, star.y);
-        const endX = star.x + Math.cos(star.angle) * star.length;
-        const endY = star.y + Math.sin(star.angle) * star.length;
         ctx.lineTo(endX, endY);
-        
-        const gradient = ctx.createLinearGradient(star.x, star.y, endX, endY);
-        gradient.addColorStop(0, `${colors.star}ff`);
-        gradient.addColorStop(1, 'transparent');
-        
+        const gradient = ctx.createLinearGradient(endX, endY, star.x, star.y);
+        gradient.addColorStop(0, `${colors.star}ff`); // tête (opaque)
+        gradient.addColorStop(0.3, 'rgba(70,131,255,0.5)'); // bleu intermédiaire
+        gradient.addColorStop(0.7, 'rgba(138,43,226,0.2)'); // violet intermédiaire
+        gradient.addColorStop(1, 'transparent'); // queue
         ctx.strokeStyle = gradient;
         ctx.lineWidth = 2;
         ctx.stroke();
-        
+
+        // Tête lumineuse avec variation taille/luminosité
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(endX, endY, star.headRadius, 0, Math.PI * 2);
+        ctx.fillStyle = `${colors.star}ff`;
+        ctx.shadowColor = `${colors.star}`;
+        ctx.shadowBlur = star.headBlur;
+        ctx.globalAlpha = 0.93;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur = 0;
+        ctx.restore();
+
+        // Génère des particules/étincelles derrière la tête
+        if (Math.random() < 0.9) {
+          spawnShootingStarParticle(
+            endX - Math.cos(vibrAngle) * 2,
+            endY - Math.sin(vibrAngle) * 2,
+            vibrAngle
+          );
+        }
+
+        // Déplacement de l'étoile filante
         star.x += Math.cos(star.angle) * star.speed;
         star.y += Math.sin(star.angle) * star.speed;
-        
+
         if (star.x > canvas.width || star.y > canvas.height) {
           shootingStars.splice(i, 1);
+        }
+      }
+
+      // Affichage des particules/étincelles
+      for (let i = shootingStarParticles.length - 1; i >= 0; i--) {
+        const p = shootingStarParticles[i];
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(200,220,255,${p.alpha})`;
+        ctx.shadowColor = '#e6f0ff';
+        ctx.shadowBlur = 6;
+        ctx.fill();
+        ctx.restore();
+        // Mise à jour particule
+        p.x += p.vx;
+        p.y += p.vy;
+        p.alpha *= 0.88;
+        p.radius *= 0.97;
+        p.life--;
+        if (p.life <= 0 || p.alpha < 0.05) {
+          shootingStarParticles.splice(i, 1);
         }
       }
       
