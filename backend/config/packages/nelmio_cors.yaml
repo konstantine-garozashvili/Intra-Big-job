@@ -1,29 +1,16 @@
 nelmio_cors:
     defaults:
         origin_regex: true
-        # Permettre les origines spécifiques en développement
-        allow_origin: ['http://localhost:5173', 'http://localhost:8000']
+        # Permettre toutes les origines en développement
+        allow_origin: ['*']
         allow_methods: ['GET', 'OPTIONS', 'POST', 'PUT', 'PATCH', 'DELETE']
         allow_headers: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
         expose_headers: ['Link', 'Location', 'X-Debug-Token', 'X-Debug-Token-Link']
-        allow_credentials: true
         max_age: 3600
+        allow_credentials: true
     paths:
         '^/api/':
-            allow_origin: ['http://localhost:5173', 'http://localhost:8000']
+            allow_origin: ['*']
             allow_headers: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
             allow_methods: ['GET', 'OPTIONS', 'POST', 'PUT', 'PATCH', 'DELETE']
-            allow_credentials: true
-            max_age: 3600
-        '^/publish':
-            allow_origin: ['http://localhost:5173', 'http://localhost:8000']
-            allow_headers: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
-            allow_methods: ['GET', 'OPTIONS', 'POST']
-            allow_credentials: true
-            max_age: 3600
-        '^/notify-document':
-            allow_origin: ['http://localhost:5173', 'http://localhost:8000']
-            allow_headers: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
-            allow_methods: ['GET', 'OPTIONS', 'POST']
-            allow_credentials: true
             max_age: 3600

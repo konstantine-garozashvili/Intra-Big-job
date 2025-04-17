@@ -135,7 +135,6 @@ const PublicProfileView = () => {
   }
 
   console.log('ProfileData before transformation:', profileData);
-  console.log('Roles array:', profileData.roles);
   
   const userData = {
     user: {
@@ -143,44 +142,14 @@ const PublicProfileView = () => {
       profilePictureUrl: profilePictureUrl,
       roles: Array.isArray(profileData.roles) 
         ? profileData.roles.map(role => {
-            console.log('[PublicProfileView] Role type:', typeof role);
-            console.log('[PublicProfileView] Role value:', role);
-            
-            // Si le rôle est null ou undefined, utiliser GUEST
-            if (!role) {
-              return {
-                name: ROLES.GUEST,
-                displayName: roleUI.translateRoleName(ROLES.GUEST),
-                color: roleUI.getRoleBadgeColor(ROLES.GUEST)
-              };
-            }
-            
-            // Si le rôle est un objet
-            if (typeof role === 'object') {
-              const roleName = role.name || role.roleName || ROLES.GUEST;
-              return {
-                name: roleName,
-                displayName: roleUI.translateRoleName(roleName),
-                color: roleUI.getRoleBadgeColor(roleName)
-              };
-            }
-            
-            // Si le rôle est une chaîne de caractères
-            if (typeof role === 'string') {
-              const roleName = role.replace('ROLE_', '');
-              return {
-                name: roleName,
-                displayName: roleUI.translateRoleName(roleName),
-                color: roleUI.getRoleBadgeColor(roleName)
-              };
-            }
-            
-            // Fallback pour tout autre type
-            return {
-              name: ROLES.GUEST,
-              displayName: roleUI.translateRoleName(ROLES.GUEST),
-              color: roleUI.getRoleBadgeColor(ROLES.GUEST)
+            console.log('[PublicProfileView] Role avant transformation:', role);
+            const transformedRole = {
+              name: role,
+              displayName: roleUI.translateRoleName(role),
+              color: roleUI.getRoleBadgeColor(role)
             };
+            console.log('[PublicProfileView] Role après transformation:', transformedRole);
+            return transformedRole;
           })
         : [{ 
             name: ROLES.GUEST,

@@ -42,4 +42,3 @@ api_token_devices:
 
 document_routes:
     resource: './routes/document.yaml'
-

@@ -905,5 +905,4 @@ const apiService = {
   }
 };
 
-// Exporter le service API pour utilisation dans d'autres modules
 export default apiService; 

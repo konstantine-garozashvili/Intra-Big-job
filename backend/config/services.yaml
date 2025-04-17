@@ -42,7 +42,6 @@ services:
         arguments:
             $documentDirectory: '%document_directory%'
             $storageFactory: '@App\Service\DocumentStorageFactory'
-            $httpClient: '@Symfony\Contracts\HttpClient\HttpClientInterface'
             
     # Configuration des repositories Document
     App\Domains\Global\Document\Repository\DocumentRepository:

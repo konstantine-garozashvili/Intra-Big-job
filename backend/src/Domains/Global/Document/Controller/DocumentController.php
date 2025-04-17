@@ -24,7 +24,6 @@ use Symfony\Component\String\Slugger\SluggerInterface;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 #[Route('/documents')]
 class DocumentController extends AbstractController
@@ -38,9 +37,7 @@ class DocumentController extends AbstractController
         private UserRepository $userRepository,
         private SluggerInterface $slugger,
         private string $documentDirectory,
-        private DocumentStorageFactory $storageFactory,
-        private ?NotificationService $notificationService = null,
-        private ?HttpClientInterface $httpClient = null
+        private DocumentStorageFactory $storageFactory
     ) {
         // The $documentDirectory will need to be configured in services.yaml
     }
@@ -463,133 +460,6 @@ class DocumentController extends AbstractController
             return $this->json([
                 'success' => false,
                 'message' => 'Failed to fetch documents: ' . $e->getMessage()
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    /**
-     * Approve a document
-     */
-    #[Route('/{id}/approve', name: 'app_document_approve', methods: ['POST'])]
-    #[IsGranted('ROLE_ADMIN')]
-    public function approveDocument(int $id, Request $request): JsonResponse
-    {
-        $document = $this->documentRepository->find($id);
-        
-        if (!$document) {
-            throw new NotFoundHttpException('Document not found');
-        }
-        
-        // Only documents in PENDING status can be approved
-        if ($document->getStatus() !== DocumentStatus::PENDING) {
-            return $this->json([
-                'success' => false,
-                'message' => 'Only pending documents can be approved',
-                'code' => 'INVALID_STATUS'
-            ], Response::HTTP_BAD_REQUEST);
-        }
-        
-        try {
-            // Update document status
-            $document->setStatus(DocumentStatus::APPROVED);
-            $document->setValidatedAt(new \DateTime());
-            $document->setValidatedBy($this->getUser());
-            
-            // Add comment if provided
-            $data = json_decode($request->getContent(), true);
-            if (!empty($data['comment'])) {
-                $document->setComment($data['comment']);
-            }
-            
-            // Create history entry
-            $history = new DocumentHistory();
-            $history->setDocument($document);
-            $history->setUser($this->getUser());
-            $history->setAction(DocumentAction::VALIDATED);
-            $history->setDetails([
-                'comment' => $document->getComment(),
-                'previousStatus' => DocumentStatus::PENDING->value
-            ]);
-            
-            $this->entityManager->persist($history);
-            $this->entityManager->flush();
-            
-            return $this->json([
-                'success' => true,
-                'message' => 'Document approved successfully',
-                'document' => $document
-            ], Response::HTTP_OK, [], ['groups' => ['document:read']]);
-        } catch (\Exception $e) {
-            return $this->json([
-                'success' => false,
-                'message' => 'Failed to approve document: ' . $e->getMessage(),
-                'code' => 'SERVER_ERROR'
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
-    }
-    
-    /**
-     * Reject a document
-     */
-    #[Route('/{id}/reject', name: 'app_document_reject', methods: ['POST'])]
-    #[IsGranted('ROLE_ADMIN')]
-    public function rejectDocument(int $id, Request $request): JsonResponse
-    {
-        $document = $this->documentRepository->find($id);
-        
-        if (!$document) {
-            throw new NotFoundHttpException('Document not found');
-        }
-        
-        // Only documents in PENDING status can be rejected
-        if ($document->getStatus() !== DocumentStatus::PENDING) {
-            return $this->json([
-                'success' => false,
-                'message' => 'Only pending documents can be rejected',
-                'code' => 'INVALID_STATUS'
-            ], Response::HTTP_BAD_REQUEST);
-        }
-        
-        // Comment is required for rejection
-        $data = json_decode($request->getContent(), true);
-        if (empty($data['comment'])) {
-            return $this->json([
-                'success' => false,
-                'message' => 'Comment is required when rejecting a document',
-                'code' => 'MISSING_COMMENT'
-            ], Response::HTTP_BAD_REQUEST);
-        }
-        
-        try {
-            // Update document status
-            $document->setStatus(DocumentStatus::REJECTED);
-            $document->setValidatedAt(new \DateTime());
-            $document->setValidatedBy($this->getUser());
-            $document->setComment($data['comment']);
-            
-            // Create history entry
-            $history = new DocumentHistory();
-            $history->setDocument($document);
-            $history->setUser($this->getUser());
-            $history->setAction(DocumentAction::REJECTED);
-            $history->setDetails([
-                'comment' => $document->getComment(),
-                'previousStatus' => DocumentStatus::PENDING->value
-            ]);
-            
-            $this->entityManager->persist($history);
-            $this->entityManager->flush();
-            
-            return $this->json([
-                'success' => true,
-                'message' => 'Document rejected successfully',
-                'document' => $document
-            ], Response::HTTP_OK, [], ['groups' => ['document:read']]);
-        } catch (\Exception $e) {
-            return $this->json([
-                'success' => false,
-                'message' => 'Failed to reject document: ' . $e->getMessage(),
-                'code' => 'SERVER_ERROR'
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }

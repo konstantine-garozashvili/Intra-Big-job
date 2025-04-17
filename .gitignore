@@ -3,3 +3,4 @@ new-frontend
 /.env.local.php
 /.env.*.local
 screenshots/
+oldProjectVersion
