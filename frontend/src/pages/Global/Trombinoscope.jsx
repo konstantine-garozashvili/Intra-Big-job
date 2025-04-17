@@ -355,9 +355,17 @@ const UserModal = ({ user, onClose }) => {
     typeof role === 'object' ? role.name === "STUDENT" : role === "STUDENT"
   );
 
+  const modalContentRef = useRef(null);
+
+  const handleBackdropClick = (e) => {
+    if (modalContentRef.current && !modalContentRef.current.contains(e.target)) {
+      onClose();
+    }
+  };
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-[500px] h-[400px] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={handleBackdropClick}>
+      <div ref={modalContentRef} className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-[500px] h-[400px] overflow-y-auto">
         <div className="p-6">
           <div className="flex justify-between items-start mb-6">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
