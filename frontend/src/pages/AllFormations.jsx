@@ -8,19 +8,6 @@ import { useTheme } from '@/contexts/ThemeContext';
 const AllFormations = () => {
   const { colorMode, currentTheme } = useTheme();
 
-  useEffect(() => {
-    // Simple animation effect for stars using CSS animations instead of GSAP
-    const stars = document.querySelectorAll('.star');
-    
-    stars.forEach((star) => {
-      // Add random animation delay for twinkling effect
-      star.style.animationDelay = `${Math.random() * 5}s`;
-    });
-    
-    return () => {
-      // Cleanup if needed
-    };
-  }, []);
 
   // Formation data
   const formations = [
@@ -81,24 +68,7 @@ const AllFormations = () => {
   ];
 
   return (
-    <div className={`min-h-screen ${currentTheme.bg} ${currentTheme.textPrimary} relative overflow-hidden pt-[72px]`}>
-      {/* Animated background stars */}
-      <div className="star-container absolute inset-0 overflow-hidden">
-        {[...Array(50)].map((_, i) => (
-          <div
-            key={i}
-            className="star absolute rounded-full bg-white animate-twinkle"
-            style={{
-              top: `${Math.random() * 100}%`,
-              left: `${Math.random() * 100}%`,
-              width: `${Math.random() * 3 + 1}px`,
-              height: `${Math.random() * 3 + 1}px`,
-              opacity: Math.random() * 0.8 + 0.2,
-              animationDuration: `${Math.random() * 3 + 2}s`
-            }}
-          />
-        ))}
-      </div>
+    <div className="min-h-screen relative overflow-hidden pt-[72px]">
       
       {/* Header */}
       <header className="container mx-auto pt-8 pb-12 px-4 text-center relative z-10">

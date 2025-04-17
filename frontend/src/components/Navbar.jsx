@@ -625,9 +625,9 @@ const Navbar = memo(() => {
                         ? permissions.getRoleDashboardPath()
                         : "/login"
                     }
-                    className="navbar-brand text-2xl font-black tracking-tight text-primary whitespace-nowrap dark:text-white"
+                    className="navbar-brand text-2xl font-black tracking-tight text-white dark:text-white whitespace-nowrap"
                   >
-              Big<span className="text-[#528eb2] dark:text-[#78b9dd]">Project</span>
+              <span style={{ color: 'white' }}>Big</span><span style={{ color: '#528eb2' }}>Project</span>
               </Link>
                 </div>
               </div>

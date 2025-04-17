@@ -306,6 +306,11 @@ const App = () => {
                         {/* Routes HR */}
                         <Route path="/hr/dashboard" element={<RoleGuard roles={ROLES.HR} fallback={<Navigate to="/dashboard" replace />}><HRDashboard /></RoleGuard>} />
 
+                        {/* Admin Routes */}
+                        <Route path="/admin">
+                          <Route path="users" element={<RoleGuard roles={[ROLES.ADMIN, ROLES.SUPERADMIN]} fallback={<Navigate to="/dashboard" replace />}><UserRoleManager /></RoleGuard>} />
+                        </Route>
+
                         {/* Routes Super Admin */}
                         <Route path="/superadmin/dashboard" element={<RoleGuard roles={ROLES.SUPERADMIN} fallback={<Navigate to="/dashboard" replace />}><SuperAdminDashboard /></RoleGuard>} />
 
