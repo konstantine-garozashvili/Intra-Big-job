@@ -167,6 +167,38 @@ export function useUserManagement(initialFilter = "ALL") {
             const response = await apiService.changeUserRole(userId, oldRoleName, newRoleName);
             if (response.success) {
                 toast.success("Rôle modifié avec succès");
+                
+                // Dispatch custom event for notifications
+                // The notification will be shown to the user whose role was changed, not to the admin
+                console.log('🔔 About to dispatch roleChanged event with data:', {
+                    userId,
+                    oldRoleName,
+                    newRoleName,
+                    responseData: response
+                });
+                
+                const eventDetail = {
+                    message: response.notificationMessage || `Votre rôle a été modifié de ${oldRoleName} à ${newRoleName}`,
+                    timestamp: new Date().toISOString(),
+                    userId: userId // This is the ID of the user whose role was changed
+                };
+                
+                console.log('🔔 Event detail object:', eventDetail);
+                
+                // 1. Dispatch event for current tab
+                window.dispatchEvent(new CustomEvent('roleChanged', {
+                    detail: eventDetail
+                }));
+                
+                // 2. Store in localStorage for cross-tab communication
+                // Use a timestamp to ensure it's seen as a new event
+                localStorage.setItem('roleChangeNotification', JSON.stringify({
+                    ...eventDetail,
+                    _timestamp: Date.now() // Add unique timestamp to force update
+                }));
+                
+                console.log('🔔 roleChanged event dispatched and saved to localStorage');
+                
                 // Pas besoin de rafraîchir toute la liste puisque nous avons déjà mis à jour localement
             } else {
                 toast.error("Impossible de modifier le rôle: " + (response.message || "Erreur inconnue"));

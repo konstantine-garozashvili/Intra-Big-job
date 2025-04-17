@@ -37,6 +37,7 @@ import { Skeleton } from './ui/skeleton';
 import ProfilePictureDisplay from './ProfilePictureDisplay';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import LanguageSelector from './Translation/LanguageSelector';
+import { NotificationBell } from './NotificationBell';
 
 // Style personnalisé pour le menu dropdown et le bouton burger
 const customStyles = `
@@ -593,6 +594,11 @@ const Navbar = memo(() => {
                   </div>
                 )}
                 
+                {/* Notification Bell */}
+                {isAuthenticated && (
+                  <NotificationBell />
+                )}
+
                 {/* Menu utilisateur */}
                 {isLoading ? (
                   <div className="flex items-center space-x-3">

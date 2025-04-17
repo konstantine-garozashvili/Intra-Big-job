@@ -127,16 +127,32 @@ class UserRoleController extends AbstractController
                 $data['oldRoleName'],
                 $data['newRoleName']
             );
+
+            // Send SSE notification
+            $message = json_encode([
+                'type' => 'role_changed',
+                'message' => "Votre rôle a été modifié de {$data['oldRoleName']} à {$data['newRoleName']}",
+                'timestamp' => (new \DateTime())->format('c')
+            ]);
             
+            file_put_contents(
+                sys_get_temp_dir() . "/sse_{$data['userId']}.txt",
+                "data: {$message}\n\n",
+                FILE_APPEND
+            );
+            
+            // Return success response with notification data
             return $this->json([
                 'success' => true,
-                'message' => 'Rôle modifié avec succès'
+                'message' => 'Role changed successfully',
+                'notification' => true,
+                'notificationMessage' => 'Votre rôle a été modifié de ' . $data['oldRoleName'] . ' à ' . $data['newRoleName'],
+                'user' => [
+                    'id' => $user->getId(),
+                    'email' => $user->getEmail(),
+                    'roles' => $user->getRoles()
+                ]
             ]);
-        } catch (NotFoundHttpException $e) {
-            return $this->json([
-                'success' => false,
-                'message' => $e->getMessage()
-            ], 404);
         } catch (\Exception $e) {
             return $this->json([
                 'success' => false,

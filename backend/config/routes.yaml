@@ -42,3 +42,14 @@ api_token_devices:
 
 document_routes:
     resource: './routes/document.yaml'
+
+# Notification routes
+notifications_stream:
+    path: /api/notifications/stream
+    methods: ['GET']
+    controller: App\Controller\NotificationController::stream
+
+notifications_send:
+    path: /api/notifications/send/{userId}
+    methods: ['POST']
+    controller: App\Controller\NotificationController::sendNotification
