@@ -280,7 +280,16 @@ const MainLayout = () => {
   const [initialRender, setInitialRender] = useState(true);
   const [isShowingConfetti, setIsShowingConfetti] = useState(false);
   const [showCongratulations, setShowCongratulations] = useState(false);
-  const { theme, isDark } = useProtectedTheme(); // Utiliser le thème protégé
+  const { theme, isDark } = useProtectedTheme();
+
+  // Reset loading state when user is not authenticated
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setLoadingState(LOADING_STATES.INITIAL);
+      setUserData(null);
+      setProfileData(null);
+    }
+  }, [isAuthenticated]);
 
   // Pages qui doivent être affichées en plein écran sans marges internes
   const fullScreenPages = []; // Removed '/register'
