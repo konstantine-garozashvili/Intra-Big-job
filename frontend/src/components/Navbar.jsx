@@ -37,6 +37,7 @@ import { Skeleton } from './ui/skeleton';
 import ProfilePictureDisplay from './ProfilePictureDisplay';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import LanguageSelector from './Translation/LanguageSelector';
+import { NotificationBell } from './ui/NotificationBell';
 
 // Style personnalisé pour le menu dropdown et le bouton burger
 const customStyles = `
@@ -276,12 +277,7 @@ const UserMenu = ({ onLogout, userData, setLogoutDialogOpen }) => {
       <LanguageSelector />
       
       {/* Notification icon */}
-      <Button
-        variant="ghost"
-        className="rounded-full w-10 h-10 p-0 bg-transparent text-gray-200 hover:bg-[#02284f]/80 hover:text-white mr-2"
-      >
-        <Bell className="h-5 w-5" />
-      </Button>
+      <NotificationBell />
 
       {/* Dropdown menu */}
       <DropdownMenu modal={true}>

@@ -5,6 +5,11 @@ alwaysApply: false
 ---
 ---
 description: 
+globs: .jsx,.js,tsx,ts
+alwaysApply: false
+---
+---
+description: 
 globs: 
 alwaysApply: true
 ---
