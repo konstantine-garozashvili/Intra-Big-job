@@ -16,7 +16,7 @@ import { TranslationProvider } from "./contexts/TranslationContext";
 import { QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import "./index.css";
 import ProtectedRoute from "./components/ProtectedRoute";
-import { ThemeProvider } from "@/contexts/theme/ThemeContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import PublicLayout from "./layouts/PublicLayout";
 import PublicRoute from "./components/PublicRoute";
 import ProfileLayout from "./layouts/ProfileLayout";

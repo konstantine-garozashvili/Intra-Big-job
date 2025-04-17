@@ -1,10 +1,10 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { usePublicTheme } from '@/contexts/theme/PublicThemeContext';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const PublicNavbar = () => {
-  const { colorMode, toggleColorMode, currentTheme } = usePublicTheme();
+  const { colorMode, toggleColorMode, currentTheme } = useTheme();
   const location = useLocation();
   
   // Déterminer la page courante
@@ -12,18 +12,17 @@ const PublicNavbar = () => {
   const isRegisterPage = location.pathname === '/register';
 
   return (
-    <nav className="public-nav fixed top-0 left-0 w-full z-40 bg-transparent backdrop-blur-none">
+    <nav className="fixed top-0 left-0 w-full z-40 transition-all duration-300">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         <div className="flex items-center">
           <Link to="/" className="flex items-center">
             <motion.div
-              className="text-2xl font-bold"
+              className="text-2xl font-bold text-white"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5 }}
             >
-              <span className="text-white">Big</span>
-              <span className="text-[#528eb2]">Project</span>
+              Big<span className="text-[#528eb2]">Project</span>
             </motion.div>
           </Link>
         </div>

@@ -1,13 +1,12 @@
 import React from 'react';
-import { usePublicTheme } from '@/contexts/theme/PublicThemeContext';
-import { motion } from 'framer-motion';
+import { useTheme } from '@/contexts/ThemeContext';import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 
 /**
  * A wrapper component that provides theme context to formation pages
  */
 const FormationThemeWrapper = ({ children, Component }) => {
-  const { colorMode, toggleColorMode } = usePublicTheme();
+  const { colorMode, toggleColorMode } = useTheme();
   
   return (
     <div className="relative">

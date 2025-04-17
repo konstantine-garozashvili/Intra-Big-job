@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRolePermissions } from '@/features/roles/useRolePermissions';
 import { Link } from 'react-router-dom';
-import { usePublicTheme } from '@/contexts/theme/PublicThemeContext';
+import { useTheme } from '@/contexts/ThemeContext';
 
 // Import refactored components
 import BackgroundAnimation from '@/components/home/BackgroundAnimation';
@@ -21,7 +21,7 @@ import FeaturesSection from '@/components/home/FeaturesSection';
  */
 const Home = () => {
   const navigate = useNavigate();
-  const { colorMode, toggleColorMode, currentTheme } = usePublicTheme();
+  const { colorMode, toggleColorMode, currentTheme } = useTheme();
   
   // Animation mode state (cosmic or minimal)
   const [animationMode, setAnimationMode] = useState('cosmic');

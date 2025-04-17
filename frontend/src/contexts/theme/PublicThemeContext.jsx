@@ -76,10 +76,10 @@ export const PublicThemeProvider = ({ children }) => {
 };
 
 // Custom hook for using public theme
-export const usePublicTheme = () => {
+export const useTheme = () => {
   const context = useContext(PublicThemeContext);
   if (context === undefined) {
-    throw new Error('usePublicTheme must be used within a PublicThemeProvider');
+    throw new Error('useTheme must be used within a PublicThemeProvider');
   }
   return context;
 }; 

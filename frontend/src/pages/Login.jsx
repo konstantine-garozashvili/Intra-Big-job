@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { usePublicTheme } from '@/contexts/theme/PublicThemeContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { AuthForm } from '@/components/AuthForm';
 import QuickLoginButtons from '@/components/QuickLoginButtons';
 import PageTransition from '@/components/PageTransition';
@@ -11,7 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { authService } from '@/lib/services/authService';
 
 const Login = () => {
-  const { colorMode, currentTheme } = usePublicTheme();
+  const { colorMode, currentTheme } = useTheme();
   const authFormRef = useRef();
   const navigate = useNavigate();
   const permissions = useRolePermissions();

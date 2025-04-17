@@ -1,49 +1,23 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
-import { usePublicTheme } from '@/contexts/theme/PublicThemeContext';
-import { useProtectedTheme } from '@/contexts/theme/ProtectedThemeContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { Moon, Sun } from 'lucide-react';
 import { Button } from './button';
 
 export function ThemeToggle() {
-  const location = useLocation();
-  const { colorMode: publicColorMode, toggleColorMode: togglePublicMode } = usePublicTheme();
-  const { theme: protectedTheme, toggleTheme: toggleProtectedTheme } = useProtectedTheme();
-
-  const isPublicRoute = location.pathname === '/' || 
-    location.pathname.startsWith('/login') || 
-    location.pathname.startsWith('/register') ||
-    location.pathname.startsWith('/reset-password') ||
-    location.pathname.startsWith('/verification') ||
-    location.pathname.startsWith('/formations') ||
-    location.pathname.startsWith('/formation-finder') ||
-    location.pathname.startsWith('/skill-assessment');
-
-  const handleToggle = () => {
-    if (isPublicRoute) {
-      togglePublicMode();
-    } else {
-      toggleProtectedTheme();
-    }
-  };
+  const { colorMode, toggleColorMode } = useTheme();
 
   return (
     <Button
       variant="ghost"
       size="icon"
-      onClick={handleToggle}
-      className="h-9 w-9 px-0"
+      onClick={toggleColorMode}
+      className="rounded-full"
     >
-      {isPublicRoute ? (
-        publicColorMode === 'navy' ? (
-          <Sun className="h-4 w-4 text-blue-100" />
-        ) : (
-          <Moon className="h-4 w-4 text-gray-100" />
-        )
-      ) : protectedTheme === 'light' ? (
-        <Sun className="h-4 w-4" />
+      {colorMode === 'light' ? (
+        <Sun className="h-5 w-5 text-current" />
       ) : (
-        <Moon className="h-4 w-4" />
+        <Moon className="h-5 w-5 text-current" />
       )}
       <span className="sr-only">Toggle theme</span>
     </Button>

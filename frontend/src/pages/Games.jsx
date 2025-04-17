@@ -3,10 +3,9 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import TechOdysseyFusion from '@/components/home/TechOdysseyFusion';
 import CosmicBackground from '@/components/home/CosmicBackground';
-import { usePublicTheme } from '@/contexts/theme/PublicThemeContext';
-
+import { useTheme } from '@/contexts/ThemeContext';
 const SkillAssessment = () => {
-  const { colorMode, toggleColorMode, currentTheme } = usePublicTheme();
+  const { colorMode, toggleColorMode, currentTheme } = useTheme();
   
   // Scroll to top on component mount
   useEffect(() => {
