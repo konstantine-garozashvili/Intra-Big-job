@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import CosmicBackground from '../home/CosmicBackground';
 
 /**
  * FormationLayout - A shared layout for all formation pages
@@ -16,7 +15,6 @@ const FormationLayout = ({
   colorMode = 'navy'
 }) => {
   const navigate = useNavigate();
-  const [scrollY, setScrollY] = useState(0);
   
   // Color mapping for different formation types
   const colorMap = {
@@ -66,15 +64,6 @@ const FormationLayout = ({
   
   const colors = colorMap[color] || colorMap.blue;
   
-  // Handle scroll for parallax effects
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrollY(window.scrollY);
-    };
-    
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
   
   // Animation variants
   const headerVariants = {
@@ -102,20 +91,10 @@ const FormationLayout = ({
   
   return (
     <div className="min-h-screen relative overflow-hidden">
-      {/* Background */}
-      <CosmicBackground colorMode={colorMode} animationMode="cosmic" />
       
       {/* Header Section */}
       <header className="pt-32 pb-20 px-4 relative">
-        <div 
-          className="absolute inset-0 z-0"
-          style={{
-            transform: `translateY(${scrollY * 0.4}px)`
-          }}
-        >
-          <div className={`absolute top-20 right-20 w-64 h-64 rounded-full ${colors.accent} filter blur-3xl opacity-10`}></div>
-          <div className={`absolute bottom-10 left-20 w-80 h-80 rounded-full ${colors.accent} filter blur-3xl opacity-5`}></div>
-        </div>
+
         
         <div className="container mx-auto relative z-10">
           <motion.div

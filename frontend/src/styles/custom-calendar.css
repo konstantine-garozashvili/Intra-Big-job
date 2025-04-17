@@ -5,31 +5,207 @@
   margin: 0 auto !important;
   box-sizing: border-box !important;
   padding: 16px !important;
-  border-radius: 12px !important;
+  border-radius: 16px !important; /* Coins plus arrondis */
   background: white !important;
   font-family: system-ui, -apple-system, sans-serif;
   line-height: 1.5;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Mode sombre pour le calendrier */
+.dark .modern-calendar {
+  background: linear-gradient(145deg, #192334, #0f172a) !important; /* Dégradé élégant */
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(78, 108, 164, 0.2) !important;
+  max-width: 450px !important;  /* Plus grand en mode sombre */
 }
 
 /* Navigation du calendrier */
 .modern-calendar .react-calendar__navigation {
   display: flex;
-  height: 44px;
+  height: 48px;
   margin-bottom: 20px;
   background-color: white;
+  border-radius: 12px;
+}
+
+.dark .modern-calendar .react-calendar__navigation {
+  background: linear-gradient(to right, #1e3a5f, #2d4a69); /* Dégradé horizontal */
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 24px;
 }
 
 /* Pour faire en sorte que le texte du mois soit centré */
 .modern-calendar .react-calendar__navigation button.react-calendar__navigation__label {
   background: none;
-  font-weight: 500;
+  font-weight: 600;
   font-size: 22px;
-  color: #0066ff;
+  color: #0055cc;
   text-transform: lowercase;
   flex-grow: 1;
   text-align: center;
   cursor: pointer;
+  position: relative;
+  padding: 0 8px;
+  transition: all 0.3s ease;
+  border-radius: 10px;
+}
+
+.modern-calendar .react-calendar__navigation button.react-calendar__navigation__label:hover {
+  transform: translateY(-2px);
+}
+
+.dark .modern-calendar .react-calendar__navigation button.react-calendar__navigation__label {
+  color: #a5cdff;
+  text-shadow: 0px 1px 2px rgba(0, 0, 0, 0.2);
+  background: linear-gradient(to right, rgba(78, 148, 255, 0.1), rgba(120, 185, 255, 0.2), rgba(78, 148, 255, 0.1));
+  border: 1px solid rgba(78, 148, 255, 0.3);
+  padding: 4px 10px;
+  letter-spacing: 0.5px;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.dark .modern-calendar .react-calendar__navigation button.react-calendar__navigation__label:hover {
+  background: linear-gradient(to right, rgba(78, 148, 255, 0.2), rgba(120, 185, 255, 0.3), rgba(78, 148, 255, 0.2));
+  border-color: rgba(78, 148, 255, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Style spécifique pour l'affichage du mois et de l'année */
+.modern-calendar .react-calendar__navigation__label__labelText {
+  position: relative;
+  z-index: 1;
+}
+
+.dark .modern-calendar .react-calendar__navigation__label__labelText {
+  position: relative;
+  display: inline-block;
+  padding: 4px 8px;
+  font-size: 24px;
+  letter-spacing: 0.5px;
+  animation: gentlePulse 3s infinite alternate;
+}
+
+@keyframes gentlePulse {
+  0% {
+    text-shadow: 0 0 4px rgba(165, 205, 255, 0.3);
+  }
+  100% {
+    text-shadow: 0 0 8px rgba(165, 205, 255, 0.6);
+  }
+}
+
+/* Style pour la vue du mois/année/décennie en mode sélection */
+.modern-calendar .react-calendar__year-view__months__month,
+.modern-calendar .react-calendar__decade-view__years__year,
+.modern-calendar .react-calendar__century-view__decades__decade {
+  border-radius: 12px !important;
+  height: 64px !important;
+  font-size: 16px !important;
+  font-weight: 500 !important;
+  margin: 4px !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  transition: all 0.25s ease-in-out !important;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Styles pour la vue des années et décennies sélectionnées */
+.dark .modern-calendar .react-calendar__year-view .react-calendar__tile--hasActive,
+.dark .modern-calendar .react-calendar__decade-view .react-calendar__tile--hasActive,
+.dark .modern-calendar .react-calendar__century-view .react-calendar__tile--hasActive {
+  font-weight: 800 !important;
+  border-width: 2px !important;
+  color: #ffffff !important;
+  background: linear-gradient(145deg, #2563eb, #3b82f6) !important;
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.5) !important;
+  z-index: 2;
+}
+
+/* Titre du calendrier modifié quand on est dans la vue année ou décennie */
+.dark .modern-calendar.react-calendar--selectYear .react-calendar__navigation,
+.dark .modern-calendar.react-calendar--selectDecade .react-calendar__navigation,
+.dark .modern-calendar.react-calendar--selectCentury .react-calendar__navigation {
+  background: linear-gradient(to right, #1a65da, #3b7dff);
+  margin-bottom: 20px;
+  border-radius: 12px;
+}
+
+.dark .modern-calendar.react-calendar--selectYear .react-calendar__navigation button.react-calendar__navigation__label,
+.dark .modern-calendar.react-calendar--selectDecade .react-calendar__navigation button.react-calendar__navigation__label,
+.dark .modern-calendar.react-calendar--selectCentury .react-calendar__navigation button.react-calendar__navigation__label {
+  color: #ffffff;
+  background: none;
+  border: none;
+  font-size: 26px;
+  font-weight: 700;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: none;
+}
+
+/* Amélioration de l'apparence des années/décennies individuelles avec des bordures et un espacement */
+.dark .modern-calendar .react-calendar__decade-view__years__year,
+.dark .modern-calendar .react-calendar__century-view__decades__decade {
+  padding: 10px !important;
+  font-size: 18px !important;
+  letter-spacing: 0.5px !important;
+  border-width: 2px !important;
+  transition: all 0.2s ease-in-out !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  position: relative !important;
+}
+
+.dark .modern-calendar .react-calendar__decade-view__years__year::after,
+.dark .modern-calendar .react-calendar__century-view__decades__decade::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 12px;
+  background: linear-gradient(145deg, rgba(78, 148, 255, 0.05), rgba(30, 58, 138, 0.05));
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.dark .modern-calendar .react-calendar__decade-view__years__year:hover::after,
+.dark .modern-calendar .react-calendar__century-view__decades__decade:hover::after {
+  opacity: 1;
+}
+
+/* Pour que l'affichage des mois soit encore plus joli en vue année */
+.dark .modern-calendar .react-calendar__year-view__months__month {
+  padding: 12px !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.5px !important;
+  background: linear-gradient(145deg, #1e3556, #263b58) !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.dark .modern-calendar .react-calendar__year-view__months__month::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to right, transparent, rgba(78, 148, 255, 0.1), transparent);
+  transform: translateX(-100%);
+  transition: transform 0.6s ease;
+}
+
+.dark .modern-calendar .react-calendar__year-view__months__month:hover::before {
+  transform: translateX(100%);
 }
 
 /* Pour ajuster la largeur des boutons de navigation */
@@ -37,17 +213,31 @@
   min-width: 44px;
   background: none;
   border: none;
-  color: #0066ff;
-  font-size: 20px;
+  color: #0055cc;
+  font-size: 22px;
   flex-grow: 0;
   cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.dark .modern-calendar .react-calendar__navigation button.react-calendar__navigation__arrow {
+  color: #8bb8ff;
+}
+
+.modern-calendar .react-calendar__navigation button.react-calendar__navigation__arrow:hover {
+  transform: scale(1.15);
 }
 
 /* Hover et focus sur boutons navigation */
 .modern-calendar .react-calendar__navigation button:enabled:hover,
 .modern-calendar .react-calendar__navigation button:enabled:focus {
-  background-color: #f8f8fa;
+  background-color: rgba(0, 102, 255, 0.1);
   border-radius: 8px;
+}
+
+.dark .modern-calendar .react-calendar__navigation button:enabled:hover,
+.dark .modern-calendar .react-calendar__navigation button:enabled:focus {
+  background-color: rgba(165, 205, 255, 0.15);
 }
 
 /* Style des jours de la semaine */
@@ -56,12 +246,23 @@
   text-transform: uppercase;
   font-weight: 600;
   font-size: 12px;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.dark .modern-calendar .react-calendar__month-view__weekdays {
+  background: linear-gradient(to right, rgba(78, 108, 164, 0.2), rgba(30, 58, 95, 0.2));
 }
 
 .modern-calendar .react-calendar__month-view__weekdays__weekday {
   padding: 8px;
-  color: #6c6c6c;
+  color: #5c5c5c;
+}
+
+.dark .modern-calendar .react-calendar__month-view__weekdays__weekday {
+  color: #a3b8cc;
+  font-weight: 700;
 }
 
 .modern-calendar .react-calendar__month-view__weekdays__weekday abbr {
@@ -79,54 +280,162 @@
   text-align: center;
   line-height: 16px;
   font-size: 14px;
-  font-weight: 400;
+  font-weight: 500;
   padding: 0;
   position: relative;
-  border-radius: 8px;
+  border-radius: 10px;
   border: none;
   margin: 2px;
   color: #333;
   cursor: pointer;
+  transition: all 0.2s ease;
   pointer-events: auto !important; /* Force les événements de clic */
+}
+
+.dark .modern-calendar .react-calendar__tile {
+  color: #e5e7eb;
+}
+
+.modern-calendar .react-calendar__tile:hover {
+  background-color: rgba(0, 102, 255, 0.1) !important;
+  transform: translateY(-1px);
+}
+
+.dark .modern-calendar .react-calendar__tile:hover {
+  background: linear-gradient(135deg, rgba(78, 108, 164, 0.2), rgba(100, 130, 200, 0.3)) !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
 }
 
 /* Style spécifique pour les vues année et décennie */
 .modern-calendar .react-calendar__year-view__months__month,
 .modern-calendar .react-calendar__decade-view__years__year,
 .modern-calendar .react-calendar__century-view__decades__decade {
-  border-radius: 8px !important;
-  height: 60px !important;
+  border-radius: 12px !important;
+  height: 64px !important;
   font-size: 16px !important;
   font-weight: 500 !important;
+  margin: 4px !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  transition: all 0.25s ease-in-out !important;
+}
+
+/* Amélioration de la visibilité en mode sombre pour les vues année, décennie et siècle */
+.dark .modern-calendar .react-calendar__year-view__months__month,
+.dark .modern-calendar .react-calendar__decade-view__years__year,
+.dark .modern-calendar .react-calendar__century-view__decades__decade {
+  background: linear-gradient(145deg, #1e3556, #263b58) !important;
+  border: 1px solid rgba(78, 108, 164, 0.3) !important;
+  margin: 5px !important;
+  font-weight: 600 !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Hover effect pour les années, mois et décennies en mode sombre */
+.dark .modern-calendar .react-calendar__year-view__months__month:hover,
+.dark .modern-calendar .react-calendar__decade-view__years__year:hover,
+.dark .modern-calendar .react-calendar__century-view__decades__decade:hover {
+  background: linear-gradient(145deg, #2c4a75, #3a5a87) !important;
+  border-color: rgba(165, 205, 255, 0.4) !important;
+  transform: translateY(-3px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
+}
+
+/* Style actif pour années, mois et décennies en mode sombre */
+.dark .modern-calendar .react-calendar__year-view__months__month.react-calendar__tile--active,
+.dark .modern-calendar .react-calendar__decade-view__years__year.react-calendar__tile--active,
+.dark .modern-calendar .react-calendar__century-view__decades__decade.react-calendar__tile--active {
+  background: linear-gradient(145deg, #1a65da, #3b7dff) !important;
+  border-color: #78b3ff !important;
+  color: white !important;
+  box-shadow: 0 0 12px rgba(78, 148, 255, 0.5) !important;
+}
+
+/* Ajouter plus d'espacement entre les rangées */
+.dark .modern-calendar .react-calendar__year-view,
+.dark .modern-calendar .react-calendar__decade-view,
+.dark .modern-calendar .react-calendar__century-view {
+  gap: 6px !important;
+}
+
+/* Augmenter la taille du conteneur en mode années/décennies */
+.dark .modern-calendar.react-calendar--selectRange {
+  padding: 22px !important;
+}
+
+/* Spécifiquement pour la vue des mois */
+.dark .modern-calendar .react-calendar__year-view__months {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 8px !important;
+}
+
+/* Spécifiquement pour la vue des années */
+.dark .modern-calendar .react-calendar__decade-view__years {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 8px !important;
+}
+
+/* Spécifiquement pour la vue des décennies */
+.dark .modern-calendar .react-calendar__century-view__decades {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 8px !important;
 }
 
 /* Style du jour actif/sélectionné */
 .modern-calendar .react-calendar__tile--active,
 .modern-calendar .react-calendar__tile--active:enabled:hover,
 .modern-calendar .react-calendar__tile--active:enabled:focus {
-  background: #0066ff !important;
+  background: linear-gradient(145deg, #0055d4, #0077ff) !important;
   color: white !important;
-  border-radius: 8px;
-  font-weight: 500;
+  border-radius: 10px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 102, 255, 0.4);
+}
+
+.dark .modern-calendar .react-calendar__tile--active,
+.dark .modern-calendar .react-calendar__tile--active:enabled:hover,
+.dark .modern-calendar .react-calendar__tile--active:enabled:focus {
+  background: linear-gradient(145deg, #1a65da, #3b7dff) !important;
+  color: white !important;
+  font-weight: 600;
+  box-shadow: 0 0 12px rgba(78, 148, 255, 0.4) !important;
 }
 
 /* Style du jour actuel */
 .modern-calendar .react-calendar__tile--now {
-  background: #f0f7ff;
-  color: #0066ff;
-  border-radius: 8px;
-  font-weight: 500;
+  background: linear-gradient(145deg, #e6f0ff, #f0f7ff) !important;
+  color: #0055cc;
+  border-radius: 10px;
+  font-weight: 600;
+  box-shadow: 0 0 0 2px rgba(0, 102, 255, 0.15);
+}
+
+.dark .modern-calendar .react-calendar__tile--now {
+  background: linear-gradient(145deg, rgba(30, 58, 138, 0.3), rgba(30, 64, 175, 0.3)) !important;
+  color: #a5cdff;
+  box-shadow: 0 0 0 2px rgba(78, 148, 255, 0.3);
 }
 
 /* Style des jours du mois actuel */
 .modern-calendar .react-calendar__month-view__days__day {
-  font-weight: 400;
+  font-weight: 500;
   color: #333;
+}
+
+.dark .modern-calendar .react-calendar__month-view__days__day {
+  color: #e5e7eb;
 }
 
 /* Style des jours des mois voisins */
 .modern-calendar .react-calendar__month-view__days__day--neighboringMonth {
   color: #b0b0b0;
+}
+
+.dark .modern-calendar .react-calendar__month-view__days__day--neighboringMonth {
+  color: #718096;
+  opacity: 0.7;
 }
 
 /* Style pour les jours futurs (grisés) */
@@ -137,25 +446,44 @@
   opacity: 0.6 !important;
 }
 
+.dark .calendar-future-date {
+  color: #4a5568 !important;
+  background: linear-gradient(145deg, #1a2535, #263249) !important;
+  opacity: 0.5 !important;
+}
+
 /* Bouton de confirmation */
 .calendar-confirm-button {
   display: inline-flex;
   justify-content: center;
   align-items: center;
-  height: 40px;
-  padding: 0 20px;
-  background-color: #0066ff;
+  height: 44px;
+  padding: 0 24px;
+  background: linear-gradient(to right, #0055d4, #0077ff);
   color: white;
-  border-radius: 8px;
-  font-weight: 500;
+  border-radius: 10px;
+  font-weight: 600;
   font-size: 14px;
   border: none;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 102, 255, 0.25);
 }
 
 .calendar-confirm-button:hover {
-  background-color: #0055d4;
+  background: linear-gradient(to right, #0044b0, #0066e6);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 102, 255, 0.3);
+}
+
+.dark .calendar-confirm-button {
+  background: linear-gradient(to right, #1a65da, #3b7dff);
+  box-shadow: 0 4px 12px rgba(26, 101, 218, 0.35);
+}
+
+.dark .calendar-confirm-button:hover {
+  background: linear-gradient(to right, #1d4ed8, #3b82f6);
+  box-shadow: 0 6px 16px rgba(26, 101, 218, 0.45);
 }
 
 /* Bouton pour choisir l'année */
@@ -163,39 +491,53 @@
   display: inline-flex;
   justify-content: center;
   align-items: center;
-  height: 40px;
-  padding: 0 20px;
-  background-color: #f0f7ff;
-  color: #0066ff;
-  border-radius: 8px;
-  font-weight: 500;
+  height: 44px;
+  padding: 0 24px;
+  background: linear-gradient(to right, #e6f0ff, #f0f7ff);
+  color: #0055cc;
+  border-radius: 10px;
+  font-weight: 600;
   font-size: 14px;
   border: none;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .calendar-year-button:hover {
-  background-color: #e0e7ff;
+  background: linear-gradient(to right, #d6e4ff, #e6f0ff);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.dark .calendar-year-button {
+  background: linear-gradient(to right, #263b58, #2d4a75);
+  color: #a5cdff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.dark .calendar-year-button:hover {
+  background: linear-gradient(to right, #2c4a75, #3a5a87);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
 /* Responsive */
 @media (max-width: 480px) {
   .modern-calendar {
-    padding: 12px !important;
+    padding: 14px !important;
     max-width: 100% !important;
   }
 
   .modern-calendar .react-calendar__tile {
-    height: 36px;
+    height: 38px;
     font-size: 13px;
   }
   
   .modern-calendar .react-calendar__year-view__months__month,
   .modern-calendar .react-calendar__decade-view__years__year,
   .modern-calendar .react-calendar__century-view__decades__decade {
-    height: 50px !important;
-    font-size: 14px !important;
+    height: 55px !important;
+    font-size: 15px !important;
   }
 }
 
@@ -210,4 +552,88 @@
 .modern-calendar .react-calendar__month-view__days {
   display: grid !important;
   grid-template-columns: repeat(7, 1fr);
+}
+
+/* Style du fond pour la boîte de dialogue de calendrier en mode sombre */
+.dark .dialog-content-calendar {
+  background: linear-gradient(145deg, #192334, #0f172a) !important;
+  border-color: rgba(78, 108, 164, 0.3) !important;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4) !important;
+}
+
+.dark .dialog-content-calendar .text-gray-900 {
+  color: #f8fafc !important;
+}
+
+.dark .dialog-content-calendar .text-gray-500 {
+  color: #a5cdff !important;
+}
+
+/* Améliorer la hauteur des conteneurs d'années/décennies avec beaucoup d'éléments */
+.dark .modern-calendar .react-calendar__viewContainer {
+  max-height: 430px;
+  overflow-y: auto;
+  margin: 8px 0;
+  padding-right: 8px;
+}
+
+/* Style de scrollbar pour le mode sombre */
+.dark .modern-calendar .react-calendar__viewContainer::-webkit-scrollbar {
+  width: 8px;
+}
+
+.dark .modern-calendar .react-calendar__viewContainer::-webkit-scrollbar-track {
+  background: #1e3a5f;
+  border-radius: 8px;
+}
+
+.dark .modern-calendar .react-calendar__viewContainer::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, #3b7dff, #1a65da);
+  border-radius: 8px;
+  border: 2px solid #1e3a5f;
+}
+
+.dark .modern-calendar .react-calendar__viewContainer::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(to bottom, #60a5fa, #3b82f6);
+}
+
+/* Améliorer l'apparence des années/décennies individuelles avec des bordures et un espacement */
+.dark .modern-calendar .react-calendar__decade-view__years__year,
+.dark .modern-calendar .react-calendar__century-view__decades__decade {
+  padding: 10px !important;
+  font-size: 18px !important;
+  letter-spacing: 0.5px !important;
+  border-width: 2px !important;
+  transition: all 0.2s ease-in-out !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Améliorer le survol des années */
+.dark .modern-calendar .react-calendar__decade-view__years__year:hover,
+.dark .modern-calendar .react-calendar__century-view__decades__decade:hover {
+  transform: translateY(-3px) !important;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Style des années en dehors de la décennie actuelle */
+.dark .modern-calendar .react-calendar__decade-view__years__year.react-calendar__decade-view__years__year--neighboringDecade {
+  opacity: 0.7 !important;
+  background: linear-gradient(145deg, #162132, #1a2942) !important;
+  border-color: rgba(78, 108, 164, 0.15) !important;
+}
+
+/* Styles pour les mois dans la vue année */
+.dark .modern-calendar .react-calendar__year-view__months__month {
+  padding: 12px !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.5px !important;
+  background: linear-gradient(145deg, #1e3556, #263b58) !important;
+}
+
+/* Utilitaire pour le décalage d'animation */
+.animation-delay-150 {
+  animation-delay: 150ms !important;
 } 

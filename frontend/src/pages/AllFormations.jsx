@@ -2,26 +2,12 @@ import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useTheme } from '@/contexts/ThemeContext';
-
 /**
  * AllFormations page displaying all available educational tracks
  */
 const AllFormations = () => {
-  const { colorMode, toggleColorMode, currentTheme } = useTheme();
+  const { colorMode, currentTheme } = useTheme();
 
-  useEffect(() => {
-    // Simple animation effect for stars using CSS animations instead of GSAP
-    const stars = document.querySelectorAll('.star');
-    
-    stars.forEach((star) => {
-      // Add random animation delay for twinkling effect
-      star.style.animationDelay = `${Math.random() * 5}s`;
-    });
-    
-    return () => {
-      // Cleanup if needed
-    };
-  }, []);
 
   // Formation data
   const formations = [
@@ -82,29 +68,12 @@ const AllFormations = () => {
   ];
 
   return (
-    <div className={`min-h-screen ${currentTheme.bg} text-white relative overflow-hidden`}>
-      {/* Animated background stars */}
-      <div className="star-container absolute inset-0 overflow-hidden">
-        {[...Array(50)].map((_, i) => (
-          <div
-            key={i}
-            className="star absolute rounded-full bg-white animate-twinkle"
-            style={{
-              top: `${Math.random() * 100}%`,
-              left: `${Math.random() * 100}%`,
-              width: `${Math.random() * 3 + 1}px`,
-              height: `${Math.random() * 3 + 1}px`,
-              opacity: Math.random() * 0.8 + 0.2,
-              animationDuration: `${Math.random() * 3 + 2}s`
-            }}
-          />
-        ))}
-      </div>
+    <div className="min-h-screen relative overflow-hidden pt-[72px]">
       
       {/* Header */}
       <header className="container mx-auto pt-8 pb-12 px-4 text-center relative z-10">
         <motion.h1 
-          className="text-5xl md:text-6xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500"
+          className={`text-5xl md:text-6xl font-bold mb-6 ${currentTheme.textHighlight}`}
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
@@ -112,7 +81,7 @@ const AllFormations = () => {
           Toutes Nos Formations
         </motion.h1>
         <motion.p 
-          className="text-xl md:text-2xl text-blue-200 max-w-3xl mx-auto"
+          className={`text-xl md:text-2xl ${currentTheme.textPrimary} max-w-3xl mx-auto`}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.2 }}
@@ -127,7 +96,7 @@ const AllFormations = () => {
           {formations.map((formation, index) => (
             <motion.div
               key={formation.id}
-              className="bg-gray-800 bg-opacity-50 backdrop-blur-sm rounded-xl overflow-hidden shadow-xl"
+              className={`${currentTheme.cardBg} backdrop-blur-sm rounded-xl overflow-hidden ${currentTheme.shadow}`}
               initial={{ opacity: 0, y: 50 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
@@ -144,18 +113,18 @@ const AllFormations = () => {
               </div>
               
               <div className="p-6">
-                <h3 className="text-2xl font-bold mb-2">{formation.title}</h3>
-                <p className="text-gray-300 mb-4">{formation.description}</p>
+                <h3 className={`text-2xl font-bold mb-2 ${currentTheme.textHighlight}`}>{formation.title}</h3>
+                <p className={`${currentTheme.textPrimary} mb-4`}>{formation.description}</p>
                 
                 <div className="mb-4">
-                  <span className="text-sm font-semibold text-blue-300">Durée: {formation.duration}</span>
+                  <span className={`text-sm font-semibold ${currentTheme.textHighlight}`}>Durée: {formation.duration}</span>
                 </div>
                 
                 <div className="flex flex-wrap gap-2 mb-6">
                   {formation.modules.map((module, i) => (
                     <span 
                       key={i}
-                      className="px-3 py-1 bg-gray-700 rounded-full text-sm text-gray-200"
+                      className={`px-3 py-1 ${currentTheme.cardBg} rounded-full text-sm ${currentTheme.textPrimary}`}
                     >
                       {module}
                     </span>
@@ -164,7 +133,7 @@ const AllFormations = () => {
                 
                 <Link 
                   to={`/formations/${formation.id}`}
-                  className="inline-block w-full py-3 px-6 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium text-center transition-colors"
+                  className={`inline-block w-full py-3 px-6 ${currentTheme.buttonBg} rounded-lg font-medium text-center transition-colors`}
                 >
                   Découvrir la formation
                 </Link>
@@ -177,25 +146,25 @@ const AllFormations = () => {
       {/* CTA Section */}
       <section className="container mx-auto px-4 py-16 text-center relative z-10">
         <motion.div 
-          className="bg-gradient-to-r from-blue-900 to-indigo-900 rounded-2xl p-8 md:p-12 shadow-2xl"
+          className={`${currentTheme.cardBg} rounded-2xl p-8 md:p-12 ${currentTheme.shadow}`}
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5 }}
         >
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">Prêt à commencer votre voyage éducatif?</h2>
-          <p className="text-xl text-blue-200 mb-8 max-w-2xl mx-auto">
+          <h2 className={`text-3xl md:text-4xl font-bold mb-4 ${currentTheme.textHighlight}`}>Prêt à commencer votre voyage éducatif?</h2>
+          <p className={`text-xl ${currentTheme.textPrimary} mb-8 max-w-2xl mx-auto`}>
             Rejoignez notre communauté d'apprenants et transformez votre carrière avec nos formations de pointe.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link 
               to="/register" 
-              className="py-3 px-8 bg-purple-600 hover:bg-purple-700 rounded-lg font-medium text-lg transition-colors"
+              className={`py-3 px-8 ${currentTheme.buttonBg} rounded-lg font-medium text-lg transition-colors`}
             >
               S'inscrire maintenant
             </Link>
             <Link 
               to="/login" 
-              className="py-3 px-8 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium text-lg transition-colors"
+              className={`py-3 px-8 ${currentTheme.buttonAlt} rounded-lg font-medium text-lg transition-colors`}
             >
               Se connecter
             </Link>
@@ -204,7 +173,7 @@ const AllFormations = () => {
       </section>
       
       {/* Footer */}
-      <footer className="container mx-auto px-4 py-8 text-center text-gray-400 relative z-10">
+      <footer className={`container mx-auto px-4 py-8 text-center ${currentTheme.textPrimary} relative z-10`}>
         <p>&copy; 2025 Tech Odyssey Academy. Tous droits réservés.</p>
       </footer>
     </div>

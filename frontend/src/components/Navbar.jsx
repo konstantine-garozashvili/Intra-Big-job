@@ -6,11 +6,9 @@ import { profileService } from "../pages/Global/Profile/services/profileService"
 import { Button } from "./ui/button";
 import {
   UserRound,
-  LayoutDashboard,
   LogOut,
   Settings,
   User,
-  Bell,
   Search,
   ClipboardPenLine
 } from "lucide-react";
@@ -37,6 +35,8 @@ import { Skeleton } from './ui/skeleton';
 import ProfilePictureDisplay from './ProfilePictureDisplay';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import LanguageSelector from './Translation/LanguageSelector';
+import { ThemeToggle } from './ui/theme-toggle';
+import { useProtectedTheme } from '../contexts/ProtectedThemeContext';
 
 // Style personnalisé pour le menu dropdown et le bouton burger
 const customStyles = `
@@ -60,6 +60,25 @@ const customStyles = `
   .navbar-dropdown-item.danger:hover {
     background-color: rgba(225, 29, 72, 0.1) !important;
     color: #be123c !important;
+  }
+  
+  /* Styles pour le mode sombre */
+  .dark .navbar-dropdown-item:hover {
+    background-color: rgba(120, 185, 221, 0.2) !important;
+    color: #78b9dd !important;
+  }
+  
+  .dark .navbar-dropdown-item.danger {
+    color: #fb7185 !important;
+    background-color: rgba(244, 63, 94, 0.05) !important;
+    font-weight: 500 !important;
+  }
+  
+  .dark .navbar-dropdown-item.danger:hover {
+    background-color: rgba(244, 63, 94, 0.2) !important;
+    color: #fff !important;
+    font-weight: 600 !important;
+    box-shadow: 0 0 0 1px rgba(244, 63, 94, 0.3) !important;
   }
   
   .menu-burger-btn {
@@ -108,14 +127,54 @@ const customStyles = `
     box-shadow: 0 0 0 2px rgba(82, 142, 178, 0.25) !important;
   }
   
+  /* Styles pour la barre de recherche en mode sombre */
+  .dark .search-container input {
+    background-color: rgba(120, 185, 221, 0.1) !important;
+    border-color: rgba(120, 185, 221, 0.3) !important;
+    color: #e0f2fe !important;
+  }
+  
+  .dark .search-container input::placeholder {
+    color: rgba(224, 242, 254, 0.6) !important;
+  }
+  
+  .dark .search-container input:focus {
+    background-color: rgba(120, 185, 221, 0.15) !important;
+    border-color: #78b9dd !important;
+    box-shadow: 0 0 0 2px rgba(120, 185, 221, 0.25) !important;
+  }
+  
   /* Fixed navbar styles */
   .navbar-fixed {
     position: sticky;
     top: 0;
-    z-index: 100;
     width: 100%;
     overflow-x: hidden;
     isolation: isolate;
+  }
+
+  /* Z-index hierarchy */
+  .navbar-fixed {
+    z-index: 100;
+  }
+
+  .menu-burger-wrapper {
+    z-index: 101;
+    position: relative;
+  }
+
+  .language-selector-wrapper {
+    z-index: 101;
+    position: relative;
+  }
+
+  .search-container {
+    z-index: 90;
+  }
+
+  /* Override Sheet styles to match our design */
+  .sidebar-sheet {
+    z-index: 102 !important;
   }
 
   /* Responsive styles */
@@ -127,6 +186,11 @@ const customStyles = `
     .navbar-actions {
       gap: 0.5rem;
     }
+  
+  .dark .navbar-fixed {
+    background-color: #01111e !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), 0 0 1px rgba(120, 185, 221, 0.1) !important;
+    border-bottom: 1px solid rgba(120, 185, 221, 0.1) !important;
   }
   
   @media (max-width: 1024px) {
@@ -229,13 +293,15 @@ const AuthButtons = () => (
   <>
     <Link
       to="/login"
-      className="px-4 py-2 text-gray-200 transition-colors rounded-md hover:text-white whitespace-nowrap"
+      className="px-4 py-2 text-gray-200 transition-all duration-200 rounded-md hover:text-white hover:bg-[#02284f]/50
+      dark:text-white dark:bg-[#004080]/80 dark:border dark:border-[#78b9dd]/50 dark:font-medium 
+      dark:hover:bg-[#005db3] dark:hover:border-[#78b9dd] dark:hover:shadow-[0_0_8px_rgba(120,185,221,0.25)]"
     >
       Connexion
     </Link>
     <Link
       to="/register"
-      className="ml-2 px-4 py-2 bg-[#528eb2] rounded-md text-white font-medium hover:bg-[#528eb2]/90 transition-all transform hover:scale-105 whitespace-nowrap"
+      className="ml-2 px-4 py-2 bg-[#528eb2] rounded-md text-white font-medium hover:bg-[#528eb2]/90 transition-all transform hover:scale-105 dark:bg-[#004080] dark:hover:bg-[#004d99] dark:hover:shadow-[0_0_10px_rgba(120,185,221,0.3)]"
     >
       Inscription
     </Link>
@@ -247,6 +313,7 @@ const UserMenu = ({ onLogout, userData, setLogoutDialogOpen }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const navigate = useNavigate();
   const dropdownMenuRef = useRef(null);
+  const { theme, toggleTheme } = useProtectedTheme();
 
   // Style personnalisé pour le menu dropdown
   const dropdownMenuStyles = {
@@ -275,12 +342,21 @@ const UserMenu = ({ onLogout, userData, setLogoutDialogOpen }) => {
       {/* Language selector */}
       <LanguageSelector />
       
-      {/* Notification icon */}
+      {/* Theme toggle button */}
       <Button
         variant="ghost"
         className="rounded-full w-10 h-10 p-0 bg-transparent text-gray-200 hover:bg-[#02284f]/80 hover:text-white mr-2"
+        onClick={toggleTheme}
       >
-        <Bell className="h-5 w-5" />
+        {theme === 'dark' ? (
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+          </svg>
+        ) : (
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
+          </svg>
+        )}
       </Button>
 
       {/* Dropdown menu */}
@@ -288,7 +364,7 @@ const UserMenu = ({ onLogout, userData, setLogoutDialogOpen }) => {
         <DropdownMenuTrigger asChild>
           <Button 
             variant="outline" 
-            className={`rounded-full w-10 h-10 p-0 ${dropdownOpen ? 'bg-[#528eb2]/20 border-[#528eb2]' : 'bg-transparent border-gray-500'} hover:bg-[#02284f]/80 hover:text-white hover:border-gray-400 transition-all duration-300`}
+            className={`rounded-full w-10 h-10 p-0 ${dropdownOpen ? 'bg-[#528eb2]/20 border-[#528eb2]' : 'bg-transparent border-gray-500'} hover:bg-[#02284f]/80 hover:text-white hover:border-gray-400 transition-all duration-300 dark:border-[#78b9dd]/50 dark:hover:bg-[#78b9dd]/20 dark:hover:border-[#78b9dd]`}
           >
             <Avatar className="h-11 w-11">
               <AvatarFallback className="bg-gradient-to-r from-[#02284f] to-[#03386b] text-white">
@@ -299,16 +375,16 @@ const UserMenu = ({ onLogout, userData, setLogoutDialogOpen }) => {
         </DropdownMenuTrigger>
         <DropdownMenuContent 
           align="end" 
-          className="w-64 mt-2 p-0 overflow-hidden border border-gray-100 shadow-xl rounded-xl"
+          className="w-64 mt-2 p-0 overflow-hidden border border-gray-100 shadow-xl rounded-xl dark:bg-gray-800 dark:border-gray-700 dark:shadow-[0_4px_16px_rgba(0,0,0,0.5),0_0_0_1px_rgba(120,185,221,0.1)]"
           onOpenAutoFocus={(e) => e.preventDefault()}
           sideOffset={5}
           ref={dropdownMenuRef}
         >
           {/* En-tête du dropdown avec avatar et nom */}
-          <div className="bg-gradient-to-r from-[#02284f] to-[#03386b] p-4 text-white">
+          <div className="bg-gradient-to-r from-[#02284f] to-[#03386b] p-4 text-white dark:from-[#01111e] dark:to-[#001f3d] dark:border-b dark:border-[#78b9dd]/20">
             <div className="flex items-center">
-              <div className="bg-white/20 rounded-full p-4.5">
-                <ProfilePictureDisplay className="h-11 w-11" />
+              <div className="bg-white/20 rounded-full p-2.5 dark:bg-[#78b9dd]/20">
+                <UserRound className="h-6 w-6" />
               </div>
               <div className="ml-3">
                 <h3 className="font-medium text-sm">
@@ -318,7 +394,7 @@ const UserMenu = ({ onLogout, userData, setLogoutDialogOpen }) => {
                       ? `${userData.user.firstName} ${userData.user.lastName}`
                       : 'Utilisateur'}
                 </h3>
-                <p className="text-xs text-gray-300">
+                <p className="text-xs text-gray-300 dark:text-[#78b9dd]/80">
                   {userData?.email || userData?.user?.email || 'utilisateur@example.com'}
                 </p>
               </div>
@@ -326,12 +402,12 @@ const UserMenu = ({ onLogout, userData, setLogoutDialogOpen }) => {
           </div>
           
           {/* Corps du dropdown avec les options */}
-          <div className="py-1 bg-white">
+          <div className="py-1 bg-white dark:bg-gray-800">
             <DropdownMenuItem 
               className="navbar-dropdown-item"
               onClick={() => navigate('/profile')}
             >
-              <User className="mr-2 h-4 w-4 text-[#528eb2]" />
+              <User className="mr-2 h-4 w-4 text-[#528eb2] dark:text-[#78b9dd]" />
               <span>Mon profil</span>
             </DropdownMenuItem>
             
@@ -339,11 +415,12 @@ const UserMenu = ({ onLogout, userData, setLogoutDialogOpen }) => {
               className="navbar-dropdown-item"
               onClick={() => navigate('/settings/profile')}
             >
-              <Settings className="mr-2 h-4 w-4 text-[#528eb2]" />
+              <Settings className="mr-2 h-4 w-4 text-[#528eb2] dark:text-[#78b9dd]" />
               <span>Paramètres</span>
             </DropdownMenuItem>
             
-            <DropdownMenuSeparator className="my-1 bg-gray-100" />
+            
+            <DropdownMenuSeparator className="my-1 bg-gray-100 dark:bg-gray-700" />
             
             <DropdownMenuItem 
               className="navbar-dropdown-item danger"
@@ -532,9 +609,9 @@ const Navbar = memo(() => {
       {/* Injection des styles personnalisés */}
       <style>{customStyles}</style>
 
-      <header className="navbar-fixed bg-[#02284f] shadow-lg">
-        <nav className="bg-[#02284f] w-full">
-          <div className="container px-4 mx-auto">
+      <header className="navbar-fixed bg-[#02284f] dark:bg-[#01111e] shadow-lg z-[100]">
+        <nav className="bg-[#02284f] dark:bg-[#01111e] w-full relative">
+          <div className="container px-4 mx-auto relative">
             <div className="flex items-center justify-between h-16">
               {/* Partie gauche: Logo et burger menu */}
               <div className="flex items-center">
@@ -543,11 +620,15 @@ const Navbar = memo(() => {
                 </div>
                 <div className="flex-shrink-0">
                   <Link
-                    to={isAuthenticated ? permissions.getRoleDashboardPath() : "/login"}
-                    className="navbar-brand text-2xl font-black tracking-tight text-white whitespace-nowrap"
+                    to={
+                      isAuthenticated
+                        ? permissions.getRoleDashboardPath()
+                        : "/login"
+                    }
+                    className="navbar-brand text-2xl font-black tracking-tight text-white dark:text-white whitespace-nowrap"
                   >
-                    Big<span className="text-[#528eb2]">Project</span>
-                  </Link>
+              <span style={{ color: 'white' }}>Big</span><span style={{ color: '#528eb2' }}>Project</span>
+              </Link>
                 </div>
               </div>
 
@@ -585,7 +666,7 @@ const Navbar = memo(() => {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="rounded-full w-10 h-10 p-0 bg-transparent text-gray-200 hover:bg-[#02284f]/80 hover:text-white"
+                      className="rounded-full w-10 h-10 p-0 bg-transparent text-gray-200 hover:bg-[#02284f]/80 hover:text-white dark:text-[#78b9dd] dark:hover:bg-[#78b9dd]/20"
                       onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
                     >
                       <Search className="h-5 w-5" />
@@ -596,8 +677,8 @@ const Navbar = memo(() => {
                 {/* Menu utilisateur */}
                 {isLoading ? (
                   <div className="flex items-center space-x-3">
-                    <Skeleton className="h-8 w-24 rounded-md" />
-                    <Skeleton className="h-10 w-10 rounded-full" />
+                    <Skeleton className="h-8 w-24 rounded-md dark:bg-gray-700" />
+                    <Skeleton className="h-10 w-10 rounded-full dark:bg-gray-700" />
                   </div>
                 ) : isAuthenticated ? (
                   <UserMenu

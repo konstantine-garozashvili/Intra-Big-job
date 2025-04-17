@@ -15,6 +15,7 @@ import {
 
 // Importer le service documentService directement dans le composant
 import documentService from '../../services/documentService';
+import { notificationService } from '@/lib/services/notificationService';
 
 const CVUpload = memo(({ userData, onUpdate }) => {
   const [cvFile, setCvFile] = useState(null);
@@ -43,7 +44,7 @@ const CVUpload = memo(({ userData, onUpdate }) => {
     isPending: isUploading
   } = useApiMutation('/api/documents/upload/cv', 'post', 'userCVDocument', {
     onSuccess: () => {
-      toast.success('CV uploaded successfully');
+      toast.success('CV téléchargé avec succès');
       setCvFile(null);
       refetchCV();
       
@@ -51,6 +52,40 @@ const CVUpload = memo(({ userData, onUpdate }) => {
       document.dispatchEvent(new CustomEvent('user:data-updated'));
       
       if (onUpdate) onUpdate();
+      
+      // Créer une notification locale pour l'utilisateur
+      const mockNotification = {
+        id: Date.now(),
+        title: 'CV téléchargé avec succès',
+        message: 'Votre CV a été téléchargé avec succès et est prêt à être consulté par les recruteurs.',
+        type: 'document_uploaded',
+        isRead: false,
+        createdAt: new Date().toISOString(),
+        targetUrl: '/documents'
+      };
+      
+      // Ajouter la notification directement dans le cache du service 
+      if (notificationService.cache.notifications && notificationService.cache.notifications.notifications) {
+        // Insérer au début du tableau
+        notificationService.cache.notifications.notifications.unshift(mockNotification);
+        
+        // Mettre à jour le compteur de notifications non lues
+        notificationService.cache.unreadCount = (notificationService.cache.unreadCount || 0) + 1;
+        
+        // Mettre à jour le compteur dans les données de pagination
+        if (notificationService.cache.notifications.pagination) {
+          notificationService.cache.notifications.pagination.total += 1;
+        }
+        
+        // Notifier les abonnés du changement
+        notificationService.notifySubscribers();
+        
+        // Forcer le rafraîchissement du compteur 
+        setTimeout(() => {
+          notificationService.getUnreadCount(true)
+            .catch(console.error);
+        }, 300);
+      }
       
       // Reset file input
       const fileInput = document.getElementById('cv-upload');
@@ -135,8 +170,44 @@ const CVUpload = memo(({ userData, onUpdate }) => {
     // Close dialog immediately for fluid interaction
     setDeleteDialogOpen(false);
     
+    // Stocker les informations du document avant la suppression
+    const documentInfo = {
+      id: cvDocument.id,
+      name: cvDocument.name
+    };
+    
     deleteCV(cvDocument.id);
-  }, [cvDocument, deleteCV]);
+    
+    // Créer directement une notification locale sans appeler l'API externe
+    // qui cause les problèmes CORS
+    const mockNotification = {
+      id: Date.now(),
+      title: 'Document supprimé',
+      message: `Votre document ${documentInfo.name} a été supprimé avec succès.`,
+      type: 'document_deleted',
+      isRead: false,
+      createdAt: new Date().toISOString(),
+      targetUrl: '/documents'
+    };
+    
+    // Ajouter la notification au cache directement
+    if (notificationService.cache.notifications && notificationService.cache.notifications.notifications) {
+      notificationService.cache.notifications.notifications.unshift(mockNotification);
+      notificationService.cache.unreadCount = (notificationService.cache.unreadCount || 0) + 1;
+      notificationService.notifySubscribers();
+      
+      // Afficher également un toast pour notification immédiate
+      toast.info(mockNotification.message, {
+        action: {
+          label: 'Voir tous',
+          onClick: () => {
+            window.location.href = mockNotification.targetUrl;
+          }
+        }
+      });
+    }
+    
+  }, [cvDocument, deleteCV, userData]);
 
   // Handle document download
   const handleDownloadDocument = useCallback(async () => {
