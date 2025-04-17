@@ -1,10 +1,7 @@
 import {
-  BrowserRouter as Router,
   Routes,
   Route,
-  useLocation,
   Navigate,
-  useNavigate,
 } from "react-router-dom";
 import { lazy, Suspense, useEffect } from "react";
 import MainLayout from "./components/MainLayout";
@@ -20,6 +17,7 @@ import { QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import "./index.css";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { ProtectedThemeProvider } from "@/contexts/ProtectedThemeContext";
 import PublicLayout from "./layouts/PublicLayout";
 import PublicRoute from "./components/PublicRoute";
 import ProfileLayout from "./layouts/ProfileLayout";
@@ -33,7 +31,6 @@ import deduplicationService from "./lib/services/deduplicationService";
 import apiService from "./lib/services/apiService";
 import PublicProfileView from "@/pages/Global/Profile/views/PublicProfileView";
 import TranslationTest from "./components/Translation/TranslationTest";
-import NotFound from "./pages/NotFound";
 
 // Export queryClient to be used elsewhere
 export { queryClient };
@@ -223,398 +220,131 @@ function ErrorFallback({ error, resetErrorBoundary }) {
 }
 
 // Main App Component
-function App() {
+const App = () => {
   return (
-    <ErrorBoundary FallbackComponent={ErrorFallback}>
-      <QueryClientProvider client={queryClient}>
-        <ReactQueryHydration>
-          <AuthProvider>
-            <ThemeProvider>
-              <RoleProvider>
-                <TranslationProvider>
-                  {/* Initialisation des services de l'application */}
-                  <AppInitializer />
-
-                  {/* Gestionnaire de préchargement */}
-                  <PrefetchHandler />
-
-                  <Suspense>
-                    <AppContent />
-                  </Suspense>
-                  <Toaster />
-                </TranslationProvider>
-              </RoleProvider>
-            </ThemeProvider>
-          </AuthProvider>
-        </ReactQueryHydration>
-      </QueryClientProvider>
-    </ErrorBoundary>
-  );
-}
-
-// Composant de contenu principal qui utilise les hooks de React Router
-function AppContent() {
-  const location = useLocation();
-
-  return (
-    <div className="relative font-poppins">
-      <PrefetchHandler />
-
-      {/* Wrapper for the main content */}
-      <div className="relative z-10">
-        <Suspense>
-          <div>
-            <Routes>
-              {/* Structure révisée: MainLayout englobe toutes les routes pour préserver la navbar */}
-              <Route element={<PublicLayout />}>
-                <Route element={<PublicRoute />}>
-                  {/* Route racine pour les utilisateurs non connectés */}
-                  <Route index element={<Home />} />
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/register" element={<Register />} />
-                  <Route path="/registration-success" element={<RegistrationSuccess />} />
-                  <Route path="/verification-success" element={<VerificationSuccess />} />
-                  <Route path="/verification-error" element={<VerificationError />} />
-                  <Route path="/reset-password" element={<ResetPasswordRequest />} />
-                  <Route path="/reset-password/confirmation" element={<ResetPasswordConfirmation />} />
-                  <Route path="/reset-password/reset" element={<ResetPassword />} />
-                  <Route path="/formations" element={<FormationList />} />
-                  <Route path="/formation-finder" element={<FormationFinder />} />
-                  <Route path="/all-formations" element={<AllFormations />} />
-                  <Route path="/formations/web" element={<WebDevelopment />} />
-                  <Route path="/formations/ai" element={<ArtificialIntelligence />} />
-                  <Route path="/formations/cybersecurity" element={<Cybersecurity />} />
-                  <Route path="/formations/mobile" element={<MobileDevelopment />} />
-                  <Route path="/formations/data-science" element={<DataScience />} />
-                  <Route path="/formations/game" element={<GameDevelopment />} />
-                  <Route path="/skill-assessment" element={<SkillAssessment />} />
-                </Route>
-              </Route>
-              <Route element={<MainLayout />}>
-                {/* Routes publiques - Accès interdit aux utilisateurs authentifiés */}
-
-                <Route element={<ProtectedRoute />}>
-                  {/* Regular protected routes */}
-                  <Route
-                    path="/dashboard"
-                    element={<RoleDashboardRedirect />}
-                  />
-
-                  {/* Profile routes */}
-                  <Route path="/profile" element={<ProfileView />} />
-                  <Route
-                    path="/profile/:userId"
-                    element={<PublicProfileView />}
-                  />
-                  <Route
-                    path="/public-profile/:userId"
-                    element={<PublicProfileView />}
-                  />
-
-                  {/* Settings routes avec ProfileLayout */}
-                  <Route element={<ProfileLayout />}>
-                    <Route
-                      path="/settings"
-                      element={<Navigate to="/profile" replace />}
-                    />
-                    <Route
-                      path="/settings/profile"
-                      element={<SettingsProfile />}
-                    />
-                    <Route
-                      path="/settings/career"
-                      element={<CareerSettings />}
-                    />
-                    <Route
-                      path="/settings/security"
-                      element={<SecuritySettings />}
-                    />
-                    <Route
-                      path="/settings/notifications"
-                      element={<NotificationSettings />}
-                    />
-                  </Route>
-
-                  {/* Routes pour la gestion des formations - accessible par teachers, admins, superadmins et recruiters */}
-                  <Route
-                    path="/formations"
-                    element={
-                      <RoleGuard
-                        roles={[
-                          ROLES.TEACHER,
-                          ROLES.ADMIN,
-                          ROLES.SUPERADMIN,
-                          ROLES.RECRUITER,
-                        ]}
-                        fallback={<Navigate to="/dashboard" replace />}
-                      >
-                        <FormationList />
-                      </RoleGuard>
-                    }
-                  />
-
-                  {/* Routes pour la gestion des rôles - accessible par recruiters, admins et superadmins */}
-                  <Route
-                    path="/recruiter/guest-student-roles"
-                    element={
-                      <RoleGuard
-                        roles={[ROLES.RECRUITER, ROLES.ADMIN, ROLES.SUPERADMIN]}
-                        fallback={<Navigate to="/dashboard" replace />}
-                      >
-                        <GuestStudentRoleManager />
-                      </RoleGuard>
-                    }
-                  />
-
-                  {/* Routes Admin */}
-                  <Route
-                    path="/admin/dashboard"
-                    element={
-                      <RoleGuard
-                        roles={ROLES.ADMIN}
-                        fallback={<Navigate to="/dashboard" replace />}
-                      >
-                        <AdminDashboard />
-                      </RoleGuard>
-                    }
-                  />
-                  <Route
-                    path="/admin/users"
-                    element={
-                      <RoleGuard
-                        roles={[
-                          ROLES.ADMIN,
-                          ROLES.HR,
-                          ROLES.TEACHER,
-                          ROLES.SUPERADMIN,
-                        ]}
-                      >
-                        <UserRoleManager />
-                      </RoleGuard>
-                    }
-                  />
-
-                  {/* Ticket Service Management - Admin Only */}
-                  <Route
-                    path="/admin/ticket-services"
-                    element={
-                      <RoleGuard
-                        roles={[ROLES.ADMIN, ROLES.SUPERADMIN]}
-                        fallback={<Navigate to="/dashboard" replace />}
-                      >
-                        <TicketServiceList />
-                      </RoleGuard>
-                    }
-                  />
-
-                  {/* Admin Ticket Management */}
-                  <Route
-                    path="/admin/tickets"
-                    element={
-                      <RoleGuard
-                        roles={[ROLES.ADMIN, ROLES.SUPERADMIN]}
-                        fallback={<Navigate to="/dashboard" replace />}
-                      >
-                        <AdminTicketList />
-                      </RoleGuard>
-                    }
-                  />
-
-                  {/* Routes étudiantes */}
-                  <Route path="/student">
-                    <Route
-                      path="dashboard"
-                      element={
-                        <RoleGuard
-                          roles={ROLES.STUDENT}
-                          fallback={<Navigate to="/dashboard" replace />}
-                        >
-                          <StudentDashboard />
-                        </RoleGuard>
-                      }
-                    />
-                    <Route
-                      path="schedule"
-                      element={
-                        <RoleGuard
-                          roles={ROLES.STUDENT}
-                          fallback={<Navigate to="/dashboard" replace />}
-                        >
-                          <StudentSchedule />
-                        </RoleGuard>
-                      }
-                    />
-                    <Route
-                      path="grades"
-                      element={
-                        <RoleGuard
-                          roles={ROLES.STUDENT}
-                          fallback={<Navigate to="/dashboard" replace />}
-                        >
-                          <StudentGrades />
-                        </RoleGuard>
-                      }
-                    />
-                    <Route
-                      path="absences"
-                      element={
-                        <RoleGuard
-                          roles={ROLES.STUDENT}
-                          fallback={<Navigate to="/dashboard" replace />}
-                        >
-                          <StudentAbsences />
-                        </RoleGuard>
-                      }
-                    />
-                    <Route
-                      path="projects"
-                      element={
-                        <RoleGuard
-                          roles={ROLES.STUDENT}
-                          fallback={<Navigate to="/dashboard" replace />}
-                        >
-                          <StudentProjects />
-                        </RoleGuard>
-                      }
-                    />
-                    {/* Ajout de la route d'assiduité pour étudiants */}
-                    <Route element={<StudentRoute />}>
-                      <Route
-                        path="attendance"
-                        element={<StudentAttendance />}
-                      />
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <AuthProvider>
+          <RoleProvider>
+            <TranslationProvider>
+    
+                  <Routes>
+                    {/* Routes publiques */}
+                    <Route element={<PublicRoute />}>
+                      <Route element={<PublicLayout />}>
+                        <Route index element={<Home />} />
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/register" element={<Register />} />
+                        <Route path="/registration-success" element={<RegistrationSuccess />} />
+                        <Route path="/verification-success" element={<VerificationSuccess />} />
+                        <Route path="/verification-error" element={<VerificationError />} />
+                        <Route path="/reset-password" element={<ResetPasswordRequest />} />
+                        <Route path="/reset-password/confirmation" element={<ResetPasswordConfirmation />} />
+                        <Route path="/reset-password/reset" element={<ResetPassword />} />
+                        <Route path="/formations" element={<FormationList />} />
+                        <Route path="/formation-finder" element={<FormationFinder />} />
+                        <Route path="/all-formations" element={<AllFormations />} />
+                        <Route path="/formations/web" element={<WebDevelopment />} />
+                        <Route path="/formations/ai" element={<ArtificialIntelligence />} />
+                        <Route path="/formations/cybersecurity" element={<Cybersecurity />} />
+                        <Route path="/formations/mobile" element={<MobileDevelopment />} />
+                        <Route path="/formations/data-science" element={<DataScience />} />
+                        <Route path="/formations/game" element={<GameDevelopment />} />
+                        <Route path="/skill-assessment" element={<SkillAssessment />} />
+                      </Route>
                     </Route>
-                  </Route>
 
-                  {/* Routes enseignantes */}
-                  <Route path="/teacher">
-                    <Route
-                      path="dashboard"
-                      element={
-                        <RoleGuard
-                          roles={ROLES.TEACHER}
-                          fallback={<Navigate to="/dashboard" replace />}
-                        >
-                          <TeacherDashboard />
-                        </RoleGuard>
-                      }
-                    />
-                    {/* Ajout de la route d'émargement pour les enseignants */}
-                    <Route
-                      path="attendance"
-                      element={
-                        <RoleGuard
-                          roles={ROLES.TEACHER}
-                          fallback={<Navigate to="/dashboard" replace />}
-                        >
-                          <TeacherAttendance />
-                        </RoleGuard>
-                      }
-                    />
-                    {/* Ajout de la route de surveillance des signatures */}
-                    <Route
-                      path="signature-monitoring"
-                      element={
-                        <RoleGuard
-                          roles={ROLES.TEACHER}
-                          fallback={<Navigate to="/dashboard" replace />}
-                        >
-                          <TeacherSignatureMonitoring />
-                        </RoleGuard>
-                      }
-                    />
-                  </Route>
+                    {/* Routes protégées */}
+                    <Route element={<ProtectedRoute />}>
+                      <Route element={
+                        <ProtectedThemeProvider>
+                          <MainLayout />
+                        </ProtectedThemeProvider>
+                      }>
+                        {/* Regular protected routes */}
+                        <Route path="/dashboard" element={<RoleDashboardRedirect />} />
 
-                  {/* Routes HR */}
-                  <Route
-                    path="/hr/dashboard"
-                    element={
-                      <RoleGuard
-                        roles={ROLES.HR}
-                        fallback={<Navigate to="/dashboard" replace />}
-                      >
-                        <HRDashboard />
-                      </RoleGuard>
-                    }
-                  />
+                        {/* Profile routes */}
+                        <Route path="/profile" element={<ProfileView />} />
+                        <Route path="/profile/:userId" element={<PublicProfileView />} />
+                        <Route path="/public-profile/:userId" element={<PublicProfileView />} />
 
-                  {/* Routes Super Admin */}
-                  <Route
-                    path="/superadmin/dashboard"
-                    element={
-                      <RoleGuard
-                        roles={ROLES.SUPERADMIN}
-                        fallback={<Navigate to="/dashboard" replace />}
-                      >
-                        <SuperAdminDashboard />
-                      </RoleGuard>
-                    }
-                  />
+                        {/* Settings routes avec ProfileLayout */}
+                        <Route element={<ProfileLayout />}>
+                          <Route path="/settings" element={<Navigate to="/profile" replace />} />
+                          <Route path="/settings/profile" element={<SettingsProfile />} />
+                          <Route path="/settings/career" element={<CareerSettings />} />
+                          <Route path="/settings/security" element={<SecuritySettings />} />
+                          <Route path="/settings/notifications" element={<NotificationSettings />} />
+                        </Route>
 
-                  {/* Routes Guest */}
-                  <Route
-                    path="/guest/dashboard"
-                    element={
-                      <RoleGuard
-                        roles={ROLES.GUEST}
-                        fallback={<Navigate to="/dashboard" replace />}
-                      >
-                        <GuestDashboard />
-                      </RoleGuard>
-                    }
-                  />
+                        {/* Routes Admin */}
+                        <Route path="/admin/dashboard" element={<RoleGuard roles={ROLES.ADMIN} fallback={<Navigate to="/dashboard" replace />}><AdminDashboard /></RoleGuard>} />
+                        <Route path="/admin/users" element={<RoleGuard roles={[ROLES.ADMIN, ROLES.HR, ROLES.TEACHER, ROLES.SUPERADMIN]}><UserRoleManager /></RoleGuard>} />
+                        <Route path="/admin/ticket-services" element={<RoleGuard roles={[ROLES.ADMIN, ROLES.SUPERADMIN]} fallback={<Navigate to="/dashboard" replace />}><TicketServiceList /></RoleGuard>} />
+                        <Route path="/admin/tickets" element={<RoleGuard roles={[ROLES.ADMIN, ROLES.SUPERADMIN]} fallback={<Navigate to="/dashboard" replace />}><AdminTicketList /></RoleGuard>} />
 
-                  {/* Routes Recruiter */}
-                  <Route
-                    path="/recruiter/dashboard"
-                    element={
-                      <RoleGuard
-                        roles={ROLES.RECRUITER}
-                        fallback={<Navigate to="/dashboard" replace />}
-                      >
-                        <RecruiterDashboard />
-                      </RoleGuard>
-                    }
-                  />
+                        {/* Routes étudiantes */}
+                        <Route path="/student">
+                          <Route path="dashboard" element={<RoleGuard roles={ROLES.STUDENT} fallback={<Navigate to="/dashboard" replace />}><StudentDashboard /></RoleGuard>} />
+                          <Route path="schedule" element={<RoleGuard roles={ROLES.STUDENT} fallback={<Navigate to="/dashboard" replace />}><StudentSchedule /></RoleGuard>} />
+                          <Route path="grades" element={<RoleGuard roles={ROLES.STUDENT} fallback={<Navigate to="/dashboard" replace />}><StudentGrades /></RoleGuard>} />
+                          <Route path="absences" element={<RoleGuard roles={ROLES.STUDENT} fallback={<Navigate to="/dashboard" replace />}><StudentAbsences /></RoleGuard>} />
+                          <Route path="projects" element={<RoleGuard roles={ROLES.STUDENT} fallback={<Navigate to="/dashboard" replace />}><StudentProjects /></RoleGuard>} />
+                          <Route element={<StudentRoute />}>
+                            <Route path="attendance" element={<StudentAttendance />} />
+                          </Route>
+                        </Route>
 
-                  {/* Trombinoscope route */}
-                  <Route
-                    path="trombinoscope"
-                    element={
-                      <RoleGuard
-                        roles={[
-                          ROLES.SUPERADMIN,
-                          ROLES.ADMIN,
-                          ROLES.TEACHER,
-                          ROLES.STUDENT,
-                          ROLES.RECRUITER,
-                        ]}
-                        fallback={<Navigate to="/dashboard" replace />}
-                      >
-                        <Trombinoscope />
-                      </RoleGuard>
-                    }
-                  />
+                        {/* Routes enseignantes */}
+                        <Route path="/teacher">
+                          <Route path="dashboard" element={<RoleGuard roles={ROLES.TEACHER} fallback={<Navigate to="/dashboard" replace />}><TeacherDashboard /></RoleGuard>} />
+                          <Route path="attendance" element={<RoleGuard roles={ROLES.TEACHER} fallback={<Navigate to="/dashboard" replace />}><TeacherAttendance /></RoleGuard>} />
+                          <Route path="signature-monitoring" element={<RoleGuard roles={ROLES.TEACHER} fallback={<Navigate to="/dashboard" replace />}><TeacherSignatureMonitoring /></RoleGuard>} />
+                        </Route>
 
-                  {/* Route pour le test de traduction */}
-                  <Route path="/translation" element={<TranslationTest />} />
-                </Route>
+                        {/* Routes HR */}
+                        <Route path="/hr/dashboard" element={<RoleGuard roles={ROLES.HR} fallback={<Navigate to="/dashboard" replace />}><HRDashboard /></RoleGuard>} />
 
-                {/* Ticket routes - fix double MainLayout issue */}
-                <Route path="/tickets" element={<TicketList />} />
-                <Route path="/tickets/new" element={<TicketForm />} />
-                <Route path="/tickets/:id" element={<TicketDetail />} />
+                        {/* Admin Routes */}
+                        <Route path="/admin">
+                          <Route path="users" element={<RoleGuard roles={[ROLES.ADMIN, ROLES.SUPERADMIN]} fallback={<Navigate to="/dashboard" replace />}><UserRoleManager /></RoleGuard>} />
+                        </Route>
 
-                {/* Route 404 */}
-                <Route path="/404" element={<NotFound />} />
-                <Route path="*" element={<Navigate to="/404" replace />} />
-              </Route>
-            </Routes>
-          </div>
-        </Suspense>
-      </div>
-    </div>
+                        {/* Routes Super Admin */}
+                        <Route path="/superadmin/dashboard" element={<RoleGuard roles={ROLES.SUPERADMIN} fallback={<Navigate to="/dashboard" replace />}><SuperAdminDashboard /></RoleGuard>} />
+
+                        {/* Routes Guest */}
+                        <Route path="/guest/dashboard" element={<RoleGuard roles={ROLES.GUEST} fallback={<Navigate to="/dashboard" replace />}><GuestDashboard /></RoleGuard>} />
+
+                        {/* Routes Recruiter */}
+                        <Route path="/recruiter/dashboard" element={<RoleGuard roles={ROLES.RECRUITER} fallback={<Navigate to="/dashboard" replace />}><RecruiterDashboard /></RoleGuard>} />
+                        <Route path="/recruiter/guest-student-roles" element={<RoleGuard roles={[ROLES.RECRUITER, ROLES.ADMIN, ROLES.SUPERADMIN]} fallback={<Navigate to="/dashboard" replace />}><GuestStudentRoleManager /></RoleGuard>} />
+
+                        {/* Trombinoscope route */}
+                        <Route path="trombinoscope" element={<RoleGuard roles={[ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.STUDENT, ROLES.RECRUITER]} fallback={<Navigate to="/dashboard" replace />}><Trombinoscope /></RoleGuard>} />
+
+                        {/* Ticket routes */}
+                        <Route path="/tickets" element={<TicketList />} />
+                        <Route path="/tickets/new" element={<TicketForm />} />
+                        <Route path="/tickets/:id" element={<TicketDetail />} />
+
+                        {/* Route pour le test de traduction */}
+                        <Route path="/translation" element={<TranslationTest />} />
+                      </Route>
+                    </Route>
+
+                    {/* Redirection des routes inconnues vers la page d'accueil */}
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Routes>
+              
+              <Toaster />
+            </TranslationProvider>
+          </RoleProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
   );
-}
+};
 
 export default App;

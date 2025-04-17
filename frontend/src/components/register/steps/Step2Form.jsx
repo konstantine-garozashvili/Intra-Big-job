@@ -16,7 +16,11 @@ const Calendar = lazy(() => import('react-calendar'));
 // Composant de chargement pour le calendrier - Mémorisé
 const CalendarFallback = memo(() => (
   <div className="flex items-center justify-center p-8">
-    <div className="w-8 h-8 border-t-2 border-b-2 border-[#0066ff] rounded-full animate-spin"></div>
+    <div className="w-12 h-12 relative">
+      <div className="absolute w-full h-full border-4 border-t-[#3b7dff] border-r-[#78b9dd] border-b-[#3b7dff] border-l-[#78b9dd] rounded-full animate-spin"></div>
+      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-8 h-8 border-4 border-t-[#a5cdff] border-r-transparent border-b-[#a5cdff] border-l-transparent rounded-full animate-spin animation-delay-150"></div>
+      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-[#3b7dff] dark:bg-[#a5cdff] rounded-full animate-pulse"></div>
+    </div>
   </div>
 ));
 
@@ -114,9 +118,9 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
                 {formattedBirthDate}
               </span>
             ) : (
-              <span className="text-gray-500">JJ/MM/AAAA</span>
+              <span className="text-gray-500 dark:text-[#a3b8cc]">JJ/MM/AAAA</span>
             )}
-            <CalendarIcon className="ml-auto h-5 w-5 text-gray-500" />
+            <CalendarIcon className="ml-auto h-5 w-5 text-gray-500 dark:text-[#a5cdff]" />
           </div>
           
           <Dialog open={calendarOpen} onOpenChange={setCalendarOpen}>
@@ -125,7 +129,7 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
                 <DialogTitle className="text-xl font-semibold text-center text-blue-300">
                   Sélectionnez votre date de naissance
                 </DialogTitle>
-                <DialogDescription className="text-sm text-center text-gray-500 mt-1">
+                <DialogDescription className="text-sm text-center text-gray-500 dark:text-[#a5cdff] mt-1">
                   Vous devez avoir au moins 16 ans pour vous inscrire.
                 </DialogDescription>
               </div>
@@ -144,10 +148,10 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
                     navigationLabel={({ date }) => 
                       date.toLocaleString('fr', { month: 'long', year: 'numeric' }).toLowerCase()
                     }
-                    next2Label={<span className="text-lg text-[#0066ff]">»</span>}
-                    prev2Label={<span className="text-lg text-[#0066ff]">«</span>}
-                    nextLabel={<span className="text-lg text-[#0066ff]">›</span>}
-                    prevLabel={<span className="text-lg text-[#0066ff]">‹</span>}
+                    next2Label={<span className="text-lg text-[#0055cc] dark:text-[#a5cdff]">»</span>}
+                    prev2Label={<span className="text-lg text-[#0055cc] dark:text-[#a5cdff]">«</span>}
+                    nextLabel={<span className="text-lg text-[#0055cc] dark:text-[#a5cdff]">›</span>}
+                    prevLabel={<span className="text-lg text-[#0055cc] dark:text-[#a5cdff]">‹</span>}
                     showNeighboringMonth={false}
                     tileClassName={({ date, view }) => {
                       // Vérifie si la date est dans le futur
@@ -163,7 +167,7 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
                   />
                 </Suspense>
               </div>
-              <div className="p-4 flex justify-end">
+              <div className="p-4 flex justify-end dark:bg-gray-800">
                 <button 
                   className="calendar-confirm-button"
                   onClick={() => setCalendarOpen(false)}

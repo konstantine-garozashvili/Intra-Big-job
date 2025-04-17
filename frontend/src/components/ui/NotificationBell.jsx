@@ -67,7 +67,7 @@ export const NotificationBell = () => {
           className="relative p-2 rounded-full hover:bg-white/10 transition-colors mr-2"
           aria-label="Notifications"
         >
-          <Bell className="h-6 w-6 text-gray-200 hover:text-white transition-colors" />
+          <Bell className="h-5 w-5 text-gray-200 hover:text-white transition-colors" />
           {unreadCount > 0 && (
             <div className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full h-5 w-5 flex items-center justify-center text-xs">
               {unreadCount}

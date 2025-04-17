@@ -123,6 +123,7 @@ class ProfileService {
       if (!options.forceRefresh && 
           profileCache.consolidatedData && 
           (now - profileCache.consolidatedDataTimestamp) < profileCache.cacheDuration) {
+        console.log('Utilisation des données consolidées en cache local');
         return profileCache.consolidatedData;
       }
       

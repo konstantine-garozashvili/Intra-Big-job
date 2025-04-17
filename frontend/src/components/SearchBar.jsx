@@ -160,6 +160,7 @@ export const SearchBar = () => {
     }
   };
 
+  // Gérer les événements clavier
   const handleKeyDown = (e) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -207,13 +208,13 @@ export const SearchBar = () => {
       <div className={cn(
         "relative flex items-center transition-all duration-300 rounded-full overflow-hidden",
         "w-full",
-        isFocused ? "ring-2 ring-[#528eb2]/50" : "",
-        isRoleSearch ? "ring-2 ring-purple-500/50" : "",
+        isFocused ? "ring-2 ring-[#528eb2]/50 dark:ring-[#78b9dd]/50" : "",
+        isRoleSearch ? "ring-2 ring-purple-500/50 dark:ring-purple-400/50" : "",
         !isLoggedIn ? "opacity-50" : ""
       )}>
-        <div className="absolute left-3 text-white/60 z-10">
+        <div className="absolute left-3 text-white/60 dark:text-white/80 z-10">
           {isRoleSearch ? (
-            <Briefcase className="w-4 h-4 text-purple-400" />
+            <Briefcase className="w-4 h-4 text-purple-400 dark:text-purple-300" />
           ) : (
             <Search className="w-4 h-4" />
           )}
@@ -223,11 +224,12 @@ export const SearchBar = () => {
           ref={inputRef}
           className={cn(
             "w-full py-2 pl-10 pr-10 text-sm text-white bg-[#02284f]/80 border border-white/20",
+            "dark:bg-gray-800 dark:border-gray-600 dark:text-white",
             "rounded-full transition-all duration-300",
-            "placeholder:text-white/50 focus:outline-none",
+            "placeholder:text-white/50 dark:placeholder:text-white/70 focus:outline-none",
             "md:placeholder:text-sm placeholder:text-xs",
-            isFocused ? "bg-[#02284f]/90 border-[#528eb2]" : "hover:bg-[#02284f]/90",
-            isRoleSearch ? "border-purple-500/30" : ""
+            isFocused ? "bg-[#02284f]/90 dark:bg-gray-700 border-[#528eb2] dark:border-[#78b9dd]" : "hover:bg-[#02284f]/90 dark:hover:bg-gray-700",
+            isRoleSearch ? "border-purple-500/30 dark:border-purple-400/30" : ""
           )}
           type="text"
           placeholder={isLoggedIn ? "Rechercher par nom ou rôle..." : "Connectez-vous pour effectuer une recherche"}
@@ -266,13 +268,13 @@ export const SearchBar = () => {
       {isFocused && query.length === 0 && isLoggedIn && 
        !hasSpecialRole() &&
        !showSuggestions && (
-        <div className="absolute top-full left-0 w-full mt-2 px-3 py-2 text-xs text-white/70 bg-[#02284f]/90 rounded-md">
+        <div className="absolute top-full left-0 w-full mt-2 px-3 py-2 text-xs text-white/70 bg-[#02284f]/90 rounded-md dark:bg-gray-800 dark:text-gray-200">
           <p>
             {allowedSearchRoles.length > 0 ? (
               allowedSearchRoles.length === 1 ? (
-                <>Vous pouvez rechercher des <strong>{getRoleDisplayFormat(allowedSearchRoles[0]).toLowerCase()}</strong> par nom</>
+                <>Vous pouvez rechercher des <strong className="dark:text-white">{getRoleDisplayFormat(allowedSearchRoles[0]).toLowerCase()}</strong> par nom</>
               ) : (
-                <>Vous pouvez rechercher par nom ou par rôle ({allowedSearchRoles.map(role => getRoleDisplayFormat(role).toLowerCase()).join(', ')})</>
+                <>Vous pouvez rechercher par nom ou par rôle (<span className="dark:text-white">{allowedSearchRoles.map(role => getRoleDisplayFormat(role).toLowerCase()).join(', ')}</span>)</>
               )
             ) : (
               <>Vous pouvez rechercher par nom</>
@@ -282,7 +284,7 @@ export const SearchBar = () => {
       )}
       
       {!isLoggedIn && isFocused && (
-        <div className="absolute top-full left-0 w-full mt-2 px-3 py-2 text-xs text-white/70 bg-[#02284f]/90 rounded-md">
+        <div className="absolute top-full left-0 w-full mt-2 px-3 py-2 text-xs text-white/70 bg-[#02284f]/90 rounded-md dark:bg-gray-800 dark:text-gray-200">
           <p>Vous devez être connecté pour effectuer une recherche.</p>
         </div>
       )}

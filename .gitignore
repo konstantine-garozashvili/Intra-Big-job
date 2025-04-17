@@ -2,3 +2,8 @@ new-frontend
 /.cursor/rules/hostinger.mdc
 hostinger.md
 frontend/.env
+/backend/.env.local
+/.env.local.php
+/.env.*.local
+screenshots/
+oldProjectVersion

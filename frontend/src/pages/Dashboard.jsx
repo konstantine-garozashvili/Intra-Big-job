@@ -3,7 +3,9 @@ import DashboardLayout from '../components/DashboardLayout';
 import { useOptimizedProfile } from '../hooks/useOptimizedProfile';
 import { motion } from 'framer-motion';
 import apiService from '@/lib/services/apiService';
-
+import { useUserData } from '../hooks/useDashboardQueries';
+import DocumentNotifications from '../components/DocumentNotifications';
+import axios from 'axios';
 /**
  * Composant Tableau de bord affiché comme page d'accueil pour les utilisateurs connectés
  * avec un message de bienvenue personnalisé selon le rôle
@@ -182,5 +184,4 @@ const Dashboard = () => {
   );
 };
 
-// Utiliser React.memo pour éviter les re-rendus inutiles
 export default React.memo(Dashboard);

@@ -27,10 +27,13 @@ const getCurrentUserState = {
 export const authService = {
   async register(userData) {
     try {
+      console.log('[authService] Début de l\'inscription:', { ...userData, password: '***' });
       const response = await apiService.post('/register', userData);
       if (response?.token) localStorage.setItem('token', response.token);
       return { status: response.status || 201, data: response };
     } catch (error) {
+      console.error('[authService] Erreur lors de l\'inscription:', error);
+      console.error('[authService] Détails:', error.response?.data || error.message);
       throw error;
     }
   },
@@ -229,6 +232,8 @@ export const authService = {
       userDataPromise = null;
       clearQueryCache();
     } catch (error) {
+      console.error('Erreur lors de la déconnexion de tous les appareils:', error);
+      console.error('Détails:', error.response?.data || error.message);
       throw error;
     }
   },
@@ -237,6 +242,8 @@ export const authService = {
     try {
       return await apiService.get('/token/devices');
     } catch (error) {
+      console.error('Erreur lors de la récupération des appareils:', error);
+      console.error('Détails:', error.response?.data || error.message);
       throw error;
     }
   },

@@ -19,13 +19,15 @@ import AsyncTranslation from '@/components/Translation/AsyncTranslation';
 import DashboardHeader from '@/components/shared/DashboardHeader';
 
 const ROLE_COLORS = {
-  'ADMIN': 'bg-blue-100 text-blue-800',
-  'SUPERADMIN': 'bg-purple-100 text-purple-800',
-  'HR': 'bg-green-100 text-green-800',
-  'TEACHER': 'bg-yellow-100 text-yellow-800',
-  'STUDENT': 'bg-indigo-100 text-indigo-800',
-  'GUEST': 'bg-gray-100 text-gray-800'
+  'ADMIN': 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300',
+  'SUPERADMIN': 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300',
+  'HR': 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300',
+  'TEACHER': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300',
+  'STUDENT': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300',
+  'GUEST': 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
 };
+
+
 
 const containerVariants = {
   hidden: { opacity: 0 },

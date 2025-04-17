@@ -29,6 +29,7 @@ export const SearchSuggestionsList = ({
       transition={{ duration: 0.2, type: "spring", stiffness: 500, damping: 30 }}
       className={cn(
         "search-dropdown-portal overflow-hidden bg-white rounded-xl shadow-xl border border-gray-100",
+        "dark:bg-gray-800 dark:border-gray-700 dark:shadow-gray-900/70",
         "max-h-[300px] md:max-h-[400px]"
       )}
       style={{ 
@@ -51,11 +52,11 @@ export const SearchSuggestionsList = ({
         />
       ) : (
         <div className="overflow-hidden">
-          <div className="px-3 py-2 bg-gray-50 border-b border-gray-100">
-            <p className="text-xs font-medium text-gray-500">
+          <div className="px-3 py-2 bg-gray-50 border-b border-gray-100 dark:bg-gray-700 dark:border-gray-600">
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-300">
               {suggestions.length} résultat{suggestions.length > 1 ? 's' : ''} trouvé{suggestions.length > 1 ? 's' : ''}
               {isRoleSearch && (
-                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700">
+                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700 dark:bg-purple-800/30 dark:text-purple-300">
                   <Briefcase className="w-3 h-3 mr-1" />
                   Recherche par rôle
                 </span>
@@ -64,7 +65,7 @@ export const SearchSuggestionsList = ({
           </div>
           <div 
             ref={suggestionsRef}
-            className="max-h-[250px] overflow-y-auto py-1 divide-y divide-gray-50"
+            className="max-h-[250px] overflow-y-auto py-1 divide-y divide-gray-50 dark:divide-gray-700"
           >
             {suggestions.map((user, index) => (
               <SearchSuggestionItem
@@ -104,9 +105,9 @@ const EmptySuggestionState = ({ isRoleSearch, hasRole, hasAnyRole, allowedSearch
     <div className="flex flex-col items-center justify-center">
       {isRoleSearch ? (
         <>
-          <Briefcase className="w-10 h-10 text-purple-300 mb-2" />
-          <p className="text-gray-500 font-medium">Aucun utilisateur trouvé avec ce rôle</p>
-          <p className="text-gray-400 text-sm mt-1">
+          <Briefcase className="w-10 h-10 text-purple-300 dark:text-purple-400 mb-2" />
+          <p className="text-gray-500 font-medium dark:text-gray-300">Aucun utilisateur trouvé avec ce rôle</p>
+          <p className="text-gray-400 text-sm mt-1 dark:text-gray-400">
             {hasRole(ROLES.ADMIN) && !hasRole(ROLES.SUPERADMIN) ? (
               <>En tant qu'Admin, vous ne pouvez pas rechercher les <strong>super admins</strong>. Essayez un autre rôle.</>
             ) : hasRole(ROLES.TEACHER) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN]) ? (
@@ -128,9 +129,9 @@ const EmptySuggestionState = ({ isRoleSearch, hasRole, hasAnyRole, allowedSearch
         </>
       ) : (
         <>
-          <Search className="w-10 h-10 text-gray-300 mb-2" />
-          <p className="text-gray-500 font-medium">Aucun utilisateur trouvé</p>
-          <p className="text-gray-400 text-sm mt-1">
+          <Search className="w-10 h-10 text-gray-300 dark:text-gray-400 mb-2" />
+          <p className="text-gray-500 font-medium dark:text-gray-300">Aucun utilisateur trouvé</p>
+          <p className="text-gray-400 text-sm mt-1 dark:text-gray-400">
             {hasRole(ROLES.ADMIN) && !hasRole(ROLES.SUPERADMIN) ? (
               <>Essayez avec un autre terme ou recherchez par rôle (à l'exception des <strong>super admins</strong>) : {allowedSearchRoles.map(role => getRoleDisplayFormat(role).toLowerCase()).join(', ')}</>
             ) : hasRole(ROLES.TEACHER) && !hasAnyRole([ROLES.ADMIN, ROLES.SUPERADMIN]) ? (
@@ -156,7 +157,7 @@ const EmptySuggestionState = ({ isRoleSearch, hasRole, hasAnyRole, allowedSearch
 );
 
 const HelpMessageForSpecialRoles = ({ hasRole, hasAnyRole, allowedSearchRoles }) => (
-  <div className="px-3 py-2 bg-gray-50 border-t border-gray-100 text-xs text-gray-500">
+  <div className="px-3 py-2 bg-gray-50 border-t border-gray-100 text-xs text-gray-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">
     <p>
       {hasRole(ROLES.SUPERADMIN) ? (
         <>En tant que Super Admin, vous pouvez rechercher tous les utilisateurs par nom ou par rôle : {allowedSearchRoles.map(role => 

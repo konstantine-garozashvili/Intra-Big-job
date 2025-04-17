@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, createContext, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useCallback, createContext, useMemo, useLayoutEffect, useRef } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PartyPopper } from 'lucide-react';
@@ -10,6 +10,7 @@ import { profileService } from '../pages/Global/Profile/services/profileService'
 import Footer from './Footer';
 import ChatButton from './chat/ChatButton';
 import { Button } from './ui/button';
+import { useProtectedTheme } from '../contexts/ProtectedThemeContext';
 
 // Create a context for profile data and refresh function
 export const ProfileContext = createContext({
@@ -279,6 +280,7 @@ const MainLayout = () => {
   const [initialRender, setInitialRender] = useState(true);
   const [isShowingConfetti, setIsShowingConfetti] = useState(false);
   const [showCongratulations, setShowCongratulations] = useState(false);
+  const { theme, isDark } = useProtectedTheme(); // Utiliser le thème protégé
 
   // Pages qui doivent être affichées en plein écran sans marges internes
   const fullScreenPages = []; // Removed '/register'
@@ -494,7 +496,7 @@ const MainLayout = () => {
 
   return (
     <ProfileContext.Provider value={profileContextValue}>
-      <div className="min-h-screen bg-background">
+      <div className={`flex flex-col min-h-screen transition-colors duration-300 ${theme === 'dark' ? 'dark bg-gray-900 text-gray-100' : 'bg-gray-50 text-gray-900'}`}>
         {/* Only show Navbar for authenticated users */}
         {isAuthenticated && <Navbar />}
         
@@ -504,15 +506,13 @@ const MainLayout = () => {
           onClose={handleCloseCongratulations} 
         />
         
-
-        
         {/* Main content avec gestion améliorée de l'espace */}
         <main 
-          className={`flex-grow ${
+          className={`flex-grow transition-colors duration-300 ${
             isFullScreenPage 
               ? 'px-0 py-0' 
               : 'container mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full'
-          }`}
+          } ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'}`}
           style={{ 
             minHeight: minContentHeight,
             maxWidth: isFullScreenPage ? '100%' : undefined
@@ -525,7 +525,9 @@ const MainLayout = () => {
               profileData, 
               loadingState,
               isLoading,
-              hasMinimalData
+              hasMinimalData,
+              theme,
+              isDark: theme === 'dark'
             }} />
           </div>
         </main>

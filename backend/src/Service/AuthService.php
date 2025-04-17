@@ -6,22 +6,18 @@ use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Security\Core\Exception\AuthenticationException;
-use Psr\Log\LoggerInterface;
 
 class AuthService
 {
     private EntityManagerInterface $entityManager;
     private UserPasswordHasherInterface $passwordHasher;
-    private LoggerInterface $logger;
 
     public function __construct(
         EntityManagerInterface $entityManager,
-        UserPasswordHasherInterface $passwordHasher,
-        LoggerInterface $logger
+        UserPasswordHasherInterface $passwordHasher
     ) {
         $this->entityManager = $entityManager;
         $this->passwordHasher = $passwordHasher;
-        $this->logger = $logger;
     }
 
     /**
@@ -35,25 +31,21 @@ class AuthService
      */
     public function authenticateUser(string $email, string $password, bool $checkVerification = true): User
     {
-        $this->logger->debug('Authenticating user', ['email' => $email]);
         $user = $this->entityManager->getRepository(User::class)->findOneBy(['email' => $email]);
 
         if (!$user) {
-            $this->logger->warning('Authentication failed: User not found', ['email' => $email]);
             throw new AuthenticationException('Email ou mot de passe incorrect.');
         }
 
         if (!$this->passwordHasher->isPasswordValid($user, $password)) {
-            $this->logger->warning('Authentication failed: Invalid password', ['email' => $email]);
             throw new AuthenticationException('Email ou mot de passe incorrect.');
         }
         
         // Temporairement désactivé : Vérification de l'email
         /*if ($checkVerification && !$user->isEmailVerified()) {
-            $this->logger->warning('Authentication failed: Email not verified', ['email' => $email]);
             throw new AuthenticationException('Veuillez vérifier votre adresse email avant de vous connecter.');
         }*/
-        $this->logger->info('User authenticated successfully', ['email' => $email, 'user_id' => $user->getId()]);
+
         return $user;
     }
 
@@ -76,59 +68,38 @@ class AuthService
      */
     public function getUserInfo(User $user): array
     {
-        $userId = $user->getId();
-        $this->logger->info('Starting getUserInfo', ['user_id' => $userId]);
-
         try {
-            $this->logger->debug('Fetching basic info', ['user_id' => $userId]);
-            $data = [
-                'id' => $userId,
+            return [
+                'id' => $user->getId(),
                 'firstName' => $user->getFirstName(),
                 'lastName' => $user->getLastName(),
                 'email' => $user->getEmail(),
+                'roles' => $user->getRoles(),
                 'isEmailVerified' => $user->isEmailVerified(),
+                'theme' => $user->getTheme() ? [
+                    'id' => $user->getTheme()->getId(),
+                    'name' => $user->getTheme()->getName()
+                ] : null,
+                'specialization' => $user->getSpecialization() ? [
+                    'id' => $user->getSpecialization()->getId(),
+                    'name' => $user->getSpecialization()->getName()
+                ] : null,
+                'nationality' => $user->getNationality() ? [
+                    'id' => $user->getNationality()->getId(),
+                    'name' => $user->getNationality()->getName()
+                ] : null,
             ];
-            $this->logger->debug('Basic info fetched', ['user_id' => $userId]);
-
-            $this->logger->debug('Fetching roles', ['user_id' => $userId]);
-            $data['roles'] = $user->getRoles();
-            $this->logger->debug('Roles fetched', ['user_id' => $userId]);
-
-            $this->logger->debug('Fetching theme', ['user_id' => $userId]);
-            $theme = $user->getTheme();
-            $data['theme'] = $theme ? [
-                'id' => $theme->getId(),
-                'name' => $theme->getName()
-            ] : null;
-            $this->logger->debug('Theme fetched', ['user_id' => $userId, 'theme_id' => $theme ? $theme->getId() : 'null']);
-
-            $this->logger->debug('Fetching specialization', ['user_id' => $userId]);
-            $specialization = $user->getSpecialization();
-            $data['specialization'] = $specialization ? [
-                'id' => $specialization->getId(),
-                'name' => $specialization->getName()
-            ] : null;
-            $this->logger->debug('Specialization fetched', ['user_id' => $userId, 'specialization_id' => $specialization ? $specialization->getId() : 'null']);
-
-            $this->logger->debug('Fetching nationality', ['user_id' => $userId]);
-            $nationality = $user->getNationality();
-            $data['nationality'] = $nationality ? [
-                'id' => $nationality->getId(),
-                'name' => $nationality->getName()
-            ] : null;
-            $this->logger->debug('Nationality fetched', ['user_id' => $userId, 'nationality_id' => $nationality ? $nationality->getId() : 'null']);
+        } catch (\Exception $e) {
+            // Log the error but return a minimal set of user info
+            error_log('Error in getUserInfo: ' . $e->getMessage());
             
-            $this->logger->info('Finished getUserInfo successfully', ['user_id' => $userId]);
-            return $data;
-
-        } catch (\Throwable $e) {
-            $this->logger->critical('Error in getUserInfo', [
-                'user_id' => $userId,
-                'exception_message' => $e->getMessage(),
-                'exception_trace' => $e->getTraceAsString()
-            ]);
-            
-            throw $e; 
+            return [
+                'id' => $user->getId(),
+                'firstName' => $user->getFirstName(),
+                'lastName' => $user->getLastName(),
+                'email' => $user->getEmail(),
+                'roles' => ['ROLE_USER'], // Fallback role
+            ];
         }
     }
 } 

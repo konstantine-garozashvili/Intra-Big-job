@@ -1,93 +1,71 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import { createContext, useContext, useState, useMemo } from 'react';
 
-// Create the theme context
 export const ThemeContext = createContext();
 
-// Theme provider component
-export const ThemeProvider = ({ children }) => {
-  // Initialize theme immediately without waiting for localStorage
-  const [colorMode, setColorMode] = useState('navy'); // Set navy as immediate default
-  const [isThemeLoaded, setIsThemeLoaded] = useState(false);
+export function ThemeProvider({ children }) {
+  const [colorMode, setColorMode] = useState('navy');
+  const [themeMode, setThemeMode] = useState('public');
+  
+  const currentTheme = useMemo(() => {
+    const baseTheme = {
+      bg: colorMode === 'light' ? 'bg-white' : 'bg-gray-900',
+      textPrimary: colorMode === 'light' ? 'text-gray-900' : 'text-white',
+      textSecondary: colorMode === 'light' ? 'text-gray-600' : 'text-gray-300',
+      textHighlight: colorMode === 'light' ? 'text-blue-600' : 'text-blue-400',
+      border: colorMode === 'light' ? 'border-gray-200' : 'border-gray-700',
+      cardBg: colorMode === 'light' ? 'bg-white' : 'bg-gray-800',
+      shadow: 'shadow-lg',
+      buttonBg: colorMode === 'light' ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-blue-500 text-white hover:bg-blue-600',
+      buttonAlt: colorMode === 'light' ? 'bg-gray-200 text-gray-800 hover:bg-gray-300' : 'bg-gray-700 text-white hover:bg-gray-600',
+      cosmicBg: colorMode === 'navy' ? 'bg-[#002147]' : 'bg-[#2D0922]',
+      cosmicGlow: colorMode === 'navy' ? 'from-blue-900/20 to-blue-900/10' : 'from-purple-900/20 to-purple-900/10',
+      buttonGradient: colorMode === 'navy' ? 'from-blue-600 to-blue-700' : 'from-purple-600 to-purple-700'
+    };
 
-  // Sync with localStorage on mount and theme changes
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme) {
-      setColorMode(savedTheme);
-    } else {
-      localStorage.setItem('theme', 'navy');
-    }
-    setIsThemeLoaded(true);
-  }, []);
+    const publicTheme = {
+      ...baseTheme,
+      navBg: 'bg-transparent',
+      navText: 'text-white',
+      navTextHover: colorMode === 'navy' ? 'hover:text-blue-400' : 'hover:text-purple-400',
+      navBrand: {
+        primary: 'text-white',
+        secondary: colorMode === 'navy' ? 'text-[#528eb2]' : 'text-purple-400'
+      }
+    };
 
-  // Update localStorage when theme changes
-  useEffect(() => {
-    if (isThemeLoaded) { // Only update localStorage after initial load
-      localStorage.setItem('theme', colorMode);
-    }
-  }, [colorMode, isThemeLoaded]);
+    const protectedTheme = {
+      ...baseTheme,
+      navBg: colorMode === 'light' ? 'bg-white' : 'bg-gray-900',
+      navText: colorMode === 'light' ? 'text-gray-900' : 'text-white',
+      navTextHover: colorMode === 'light' ? 'hover:text-blue-600' : 'hover:text-blue-400',
+      navBrand: {
+        primary: colorMode === 'light' ? 'text-gray-900' : 'text-white',
+        secondary: colorMode === 'light' ? 'text-blue-600' : 'text-blue-400'
+      }
+    };
 
-  // Toggle theme function
-  const toggleColorMode = () => {
-    setColorMode(prevMode => prevMode === 'navy' ? 'black' : 'navy');
-  };
+    return themeMode === 'public' ? publicTheme : protectedTheme;
+  }, [colorMode, themeMode]);
 
-  // Define theme settings
-  const themes = {
-    navy: {
-      bg: 'bg-gradient-to-b from-[#001a38] to-[#0a3c6e]',
-      navBg: 'bg-[#001a38]/80',
-      cardBg: 'bg-[#0a3c6e]/30',
-      buttonGradient: 'from-blue-600 to-blue-700',
-      buttonBg: 'bg-blue-600 hover:bg-blue-700',
-      buttonAlt: 'bg-[#001a38]/60 border border-[#0a3c6e]/50 hover:border-blue-400',
-      navButtonBg: 'bg-[#0a3c6e]',
-      navButtonBorder: 'border-[#0a3c6e]',
-      textPrimary: 'text-blue-100',
-      textHighlight: 'text-blue-300',
-      shadow: 'shadow-blue-900/20',
-    },
-    black: {
-      bg: 'bg-gradient-to-b from-black to-gray-900',
-      navBg: 'bg-black/80',
-      cardBg: 'bg-gray-800/30',
-      buttonGradient: 'from-gray-700 to-gray-800',
-      buttonBg: 'bg-gray-700 hover:bg-gray-600',
-      buttonAlt: 'bg-black/60 border border-gray-700/50 hover:border-gray-400',
-      navButtonBg: 'bg-gray-800',
-      navButtonBorder: 'border-gray-700',
-      textPrimary: 'text-gray-100',
-      textHighlight: 'text-purple-300',
-      shadow: 'shadow-black/30',
-    }
-  };
-
-  // Current theme object - always available even before localStorage sync
-  const currentTheme = themes[colorMode];
-
-  // Context value
   const value = {
     colorMode,
-    setColorMode,
-    toggleColorMode,
+    themeMode,
     currentTheme,
-    themes,
-    isThemeLoaded
+    toggleColorMode: () => setColorMode(prev => prev === 'navy' ? 'purple' : 'navy'),
+    setThemeMode
   };
 
-  // Render children immediately with default theme
   return (
     <ThemeContext.Provider value={value}>
       {children}
     </ThemeContext.Provider>
   );
-};
+}
 
-// Custom hook for using theme
-export const useTheme = () => {
+export function useTheme() {
   const context = useContext(ThemeContext);
   if (context === undefined) {
     throw new Error('useTheme must be used within a ThemeProvider');
   }
   return context;
-};
+}

@@ -101,14 +101,14 @@ const EditableField = memo(({
     <div 
       className={`
         rounded-lg transition-all duration-200 
-        ${isEditing ? 'bg-white border-2 border-blue-200 shadow-sm' : 'bg-gray-50'} 
-        ${!isEditing ? 'hover:bg-gray-100' : ''} 
+        ${isEditing ? 'bg-white dark:bg-gray-800 border-2 border-blue-200 dark:border-[#78b9dd]/40 shadow-sm dark:shadow-[0_0_10px_rgba(120,185,221,0.15)]' : 'bg-gray-50 dark:bg-gray-800/60 dark:border dark:border-gray-700'} 
+        ${!isEditing ? 'hover:bg-gray-100 dark:hover:bg-gray-700/70' : ''} 
         p-3 sm:p-4 md:p-5 
         ${className}
       `}
     >
-      <Label className="text-xs sm:text-sm font-medium text-gray-700 flex items-center justify-between">
-        <span className="flex items-center gap-2">
+      <Label className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center justify-between">
+      <span className="flex items-center gap-2">
           {icon}
           {label}
         </span>
@@ -117,7 +117,7 @@ const EditableField = memo(({
             variant="ghost"
             size="sm"
             onClick={onEdit}
-            className="h-7 w-7 p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-colors"
+            className="h-7 w-7 p-1 text-blue-600 dark:text-[#78b9dd] hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-[#78b9dd]/20 dark:hover:text-[#a0d0ec] transition-colors"
             disabled={loading}
           >
             <Pencil className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -182,16 +182,16 @@ const EditableField = memo(({
                 href={displayValue}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center text-blue-600 hover:text-blue-800 break-all group"
+                className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 break-all"
               >
                 <span className="truncate mr-1">{getTruncatedUrl(displayValue)}</span>
                 <ExternalLink className="h-3 w-3 opacity-70 group-hover:opacity-100 flex-shrink-0" />
               </a>
             ) : (
-              <span className="text-gray-900">{getFormattedDisplayValue()}</span>
+              <span className="text-gray-900 dark:text-gray-100">{getFormattedDisplayValue()}</span>
             )
           ) : (
-            <span className="text-gray-500">Non renseigné</span>
+            <span className="text-gray-500 dark:text-gray-400">Non renseigné</span>
           )}
         </div>
       )}

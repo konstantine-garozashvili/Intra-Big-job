@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom';
 import TechOdysseyFusion from '@/components/home/TechOdysseyFusion';
 import CosmicBackground from '@/components/home/CosmicBackground';
 import { useTheme } from '@/contexts/ThemeContext';
-
 const SkillAssessment = () => {
   const { colorMode, toggleColorMode, currentTheme } = useTheme();
   

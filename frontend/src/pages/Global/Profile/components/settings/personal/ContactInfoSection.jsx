@@ -52,7 +52,7 @@ export const ContactInfoSection = ({
           <EditableField
             field="email"
             label="Email"
-            icon={<Mail className="h-4 w-4 mr-2 text-gray-500" />}
+            icon={<Mail className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-300" />}
             value={userData.email}
             editedValue={editedData.personal.email}
             type="email"
@@ -66,7 +66,7 @@ export const ContactInfoSection = ({
         ) : (
           <StaticField 
             label="Email"
-            icon={<Mail className="h-4 w-4 mr-2 text-gray-500" />}
+            icon={<Mail className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-300" />}
             value={userData.email || 'Non renseigné'}
           />
         )}
@@ -80,7 +80,7 @@ export const ContactInfoSection = ({
             <EditableField
               field="phoneNumber"
               label="Téléphone"
-              icon={<Phone className="h-4 w-4 mr-2 text-gray-500" />}
+              icon={<Phone className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-300" />}
               value={userData.phoneNumber}
               editedValue={editedData.personal.phoneNumber}
               type="phone"
@@ -94,7 +94,7 @@ export const ContactInfoSection = ({
           ) : (
             <StaticField 
               label="Téléphone"
-              icon={<Phone className="h-4 w-4 mr-2 text-gray-500" />}
+              icon={<Phone className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-300" />}
               value={userData.phoneNumber || 'Non renseigné'}
             />
           )}
@@ -116,7 +116,7 @@ export const ContactInfoSection = ({
           ) : (
             <StaticField 
               label="Adresse"
-              icon={<MapPin className="h-4 w-4 mr-2 text-blue-500 flex-shrink-0" />}
+              icon={<MapPin className="h-4 w-4 mr-2 text-blue-500 dark:text-[#78b9dd] flex-shrink-0" />}
               value={userData.addresses && Array.isArray(userData.addresses) && userData.addresses.length > 0
                 ? formatAddress(userData.addresses[0])
                 : 'Aucune adresse renseignée'}

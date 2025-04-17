@@ -1,6 +1,5 @@
 import React from 'react';
-import { useTheme } from '@/contexts/ThemeContext';
-import { motion } from 'framer-motion';
+import { useTheme } from '@/contexts/ThemeContext';import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 
 /**
