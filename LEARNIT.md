@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Ce document explique en détail comment est construite et fonctionne la page d'accueil (Home) de notre plateforme éducative. La page d'accueil est conçue avec une esthétique cosmique et spatiale, offrant une expérience utilisateur immersive avec de nombreuses animations et éléments interactifs.
+Ce document explique en détail comment est construite et fonctionne la page d'accueil (Home) de notre projet. La page d'accueil est conçue avec une esthétique cosmique et spatiale, offrant une expérience utilisateur immersive avec de nombreuses animations et éléments interactifs.
 
 ## Table des Matières
 
@@ -18,7 +18,7 @@ Ce document explique en détail comment est construite et fonctionne la page d'a
 
 La page d'accueil utilise un ensemble de technologies web modernes:
 
-- **React**: Framework JavaScript pour construire les composants UI
+- **React**:  Bibliothèque JavaScript pour construire les composants UI
 - **Framer Motion**: Bibliothèque d'animation pour les transitions et animations fluides
 - **Tailwind CSS**: Framework CSS utilitaire pour le style
 - **React Router**: Pour la navigation entre les différentes sections
