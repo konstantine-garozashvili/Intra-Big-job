@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { toast } from "sonner";
 import apiService from "@/lib/services/apiService";
+import { getFirestore, collection, addDoc } from 'firebase/firestore';
 
 
 
@@ -154,7 +155,6 @@ export function useUserManagement(initialFilter = "ALL") {
         // Mise à jour optimiste de l'interface utilisateur
         setUsers(prevUsers => prevUsers.map(user => {
             if (user.id === userId) {
-                // Créer une copie de l'utilisateur avec le nouveau rôle
                 return {
                     ...user,
                     roles: [{ name: newRoleName }]
@@ -166,17 +166,25 @@ export function useUserManagement(initialFilter = "ALL") {
         try {
             const response = await apiService.changeUserRole(userId, oldRoleName, newRoleName);
             if (response.success) {
+                // Créer la notification dans Firestore
+                const db = getFirestore();
+                await addDoc(collection(db, 'notifications'), {
+                    recipientId: userId,
+                    title: 'Mise à jour de votre rôle',
+                    message: `Votre rôle a été modifié en ${newRoleName.replace('ROLE_', '')}`,
+                    timestamp: new Date(),
+                    read: false,
+                    type: 'ROLE_UPDATE'
+                });
+                
                 toast.success("Rôle modifié avec succès");
-                // Pas besoin de rafraîchir toute la liste puisque nous avons déjà mis à jour localement
             } else {
                 toast.error("Impossible de modifier le rôle: " + (response.message || "Erreur inconnue"));
-                // Recharger les données en cas d'erreur pour revenir à l'état précédent
                 fetchUsers(filterRole);
             }
         } catch (error) {
             console.error("Erreur lors de la modification du rôle:", error);
             toast.error("Erreur lors de la modification du rôle");
-            // Recharger les données en cas d'erreur pour revenir à l'état précédent
             fetchUsers(filterRole);
         } finally {
             setIsProcessing(false);
