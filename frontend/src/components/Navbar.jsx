@@ -6,11 +6,9 @@ import { profileService } from "../pages/Global/Profile/services/profileService"
 import { Button } from "./ui/button";
 import {
   UserRound,
-  LayoutDashboard,
   LogOut,
   Settings,
   User,
-  Bell,
   Search,
   ClipboardPenLine
 } from "lucide-react";
@@ -150,10 +148,33 @@ const customStyles = `
   .navbar-fixed {
     position: sticky;
     top: 0;
-    z-index: 100;
     width: 100%;
     overflow-x: hidden;
     isolation: isolate;
+  }
+
+  /* Z-index hierarchy */
+  .navbar-fixed {
+    z-index: 100;
+  }
+
+  .menu-burger-wrapper {
+    z-index: 101;
+    position: relative;
+  }
+
+  .language-selector-wrapper {
+    z-index: 101;
+    position: relative;
+  }
+
+  .search-container {
+    z-index: 90;
+  }
+
+  /* Override Sheet styles to match our design */
+  .sidebar-sheet {
+    z-index: 102 !important;
   }
 
   /* Responsive styles */
@@ -337,14 +358,6 @@ const UserMenu = ({ onLogout, userData, setLogoutDialogOpen }) => {
           </svg>
         )}
       </Button>
-      
-      {/* Notification icon */}
-      <Button
-        variant="ghost"
-        className="rounded-full w-10 h-10 p-0 bg-transparent text-gray-200 hover:bg-[#02284f]/80 hover:text-white mr-2"
-      >
-        <Bell className="h-5 w-5" />
-      </Button>
 
       {/* Dropdown menu */}
       <DropdownMenu modal={true}>
@@ -406,13 +419,6 @@ const UserMenu = ({ onLogout, userData, setLogoutDialogOpen }) => {
               <span>Paramètres</span>
             </DropdownMenuItem>
             
-            <DropdownMenuItem 
-              className="navbar-dropdown-item"
-              onClick={() => navigate('/notifications')}
-            >
-              <Bell className="mr-2 h-4 w-4 text-[#528eb2] dark:text-[#78b9dd]" />
-              <span>Notifications</span>
-            </DropdownMenuItem>
             
             <DropdownMenuSeparator className="my-1 bg-gray-100 dark:bg-gray-700" />
             
@@ -603,9 +609,9 @@ const Navbar = memo(() => {
       {/* Injection des styles personnalisés */}
       <style>{customStyles}</style>
 
-      <header className="navbar-fixed bg-[#02284f] dark:bg-[#01111e] shadow-lg">
-        <nav className="bg-[#02284f] dark:bg-[#01111e] w-full">
-          <div className="container px-4 mx-auto">
+      <header className="navbar-fixed bg-[#02284f] dark:bg-[#01111e] shadow-lg z-[100]">
+        <nav className="bg-[#02284f] dark:bg-[#01111e] w-full relative">
+          <div className="container px-4 mx-auto relative">
             <div className="flex items-center justify-between h-16">
               {/* Partie gauche: Logo et burger menu */}
               <div className="flex items-center">
@@ -619,9 +625,9 @@ const Navbar = memo(() => {
                         ? permissions.getRoleDashboardPath()
                         : "/login"
                     }
-                    className="text-2xl font-black tracking-tight text-white"
+                    className="navbar-brand text-2xl font-black tracking-tight text-primary whitespace-nowrap dark:text-white"
                   >
-              Big<span className="text-[#528eb2]">Project</span>
+              Big<span className="text-[#528eb2] dark:text-[#78b9dd]">Project</span>
               </Link>
                 </div>
               </div>

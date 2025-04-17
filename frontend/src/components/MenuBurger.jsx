@@ -48,6 +48,7 @@ const customStyles = `
     background-color: transparent;
     border: none;
     cursor: pointer;
+    z-index: 101;
   }
   
   .menu-burger-button:hover {
@@ -65,6 +66,7 @@ const customStyles = `
     color: white !important;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
     border-right: 1px solid rgba(82, 142, 178, 0.2) !important;
+    z-index: 102 !important;
   }
   
   .scrollable-div {
@@ -585,7 +587,7 @@ const MenuBurger = memo(() => {
   ];
 
   return (
-    <div className="relative">
+    <div className="relative z-[101]">
       {/* Injection des styles personnalisés */}
       <style>{customStyles}</style>
       
