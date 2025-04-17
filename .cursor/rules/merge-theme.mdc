@@ -10,4 +10,5 @@ Here's what remains to be fixed:
 - Ugly loading effect when switching from one page to another on public pages. I'd like it to be completely invisible.
 - Colors set up with tailwind don't appear on the page; the text remains white.
 - Navbar doesn't appear because the main layout isn't used in App.jsx.
+- Put back the old typography (Poppins)
 
