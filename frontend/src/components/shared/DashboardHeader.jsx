@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, memo, useMemo } from 'react';
+import React, { useEffect, useState, useRef, memo } from 'react';
 import { Link } from 'react-router-dom';
 import { Clock, User, Sparkles } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -274,15 +274,14 @@ const DashboardHeader = ({ user, icon: Icon, roleTitle }) => {
     >
       <div className="flex flex-col md:flex-row md:items-center md:justify-between relative z-10">
         <div className="flex items-center">
-          <Avatar className="h-14 w-14 border-2 border-primary">
-            <AvatarImage src={profilePicture} alt={firstName} />
-            <AvatarFallback className="bg-primary text-primary-foreground">{userInitials}</AvatarFallback>
-          </Avatar>
+          <div className="relative h-16 w-16 sm:h-12 sm:w-12 md:h-16 md:w-16 lg:h-18 lg:w-18">
+            <ProfilePictureDisplay className="w-full h-full" />
+          </div>
           <div className="ml-4">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
-              {firstName ? (
+              {userData.firstName ? (
                 <>
-                  Bonjour, {firstName}{' '}
+                  {translatedGreeting}, {userData.firstName}{' '}
                   <span className="inline-block ml-2">
                     <motion.div 
                       className="w-5 h-5 text-yellow-500"

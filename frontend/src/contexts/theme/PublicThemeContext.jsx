@@ -1,38 +1,33 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 
-// Create the theme context
-export const ThemeContext = createContext();
+// Create the public theme context
+export const PublicThemeContext = createContext();
 
-// Theme provider component
-export const ThemeProvider = ({ children }) => {
-  // Initialize theme immediately without waiting for localStorage
-  const [colorMode, setColorMode] = useState('navy'); // Set navy as immediate default
+// Theme provider component for public routes
+export const PublicThemeProvider = ({ children }) => {
+  const [colorMode, setColorMode] = useState('navy');
   const [isThemeLoaded, setIsThemeLoaded] = useState(false);
 
-  // Sync with localStorage on mount and theme changes
   useEffect(() => {
-    const savedTheme = localStorage.getItem('theme');
+    const savedTheme = localStorage.getItem('publicTheme');
     if (savedTheme) {
       setColorMode(savedTheme);
     } else {
-      localStorage.setItem('theme', 'navy');
+      localStorage.setItem('publicTheme', 'navy');
     }
     setIsThemeLoaded(true);
   }, []);
 
-  // Update localStorage when theme changes
   useEffect(() => {
-    if (isThemeLoaded) { // Only update localStorage after initial load
-      localStorage.setItem('theme', colorMode);
+    if (isThemeLoaded) {
+      localStorage.setItem('publicTheme', colorMode);
     }
   }, [colorMode, isThemeLoaded]);
 
-  // Toggle theme function
   const toggleColorMode = () => {
     setColorMode(prevMode => prevMode === 'navy' ? 'black' : 'navy');
   };
 
-  // Define theme settings
   const themes = {
     navy: {
       bg: 'bg-gradient-to-b from-[#001a38] to-[#0a3c6e]',
@@ -62,10 +57,8 @@ export const ThemeProvider = ({ children }) => {
     }
   };
 
-  // Current theme object - always available even before localStorage sync
   const currentTheme = themes[colorMode];
 
-  // Context value
   const value = {
     colorMode,
     setColorMode,
@@ -75,19 +68,18 @@ export const ThemeProvider = ({ children }) => {
     isThemeLoaded
   };
 
-  // Render children immediately with default theme
   return (
-    <ThemeContext.Provider value={value}>
+    <PublicThemeContext.Provider value={value}>
       {children}
-    </ThemeContext.Provider>
+    </PublicThemeContext.Provider>
   );
 };
 
-// Custom hook for using theme
-export const useTheme = () => {
-  const context = useContext(ThemeContext);
+// Custom hook for using public theme
+export const usePublicTheme = () => {
+  const context = useContext(PublicThemeContext);
   if (context === undefined) {
-    throw new Error('useTheme must be used within a ThemeProvider');
+    throw new Error('usePublicTheme must be used within a PublicThemeProvider');
   }
   return context;
-};
+}; 

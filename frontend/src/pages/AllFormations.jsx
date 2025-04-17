@@ -1,13 +1,13 @@
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { useTheme } from '@/contexts/ThemeContext';
+import { usePublicTheme } from '@/contexts/theme/PublicThemeContext';
 
 /**
  * AllFormations page displaying all available educational tracks
  */
 const AllFormations = () => {
-  const { colorMode, toggleColorMode, currentTheme } = useTheme();
+  const { colorMode, toggleColorMode, currentTheme } = usePublicTheme();
 
   useEffect(() => {
     // Simple animation effect for stars using CSS animations instead of GSAP

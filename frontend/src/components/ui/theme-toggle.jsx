@@ -1,6 +1,7 @@
+import React from 'react';
 import { useLocation } from 'react-router-dom';
-import { usePublicTheme } from '@/contexts/PublicThemeContext';
-import { useProtectedTheme } from '@/contexts/ProtectedThemeContext';
+import { usePublicTheme } from '@/contexts/theme/PublicThemeContext';
+import { useProtectedTheme } from '@/contexts/theme/ProtectedThemeContext';
 import { Moon, Sun } from 'lucide-react';
 import { Button } from './button';
 

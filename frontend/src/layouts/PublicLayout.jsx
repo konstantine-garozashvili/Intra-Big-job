@@ -4,9 +4,9 @@ import PublicNavbar from '@/components/PublicNavbar';
 
 const PublicLayout = () => {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       <PublicNavbar />
-      <main className="relative">
+      <main className="pt-16">
         <Outlet />
       </main>
     </div>

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { useTheme } from '@/contexts/ThemeContext';
+import { usePublicTheme } from '@/contexts/theme/PublicThemeContext';
 
 const FormationFinder = () => {
-  const { colorMode, toggleColorMode, currentTheme } = useTheme();
+  const { colorMode, toggleColorMode, currentTheme } = usePublicTheme();
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState([]);
   const [result, setResult] = useState(null);

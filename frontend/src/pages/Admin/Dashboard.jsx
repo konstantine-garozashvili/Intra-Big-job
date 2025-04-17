@@ -27,25 +27,7 @@ const ROLE_COLORS = {
   'GUEST': 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
 };
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: { 
-    opacity: 1,
-    transition: { 
-      staggerChildren: 0.08,
-      delayChildren: 0.1
-    }
-  }
-};
 
-const itemVariants = {
-  hidden: { y: 15, opacity: 0 },
-  visible: { 
-    y: 0, 
-    opacity: 1,
-    transition: { type: "spring", stiffness: 400, damping: 25 }
-  }
-};
 
 const containerVariants = {
   hidden: { opacity: 0 },

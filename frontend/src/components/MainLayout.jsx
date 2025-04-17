@@ -10,7 +10,7 @@ import { profileService } from '../pages/Global/Profile/services/profileService'
 import Footer from './Footer';
 import ChatButton from './chat/ChatButton';
 import { Button } from './ui/button';
-import { useTheme } from '../contexts/ThemeContext';
+import { useProtectedTheme } from '../contexts/ProtectedThemeContext';
 
 // Create a context for profile data and refresh function
 export const ProfileContext = createContext({
@@ -280,7 +280,7 @@ const MainLayout = () => {
   const [initialRender, setInitialRender] = useState(true);
   const [isShowingConfetti, setIsShowingConfetti] = useState(false);
   const [showCongratulations, setShowCongratulations] = useState(false);
-  const { theme } = useTheme(); // Accéder au thème actuel
+  const { theme, isDark } = useProtectedTheme(); // Utiliser le thème protégé
 
   // Pages qui doivent être affichées en plein écran sans marges internes
   const fullScreenPages = []; // Removed '/register'
