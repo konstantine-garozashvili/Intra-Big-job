@@ -270,8 +270,7 @@ export function useUserManagement(initialFilter = "ALL") {
                     const preferences = preferencesSnap.data() || {};
                     
                     // Si les notifications d'information personnelle ne sont pas explicitement désactivées
-                    // Utiliser ROLE_UPDATE pour le moment, à remplacer par INFO_UPDATE quand disponible
-                    if (preferences['ROLE_UPDATE'] !== false) {
+                    if (preferences['INFO_UPDATE'] !== false) {
                         
                         // Créer la notification
                         const notificationData = {
@@ -280,7 +279,7 @@ export function useUserManagement(initialFilter = "ALL") {
                             message: 'Vos informations personnelles ont été mises à jour par un administrateur',
                             timestamp: new Date(),
                             read: false,
-                            type: 'INFO'
+                            type: 'INFO_UPDATE'
                         };
                         
                         await addDoc(collection(db, 'notifications'), notificationData);

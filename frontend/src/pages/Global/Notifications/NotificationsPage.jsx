@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Bell, FileCheck, FileX, File, Info, Calendar, Check, Undo, ChevronLeft, Filter, Trash, Settings } from 'lucide-react';
+import { Bell, FileCheck, FileX, File, Info, Calendar, Check, Undo, ChevronLeft, Filter, Trash, Settings, User } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
@@ -44,6 +44,11 @@ const notificationTypeConfig = {
     label: 'Mise à jour de rôle',
     color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
     icon: <Info className="h-4 w-4" />
+  },
+  INFO_UPDATE: {
+    label: 'Mise à jour de profil',
+    color: 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-300',
+    icon: <User className="h-4 w-4" />
   },
   SYSTEM: {
     label: 'Système',

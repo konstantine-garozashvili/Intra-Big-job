@@ -17,7 +17,8 @@ const NotificationSettings = () => {
   const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState({
     app: {
-      ROLE_UPDATE: true // Valeur par défaut, sera remplacée lors du chargement
+      ROLE_UPDATE: true, // Valeur par défaut, sera remplacée lors du chargement
+      INFO_UPDATE: true  // Ajout d'une préférence pour les mises à jour de profil
     }
   });
   const [savingChanges, setSavingChanges] = useState(false);
@@ -43,7 +44,8 @@ const NotificationSettings = () => {
             // Mettre à jour le state avec les valeurs exactes de Firestore
             setSettings({
               app: {
-                ROLE_UPDATE: preferences.ROLE_UPDATE !== false // true par défaut sauf si explicitement false
+                ROLE_UPDATE: preferences.ROLE_UPDATE !== false, // true par défaut sauf si explicitement false
+                INFO_UPDATE: preferences.INFO_UPDATE !== false  // true par défaut sauf si explicitement false
               }
             });
           } else {
@@ -52,7 +54,8 @@ const NotificationSettings = () => {
             // Si pas de préférences, on utilise les valeurs par défaut déjà définies
             setSettings({
               app: {
-                ROLE_UPDATE: true
+                ROLE_UPDATE: true,
+                INFO_UPDATE: true
               }
             });
           }
@@ -89,6 +92,7 @@ const NotificationSettings = () => {
     setSavingChanges(true);
     try {
       await updateNotificationPreference('ROLE_UPDATE', settings.app.ROLE_UPDATE);
+      await updateNotificationPreference('INFO_UPDATE', settings.app.INFO_UPDATE);
       toast.success('Paramètres de notification mis à jour');
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error);
@@ -186,6 +190,12 @@ const NotificationSettings = () => {
               setting="ROLE_UPDATE"
               label="Changements de rôle"
               description="Recevez des notifications lorsque votre rôle est modifié."
+            />
+            <NotificationSwitch
+              category="app"
+              setting="INFO_UPDATE"
+              label="Mises à jour de profil"
+              description="Recevez des notifications lorsque votre profil est mis à jour."
             />
           </CardContent>
         </Card>

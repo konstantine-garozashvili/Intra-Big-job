@@ -38,6 +38,7 @@ Les notifications sont stockées dans la collection `notifications` de la base d
 
 Les types de notifications supportés sont :
 - `ROLE_UPDATE` : Notification de changement de rôle
+- `INFO_UPDATE` : Notification de mise à jour de profil
 - `SYSTEM` : Notifications système
 - `INFO` : Informations générales
 - `WARNING` : Avertissements
@@ -100,4 +101,14 @@ https://console.firebase.google.com/u/4/project/bigproject-d6daf/firestore/datab
 
 - Notif quand il faut signer (matin et aprem)
 - Faire fonctionner les paramètres de notifs pour chacune de ces options (Activer/Désactiver)
-- Faire fonctionner le système de tri pour chacune de ces options (Sur la page NotificationsPage)
+
+## Ce qui est fait :
+
+- Notification pour l'utilisateur à qui on a changé le rôle avec activation/désactivation dans les settings
+- Interface utilisateur moderne avec animations et badges
+- Système de filtrage par type de notification
+- Gestion des notifications non lues
+- Accès rapide aux paramètres de notifications
+- Modification de la notification de changement de rôle pour afficher : "Vous êtes maintenant étudiant/recruter/formateur" etc...
+- Notification quand l'admin modifie les informations personnelles d'un utilisateur (Vos informations ont été mises à jour)
+- Fait fonctionner le système de tri pour les notifications de mise à jour de profil (Sur la page NotificationsPage)

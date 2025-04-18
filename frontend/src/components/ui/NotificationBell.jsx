@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bell, ArrowRight, Settings, CheckCheck, Clock } from 'lucide-react';
+import { Bell, ArrowRight, Settings, CheckCheck, Clock, User } from 'lucide-react';
 import { useNotifications } from '../../lib/hooks/useNotifications';
 import { format, formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -73,6 +73,10 @@ const notificationTypeConfig = {
   ROLE_UPDATE: {
     color: 'bg-blue-100 text-blue-800',
     icon: <Settings className="h-4 w-4 text-blue-600" />
+  },
+  INFO_UPDATE: {
+    color: 'bg-teal-100 text-teal-800',
+    icon: <User className="h-4 w-4 text-teal-600" />
   },
   SYSTEM: {
     color: 'bg-purple-100 text-purple-800',
