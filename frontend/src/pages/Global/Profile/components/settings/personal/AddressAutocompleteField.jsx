@@ -14,8 +14,8 @@ export const AddressAutocompleteField = ({
   setEditMode, 
   setEditedData, 
   onSaveAddress,
-  isAdmin,
-  handleCancelAddress
+  handleCancelAddress,
+  isEditable = true
 }) => {
   const field = 'address';
   const isEditing = editMode[field];
@@ -148,7 +148,7 @@ export const AddressAutocompleteField = ({
     `}>
       <Label className="text-sm font-medium text-gray-700 flex items-center justify-between">
         <span>Adresse</span>
-        {isAdmin && !isEditing && (
+        {isEditable && !isEditing && (
           <Button
             variant="ghost"
             size="sm"

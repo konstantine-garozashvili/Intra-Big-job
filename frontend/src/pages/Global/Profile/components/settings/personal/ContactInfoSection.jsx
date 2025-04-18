@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Mail, Phone, MapPin } from 'lucide-react';
 import EditableField from './EditableField';
 import { StaticField } from './StaticField';
 import { AddressAutocompleteField } from './AddressAutocompleteField';
 import { formatAddress } from './utils';
+import { useAuth } from '@/contexts/AuthContext';
+import * as roleUtils from '../../../utils/roleUtils';
 
 export const ContactInfoSection = ({ 
   userData, 
@@ -18,6 +20,20 @@ export const ContactInfoSection = ({
   onSaveAddress,
   setEditMode
 }) => {
+  const { user: currentUser } = useAuth();
+  
+  // Add debug logging
+  useEffect(() => {
+    console.log('ContactInfoSection rendered with:', {
+      'isFieldEditable("address")': isFieldEditable('address'),
+      'isFieldEditable("phoneNumber")': isFieldEditable('phoneNumber'),
+      'isFieldEditable("linkedinUrl")': isFieldEditable('linkedinUrl'),
+      'userData?.id': userData?.id,
+      'currentUser?.id': currentUser?.id,
+      'currentUser?.roles': currentUser?.roles
+    });
+  }, [userData, currentUser, isFieldEditable]);
+  
   // Get the handleCancelAddress function from the hook
   const handleCancelAddress = () => {
     const address = userData.addresses && userData.addresses.length > 0 
@@ -43,6 +59,11 @@ export const ContactInfoSection = ({
       address: false
     }));
   };
+
+  // Check if user is admin
+  const isAdmin = currentUser?.roles?.some(role => 
+    role === 'ROLE_ADMIN' || role === 'ADMIN' || role === 'ROLE_SUPER_ADMIN' || role === 'SUPER_ADMIN'
+  );
 
   return (
     <div className="space-y-5 sm:space-y-6">
@@ -110,8 +131,8 @@ export const ContactInfoSection = ({
               setEditMode={setEditMode}
               setEditedData={setEditedData}
               onSaveAddress={onSaveAddress}
-              isAdmin={true}
               handleCancelAddress={handleCancelAddress}
+              isEditable={true}
             />
           ) : (
             <StaticField 

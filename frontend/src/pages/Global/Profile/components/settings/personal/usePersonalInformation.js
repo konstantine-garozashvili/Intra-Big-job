@@ -8,7 +8,8 @@ export const usePersonalInformation = ({
   editMode,
   setEditMode,
   editedData,
-  setEditedData
+  setEditedData,
+  currentUser
 }) => {
   const isStudent = userRole === 'ROLE_STUDENT';
   const isSuperAdmin = userRole === 'ROLE_SUPER_ADMIN' || userRole === 'SUPER_ADMIN' || userRole === 'SUPERADMIN';
@@ -16,6 +17,8 @@ export const usePersonalInformation = ({
     const adminRoles = ['ROLE_ADMIN', 'ROLE_SUPER_ADMIN', 'ADMIN', 'SUPER_ADMIN', 'SUPERADMIN'];
     return adminRoles.includes(userRole);
   }, [userRole])();
+  
+  const isGuest = userRole === 'ROLE_GUEST' || userRole === 'GUEST';
   
   const studentProfile = userData?.studentProfile || {};
   
@@ -26,9 +29,13 @@ export const usePersonalInformation = ({
     // Admins can edit everything
     if (isAdmin) return true;
     
-    // Address field is handled by roleUtils.canEditAddress
+    // For address field, check if user is a guest viewing their own profile
     if (field === 'address') {
-      return roleUtils.canEditAddress(userRole);
+      // Guests can edit their own address
+      if (isGuest && userData?.id === currentUser?.id) {
+        return true;
+      }
+      return false;
     }
     
     // For all non-admin users, only allow editing specific fields
@@ -41,7 +48,7 @@ export const usePersonalInformation = ({
     
     // Only allow editing the fields in the editableFields array
     return editableFields.includes(field);
-  }, [isAdmin, isStudent, userRole, isSuperAdmin]);
+  }, [isAdmin, isStudent, isGuest, isSuperAdmin, userData?.id, currentUser?.id]);
 
   // Function to handle input changes
   const handleInputChange = (field, value) => {
@@ -135,6 +142,7 @@ export const usePersonalInformation = ({
     isStudent,
     isAdmin,
     isSuperAdmin,
+    isGuest,
     studentProfile,
     isFieldEditable,
     handleInputChange,

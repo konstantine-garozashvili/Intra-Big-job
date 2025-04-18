@@ -488,7 +488,15 @@ class ProfileService {
   
   async updateAddress(addressData) {
     try {
-      const response = await apiService.put('/profile/address', addressData);
+      let response;
+      
+      if (addressData.id) {
+        // Update existing address
+        response = await apiService.put(`/profile/addresses/${addressData.id}`, addressData);
+      } else {
+        // Create new address
+        response = await apiService.post('/profile/addresses', addressData);
+      }
       
       // Invalider le cache après une mise à jour
       this.invalidateCache('address');

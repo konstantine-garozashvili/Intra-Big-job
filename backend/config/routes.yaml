@@ -9,12 +9,9 @@ profile_controllers:
         path: ../src/Controller/Profile/
         namespace: App\Controller\Profile
     type: attribute
+    prefix: /api/profile
 
-# Explicitly register profile test route
-profile_test:
-    path: /api/profile/test
-    controller: App\Controller\Profile\ProfileController::testProfile
-    methods: ['GET']
+
 
 # Explicitly register profile stats route
 profile_stats:

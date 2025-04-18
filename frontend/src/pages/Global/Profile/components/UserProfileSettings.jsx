@@ -337,7 +337,7 @@ const UserProfileSettings = () => {
       };
       
       // Make the API call first
-      await profileService.updateAddress(formattedAddress);
+      await profileService.updateAddress(addressWithId);
       
       toast.success('Adresse mise à jour avec succès');
       
