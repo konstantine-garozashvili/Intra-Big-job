@@ -148,10 +148,77 @@ const CosmicBackground = ({
       });
     }
     
+    // Satellites traversant l'écran (login uniquement)
+    let satelliteL = null; // gauche -> droite
+    let satelliteLTimer = 0;
+    let satelliteLVisible = false;
+    let nextSatelliteLDelay = 0;
+    let satelliteLSpeed = 0.1;
+
+    let satelliteR = null; // droite -> gauche
+    let satelliteRTimer = 0;
+    let satelliteRVisible = false;
+    let nextSatelliteRDelay = 0;
+    let satelliteRSpeed = 0.1;
+
+    if (shootingStarDirection === 'horizontal') {
+      // Satellite gauche -> droite
+      const spawnSatelliteL = () => {
+        satelliteL = {
+          x: -8,
+          y: canvas.height * (0.4 + Math.random() * 0.2),
+          radius: 1.1 + Math.random() * 0.8,
+          color: 'rgba(180,220,255,1)',
+        };
+        satelliteLVisible = true;
+        satelliteLSpeed = 0.08 + Math.random() * 0.07;
+        nextSatelliteLDelay = 2000 + Math.random() * 4000;
+      };
+      spawnSatelliteL();
+      // Satellite droite -> gauche
+      const spawnSatelliteR = () => {
+        satelliteR = {
+          x: canvas.width + 8,
+          y: canvas.height * (0.4 + Math.random() * 0.2),
+          radius: 1.1 + Math.random() * 0.8,
+          color: 'rgba(180,220,255,1)',
+        };
+        satelliteRVisible = true;
+        satelliteRSpeed = 0.08 + Math.random() * 0.07;
+        nextSatelliteRDelay = 3000 + Math.random() * 5000; // décalage pour éviter la synchro
+      };
+      setTimeout(spawnSatelliteR, 1200 + Math.random() * 2000); // apparition différée du 2e
+    }
+
     // Animation loop
     let animationFrameId;
     const render = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Aurora boréale subtile (login uniquement)
+      if (shootingStarDirection === 'horizontal') {
+        const auroraHeight = canvas.height * 0.21;
+        const auroraY = auroraHeight * 0.6;
+        const time = Date.now() / 2200;
+        // Mouvement ondulant horizontal
+        const offset = Math.sin(time) * canvas.width * 0.08;
+
+        const grad = ctx.createLinearGradient(
+          offset, auroraY, canvas.width + offset, auroraY + auroraHeight
+        );
+        grad.addColorStop(0, 'rgba(60,180,255,0.17)'); // bleu clair
+        grad.addColorStop(0.3, 'rgba(80,255,180,0.23)'); // vert-bleu
+        grad.addColorStop(0.6, 'rgba(180,120,255,0.19)'); // violet pâle
+        grad.addColorStop(1, 'rgba(60,180,255,0.13)'); // bleu clair
+        ctx.save();
+        ctx.globalAlpha = 1;
+        ctx.filter = 'blur(28px)';
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, canvas.width, auroraHeight * 1.5);
+        ctx.filter = 'none';
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
       
       // Draw nebulas
       nebulas.forEach(nebula => {
@@ -167,20 +234,97 @@ const CosmicBackground = ({
         ctx.fill();
       });
       
-      // Draw stars
-      stars.forEach(star => {
+      // Draw stars avec effet parallax
+      const now = Date.now() / 1800;
+      stars.forEach((star, i) => {
         star.y -= star.speed;
         if (star.y < 0) {
           star.y = canvas.height;
           star.x = Math.random() * canvas.width;
         }
-        
+        // Parallax : oscillation horizontale subtile
+        const parallaxFactor = 0.7 + star.radius * 1.5 + (i % 7) * 0.09; // dépend du rayon et de l'index
+        const parallax = Math.sin(now + i) * parallaxFactor;
+        ctx.save();
         ctx.beginPath();
-        ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
-        ctx.fillStyle = `${colors.star}${Math.round(star.opacity * 255).toString(16).padStart(2, '0')}`;
+        ctx.arc(star.x + parallax, star.y, star.radius, 0, Math.PI * 2);
+        ctx.globalAlpha = star.opacity;
+        ctx.fillStyle = star.color;
+        ctx.shadowColor = star.color;
+        ctx.shadowBlur = 2;
         ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur = 0;
+        ctx.restore();
       });
       
+      // Satellite gauche -> droite (login uniquement)
+      if (shootingStarDirection === 'horizontal' && satelliteL) {
+        if (satelliteLVisible) {
+          satelliteL.x += satelliteLSpeed;
+          const now = Date.now();
+          const blink = 0.65 + 0.35 * Math.abs(Math.sin(now / 400));
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(satelliteL.x, satelliteL.y, satelliteL.radius, 0, Math.PI * 2);
+          ctx.shadowColor = '#bcdfff';
+          ctx.shadowBlur = 12;
+          ctx.globalAlpha = blink;
+          ctx.fillStyle = satelliteL.color;
+          ctx.fill();
+          ctx.globalAlpha = 1;
+          ctx.shadowBlur = 0;
+          ctx.restore();
+          if (satelliteL.x - satelliteL.radius > canvas.width + 8) {
+            satelliteLVisible = false;
+            satelliteLTimer = 0;
+          }
+        } else {
+          satelliteLTimer += 16;
+          if (satelliteLTimer > nextSatelliteLDelay) {
+            satelliteL.x = -8;
+            satelliteL.y = canvas.height * (0.4 + Math.random() * 0.2);
+            satelliteL.radius = 1.1 + Math.random() * 0.8;
+            satelliteLVisible = true;
+            satelliteLSpeed = 0.08 + Math.random() * 0.07;
+            nextSatelliteLDelay = 2000 + Math.random() * 4000;
+          }
+        }
+      }
+      // Satellite droite -> gauche (login uniquement)
+      if (shootingStarDirection === 'horizontal' && satelliteR) {
+        if (satelliteRVisible) {
+          satelliteR.x -= satelliteRSpeed;
+          const now = Date.now() + 1000; // déphasage du clignotement
+          const blink = 0.65 + 0.35 * Math.abs(Math.sin(now / 400));
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(satelliteR.x, satelliteR.y, satelliteR.radius, 0, Math.PI * 2);
+          ctx.shadowColor = '#bcdfff';
+          ctx.shadowBlur = 12;
+          ctx.globalAlpha = blink;
+          ctx.fillStyle = satelliteR.color;
+          ctx.fill();
+          ctx.globalAlpha = 1;
+          ctx.shadowBlur = 0;
+          ctx.restore();
+          if (satelliteR.x + satelliteR.radius < -8) {
+            satelliteRVisible = false;
+            satelliteRTimer = 0;
+          }
+        } else {
+          satelliteRTimer += 16;
+          if (satelliteRTimer > nextSatelliteRDelay) {
+            satelliteR.x = canvas.width + 8;
+            satelliteR.y = canvas.height * (0.6 + Math.random() * 0.2);
+            satelliteR.radius = 1.1 + Math.random() * 0.8;
+            satelliteRVisible = true;
+            satelliteRSpeed = 0.08 + Math.random() * 0.07;
+            nextSatelliteRDelay = 3000 + Math.random() * 5000;
+          }
+        }
+      }
+
       // Draw shooting stars
       createShootingStar();
       for (let i = shootingStars.length - 1; i >= 0; i--) {
