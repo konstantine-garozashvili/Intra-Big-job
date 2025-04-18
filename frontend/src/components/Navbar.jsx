@@ -1,4 +1,4 @@
-import React, { memo, useState, useEffect, useRef } from "react";
+import React, { memo, useState, useEffect, useRef, forwardRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { authService } from "../lib/services/authService";
 import userDataManager from "../lib/services/userDataManager";
@@ -38,6 +38,7 @@ import LanguageSelector from "./Translation/LanguageSelector";
 import { NotificationBell } from "./ui/NotificationBell";
 import { ThemeToggle } from "./ui/theme-toggle";
 import { useProtectedTheme } from "../contexts/ProtectedThemeContext";
+import { useSignatureReminder } from '../hooks/useSignatureReminder';
 
 // Style personnalisé pour le menu dropdown et le bouton burger
 const customStyles = `
@@ -474,6 +475,7 @@ const Navbar = memo(() => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isLoading, setIsLoading] = useState(true);
+  const needsSignature = useSignatureReminder();
 
   // Vérifier l'état d'authentification
   const checkAuthStatus = async () => {
@@ -713,6 +715,12 @@ const Navbar = memo(() => {
                       >
                         <div className="flex items-center justify-center w-full transition-all duration-300 group-hover:justify-start group-hover:px-3">
                           <ClipboardPenLine className="w-4 h-4 text-white group-hover:animate-pulse" />
+                          {needsSignature && (
+                            <span className="absolute top-1 right-2 md:right-5 flex h-3 w-3">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-3 w-3 bg-red-600"></span>
+                            </span>
+                          )}
                         </div>
                         <div className="absolute right-5 transform translate-x-full opacity-0 text-white text-sm font-medium transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100 hidden md:block">
                           Présence
