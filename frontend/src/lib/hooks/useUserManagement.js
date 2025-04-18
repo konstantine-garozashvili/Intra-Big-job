@@ -258,6 +258,38 @@ export function useUserManagement(initialFilter = "ALL") {
             const response = await apiService.updateUser(userId, userData);
             if (response.success) {
                 toast.success("Utilisateur mis à jour avec succès");
+                
+                // Convertir l'ID en chaîne de caractères pour la notification
+                const userIdString = String(userId);
+                
+                try {
+                    // Vérifier les préférences de notification
+                    const db = getFirestore();
+                    const preferencesRef = doc(db, 'notificationPreferences', userIdString);
+                    const preferencesSnap = await getDoc(preferencesRef);
+                    const preferences = preferencesSnap.data() || {};
+                    
+                    // Si les notifications d'information personnelle ne sont pas explicitement désactivées
+                    // Utiliser ROLE_UPDATE pour le moment, à remplacer par INFO_UPDATE quand disponible
+                    if (preferences['ROLE_UPDATE'] !== false) {
+                        
+                        // Créer la notification
+                        const notificationData = {
+                            recipientId: userIdString,
+                            title: 'Mise à jour de votre profil',
+                            message: 'Vos informations personnelles ont été mises à jour par un administrateur',
+                            timestamp: new Date(),
+                            read: false,
+                            type: 'INFO'
+                        };
+                        
+                        await addDoc(collection(db, 'notifications'), notificationData);
+                    }
+                } catch (firebaseError) {
+                    console.error('Firebase error:', firebaseError);
+                    // Ne pas bloquer la mise à jour si la notification échoue
+                }
+                
                 // Appeler le callback de succès si fourni
                 if (onSuccess) {
                     onSuccess();
