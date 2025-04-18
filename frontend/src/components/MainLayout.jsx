@@ -505,7 +505,7 @@ const MainLayout = () => {
 
   return (
     <ProfileContext.Provider value={profileContextValue}>
-      <div className={`flex flex-col min-h-screen transition-colors duration-300 ${theme === 'dark' ? 'dark bg-gray-900 text-gray-100' : 'bg-gray-50 text-gray-900'}`}>
+      <div className={`flex flex-col min-h-screen transition-colors duration-300 ${theme === 'dark' ? 'dark bg-gradient-to-br from-gray-900 via-blue-950 to-gray-900' : 'bg-gradient-to-br from-blue-50 via-blue-100 to-blue-200'}`}>
         {/* Only show Navbar for authenticated users */}
         {isAuthenticated && <Navbar />}
         
@@ -521,7 +521,7 @@ const MainLayout = () => {
             isFullScreenPage 
               ? 'px-0 py-0' 
               : 'container mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full'
-          } ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'}`}
+          } ${theme === 'dark' ? 'bg-gradient-to-br from-gray-900 via-blue-950 to-gray-900' : 'bg-gradient-to-br from-blue-50 via-blue-100 to-blue-200'}`}
           style={{ 
             minHeight: minContentHeight,
             maxWidth: isFullScreenPage ? '100%' : undefined

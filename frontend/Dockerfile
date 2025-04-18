@@ -6,10 +6,11 @@ WORKDIR /app
 RUN npm cache clean --force
 
 # Copie des fichiers de dépendances
-COPY package.json ./
+COPY package.json .npmrc ./
 
-# Installation des dépendances
-RUN npm install
+# Installation des dépendances avec gestion des dépendances optionnelles
+RUN npm install --include=optional && \
+    npm install @rollup/rollup-linux-x64-musl || true
 
 # Copie du reste du code
 COPY . .

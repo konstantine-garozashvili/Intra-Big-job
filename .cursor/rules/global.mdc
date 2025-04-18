@@ -3,6 +3,11 @@ description:
 globs: 
 alwaysApply: true
 ---
+---
+description: 
+globs: 
+alwaysApply: true
+---
  # Global Project Rules
 
 > **These rules apply to the entire Intra-Big-job project**

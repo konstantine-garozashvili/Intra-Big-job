@@ -8,11 +8,7 @@ description:
 globs: .jsx,.js,tsx,ts
 alwaysApply: false
 ---
----
-description: 
-globs: 
-alwaysApply: true
----
+
 # Frontend Rules
 
 > **Rules for working with the React frontend**
@@ -24,6 +20,7 @@ alwaysApply: true
 - Always read the entire file contents before suggesting modifications
 - This ensures you understand the component's purpose and dependencies
 - Always use the frontend commands in the frontend container
+- Always import Toaster from 'sonner' and never use-toast or something
 
 
 ### Verify imports
@@ -60,6 +57,13 @@ alwaysApply: true
 - Use Tailwind CSS for styling components
 - Avoid inline styles and CSS files when possible
 - Follow existing component patterns for styling
+
+
+### Dependencies
+- **Severity: HIGH**
+- Shadcn
+- Framer Motion
+- 
 
 ### React patterns
 - **Severity: HIGH**
