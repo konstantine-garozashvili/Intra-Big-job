@@ -79,31 +79,145 @@ const SignatureHistory = () => {
         throw new Error('Token d\'authentification non trouvé');
       }
       
-      // Fetch weekly signature history
-      const response = await fetch('http://localhost:8000/api/signatures/weekly', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+      // Essayer de récupérer les données depuis l'API
+      let apiSuccess = false;
+      let apiData = null;
+      
+      try {
+        // Fetch weekly signature history
+        const response = await fetch('/api/signatures/weekly', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          apiData = await response.json();
+          apiSuccess = true;
+          
+          // Filtrer pour ne garder que les jours de la semaine (lundi à vendredi)
+          if (apiData && apiData.signaturesByDate) {
+            apiData.signaturesByDate = apiData.signaturesByDate.filter(day => 
+              !['Saturday', 'Sunday'].includes(day.dayName)
+            );
+          }
+          
+          console.log('Weekly signature history from API:', apiData);
+        } else {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('API error response:', errorData);
+          throw new Error(errorData.message || `Erreur ${response.status}`);
         }
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Erreur ${response.status}`);
+      } catch (apiError) {
+        console.error('API request failed:', apiError);
+        // Continue avec le mode dégradé - API inaccessible
       }
       
-      const data = await response.json();
-      
-      // Filtrer pour ne garder que les jours de la semaine (lundi à vendredi)
-      if (data && data.signaturesByDate) {
-        data.signaturesByDate = data.signaturesByDate.filter(day => 
-          !['Saturday', 'Sunday'].includes(day.dayName)
-        );
+      // Si l'API a fonctionné, utiliser ces données
+      if (apiSuccess && apiData) {
+        setWeeklyData(apiData);
+      } else {
+        // Fallback: générer des données locales à partir du localStorage
+        console.log('Fallback: Using local signature data');
+        
+        // Obtenir les dates de la semaine courante
+        const today = new Date();
+        const dayOfWeek = today.getDay(); // 0 = dimanche, 1 = lundi, etc.
+        const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Calculer le décalage jusqu'à lundi
+        const monday = new Date(today);
+        monday.setDate(today.getDate() + mondayOffset);
+        
+        // Générer un tableau de dates pour la semaine (lundi à vendredi)
+        const weekDates = [];
+        for (let i = 0; i < 5; i++) {
+          const date = new Date(monday);
+          date.setDate(monday.getDate() + i);
+          weekDates.push(date);
+        }
+        
+        // Convertir les dates en format YYYY-MM-DD
+        const formattedDates = weekDates.map(date => date.toISOString().split('T')[0]);
+        
+        // Construire les données de la semaine
+        const localWeeklyData = {
+          success: true,
+          weekStart: formattedDates[0],
+          weekEnd: new Date(weekDates[4]).setDate(weekDates[4].getDate() + 1), // Jour suivant
+          availablePeriods: {
+            morning: 'Matin (9h-12h)',
+            afternoon: 'Après-midi (13h-17h)'
+          },
+          signaturesByDate: []
+        };
+        
+        // Remplir avec les données locales
+        formattedDates.forEach((dateStr, index) => {
+          const morningKey = `signature_${dateStr}_morning`;
+          const afternoonKey = `signature_${dateStr}_afternoon`;
+          const morningDataKey = `signature_data_${dateStr}_morning`;
+          const afternoonDataKey = `signature_data_${dateStr}_afternoon`;
+          
+          // Vérifier si nous avons des signatures dans localStorage
+          const hasMorningSignature = localStorage.getItem(morningKey) === 'true';
+          const hasAfternoonSignature = localStorage.getItem(afternoonKey) === 'true';
+          
+          // Récupérer les données détaillées si disponibles
+          let morningData = null;
+          let afternoonData = null;
+          
+          if (hasMorningSignature) {
+            const storedData = localStorage.getItem(morningDataKey);
+            if (storedData) {
+              try {
+                morningData = JSON.parse(storedData);
+              } catch (e) {
+                console.error('Error parsing morning signature data:', e);
+              }
+            }
+            
+            if (!morningData) {
+              // Données minimales si pas de détails
+              morningData = {
+                date: `${dateStr}T09:30:00.000Z`
+              };
+            }
+          }
+          
+          if (hasAfternoonSignature) {
+            const storedData = localStorage.getItem(afternoonDataKey);
+            if (storedData) {
+              try {
+                afternoonData = JSON.parse(storedData);
+              } catch (e) {
+                console.error('Error parsing afternoon signature data:', e);
+              }
+            }
+            
+            if (!afternoonData) {
+              // Données minimales si pas de détails
+              afternoonData = {
+                date: `${dateStr}T14:30:00.000Z`
+              };
+            }
+          }
+          
+          // Ajouter l'entrée pour cette journée
+          const date = weekDates[index];
+          localWeeklyData.signaturesByDate.push({
+            date: dateStr,
+            dayName: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][date.getDay()],
+            signatures: {
+              morning: hasMorningSignature ? morningData : null,
+              afternoon: hasAfternoonSignature ? afternoonData : null
+            }
+          });
+        });
+        
+        console.log('Generated local weekly data:', localWeeklyData);
+        setWeeklyData(localWeeklyData);
       }
-      
-      console.log('Weekly signature history:', data);
-      setWeeklyData(data);
     } catch (error) {
       console.error('Error fetching weekly history:', error);
       setError(error.message || 'Erreur de chargement de l\'historique');
