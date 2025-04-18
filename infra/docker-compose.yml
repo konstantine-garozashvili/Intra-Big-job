@@ -19,22 +19,27 @@ services:
       context: ../backend
       dockerfile: Dockerfile
     volumes:
+      - ../backend:/var/www/symfony
       - backend_vendor:/var/www/symfony/vendor
       - backend_var:/var/www/symfony/var
       - jwt_keys:/var/www/symfony/config/jwt
     depends_on:
-      database:
-        condition: service_healthy
       redis:
         condition: service_started
     networks:
       - app-network
     environment:
       REDIS_URL: redis://redis:6379
-    command: bash -c "composer install --no-interaction && 
-      php bin/console doctrine:database:create --if-not-exists --no-interaction && 
-      php bin/console doctrine:schema:update --force --no-interaction && 
-      php bin/console doctrine:fixtures:load --no-interaction --append || php bin/console doctrine:fixtures:load --no-interaction && 
+      DATABASE_URL: "mysql://u521981000_bigproject_dev:Nalamaman210'@46.202.172.48:3306/u521981000_bigproject_dev?serverVersion=8.0&charset=utf8mb4"
+      APP_ENV: dev
+      APP_DEBUG: 1
+    command: bash -c "
+      composer install --no-interaction &&
+      until php bin/console doctrine:query:sql 'SELECT 1' > /dev/null 2>&1; do
+        echo 'Waiting for database connection...';
+        sleep 2;
+      done &&
+      php bin/console cache:clear &&
       exec php-fpm"
 
   nginx:
@@ -48,27 +53,6 @@ services:
       - backend
     networks:
       - app-network
-
-  database:
-    image: mysql:8.0
-    command: --default-authentication-plugin=mysql_native_password
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: bigproject
-      MYSQL_USER: user
-      MYSQL_PASSWORD: "password"
-    volumes:
-      - database_data:/var/lib/mysql
-    ports:
-      - "3306:3306"
-    networks:
-      - app-network
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "user", "-ppassword"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
 
   redis:
     image: redis:alpine
@@ -85,12 +69,11 @@ services:
     ports:
       - "8080:80"
     environment:
-      PMA_HOST: database
-      PMA_USER: root
-      PMA_PASSWORD: root
+      PMA_HOST: 46.202.172.48
+      PMA_USER: u521981000_bigproject_dev
+      PMA_PASSWORD: "Nalamaman210'"
       UPLOAD_LIMIT: 300M
-    depends_on:
-      - database
+      PMA_ABSOLUTE_URI: http://localhost:8080/
     networks:
       - app-network
 
@@ -99,7 +82,6 @@ networks:
     driver: bridge
 
 volumes:
-  database_data:
   frontend_node_modules:
   backend_vendor:
   backend_var:
