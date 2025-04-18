@@ -2,8 +2,15 @@ import React, { useEffect, useRef } from 'react';
 
 /**
  * CosmicBackground component that creates a space-themed background with stars and nebulas
+ * @param {string} colorMode - 'navy' or 'purple' theme
+ * @param {string} animationMode - 'cosmic' for animation, any other value for static
+ * @param {string} shootingStarDirection - 'diagonal' (default) or 'horizontal'
  */
-const CosmicBackground = ({ colorMode = 'navy', animationMode = 'cosmic' }) => {
+const CosmicBackground = ({ 
+  colorMode = 'navy', 
+  animationMode = 'cosmic',
+  shootingStarDirection = 'diagonal'
+}) => {
   const canvasRef = useRef(null);
   
   // Get theme colors based on colorMode
@@ -62,16 +69,43 @@ const CosmicBackground = ({ colorMode = 'navy', animationMode = 'cosmic' }) => {
         // Variation taille/luminosité tête
         const headRadius = 1.2 + Math.random() * 1.5;
         const headBlur = 6 + Math.random() * 14;
-        const angle = (Math.PI / 4) + (Math.random() * Math.PI / 4);
+        
+        // Direction des étoiles filantes selon le paramètre
+        let angle, startX, startY;
+        
+        if (shootingStarDirection === 'horizontal') {
+          // Direction horizontale (gauche à droite)
+          angle = 0; // 0 radians = direction horizontale vers la droite
+          startX = 0; // Commence du côté gauche
+          startY = Math.random() * (canvas.height * 0.7); // Position Y aléatoire (70% supérieur de l'écran)
+        } else {
+          // Direction diagonale (comportement par défaut)
+          angle = (Math.PI / 4) + (Math.random() * Math.PI / 4); // Angle diagonal
+          startX = Math.random() * canvas.width;
+          startY = 0; // Commence du haut
+        }
+        
+        // Ajout d'une durée de vie et d'un point de disparition aléatoires
+        // pour permettre aux étoiles filantes de disparaître en cours de route
+        const maxDistance = shootingStarDirection === 'horizontal' ? canvas.width : Math.sqrt(canvas.width * canvas.width + canvas.height * canvas.height);
+        const lifespan = Math.random() < 0.6 ? // 60% de chance de disparaître en cours de route
+          (0.3 + Math.random() * 0.5) * maxDistance : // Disparaît entre 30% et 80% du chemin
+          maxDistance * 1.2; // Traverse tout l'écran (120% pour s'assurer qu'elle sort complètement)
+        
+        const fadeOutPoint = lifespan * (0.9 + Math.random() * 0.15);
+        
         shootingStars.push({
-          x: Math.random() * canvas.width,
-          y: 0,
+          x: startX,
+          y: startY,
           length: 80 + Math.random() * 70,
-          speed: 5 + Math.random() * 7,
+          speed: 10 + Math.random() * 7,
           angle: angle,
           headRadius,
           headBlur,
-          vibratePhase: Math.random() * Math.PI * 2 // Pour effet de vibration
+          vibratePhase: Math.random() * Math.PI * 2,
+          distanceTraveled: 0, 
+          lifespan, 
+          fadeOutPoint 
         });
       }
     };
@@ -151,42 +185,51 @@ const CosmicBackground = ({ colorMode = 'navy', animationMode = 'cosmic' }) => {
       createShootingStar();
       for (let i = shootingStars.length - 1; i >= 0; i--) {
         const star = shootingStars[i];
-        // Effet vibration/scintillement : légère oscillation sur la trajectoire
-        const vibration = Math.sin(Date.now() / 60 + star.vibratePhase) * 1.3;
-        const vibrAngle = star.angle + vibration * 0.01; // angle légèrement modifié
-
-        // Calcul position tête (fin de la traînée)
-        const endX = star.x + Math.cos(vibrAngle) * star.length;
-        const endY = star.y + Math.sin(vibrAngle) * star.length;
-
-        // Traînée avec dégradé coloré et dissipation progressive
+        
+        // Calcul de l'angle avec effet de vibration
+        const vibrAngle = star.angle + Math.sin(star.vibratePhase + Date.now() / 200) * 0.03;
+        
+        // Calcul de la position de la tête de l'étoile filante
+        const endX = star.x + Math.cos(vibrAngle) * star.speed * 5;
+        const endY = star.y + Math.sin(vibrAngle) * star.speed * 5;
+        
+        // Calcul de l'opacité en fonction de la distance parcourue
+        // L'étoile disparaît progressivement après avoir atteint son fadeOutPoint
+        let opacity = 1;
+        if (star.distanceTraveled > star.fadeOutPoint) {
+          // Calcul de l'opacité (de 1 à 0) basé sur la distance restante
+          opacity = 1 - ((star.distanceTraveled - star.fadeOutPoint) / (star.lifespan - star.fadeOutPoint));
+        }
+        
+        // Traçage de la traînée avec opacité variable
         ctx.beginPath();
         ctx.moveTo(star.x, star.y);
         ctx.lineTo(endX, endY);
+        
         const gradient = ctx.createLinearGradient(endX, endY, star.x, star.y);
-        gradient.addColorStop(0, `${colors.star}ff`); // tête (opaque)
-        gradient.addColorStop(0.3, 'rgba(70,131,255,0.5)'); // bleu intermédiaire
-        gradient.addColorStop(0.7, 'rgba(138,43,226,0.2)'); // violet intermédiaire
+        gradient.addColorStop(0, `rgba(230,240,255,${opacity})`); // tête avec opacité variable
+        gradient.addColorStop(0.3, `rgba(70,131,255,${opacity * 0.5})`); // bleu intermédiaire
+        gradient.addColorStop(0.7, `rgba(138,43,226,${opacity * 0.2})`); // violet intermédiaire
         gradient.addColorStop(1, 'transparent'); // queue
         ctx.strokeStyle = gradient;
         ctx.lineWidth = 2;
         ctx.stroke();
 
-        // Tête lumineuse avec variation taille/luminosité
+        // Tête lumineuse avec variation taille/luminosité et opacité variable
         ctx.save();
         ctx.beginPath();
         ctx.arc(endX, endY, star.headRadius, 0, Math.PI * 2);
-        ctx.fillStyle = `${colors.star}ff`;
-        ctx.shadowColor = `${colors.star}`;
-        ctx.shadowBlur = star.headBlur;
-        ctx.globalAlpha = 0.93;
+        ctx.fillStyle = `rgba(230,240,255,${opacity})`;
+        ctx.shadowColor = `rgba(230,240,255,${opacity})`;
+        ctx.shadowBlur = star.headBlur * opacity; // L'effet de flou diminue aussi
+        ctx.globalAlpha = 0.93 * opacity;
         ctx.fill();
         ctx.globalAlpha = 1;
         ctx.shadowBlur = 0;
         ctx.restore();
 
-        // Génère des particules/étincelles derrière la tête
-        if (Math.random() < 0.9) {
+        // Génère des particules/étincelles derrière la tête (moins fréquentes quand l'opacité diminue)
+        if (Math.random() < 0.9 * opacity) {
           spawnShootingStarParticle(
             endX - Math.cos(vibrAngle) * 2,
             endY - Math.sin(vibrAngle) * 2,
@@ -197,8 +240,12 @@ const CosmicBackground = ({ colorMode = 'navy', animationMode = 'cosmic' }) => {
         // Déplacement de l'étoile filante
         star.x += Math.cos(star.angle) * star.speed;
         star.y += Math.sin(star.angle) * star.speed;
+        
+        // Mise à jour de la distance parcourue
+        star.distanceTraveled += star.speed;
 
-        if (star.x > canvas.width || star.y > canvas.height) {
+        // Suppression de l'étoile si elle sort de l'écran ou a dépassé sa durée de vie
+        if (star.x > canvas.width || star.y > canvas.height || star.distanceTraveled >= star.lifespan || opacity <= 0.05) {
           shootingStars.splice(i, 1);
         }
       }
