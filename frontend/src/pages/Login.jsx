@@ -9,6 +9,7 @@ import { useRolePermissions } from '@/features/roles';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { authService } from '@/lib/services/authService';
+import CosmicBackground from '@/components/home/CosmicBackground';
 
 const Login = () => {
   const { colorMode, currentTheme } = useTheme();
@@ -58,7 +59,13 @@ const Login = () => {
 
   return (
     <PageTransition>
-      <div className="min-h-screen flex flex-col overflow-hidden relative">
+      <div className={`min-h-screen ${currentTheme.bg} flex flex-col overflow-hidden relative`}>
+        {/* Fond cosmique avec étoiles filantes horizontales (météorites) */}
+        <CosmicBackground 
+          colorMode={colorMode} 
+          animationMode="cosmic" 
+          shootingStarDirection="horizontal" 
+        />
         
         {/* Main content */}
         <div className="flex-1 flex items-center justify-center px-4 py-12">
