@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { toast } from "sonner";
 import apiService from "@/lib/services/apiService";
 import { getFirestore, collection, addDoc, doc, getDoc } from 'firebase/firestore';
+import { getFrenchRoleDisplayName } from "@/lib/utils/roleUtils";
 
 
 
@@ -175,8 +176,8 @@ export function useUserManagement(initialFilter = "ALL") {
                         // Créer la notification
                         const notificationData = {
                             recipientId: userIdString,
-                            title: 'Mise à jour de votre rôle',
-                            message: `Votre rôle a été modifié en ${newRoleName.replace('ROLE_', '')}`,
+                            title: 'Changement de rôle',
+                            message: `Vous êtes maintenant ${getFrenchRoleDisplayName(newRoleName)}`,
                             timestamp: new Date(),
                             read: false,
                             type: 'ROLE_UPDATE'

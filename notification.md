@@ -93,10 +93,10 @@ https://console.firebase.google.com/u/4/project/bigproject-d6daf/firestore/datab
 - Système de filtrage par type de notification
 - Gestion des notifications non lues
 - Accès rapide aux paramètres de notifications
+- Modification de la notification de changement de rôle pour afficher : "Vous êtes maintenant étudiant/recruter/formateur" etc...
 
 ## Ce qu'il reste à faire :
 
-- Modifier la notification de changement de rôle pour afficher : "Vous êtes maintenant étudiant/recruter/formateur" etc...
 - Notif quand il faut signer (matin et aprem)
 - Notif quand l'admin modifie nos infos personnelles (Vos informations ont été mises à jour)
 - Faire fonctionner les paramètres de notifs pour chacune de ces options (Activer/Désactiver)
