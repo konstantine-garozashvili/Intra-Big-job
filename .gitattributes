@@ -1,2 +1,11 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Configuration files that should keep their production version
+infra/docker-compose.yml merge=ours
+infra/nginx/* merge=ours
+infra/mutagen.yml merge=ours
+infra/*.sh merge=ours
+infra/*.ps1 merge=ours
+infra/*.cmd merge=ours
+infra/*.bat merge=ours
