@@ -152,8 +152,8 @@ const SidebarProfile = memo(({ onNavigate }) => {
   }, [navigate]);
 
   return (
-    <div className="space-y-4">
-      <nav className="space-y-1">
+    <div className="space-y-4 bg-transparent dark:bg-transparent sidebar-profile">
+      <nav className="space-y-1 bg-transparent dark:bg-transparent">
         {sidebarItems.map((item) => {
           if (item.type === 'header') {
             return (

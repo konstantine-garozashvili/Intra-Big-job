@@ -105,20 +105,20 @@ export const ProfessionalInfoSection = ({
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6">
       <StaticField 
         label="Domaine"
-        icon={<Briefcase className="h-4 w-4 mr-2 text-blue-500" />}
+        icon={<Briefcase className="h-4 w-4 mr-2 text-blue-500 dark:text-[#78b9dd]" />}
         value={userData.specialization?.domain?.name || 'Non renseigné'}
       />
 
       <StaticField 
         label="Spécialisation"
-        icon={<GraduationCap className="h-4 w-4 mr-2 text-blue-500" />}
+        icon={<GraduationCap className="h-4 w-4 mr-2 text-blue-500 dark:text-[#78b9dd]" />}
         value={userData.specialization?.name || 'Non renseignée'}
       />
 
       <EditableField
         field="linkedinUrl"
         label="LinkedIn"
-        icon={<Linkedin className="h-4 w-4" />}
+        icon={<Linkedin className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-300" />}
         value={userData.linkedinUrl}
         editedValue={editedData.personal.linkedinUrl}
         type="url"
@@ -134,8 +134,8 @@ export const ProfessionalInfoSection = ({
         <EditableField
           field="portfolioUrl"
           label="Portfolio"
-          icon={<Globe className="h-4 w-4" />}
-          value={localPortfolioUrl}
+          icon={<Link className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-300" />}
+          value={studentProfile?.portfolioUrl}
           editedValue={editedData.personal.portfolioUrl}
           type="url"
           isEditing={editMode.portfolioUrl}
@@ -157,8 +157,8 @@ export const ProfessionalInfoSection = ({
       {isStudent && (
         <StaticField 
           label="Situation actuelle"
-          icon={<Briefcase className="h-4 w-4 mr-2 text-blue-500" />}
-          value={studentProfile?.situationType?.name || 'Non renseignée'}
+          icon={<Briefcase className="h-4 w-4 mr-2 text-blue-500 dark:text-[#78b9dd]" />}
+          value={studentProfile.situationType?.name || 'Non renseignée'}
         />
       )}
     </div>

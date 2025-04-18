@@ -6,6 +6,8 @@ const QuickLoginButtons = ({ onQuickLogin }) => {
   const [isOpen, setIsOpen] = React.useState(true);
   
   const roles = [
+    { id: 'admin', label: 'Admin', color: 'blue' },
+    { id: 'superadmin', label: 'Superadmin', color: 'red' }, 
     { id: 'recruiter', label: 'Recruiter', color: 'pink' },
     { id: 'teacher', label: 'Teacher', color: 'green' },
     { id: 'student', label: 'Student', color: 'yellow' },

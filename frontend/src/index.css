@@ -97,7 +97,6 @@
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
     --accent: 200 39% 30%; /* #528eb2 avec une transparence plus élevée pour le mode sombre */
-   /*  --accent-foreground: 210 40% 98%; */
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
     --border: 217.2 32.6% 17.5%;
@@ -393,6 +392,10 @@
   font-style: italic;
 }
 
+.dark [cmdk-empty] {
+  color: #a3b8cc;
+}
+
 .country-item {
   cursor: pointer !important;
   color: #333 !important;
@@ -403,18 +406,42 @@
   filter: none !important;
   pointer-events: auto !important;
   margin: 2px 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+
+.dark .country-item {
+  color: #e5e7eb !important;
+  border: 1px solid transparent;
 }
 
 .country-item:hover {
-  background-color: transparent !important;
+  background-color: rgba(0, 102, 255, 0.1) !important;
+  transform: translateY(-1px);
+}
+
+.dark .country-item:hover {
+  background: linear-gradient(135deg, rgba(78, 108, 164, 0.2), rgba(100, 130, 200, 0.3)) !important;
+  border-color: rgba(100, 150, 230, 0.2) !important;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
 .country-item:active {
-  background-color: transparent !important;
+  background-color: rgba(0, 102, 255, 0.2) !important;
+}
+
+.dark .country-item:active {
+  background: linear-gradient(135deg, rgba(78, 108, 164, 0.3), rgba(100, 130, 200, 0.4)) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .country-item svg {
-  color: #0062FF;
+  color: #0055cc;
+}
+
+.dark .country-item svg {
+  color: #a5cdff;
 }
 
 /* Command dialog styles */
@@ -427,6 +454,31 @@
   filter: none !important;
 }
 
+/* Dark mode styles for command dialog */
+.dark [cmdk-input] {
+  background: linear-gradient(to right, #1e3556, #263b58) !important;
+  color: #f0f7ff !important;
+  border-color: rgba(78, 108, 164, 0.4) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2) !important;
+}
+
+.dark [cmdk-input]::placeholder {
+  color: #a3b8cc !important;
+}
+
+.dark [cmdk-list] {
+  background: linear-gradient(145deg, #192334, #0f172a) !important;
+  border: 1px solid rgba(78, 108, 164, 0.3) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3) !important;
+  padding: 5px !important;
+}
+
+.dark [cmdk-item][data-selected="true"] {
+  background: linear-gradient(135deg, #2c4a75, #3a5a87) !important;
+  border-radius: 8px !important;
+}
+
 [cmdk-item][aria-selected="true"],
 [cmdk-item]:hover,
 [cmdk-item][data-selected="true"],
@@ -435,13 +487,28 @@
 .country-item[aria-selected],
 .country-item[data-selected],
 .country-item[data-highlighted] {
-  background-color: transparent !important;
+  background-color: rgba(0, 102, 255, 0.1) !important;
+  border-radius: 8px !important;
+}
+
+.dark [cmdk-item][aria-selected="true"],
+.dark [cmdk-item]:hover,
+.dark [cmdk-item][data-selected="true"],
+.dark [cmdk-item][data-highlighted="true"],
+.dark [cmdk-item][aria-selected],
+.dark .country-item[aria-selected],
+.dark .country-item[data-selected],
+.dark .country-item[data-highlighted] {
+  background: linear-gradient(135deg, rgba(78, 108, 164, 0.25), rgba(100, 130, 200, 0.35)) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
 }
 
 [cmdk-list] {
-  max-height: 300px;
+  max-height: 320px;
   overflow-y: auto;
-  padding: 4px;
+  padding: 6px;
+  border-radius: 10px;
 }
 
 [cmdk-group] {
@@ -475,6 +542,14 @@
   height: 100%;
 }
 
+/* Phone input - dark mode styles */
+.dark .phone-input-fr .prefix {
+  background-color: #374151;
+  border-color: #4b5563;
+  color: #e5e7eb;
+  font-weight: 600;
+}
+
 .phone-input-fr input {
   flex: 1;
   padding: 0.625rem 0.75rem;
@@ -486,7 +561,19 @@
   transition: all 0.15s ease;
 }
 
+/* Phone input - dark mode input */
+.dark .phone-input-fr input {
+  background-color: #1f2937;
+  border-color: #4b5563;
+  color: #e5e7eb;
+}
+
 .phone-input-fr input::placeholder {
+  color: #9ca3af;
+}
+
+/* Phone input - dark mode placeholder */
+.dark .phone-input-fr input::placeholder {
   color: #9ca3af;
 }
 
@@ -495,13 +582,32 @@
   border-color: #ef4444 !important;
 }
 
+/* Phone input - dark mode error */
+.dark .phone-input-fr.error .prefix,
+.dark .phone-input-fr.error input {
+  border-color: #ef4444 !important;
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
 .phone-input-fr:focus-within input {
   border-color: #528eb2;
   box-shadow: 0 0 0 2px rgba(82, 142, 178, 0.2);
 }
 
+/* Phone input - dark mode focus */
+.dark .phone-input-fr:focus-within input {
+  border-color: #78b9dd;
+  box-shadow: 0 0 0 2px rgba(120, 185, 221, 0.3);
+}
+
 .phone-input-fr:focus-within .prefix {
   border-color: #528eb2;
+  border-right-color: transparent;
+}
+
+/* Phone input - dark mode focus prefix */
+.dark .phone-input-fr:focus-within .prefix {
+  border-color: #78b9dd;
   border-right-color: transparent;
 }
 
@@ -586,4 +692,209 @@
   0%, 20% { content: "."; }
   40% { content: ".."; }
   60%, 100% { content: "..."; }
+}
+
+/* Amélioration du contraste pour le mode sombre */
+@layer utilities {
+  /* Styles spécifiques pour les titres en mode sombre */
+  .dark h1, 
+  .dark h2, 
+  .dark h3, 
+  .dark h4, 
+  .dark h5, 
+  .dark h6,
+  .dark .title,
+  .dark .card-title,
+  .dark .section-title {
+    @apply text-white font-semibold;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  }
+
+  /* Amélioration du contraste pour les textes courants en mode sombre */
+  .dark p, 
+  .dark span, 
+  .dark label, 
+  .dark li,
+  .dark a:not(.btn):not([role="button"]) {
+    @apply text-gray-200;
+  }
+
+  /* Amélioration du contraste pour les cards en mode sombre */
+  .dark .card,
+  .dark [class*="card-"] {
+    @apply bg-gray-800 border-gray-700;
+  }
+
+  /* Amélioration du contraste pour les backgrounds en mode sombre */
+  .dark .bg-white,
+  .dark .bg-gray-50,
+  .dark .bg-gray-100 {
+    @apply bg-gray-800;
+  }
+
+  /* Amélioration du contraste pour les tableaux en mode sombre */
+  .dark table th {
+    @apply text-white bg-gray-800;
+  }
+
+  .dark table td {
+    @apply text-gray-200 border-gray-700;
+  }
+
+  /* Spécifique aux éléments de navigation protégés */
+  .dark nav:not(.public-nav) {
+    @apply bg-[#011627] border-gray-700;
+  }
+
+  /* Style spécifique pour la navbar protégée en mode sombre */
+  .dark .navbar-fixed:not(.public-nav),
+  .dark .bg-\[\#02284f\]:not(.public-nav) {
+    @apply bg-[#011627];
+  }
+
+  /* Style spécifique pour le contenu principal en mode sombre */
+  .dark main {
+    @apply bg-gray-900;
+  }
+  
+  /* Amélioration du contraste pour les inputs en mode sombre */
+  .dark input,
+  .dark select,
+  .dark textarea {
+    @apply bg-gray-800 border-gray-700 text-white;
+  }
+
+  /* Amélioration du contraste pour les badges en mode sombre */
+  .dark .badge,
+  .dark [class*="badge-"] {
+    @apply bg-gray-700 text-white border-gray-600;
+  }
+
+  /* Amélioration de la visibilité des icônes en mode sombre */
+  .dark svg:not([class*="text-"]):not([class*="fill-"]) {
+    @apply text-gray-200;
+  }
+
+  /* Amélioration du contraste pour les info-bulles en mode sombre */
+  .dark [role="tooltip"],
+  .dark .tooltip {
+    @apply bg-gray-800 text-white border-gray-700 shadow-xl shadow-black/30;
+  }
+
+  /* Amélioration des liens en mode sombre */
+  .dark a:hover:not([class*="bg-"]):not(.btn):not([role="button"]) {
+    @apply text-[#78b9dd];
+  }
+
+  /* Styles améliorés pour les éléments destructifs en mode sombre */
+  .dark .danger,
+  .dark .danger-btn,
+  .dark .danger-text,
+  .dark [class*="text-red-"] {
+    @apply text-red-400 font-medium;
+  }
+
+  .dark .danger:hover,
+  .dark .danger-btn:hover,
+  .dark .danger-text:hover {
+    @apply text-red-300 font-semibold;
+  }
+
+  .dark button[class*="destructive"],
+  .dark .destructive,
+  .dark [class*="btn-danger"] {
+    @apply bg-red-500 text-white font-medium shadow-sm shadow-red-900/20;
+  }
+
+  .dark button[class*="destructive"]:hover,
+  .dark .destructive:hover,
+  .dark [class*="btn-danger"]:hover {
+    @apply bg-red-600 text-white font-semibold shadow-md shadow-red-900/30;
+  }
+
+  /* Améliorations pour les tableaux en mode sombre */
+  .dark table {
+    @apply bg-gray-800 text-white border-gray-700;
+  }
+  
+  .dark table thead {
+    @apply bg-gray-800 text-gray-200;
+  }
+  
+  .dark table th {
+    @apply text-gray-200 bg-gray-800 border-b border-gray-700;
+  }
+  
+  .dark table td {
+    @apply text-gray-200 border-gray-700;
+  }
+  
+  .dark table tr:hover {
+    @apply bg-gray-700;
+  }
+  
+  .dark table tr:nth-child(even) {
+    @apply bg-gray-800/60;
+  }
+  
+  /* Améliorations pour les rôles et badges */
+  .dark [class*="bg-blue-100"] {
+    @apply bg-blue-900/60 text-blue-200;
+  }
+  
+  .dark [class*="bg-purple-100"] {
+    @apply bg-purple-900/60 text-purple-200;
+  }
+  
+  .dark [class*="bg-green-100"] {
+    @apply bg-green-900/60 text-green-200;
+  }
+  
+  .dark [class*="bg-yellow-100"] {
+    @apply bg-yellow-900/60 text-yellow-200;
+  }
+  
+  .dark [class*="bg-indigo-100"] {
+    @apply bg-indigo-900/60 text-indigo-200;
+  }
+  
+  .dark [class*="bg-gray-100"] {
+    @apply bg-gray-800 text-gray-200;
+  }
+  
+  /* Améliorations pour les onglets en mode sombre */
+  .dark [role="tablist"] {
+    @apply bg-gray-800 border-gray-700;
+  }
+  
+  .dark [role="tab"] {
+    @apply text-gray-400 hover:text-white hover:bg-gray-700;
+  }
+  
+  .dark [role="tab"][data-state="active"] {
+    @apply bg-blue-800 text-white;
+  }
+  
+  /* Améliorations pour les boutons d'action en mode sombre */
+  .dark button.text-blue-600.bg-blue-100 {
+    @apply text-blue-300 bg-blue-900/40 hover:bg-blue-800;
+  }
+  
+  .dark button.text-red-600.bg-red-100 {
+    @apply text-red-300 bg-red-900/40 hover:bg-red-800;
+  }
+  
+  .dark button.text-green-600.bg-green-100 {
+    @apply text-green-300 bg-green-900/40 hover:bg-green-800;
+  }
+}
+
+/* Exception pour la sidebar du profil */
+.dark [key="sidebar"] nav,
+.dark [key="sidebar"],
+.dark .sidebar-profile nav,
+.dark .sidebar-profile {
+  background-color: transparent !important;
+  background: transparent !important;
+  border: none !important;
 }

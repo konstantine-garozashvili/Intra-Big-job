@@ -8,7 +8,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { ProfilePictureDisplay } from "@/components/ProfilePictureDisplay";
-import { Settings, LogOut, Zap } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserRound, Settings, LogOut, Zap } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { setLowPerformanceMode } from '@/lib/utils/loadingUtils';

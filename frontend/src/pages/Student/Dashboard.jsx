@@ -320,7 +320,11 @@ const StudentDashboard = () => {
                     </div>
                     <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Compétences</h3>
                   </div>
-                  <Button variant="ghost" size="sm" className="gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 p-0 h-auto hover:bg-transparent">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 p-0 h-auto hover:bg-transparent dark:hover:bg-transparent"
+                  >
                     Détails
                     <ChevronRight className="h-3.5 w-3.5" />
                   </Button>
@@ -341,7 +345,7 @@ const StudentDashboard = () => {
                       <RechartsPrimitive.PolarAngleAxis 
                         dataKey="name"
                         tick={{
-                          fill: '#64748b',
+                          fill: document.documentElement.classList.contains('dark') ? '#D1D5DB' : '#64748b',
                           fontSize: 11,
                           fontWeight: 500
                         }}
@@ -351,7 +355,7 @@ const StudentDashboard = () => {
                         domain={[0, 100]}
                         axisLine={false}
                         tick={{
-                          fill: '#94a3b8',
+                          fill: document.documentElement.classList.contains('dark') ? '#9CA3AF' : '#94a3b8',
                           fontSize: 10
                         }}
                         tickCount={5}
@@ -359,8 +363,8 @@ const StudentDashboard = () => {
                       <RechartsPrimitive.Radar
                         name="Compétences"
                         dataKey="value"
-                        stroke="rgba(99, 102, 241, 0.8)"
-                        fill="rgba(99, 102, 241, 0.4)"
+                        stroke={document.documentElement.classList.contains('dark') ? "rgba(129, 140, 248, 0.8)" : "rgba(99, 102, 241, 0.8)"}
+                        fill={document.documentElement.classList.contains('dark') ? "rgba(129, 140, 248, 0.4)" : "rgba(99, 102, 241, 0.4)"}
                         fillOpacity={0.6}
                         dot
                         activeDot={{ r: 4 }}
@@ -368,7 +372,8 @@ const StudentDashboard = () => {
                       <RechartsPrimitive.Tooltip 
                         formatter={(value) => [`${value}%`, 'Niveau']}
                         contentStyle={{
-                          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                          backgroundColor: document.documentElement.classList.contains('dark') ? 'rgba(31, 41, 55, 0.9)' : 'rgba(255, 255, 255, 0.9)',
+                          color: document.documentElement.classList.contains('dark') ? '#F9FAFB' : undefined,
                           borderRadius: '6px',
                           boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
                           border: 'none',
@@ -448,7 +453,7 @@ const StudentDashboard = () => {
                 </div>
               </div>
               <div className="px-5 py-4 border-t border-gray-100 dark:border-gray-700">
-                <Button variant="ghost" size="sm" className="w-full justify-center gap-1 text-primary">
+                <Button variant="ghost" size="sm" className="w-full justify-center gap-1 text-primary dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-transparent dark:hover:bg-transparent">
                   <span>Voir tous les événements</span>
                   <ArrowRight className="h-3.5 w-3.5" />
                 </Button>
@@ -493,7 +498,7 @@ const StudentDashboard = () => {
                   <p className="text-gray-600 dark:text-gray-300 mb-4">
                     Vous avez déjà validé <span className="font-bold text-green-500">30 ECTS</span> ! Continuez comme ça, vous êtes sur la bonne voie.
                   </p>
-                  <Button variant="outline" className="w-full">
+                  <Button variant="outline" className="w-full dark:hover:bg-green-900/30 dark:hover:text-green-300 dark:hover:border-green-700">
                     Voir les prochaines étapes
                   </Button>
                 </motion.div>
@@ -511,7 +516,7 @@ const StudentDashboard = () => {
                   <p className="text-gray-600 dark:text-gray-300 mb-4">
                     Félicitations ! Vous avez terminé <span className="font-bold text-blue-500">8 projets</span>. Le prochain est à portée de main.
                   </p>
-                  <Button variant="outline" className="w-full">
+                  <Button variant="outline" className="w-full dark:hover:bg-blue-900/30 dark:hover:text-blue-300 dark:hover:border-blue-700">
                     Découvrir le prochain projet
                   </Button>
                 </motion.div>
@@ -529,7 +534,7 @@ const StudentDashboard = () => {
                   <p className="text-gray-600 dark:text-gray-300 mb-4">
                     Vous avez développé <span className="font-bold text-purple-500">75% des compétences</span> visées. Un excellent travail !
                   </p>
-                  <Button variant="outline" className="w-full">
+                  <Button variant="outline" className="w-full dark:hover:bg-purple-900/30 dark:hover:text-purple-300 dark:hover:border-purple-700">
                     Explorer vos compétences
                   </Button>
                 </motion.div>
@@ -558,7 +563,7 @@ const StudentDashboard = () => {
                   Vous avez accompli 75% de vos objectifs ce semestre. Maintenez vos efforts pour terminer en beauté !
                 </p>
               </div>
-              <Button className="bg-white text-primary hover:bg-white/90 shadow-sm">
+              <Button className="bg-white text-primary hover:bg-white/90 dark:hover:text-primary dark:hover:bg-white/95 shadow-sm">
                 Voir mes objectifs
               </Button>
             </div>

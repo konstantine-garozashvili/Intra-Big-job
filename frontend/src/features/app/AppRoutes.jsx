@@ -6,6 +6,7 @@ import ProfileLayout from '../../layouts/ProfileLayout';
 import ProtectedRoute from '../../components/ProtectedRoute';
 import PublicRoute from '../../components/PublicRoute';
 import StudentRoute from '../../components/StudentRoute';
+import NotificationsPage from '@/pages/Global/Notifications/NotificationsPage';
 
 // Composant de chargement pour Suspense
 const LoadingFallback = () => (
@@ -86,6 +87,9 @@ const AppRoutes = ({ lazyComponents }) => {
           <Route element={<MainLayout />}>
             {/* Redirection basée sur le rôle */}
             <Route path="dashboard" element={<RoleDashboardRedirect />} />
+            
+            {/* Page des notifications complète */}
+            <Route path="notifications" element={<NotificationsPage />} />
             
             {/* Routes de profil */}
             <Route path="profile" element={<ProfileLayout />}>

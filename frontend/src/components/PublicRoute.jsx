@@ -55,7 +55,7 @@ const PublicRoute = () => {
     return null;
   }
 
-  // Si l'utilisateur est authentifié, rediriger vers le tableau de bord approprié
+  // Si l'utilisateur est authentifié, rediriger vers la page d'accueil
   if (isAuthenticated) {
     const dashboardPath = permissions.getRoleDashboardPath();
     return <Navigate to={dashboardPath} replace />;

@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { useQueryClient } from '@tanstack/react-query';
 import { profileService } from '../services/profileService';
+import { notificationService } from '@/lib/services/notificationService';
 import ProfilePicture from './settings/ProfilePicture';
 import { isValidEmail, isValidPhone, isValidLinkedInUrl, isValidName, isValidUrl } from '@/lib/utils/validation';
 import { Label } from '@/components/ui/label';

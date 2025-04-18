@@ -143,7 +143,6 @@ const PublicProfileView = () => {
       roles: Array.isArray(profileData.roles) 
         ? profileData.roles.map(role => {
             console.log('[PublicProfileView] Role avant transformation:', role);
-            const normalizedRole = role.replace('ROLE_', '');
             const transformedRole = {
               name: role,
               displayName: roleUI.translateRoleName(role),

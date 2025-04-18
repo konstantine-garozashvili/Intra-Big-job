@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { toast } from "sonner";
 import apiService from "@/lib/services/apiService";
+import { getFirestore, collection, addDoc, doc, getDoc } from 'firebase/firestore';
 
 
 
@@ -151,32 +152,57 @@ export function useUserManagement(initialFilter = "ALL") {
     const changeUserRole = async (userId, oldRoleName, newRoleName) => {
         setIsProcessing(true);
         
-        // Mise à jour optimiste de l'interface utilisateur
-        setUsers(prevUsers => prevUsers.map(user => {
-            if (user.id === userId) {
-                // Créer une copie de l'utilisateur avec le nouveau rôle
-                return {
-                    ...user,
-                    roles: [{ name: newRoleName }]
-                };
-            }
-            return user;
-        }));
-        
         try {
             const response = await apiService.changeUserRole(userId, oldRoleName, newRoleName);
             if (response.success) {
+                // Convertir l'ID en chaîne de caractères
+                const userIdString = String(userId);
+                console.log('Changing role for user:', userIdString);
+
+                try {
+                    // Vérifier les préférences de notification
+                    const db = getFirestore();
+                    const preferencesRef = doc(db, 'notificationPreferences', userIdString);
+                    const preferencesSnap = await getDoc(preferencesRef);
+                    const preferences = preferencesSnap.data() || {};
+
+                    console.log('Notification preferences:', preferences);
+
+                    // Si les notifications de rôle ne sont pas explicitement désactivées
+                    if (preferences['ROLE_UPDATE'] !== false) {
+                        console.log('Creating notification for user:', userIdString);
+                        
+                        // Créer la notification
+                        const notificationData = {
+                            recipientId: userIdString,
+                            title: 'Mise à jour de votre rôle',
+                            message: `Votre rôle a été modifié en ${newRoleName.replace('ROLE_', '')}`,
+                            timestamp: new Date(),
+                            read: false,
+                            type: 'ROLE_UPDATE'
+                        };
+
+                        console.log('Notification data:', notificationData);
+
+                        await addDoc(collection(db, 'notifications'), notificationData);
+                        console.log('Notification created successfully');
+                    } else {
+                        console.log('Notifications are disabled for this user');
+                    }
+                } catch (firebaseError) {
+                    console.error('Firebase error:', firebaseError);
+                    // Ne pas bloquer le changement de rôle si la notification échoue
+                    toast.error("Le rôle a été modifié mais la notification n'a pas pu être envoyée");
+                }
+                
                 toast.success("Rôle modifié avec succès");
-                // Pas besoin de rafraîchir toute la liste puisque nous avons déjà mis à jour localement
             } else {
                 toast.error("Impossible de modifier le rôle: " + (response.message || "Erreur inconnue"));
-                // Recharger les données en cas d'erreur pour revenir à l'état précédent
                 fetchUsers(filterRole);
             }
         } catch (error) {
             console.error("Erreur lors de la modification du rôle:", error);
             toast.error("Erreur lors de la modification du rôle");
-            // Recharger les données en cas d'erreur pour revenir à l'état précédent
             fetchUsers(filterRole);
         } finally {
             setIsProcessing(false);
