@@ -84,7 +84,41 @@ const PersonalInformation = ({
         }));
       }
     }
-  }, [userData?.id]); // Only depend on userData.id to prevent unnecessary rerenders
+  }, [userData?.id, studentProfile?.portfolioUrl]); // Ajouter studentProfile?.portfolioUrl comme dépendance
+  
+  // Écouter les événements de mise à jour du portfolio
+  useEffect(() => {
+    // Gestionnaire pour les mises à jour de portfolio
+    const handlePortfolioUpdate = (event) => {
+      const portfolioUrl = event.detail?.portfolioUrl;
+      
+      if (portfolioUrl !== undefined) {
+        console.log('Mise à jour du portfolio détectée:', portfolioUrl);
+        
+        // Mettre à jour l'état local
+        setEditedData(prev => ({
+          ...prev,
+          personal: {
+            ...prev.personal,
+            portfolioUrl: portfolioUrl
+          }
+        }));
+        
+        // Si nous avons une référence au studentProfile, mettre à jour cette référence aussi
+        if (studentProfile) {
+          studentProfile.portfolioUrl = portfolioUrl;
+        }
+      }
+    };
+    
+    // Ajouter l'écouteur d'événements
+    window.addEventListener('portfolio-updated', handlePortfolioUpdate);
+    
+    // Nettoyer l'écouteur à la destruction du composant
+    return () => {
+      window.removeEventListener('portfolio-updated', handlePortfolioUpdate);
+    };
+  }, [studentProfile, setEditedData]);
 
   return (
     <div className="space-y-6 sm:space-y-8 w-full px-1 sm:px-2 md:px-4">
@@ -106,7 +140,6 @@ const PersonalInformation = ({
           handleCancelField={handleCancelField}
           handleInputChange={handleInputChange}
           onSave={onSave}
-          onUploadIdentity={onUploadIdentity}
         />
       </div>
 

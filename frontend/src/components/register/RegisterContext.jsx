@@ -175,8 +175,9 @@ export const RegisterProvider = ({ children }) => {
   }, [birthDate, nationality, phone]);
 
   const handleSubmit = useCallback(async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     
+    console.log('RegisterContext - Starting submission process');
     setIsSubmitting(true);
     
     try {
@@ -197,9 +198,17 @@ export const RegisterProvider = ({ children }) => {
         }
       };
       
+      console.log('RegisterContext - Prepared user data:', {
+        ...userData,
+        password: '***' // Mask password in logs
+      });
+      
+      console.log('RegisterContext - Calling authService.register');
       const response = await authService.register(userData);
+      console.log('RegisterContext - Response received:', response);
       
       if (response && response.status === 201) {
+        console.log('RegisterContext - Registration successful');
         setRegisterSuccess(true);
         toast.success("Inscription réussie ! Vous pouvez maintenant vous connecter.", {
           duration: 5000,
@@ -209,12 +218,19 @@ export const RegisterProvider = ({ children }) => {
           navigate('/login');
         }, 500);
       } else {
+        console.error('RegisterContext - Registration failed:', response);
         toast.error("Une erreur s'est produite. Veuillez réessayer.", {
           duration: 5000,
           position: "top-center"
         });
       }
     } catch (error) {
+      console.error('RegisterContext - Error during registration:', error);
+      console.error('Error details:', {
+        message: error?.message,
+        response: error?.response?.data,
+        status: error?.response?.status
+      });
       toast.error(error?.response?.data?.message || "Erreur lors de l'inscription. Veuillez réessayer.");
     } finally {
       setIsSubmitting(false);

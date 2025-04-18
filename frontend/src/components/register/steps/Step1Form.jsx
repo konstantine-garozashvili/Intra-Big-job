@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Eye, EyeOff } from "lucide-react";
 import { useUserData, useValidation } from "../RegisterContext";
 import { PasswordStrengthIndicator } from "../RegisterUtils";
+import { motion } from "framer-motion";
 
 const Step1Form = ({ goToNextStep }) => {
   const {
@@ -87,76 +88,91 @@ const Step1Form = ({ goToNextStep }) => {
   };
 
   return (
-    <div className="space-y-6">
+    <motion.div 
+      className="space-y-6"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.4 }}
+    >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
         {/* Prénom */}
         <div>
-          <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
-            Prénom
+          <label htmlFor="firstName" className="block text-sm font-medium text-blue-300 mb-1">
+            Prénom <span className="text-red-400">*</span>
           </label>
           <input
             id="firstName"
             type="text"
-            className={`w-full px-4 py-3 rounded-md border ${shouldShowError('firstName') ? 'border-red-500' : 'border-gray-300'}`}
+            className={`w-full px-4 py-3 rounded-md border bg-gray-800/50 text-white placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500 ${shouldShowError('firstName') ? 'border-red-500' : 'border-gray-700'}`}
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
             placeholder="Votre prénom"
+            required
           />
-          {shouldShowError('firstName') && (
-            <p className="text-red-500 text-xs mt-1">{getErrorMessage('firstName')}</p>
+          {shouldShowError('firstName') ? (
+            <p className="text-red-400 text-xs mt-1">{getErrorMessage('firstName')}</p>
+          ) : (
+            <p className="text-gray-500 text-xs mt-1">Champ requis</p>
           )}
         </div>
         
         {/* Nom */}
         <div>
-          <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
-            Nom
+          <label htmlFor="lastName" className="block text-sm font-medium text-blue-300 mb-1">
+            Nom <span className="text-red-400">*</span>
           </label>
           <input
             id="lastName"
             type="text"
-            className={`w-full px-4 py-3 rounded-md border ${shouldShowError('lastName') ? 'border-red-500' : 'border-gray-300'}`}
+            className={`w-full px-4 py-3 rounded-md border bg-gray-800/50 text-white placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500 ${shouldShowError('lastName') ? 'border-red-500' : 'border-gray-700'}`}
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}
             placeholder="Votre nom"
+            required
           />
-          {shouldShowError('lastName') && (
-            <p className="text-red-500 text-xs mt-1">{getErrorMessage('lastName')}</p>
+          {shouldShowError('lastName') ? (
+            <p className="text-red-400 text-xs mt-1">{getErrorMessage('lastName')}</p>
+          ) : (
+            <p className="text-gray-500 text-xs mt-1">Champ requis</p>
           )}
         </div>
       </div>
       
       {/* Email */}
       <div>
-        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-          Email
+        <label htmlFor="email" className="block text-sm font-medium text-blue-300 mb-1">
+          Email <span className="text-red-400">*</span>
         </label>
         <input
           id="email"
           type="email"
-          className={`w-full px-4 py-3 rounded-md border ${shouldShowError('email') ? 'border-red-500' : 'border-gray-300'}`}
+          className={`w-full px-4 py-3 rounded-md border bg-gray-800/50 text-white placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500 ${shouldShowError('email') ? 'border-red-500' : 'border-gray-700'}`}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="email@exemple.com"
+          required
         />
-        {shouldShowError('email') && (
-          <p className="text-red-500 text-xs mt-1">{getErrorMessage('email')}</p>
+        {shouldShowError('email') ? (
+          <p className="text-red-400 text-xs mt-1">{getErrorMessage('email')}</p>
+        ) : (
+          <p className="text-gray-500 text-xs mt-1">Champ requis</p>
         )}
       </div>
       
       {/* Mot de passe */}
       <div>
-        <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-          Mot de passe
+        <label htmlFor="password" className="block text-sm font-medium text-blue-300 mb-1">
+          Mot de passe <span className="text-red-400">*</span>
         </label>
         <div className="relative">
           <input
             id="password"
             type={showPassword ? "text" : "password"}
-            className={`w-full px-4 py-3 pr-10 rounded-md border ${shouldShowError('password') ? 'border-red-500' : 'border-gray-300'}`}
+            className={`w-full px-4 py-3 pr-10 rounded-md border bg-gray-800/50 text-white placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500 ${shouldShowError('password') ? 'border-red-500' : 'border-gray-700'}`}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Minimum 8 caractères"
+            required
           />
           <Button
             type="button"
@@ -172,8 +188,10 @@ const Step1Form = ({ goToNextStep }) => {
             )}
           </Button>
         </div>
-        {shouldShowError('password') && (
-          <p className="text-red-500 text-xs mt-1">{getErrorMessage('password')}</p>
+        {shouldShowError('password') ? (
+          <p className="text-red-400 text-xs mt-1">{getErrorMessage('password')}</p>
+        ) : (
+          <p className="text-gray-500 text-xs mt-1">Champ requis - Minimum 8 caractères</p>
         )}
         
         {/* Indicateur de force du mot de passe */}
@@ -182,19 +200,21 @@ const Step1Form = ({ goToNextStep }) => {
       
       {/* Bouton pour passer à l'étape suivante */}
       <div className="flex justify-end mt-6">
-        <Button 
+        <motion.button 
           type="button"
-          className="h-12 bg-[#528eb2] hover:bg-[#528eb2]/90 text-white px-6"
+          className="h-12 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-6 rounded-md flex items-center justify-center shadow-lg shadow-blue-900/20"
           onClick={handleNextStep}
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.98 }}
         >
           Continuer
           <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
           </svg>
-        </Button>
+        </motion.button>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
-export default Step1Form; 
+export default Step1Form;

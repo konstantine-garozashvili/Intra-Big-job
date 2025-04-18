@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetClose } from '@/components/ui/sheet';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ProfileLayoutProvider, useProfileLayout } from '@/context/ProfileLayoutContext';
+import { ProfileLayoutProvider, useProfileLayout } from '@/contexts/ProfileLayoutContext';
 
 // Inner component to use context hooks
 const ProfileLayoutContent = () => {
@@ -25,6 +25,16 @@ const ProfileLayoutContent = () => {
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
+  
+  // Effet de débogage (sera supprimé en production)
+  useEffect(() => {
+    console.log('ProfileLayout debug:', { 
+      isLayoutLoading, 
+      isUserDataLoading, 
+      isSidebarLoaded, 
+      showSkeleton 
+    });
+  }, [isLayoutLoading, isUserDataLoading, isSidebarLoaded, showSkeleton]);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -59,7 +69,7 @@ const ProfileLayoutContent = () => {
                 <Settings className="mr-2 h-5 w-5 text-[#528eb2]" />
                 Paramètres
               </SheetTitle>
-              <div className="py-4">
+              <div className="py-4 bg-transparent dark:bg-transparent">
                 <AnimatePresence mode="wait">
                   {showSkeleton ? (
                     <motion.div
@@ -77,6 +87,7 @@ const ProfileLayoutContent = () => {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ duration: 0.3 }}
+                      className="bg-transparent dark:bg-transparent"
                     >
                       <SidebarProfile onNavigate={() => setIsMobileMenuOpen(false)} />
                     </motion.div>
@@ -97,7 +108,7 @@ const ProfileLayoutContent = () => {
 
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Desktop Sidebar - Visible uniquement sur desktop */}
-        <div className="hidden lg:block w-[280px] flex-shrink-0">
+        <div className="hidden lg:block w-[280px] flex-shrink-0 bg-transparent dark:bg-transparent">
           <AnimatePresence mode="wait">
             {showSkeleton ? (
               <motion.div
@@ -115,6 +126,7 @@ const ProfileLayoutContent = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.3 }}
+                className="bg-transparent dark:bg-transparent"
               >
                 <SidebarProfile />
               </motion.div>

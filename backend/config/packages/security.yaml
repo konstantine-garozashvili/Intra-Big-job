@@ -50,7 +50,10 @@ security:
         - { path: ^/verification-success, roles: PUBLIC_ACCESS }
         - { path: ^/verification-error, roles: PUBLIC_ACCESS }
         - { path: ^/api/test, roles: PUBLIC_ACCESS }
-        - { path: ^/publish, roles: PUBLIC_ACCESS }
+        - { path: ^/api/test-controller, roles: PUBLIC_ACCESS }
+        - { path: ^/api/profile/test, roles: PUBLIC_ACCESS }
+        - { path: ^/api/simple-profile/test, roles: PUBLIC_ACCESS }
+        - { path: ^/api/move-profile/test, roles: PUBLIC_ACCESS }
         - { path: ^/api/me, roles: IS_AUTHENTICATED_FULLY }
         - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
 

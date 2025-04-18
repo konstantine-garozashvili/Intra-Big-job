@@ -1,40 +1,126 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import ProfileHeader from "../components/profile-view/ProfileHeader";
 import ProfileTabs from "../components/profile-view/ProfileTabs";
 import { motion } from "framer-motion";
 import { useParams } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
-// Using the centralized useUserData hook for better state management and data consistency
 import { useUserData } from "@/hooks/useUserData";
 import { useProfilePicture } from "../hooks/useProfilePicture";
-import { isGuest } from "../utils/roleUtils";
 import documentService from "../services/documentService";
 import apiService from "@/lib/services/apiService";
+import { toast } from "sonner";
+import { studentProfileService } from "@/lib/services/studentProfileService";
 
 const ProfileView = () => {
   const { userId } = useParams();
   const [documents, setDocuments] = useState([]);
+  const [studentProfile, setStudentProfile] = useState(null);
+  const [hasLoadedStudentProfile, setHasLoadedStudentProfile] = useState(false);
+  const [isLoadingStudentProfile, setIsLoadingStudentProfile] = useState(false);
   const isPublicProfile = !!userId;
   
-  // Use the useUserData hook for current profile data - now with normalized structure
   const { 
     user: currentProfileData, 
     isLoading: isLoadingCurrentProfile,
     error: currentProfileError,
-    forceRefresh: refetchCurrentProfile
+    forceRefresh: refetchCurrentProfile,
+    setUser: setCurrentProfileData
   } = useUserData({
+    userId: isPublicProfile ? userId : undefined,
     preferComprehensiveData: true,
-    enabled: !isPublicProfile
+    enabled: true
   });
   
-  // For public profile, we'll still use the existing hook/API call
   const [publicProfileData, setPublicProfileData] = useState(null);
   const [isLoadingPublicProfile, setIsLoadingPublicProfile] = useState(false);
   const [publicProfileError, setPublicProfileError] = useState(null);
   
-  // Fetch public profile data if userId is provided
+  const fetchStudentProfile = useCallback(async (forceFresh = true) => {
+    if (isLoadingStudentProfile) return; // Éviter les appels multiples
+    
+    try {
+      setIsLoadingStudentProfile(true);
+      
+      const response = await studentProfileService.getMyProfile(forceFresh);
+      
+      if (response && response.success && response.data) {
+        setStudentProfile(response.data);
+        
+        if (currentProfileData && !isPublicProfile) {
+          currentProfileData.studentProfile = response.data;
+          
+          handleProfileUpdate({
+            studentProfile: response.data
+          });
+        }
+      }
+      setHasLoadedStudentProfile(true);
+    } catch (error) {
+      setHasLoadedStudentProfile(true); 
+    } finally {
+      setIsLoadingStudentProfile(false);
+    }
+  }, [isLoadingStudentProfile, currentProfileData, isPublicProfile]);
+  
+  useEffect(() => {
+    if (!isPublicProfile && currentProfileData && !hasLoadedStudentProfile && !isLoadingStudentProfile) {
+      const isStudent = currentProfileData.roles?.some(role => {
+        if (typeof role === 'string') {
+          return role.includes('STUDENT');
+        } else if (typeof role === 'object' && role !== null && role.name) {
+          return role.name.includes('STUDENT');
+        }
+        return false;
+      });
+      
+      if (isStudent) {
+        fetchStudentProfile(true);
+      } else {
+        setHasLoadedStudentProfile(true);
+      }
+    }
+  }, [isPublicProfile, currentProfileData, hasLoadedStudentProfile, isLoadingStudentProfile, fetchStudentProfile]);
+  
+  const handleProfileUpdate = useCallback((updatedData) => {
+    if (isPublicProfile) {
+      setPublicProfileData(prev => ({
+        ...prev,
+        ...updatedData
+      }));
+    } else {
+      if (setCurrentProfileData) {
+        setCurrentProfileData(prev => ({
+          ...prev,
+          ...updatedData
+        }));
+      } else {
+        refetchCurrentProfile();
+      }
+      
+      if (updatedData.documents) {
+        setDocuments(updatedData.documents);
+      }
+      
+      if (updatedData.studentProfile) {
+        setStudentProfile(updatedData.studentProfile);
+      }
+    }
+    
+    if (updatedData.toastMessage !== false) {
+      toast.success(updatedData.toastMessage || "Profil mis à jour");
+    }
+  }, [isPublicProfile, setCurrentProfileData, refetchCurrentProfile]);
+  
   useEffect(() => {
     if (isPublicProfile && userId) {
+      const currentUserId = currentProfileData?.id;
+      
+      if (currentUserId && currentUserId.toString() === userId) {
+        setPublicProfileData(currentProfileData);
+        setIsLoadingPublicProfile(false);
+        return;
+      }
+      
       setIsLoadingPublicProfile(true);
       
       const fetchPublicProfile = async () => {
@@ -55,38 +141,31 @@ const ProfileView = () => {
       
       fetchPublicProfile();
     }
-  }, [userId, isPublicProfile]);
+  }, [userId, isPublicProfile, currentProfileData]);
   
-  // Fetch profile picture using the custom hook
   const {
     profilePictureUrl,
     isLoading: isLoadingProfilePicture,
     refetch: refetchProfilePicture
   } = useProfilePicture();
   
-  // Determine which data to use
   const data = isPublicProfile ? publicProfileData : currentProfileData;
   const isLoading = (isPublicProfile ? isLoadingPublicProfile : isLoadingCurrentProfile) || isLoadingProfilePicture;
   const error = isPublicProfile ? publicProfileError : currentProfileError;
   
-  // Refetch profile picture when component mounts or userId changes
   useEffect(() => {
-    // Only refetch if there's no cached URL available
     if (!profilePictureUrl && !isLoadingProfilePicture) {
       refetchProfilePicture();
     }
-  }, [userId]); // Only run when userId changes, not on every render
+  }, [userId]);
   
-  // Always use the latest profile picture URL when rendering
   useEffect(() => {
     if (data && profilePictureUrl) {
       if (isPublicProfile) {
-        // For public profile
         if (data.profilePictureUrl !== profilePictureUrl) {
           data.profilePictureUrl = profilePictureUrl;
         }
       } else {
-        // For current user profile
         if (data.profilePictureUrl !== profilePictureUrl) {
           data.profilePictureUrl = profilePictureUrl;
         }
@@ -94,14 +173,13 @@ const ProfileView = () => {
     }
   }, [data, profilePictureUrl, isPublicProfile]);
   
-  // Fetch documents separately
   useEffect(() => {
     const fetchDocuments = async () => {
       try {
-        const docs = await documentService.getDocuments(true); // Force refresh
+        const docs = await documentService.getDocuments(true);
         setDocuments(docs);
       } catch (error) {
-        // Error handling without console.log
+        console.error("Error fetching documents:", error);
       }
     };
     
@@ -110,7 +188,6 @@ const ProfileView = () => {
     }
   }, [isPublicProfile, isLoading, error, data]);
   
-  // Animation variants for the page
   const pageVariants = {
     hidden: { opacity: 0 },
     visible: { 
@@ -123,14 +200,35 @@ const ProfileView = () => {
     }
   };
 
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      studentProfileService.clearCache();
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    studentProfileService.clearCache();
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
+
+  useEffect(() => {
+    localStorage.removeItem('user');
+    sessionStorage.removeItem('user');
+    
+    if (refetchCurrentProfile) {
+      refetchCurrentProfile();
+    }
+  }, [userId, refetchCurrentProfile]);
+
   if (isLoading) {
     return (
       <div className="w-full max-w-7xl mx-auto px-4 py-6 space-y-8" data-testid="profile-loading">
-        {/* Profile Header Skeleton */}
         <div className="w-full bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 rounded-lg shadow-md overflow-hidden">
           <div className="p-6 sm:p-8">
             <div className="flex flex-col sm:flex-row gap-6 items-start">
-              {/* Avatar Skeleton */}
               <div className="relative">
                 <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/30 to-indigo-600/30 rounded-full opacity-75 blur"></div>
                 <Skeleton className="h-24 w-24 sm:h-32 sm:w-32 rounded-full border-4 border-background relative" />
@@ -139,23 +237,18 @@ const ProfileView = () => {
               <div className="flex-1">
                 <div className="flex flex-col sm:flex-row sm:justify-between items-start gap-4">
                   <div>
-                    {/* Name Skeleton */}
                     <Skeleton className="h-8 w-64 mb-2" />
-                    {/* Specialization Skeleton */}
                     <Skeleton className="h-4 w-48 mb-4" />
                     
-                    {/* Badges Skeleton */}
                     <div className="flex flex-wrap gap-2 mt-3">
                       <Skeleton className="h-6 w-24 rounded-full" />
                       <Skeleton className="h-6 w-32 rounded-full" />
                     </div>
                   </div>
                   
-                  {/* Action Button Skeleton */}
                   <Skeleton className="h-10 w-36" />
                 </div>
                 
-                {/* Additional Info Skeleton */}
                 <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Skeleton className="h-6 w-48" />
                   <Skeleton className="h-6 w-56" />
@@ -165,9 +258,7 @@ const ProfileView = () => {
           </div>
         </div>
         
-        {/* Tabs Skeleton */}
         <div>
-          {/* Tabs Header Skeleton */}
           <div className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-1 rounded-lg mb-6">
             <div className="grid w-full grid-cols-2 h-auto p-1">
               <Skeleton className="h-12 rounded-md" />
@@ -175,9 +266,7 @@ const ProfileView = () => {
             </div>
           </div>
           
-          {/* Tab Content Skeleton - About Tab */}
           <div className="space-y-6">
-            {/* Personal Info Card Skeleton */}
             <div className="overflow-hidden border-none shadow-md bg-white dark:bg-slate-800 rounded-lg">
               <div className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 p-4">
                 <Skeleton className="h-6 w-48" />
@@ -196,7 +285,6 @@ const ProfileView = () => {
               </div>
             </div>
             
-            {/* Student Profile Card Skeleton */}
             <div className="overflow-hidden border-none shadow-md bg-white dark:bg-slate-800 rounded-lg">
               <div className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 p-4">
                 <Skeleton className="h-6 w-36" />
@@ -242,50 +330,17 @@ const ProfileView = () => {
     );
   }
 
-  // Prepare userData for components with proper structure
-  let userData;
-  
-  if (isPublicProfile) {
-    // Normalize public profile data
-    userData = {
-      user: {
-        id: data.id || data.user?.id,
-        firstName: data.firstName || data.user?.firstName || "",
-        lastName: data.lastName || data.user?.lastName || "",
-        email: data.email || data.user?.email || "",
-        phoneNumber: data.phoneNumber || data.user?.phoneNumber || "",
-        profilePictureUrl: profilePictureUrl || data.profilePictureUrl || data.user?.profilePictureUrl || "",
-        roles: Array.isArray(data.roles) 
-          ? data.roles.map(role => typeof role === 'string' ? { name: role } : role)
-          : (data.user?.roles || [{ name: 'USER' }]),
-        specialization: data.specialization || data.user?.specialization || {},
-        linkedinUrl: data.linkedinUrl || data.user?.linkedinUrl || "",
-        city: data.city || ""
-      },
-      studentProfile: data.studentProfile || {
-        isSeekingInternship: false,
-        isSeekingApprenticeship: false
-      },
-      diplomas: data.diplomas || [],
-      addresses: data.addresses || [],
-      documents: data.documents || [],
-      stats: data.stats || { profile: { completionPercentage: 0 } }
-    };
-  } else {
-    // For current profile, the useUserData hook now returns normalized data
-    userData = {
-      user: data,  // Use the normalized user data directly
-      studentProfile: data.studentProfile || {
-        isSeekingInternship: false,
-        isSeekingApprenticeship: false
-      },
-      diplomas: data.diplomas || [],
-      addresses: data.addresses || [],
-      documents: documents.length > 0 ? documents : (data.documents || []),
-      stats: data.stats || { profile: { completionPercentage: 0 } }
-    };
-  }
-
+  const userData = {
+    user: currentProfileData || {},
+    studentProfile: studentProfile || {
+      isSeekingInternship: false,
+      isSeekingApprenticeship: false
+    },
+    diplomas: currentProfileData?.diplomas || [],
+    addresses: currentProfileData?.addresses || [],
+    documents: documents.length > 0 ? documents : (currentProfileData?.documents || []),
+    stats: currentProfileData?.stats || { profile: { completionPercentage: 0 } }
+  };
 
   return (
     <motion.div
@@ -299,12 +354,14 @@ const ProfileView = () => {
         userData={userData} 
         isPublicProfile={isPublicProfile} 
         profilePictureUrl={profilePictureUrl}
+        onProfileUpdate={handleProfileUpdate}
       />
 
       <ProfileTabs 
         userData={userData}
         isPublicProfile={isPublicProfile}
         documents={documents}
+        onProfileUpdate={handleProfileUpdate}
       />
 
     </motion.div>

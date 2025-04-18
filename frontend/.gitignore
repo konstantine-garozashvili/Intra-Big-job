@@ -1,4 +1,7 @@
 # Dépendances
+.env
+.env.*
+.env.local
 node_modules
 .pnp
 .pnp.js
@@ -6,10 +9,10 @@ node_modules
 # Cache et fichiers générés par Vite
 .vite/
 node_modules/.vite/
-*.local
+
 
 # Fichiers de production
-/dist
+# /dist  (removed to allow committing dist folder)
 /build
 
 # Logs
@@ -21,7 +24,7 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-dist
+# dist  (removed to allow committing dist folder)
 dist-ssr
 *.local
 

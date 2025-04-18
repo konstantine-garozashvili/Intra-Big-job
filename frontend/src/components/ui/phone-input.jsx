@@ -20,7 +20,22 @@ const PhoneInput = forwardRef(({
   // Met à jour la valeur affichée lorsque la prop value change
   useEffect(() => {
     if (value) {
-      setDisplayValue(formatPhone(value));
+      // Si le numéro ne commence pas par +33, on l'ajoute
+      if (!value.startsWith('+33')) {
+        // Si c'est un numéro français (commence par 0), convertir en format international
+        if (value.startsWith('0')) {
+          const international = `+33${value.substring(1)}`;
+          setDisplayValue(formatPhone(international));
+          onChange(international.replace(/\s/g, ""));
+        } else {
+          // Sinon, ajouter +33 au début
+          const withPrefix = `+33${value}`;
+          setDisplayValue(formatPhone(withPrefix));
+          onChange(withPrefix.replace(/\s/g, ""));
+        }
+      } else {
+        setDisplayValue(formatPhone(value));
+      }
     } else {
       setDisplayValue("");
     }
@@ -31,9 +46,27 @@ const PhoneInput = forwardRef(({
     const inputVal = e.target.value;
     
     // Autorise uniquement les chiffres et les espaces
-    const sanitizedInput = inputVal.replace(/[^\d\s]/g, "");
+    const sanitizedInput = inputVal.replace(/[^\d\s+]/g, "");
     
-    // Formatage du numéro avec espaces
+    // Si le numéro ne commence pas par +33, on l'ajoute
+    if (!sanitizedInput.startsWith('+33')) {
+      // Si c'est un numéro français (commence par 0), convertir en format international
+      if (sanitizedInput.startsWith('0')) {
+        const international = `+33${sanitizedInput.substring(1)}`;
+        const formatted = formatPhone(international);
+        setDisplayValue(formatted);
+        onChange(international.replace(/\s/g, ""));
+        return;
+      }
+      // Sinon, ajouter +33 au début
+      const withPrefix = `+33${sanitizedInput}`;
+      const formatted = formatPhone(withPrefix);
+      setDisplayValue(formatted);
+      onChange(withPrefix.replace(/\s/g, ""));
+      return;
+    }
+    
+    // Si le numéro commence déjà par +33
     const formattedValue = formatPhone(sanitizedInput);
     setDisplayValue(formattedValue);
     
@@ -46,29 +79,27 @@ const PhoneInput = forwardRef(({
   const isValid = !value || isValidPhone(value);
   
   return (
-    <div className={cn("w-full space-y-1.5", className)} {...props}>
-      {label && <Label htmlFor={id}>{label}</Label>}
-      <div className={cn(
-        "phone-input-fr",
-        error || !isValid ? "error" : "",
-        disabled && "opacity-50 pointer-events-none"
-      )}>
-        <div className="prefix">
-          <span>+33</span>
-        </div>
-        <input
-          id={id}
-          ref={ref}
-          type="tel"
-          value={displayValue}
-          onChange={handleChange}
-          className={cn("phone-number-field")}
-          placeholder={placeholder}
-          disabled={disabled}
-          inputMode="numeric"
-          autoComplete="tel-national"
-        />
-      </div>
+    <div className="w-full">
+      {label && <Label htmlFor={id} className="block text-sm font-medium text-blue-300 mb-1">{label}</Label>}
+      <input
+        id={id}
+        ref={ref}
+        type="tel"
+        value={displayValue}
+        onChange={handleChange}
+        className={cn(
+          "w-full px-4 py-3 rounded-md border bg-gray-800/50 text-white placeholder-gray-400",
+          "focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none",
+          error || !isValid ? "border-red-500" : "border-gray-700",
+          disabled && "opacity-50 cursor-not-allowed",
+          className
+        )}
+        placeholder={placeholder}
+        disabled={disabled}
+        inputMode="numeric"
+        autoComplete="tel-national"
+        name="phoneNumber"
+      />
       {error && (
         <p className="text-red-500 text-xs mt-1">{error}</p>
       )}
@@ -78,4 +109,4 @@ const PhoneInput = forwardRef(({
 
 PhoneInput.displayName = "PhoneInput";
 
-export { PhoneInput }; 
+export { PhoneInput };

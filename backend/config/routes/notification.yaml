@@ -1,4 +1,0 @@
-notification_routes:
-    resource: '../../src/Domains/Global/Notification/Controller/'
-    type: attribute
-    prefix: /api 

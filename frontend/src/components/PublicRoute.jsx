@@ -1,10 +1,11 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { authService } from '@/lib/services/authService';
 import { useEffect, useState, useRef } from 'react';
+import { useRolePermissions } from '@/features/roles';
 
 /**
  * Composant pour protéger les routes publiques (login, register, etc.)
- * Redirige vers la racine si l'utilisateur est déjà connecté
+ * Redirige vers la page 404 si l'utilisateur est déjà connecté
  */
 const PublicRoute = () => {
   const location = useLocation();
@@ -12,6 +13,7 @@ const PublicRoute = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const lastAuthState = useRef(false);
   const isProcessingRef = useRef(false);
+  const permissions = useRolePermissions();
   
   useEffect(() => {
     const checkAuth = async () => {
@@ -46,7 +48,7 @@ const PublicRoute = () => {
       window.removeEventListener('login-success', handleAuthEvent);
       window.removeEventListener('logout-success', handleAuthEvent);
     };
-  }, []); // Suppression de la dépendance location.pathname pour éviter des vérifications excessives
+  }, []);
 
   // Si encore en vérification, retourner un élément vide
   if (isChecking) {
@@ -55,10 +57,11 @@ const PublicRoute = () => {
 
   // Si l'utilisateur est authentifié, rediriger vers la page d'accueil
   if (isAuthenticated) {
-    return <Navigate to="/" replace />;
+    const dashboardPath = permissions.getRoleDashboardPath();
+    return <Navigate to={dashboardPath} replace />;
   }
 
-  // Si l'utilisateur n'est pas authentifié, on affiche la page publique
+  // Si l'utilisateur n'est pas authentifié, afficher la page publique
   return <Outlet />;
 };
 

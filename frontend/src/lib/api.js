@@ -1,4 +1,5 @@
 import { addressApiInstance } from './axios';
+import axios from 'axios';
 
 // Configuration de l'API Adresse du gouvernement français
 const API_ADRESSE_URL = 'https://api-adresse.data.gouv.fr';
@@ -44,7 +45,10 @@ export const adresseApi = {
         autocomplete: 1
       };
       
-      const response = await axios.get(`${API_ADRESSE_URL}/search`, { params });
+      // DEBUG: Log the query being sent to the API
+      console.log('[adresseApi.searchAddress] Sending query:', trimmedQuery, 'Params:', params);
+      
+      const response = await addressApiInstance.get(`/search`, { params });
       
       if (!response.data || !response.data.features || response.data.features.length === 0) {
         return [];

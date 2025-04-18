@@ -1,0 +1,88 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# File Operation Rules
+
+> **Rules for safely modifying files in the project**
+
+## Critical Rules
+
+### Read full content
+- **Severity: CRITICAL**
+- Always read the full content of a file before suggesting any modifications
+- This is crucial to understand the context and dependencies
+
+### Verify before edit
+- **Severity: CRITICAL**
+- Verify that the file exists and is the correct file before suggesting edits
+- Check the file path and content to confirm it's the intended target
+
+### Check dependencies
+- **Severity: CRITICAL**
+- Check for dependencies and imports before modifying function/class definitions
+- Changes to function signatures or class interfaces may require updates in other files
+
+### Frontend JSX caution
+- **Severity: CRITICAL**
+- Never modify imports in JSX/TSX files without first examining related controllers, entities, and services
+- Frontend components often depend on specific backend structures
+- Example workflow before modifying a component that fetches data:
+  1. Read the component to understand data usage
+  2. Identify API endpoints being called
+  3. Examine relevant backend controllers
+  4. Check associated entity structures
+  5. Understand service methods that process data
+  6. Only then modify the component
+
+### Backend entity caution
+- **Severity: CRITICAL**
+- Exercise extreme caution when modifying entity classes
+- Entity changes often require database migrations and can affect multiple parts of the application
+- Changes to entity properties may affect:
+  - Database schema (may require migration)
+  - API responses
+  - Form validation
+  - Business logic in services
+
+### Verify API routes
+- **Severity: CRITICAL**
+- Verify API routes in Symfony controllers before modifying frontend API calls
+- Ensure the route exists and accepts the expected HTTP method and parameters
+- Check route annotations/attributes in controllers, for example:
+  ```php
+  #[Route('/api/users', name: 'get_users', methods: ['GET'])]
+  ```
+
+### Config modification
+- **Severity: CRITICAL**
+- Exercise extreme caution when modifying configuration files
+- Changes to .env, vite.config.js, composer.json, or package.json can have wide-ranging effects
+- Always document why configuration changes are needed
+
+## High Priority Rules
+
+### Maintain structure
+- **Severity: HIGH**
+- Maintain the existing file structure and formatting
+- Follow the existing indentation, spacing, and code organization patterns
+
+### Respect namespaces
+- **Severity: HIGH**
+- Respect the existing namespace structure in PHP files
+- New classes should follow the established namespace conventions:
+  - General controllers: `namespace App\Controller;`
+  - Domain-specific: `namespace App\Domain\{DomainName}\{Type};`
+
+## Medium Priority Rules
+
+### Component organization
+- **Severity: MEDIUM**
+- Place new components in the appropriate directory structure
+- Follow the domain-driven organization for both frontend and backend files

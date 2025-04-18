@@ -17,16 +17,32 @@ class DomainFixtures extends Fixture
     public function load(ObjectManager $manager): void
     {
         $domains = [
-            self::DOMAIN_DEV => 'Développement',
-            self::DOMAIN_DESIGN => 'Design',
-            self::DOMAIN_MARKETING => 'Marketing Digital',
-            self::DOMAIN_BUSINESS => 'Business & Management',
-            self::DOMAIN_DATA => 'Data & IA',
+            self::DOMAIN_DEV => [
+                'name' => 'Développement',
+                'description' => 'Domaine du développement logiciel et web'
+            ],
+            self::DOMAIN_DESIGN => [
+                'name' => 'Design',
+                'description' => 'Domaine du design graphique et UX/UI'
+            ],
+            self::DOMAIN_MARKETING => [
+                'name' => 'Marketing Digital',
+                'description' => 'Domaine du marketing en ligne et stratégies digitales'
+            ],
+            self::DOMAIN_BUSINESS => [
+                'name' => 'Business & Management',
+                'description' => 'Domaine de la gestion d\'entreprise et du management'
+            ],
+            self::DOMAIN_DATA => [
+                'name' => 'Data & IA',
+                'description' => 'Domaine de l\'analyse de données et intelligence artificielle'
+            ],
         ];
 
-        foreach ($domains as $reference => $name) {
+        foreach ($domains as $reference => $data) {
             $domain = new Domain();
-            $domain->setName($name);
+            $domain->setName($data['name']);
+            $domain->setDescription($data['description']);
             $manager->persist($domain);
             $this->addReference($reference, $domain);
         }

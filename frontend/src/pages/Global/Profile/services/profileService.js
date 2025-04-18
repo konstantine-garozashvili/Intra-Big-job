@@ -19,7 +19,7 @@ class ProfileService {
   constructor() {
     // Enregistrer le service comme utilisateur des routes qu'il utilise fréquemment
     userDataManager.requestRegistry.registerRouteUser('/profile/picture', SERVICE_ID);
-    userDataManager.requestRegistry.registerRouteUser('/profile/consolidated', SERVICE_ID);
+    userDataManager.requestRegistry.registerRouteUser('/api/profile', SERVICE_ID);
   }
 
   async getUserProfile() {
@@ -108,11 +108,11 @@ class ProfileService {
    * @returns {Promise<Object>} - Données de profil
    */
   async getAllProfileData(options = {}) {
+    const routeToUse = '/api/profile'; // Define the correct route
     try {
       // Vérifier si une requête est déjà en cours pour cette route
-      if (userDataManager.requestRegistry.getActiveRequest('/profile/consolidated') && !options.forceRefresh) {
-        console.log('Requête consolidée déjà en cours, réutilisation de la requête existante');
-        const activeRequest = userDataManager.requestRegistry.getActiveRequest('/profile/consolidated');
+      if (userDataManager.requestRegistry.getActiveRequest(routeToUse) && !options.forceRefresh) {
+        const activeRequest = userDataManager.requestRegistry.getActiveRequest(routeToUse);
         if (activeRequest) {
           return activeRequest;
         }
@@ -127,18 +127,29 @@ class ProfileService {
         return profileCache.consolidatedData;
       }
       
+      // Add unique timestamp to URL to ensure we bypass browser cache when forceRefresh is true
+      const url = options.forceRefresh ? 
+        `${routeToUse}?_t=${Date.now()}` : 
+        routeToUse;
+      
       // Utiliser le gestionnaire centralisé des données utilisateur avec coordination
       const response = await userDataManager.coordinateRequest(
-        '/profile/consolidated',
+        url, // Use the URL with cache buster if needed
         SERVICE_ID,
         () => userDataManager.getUserData({
-          routeKey: '/profile/consolidated',
+          routeKey: url, // Use the URL with cache buster if needed
           forceRefresh: options.forceRefresh,
-          useCache: !options.forceRefresh
+          useCache: !options.forceRefresh,
+          // Add additional parameters to ensure fresh data
+          fetchOptions: options.forceRefresh ? {
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache',
+              'Expires': '0'
+            }
+          } : undefined
         })
       );
-      
-      console.log('Réponse brute de getAllProfileData:', response);
       
       // Normaliser les données pour assurer une structure cohérente
       let normalizedData;
@@ -157,6 +168,8 @@ class ProfileService {
             lastName: response.lastName || response.last_name || "",
             email: response.email || "",
             profilePictureUrl: response.profilePictureUrl || response.profile_picture_url || "",
+            linkedinUrl: response.linkedinUrl || "",
+            hasCvDocument: response.hasCvDocument || false,
             // Assurer que les collections sont des tableaux
             diplomas: Array.isArray(response.diplomas) ? response.diplomas : [],
             addresses: Array.isArray(response.addresses) ? response.addresses : [],
@@ -174,6 +187,7 @@ class ProfileService {
             lastName: userData.lastName || userData.last_name || "",
             email: userData.email || "",
             profilePictureUrl: userData.profilePictureUrl || userData.profile_picture_url || "",
+            linkedinUrl: userData.linkedinUrl || "",
             // Assurer que les collections sont des tableaux
             diplomas: Array.isArray(userData.diplomas) ? userData.diplomas : [],
             addresses: Array.isArray(userData.addresses) ? userData.addresses : [],
@@ -206,16 +220,13 @@ class ProfileService {
       try {
         localStorage.setItem('user', JSON.stringify(normalizedData));
       } catch (e) {
-        console.error('Erreur lors de la sauvegarde des données utilisateur dans localStorage:', e);
+        // Ignorer l'erreur silencieusement
       }
       
       return normalizedData;
     } catch (error) {
-      console.warn('Erreur lors de la récupération des données de profil:', error);
-      
       // FALLBACK: Essayer d'utiliser les données en cache local si disponibles
       if (profileCache.consolidatedData) {
-        console.log('Utilisation des données en cache local après erreur');
         return profileCache.consolidatedData;
       }
       
@@ -224,7 +235,6 @@ class ProfileService {
         // Utiliser directement la méthode getCachedUserData de userDataManager
         const cachedData = userDataManager.getCachedUserData();
         if (cachedData) {
-          console.log('Utilisation des données en cache central après erreur');
           return cachedData;
         }
         
@@ -233,14 +243,13 @@ class ProfileService {
         if (storedData) {
           try {
             const parsedData = JSON.parse(storedData);
-            console.log('Utilisation des données depuis localStorage après erreur');
             return parsedData;
           } catch (e) {
-            console.error('Erreur lors du parsing des données utilisateur:', e);
+            // Ignorer l'erreur silencieusement
           }
         }
       } catch (e) {
-        console.error('Erreur lors de la récupération des données en cache:', e);
+        // Ignorer l'erreur silencieusement
       }
       
       // Si tout échoue, lancer l'erreur
@@ -355,7 +364,6 @@ class ProfileService {
       
       return response;
     } catch (error) {
-      console.error('Erreur lors de la récupération de la photo de profil:', error);
       // En cas d'erreur, retourner un objet avec le format attendu
       return { 
         success: false, 
@@ -427,8 +435,6 @@ class ProfileService {
     // Ne pas déclencher l'invalidation trop fréquemment
     if (updateType === 'profile_picture' && 
         userDataManager.requestRegistry.isRouteShared('/api/profile/picture')) {
-      console.log('Route partagée, invalidation de cache limitée pour éviter les boucles');
-      
       // Vider uniquement notre cache local sans propager
       profileCache.userData = null;
       profileCache.userDataTimestamp = 0;

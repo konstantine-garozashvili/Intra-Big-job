@@ -11,6 +11,7 @@ import ProfilePicture from './settings/ProfilePicture';
 import { isValidEmail, isValidPhone, isValidLinkedInUrl, isValidName, isValidUrl } from '@/lib/utils/validation';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { PhoneInput } from '@/components/ui/phone-input';
 import { Upload, FileText, Trash2, Send } from 'lucide-react';
 // Importer notre hook centralisé
 import { useUserDataCentralized } from '@/hooks';
@@ -58,9 +59,10 @@ const UserProfileSettings = () => {
     error: profileError,
     forceRefresh: refetchProfile
   } = useUserDataCentralized({
-    preferComprehensiveData: true, // Utiliser la route '/profile/consolidated'
-    refetchOnWindowFocus: false,
-    staleTime: 0, // Ensure we always get fresh data
+    refetchOnWindowFocus: true,    // Enable refetching when window focus changes
+    refetchOnMount: true,          // Enable refetching when component mounts
+    staleTime: 0,                  // Consider data stale immediately
+    cacheTime: 5 * 60 * 1000,      // Keep in cache for 5 minutes
     onError: (error) => {
       toast.error('Failed to load profile data: ' + (error.message || 'Unknown error'));
     }
@@ -129,6 +131,33 @@ const UserProfileSettings = () => {
     }
   }, [profileData]); // Only depend on profileData, not derived values
 
+  // Add event listener for portfolio URL updates from other components
+  useEffect(() => {
+    const handlePortfolioUrlUpdate = (event) => {
+      if (event.detail?.portfolioUrl !== undefined) {
+        const newPortfolioUrl = event.detail.portfolioUrl;
+        
+        // Update local state if different
+        if (editedData.personal.portfolioUrl !== newPortfolioUrl) {
+          setEditedData(prev => ({
+            ...prev,
+            personal: {
+              ...prev.personal,
+              portfolioUrl: newPortfolioUrl
+            }
+          }));
+        }
+      }
+    };
+    
+    // Listen for portfolio URL update events
+    window.addEventListener('portfolio-url-updated', handlePortfolioUrlUpdate);
+    
+    return () => {
+      window.removeEventListener('portfolio-url-updated', handlePortfolioUrlUpdate);
+    };
+  }, [editedData.personal.portfolioUrl]);
+
   // Helper function to calculate age from birthdate
   const calculateAge = (birthDateString) => {
     if (!birthDateString) return null;
@@ -163,8 +192,17 @@ const UserProfileSettings = () => {
         }
       }));
       // Update userData immediately for optimistic UI
-      if (userData.studentProfile) {
-        userData.studentProfile.portfolioUrl = value;
+      if (userData && userData.studentProfile) {
+        // Create a new reference for studentProfile to trigger proper React updates
+        userData.studentProfile = {
+          ...userData.studentProfile,
+          portfolioUrl: value
+        };
+        
+        // Dispatch a custom event for other components listening to portfolio changes
+        window.dispatchEvent(new CustomEvent('portfolio-update-local', {
+          detail: { portfolioUrl: value }
+        }));
       }
     } else {
       setEditedData(prev => ({
@@ -175,11 +213,13 @@ const UserProfileSettings = () => {
         }
       }));
       // Update userData immediately for optimistic UI
-      userData[field] = value;
-      
-      // If updating birthDate, also update the age
-      if (field === 'birthDate' && value) {
-        userData.age = calculateAge(value);
+      if (userData) {
+        userData[field] = value;
+        
+        // If updating birthDate, also update the age
+        if (field === 'birthDate' && value) {
+          userData.age = calculateAge(value);
+        }
       }
     }
   }, [userData]);
@@ -242,30 +282,28 @@ const UserProfileSettings = () => {
         }
       }
       
-      // Apply optimistic update immediately
+      // Use the service to update the profile
+      await profileService.updateProfile({ [field]: value });
+      
+      // Optimistically update the local state
       updateLocalState(field, value);
       
-      // Prepare data for saving
-      const dataToSave = { [field]: value === '' ? null : value };
+      // Exit edit mode for this field
+      setEditMode(prev => ({
+        ...prev,
+        [field]: false,
+      }));
       
-      // Make the API call in the background
-      if (field === 'portfolioUrl' && isStudent) {
-        await updatePortfolioUrl({ portfolioUrl: value });
-        toast.success('Mise à jour réussie');
-      } else {
-        await updatePersonalInfo(dataToSave);
-        toast.success('Mise à jour réussie');
-      }
-      
-      // If we're updating birthDate, calculate and update the age
-      if (field === 'birthDate' && value) {
-        userData.age = calculateAge(value);
-      }
-      
+      // Dispatch event to notify other components like ProfileProgress
+      document.dispatchEvent(new CustomEvent('user:data-updated'));
+
+      toast.success(`${field} mis à jour avec succès`);
     } catch (error) {
+      // console.error(`Error updating ${field}:`, error);
       // Revert optimistic update on error
       if (field === 'portfolioUrl' && isStudent) {
         updateLocalState('portfolioUrl', profileData?.data?.studentProfile?.portfolioUrl || null);
+        toast.error("Erreur lors de la mise à jour de l'URL du portfolio");
       } else {
         updateLocalState(field, profileData?.data?.user?.[field] || null);
         toast.error(`Erreur lors de la mise à jour de ${field}`);
@@ -359,8 +397,17 @@ const UserProfileSettings = () => {
         
         return { previousData };
       },
-      onSuccess: (data, variables) => {
-        toast.success('Informations mises à jour avec succès');
+      onSuccess: async (data, variables) => {
+        toast.success('URL du portfolio mise à jour avec succès');
+        
+        // Explicitly trigger a complete refresh of the profile data
+        await queryClient.invalidateQueries({ queryKey: ['unified-user-data'] });
+        setTimeout(() => refetchProfile(), 300);
+        
+        // Dispatch a custom event to notify other components about the portfolio URL update
+        window.dispatchEvent(new CustomEvent('portfolio-url-updated', {
+          detail: { portfolioUrl: variables.portfolioUrl }
+        }));
       },
       onError: (err, variables, context) => {
         // Rollback on error
@@ -368,142 +415,46 @@ const UserProfileSettings = () => {
         toast.error(err.response?.data?.message || "L'URL du portfolio doit commencer par 'https://'");
       },
       onSettled: () => {
-        // Refetch in the background to ensure sync
+        // Invalidate all relevant queries to ensure data consistency
         queryClient.invalidateQueries({ queryKey: ['userProfileData'] });
+        queryClient.invalidateQueries({ queryKey: ['profile'] });
+        queryClient.invalidateQueries({ queryKey: ['unified-user-data'] });
       }
     }
   );
 
-  // Fonction pour gérer l'upload de pièces d'identité
-  const handleUploadIdentity = async () => {
-    try {
-      // Créer un élément input caché pour sélectionner le fichier
-      const fileInput = document.createElement('input');
-      fileInput.type = 'file';
-      fileInput.accept = '.pdf,.jpg,.jpeg,.png';
-      fileInput.multiple = false;
-      
-      // Gérer l'événement de changement lorsqu'un fichier est sélectionné
-      fileInput.onchange = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        
-        // Vérifier la taille du fichier (max 5MB)
-        if (file.size > 5 * 1024 * 1024) {
-          toast.error('Le fichier est trop volumineux. La taille maximale est de 5MB.');
-          return;
-        }
-        
-        // Vérifier le type du fichier
-        const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
-        if (!allowedTypes.includes(file.type)) {
-          toast.error('Type de fichier non pris en charge. Utilisez PDF, JPG ou PNG.');
-          return;
-        }
-        
-        // Créer un objet FormData pour l'upload
-        const formData = new FormData();
-        formData.append('document', file);
-        
-        // Afficher un toast de chargement
-        const loadingToast = toast.loading('Upload en cours...');
-        
-        try {
-          // Appel API pour télécharger le document
-          await profileService.uploadIdentityDocument(formData);
-          
-          toast.dismiss(loadingToast);
-          toast.success('Document téléchargé avec succès');
-          
-          // Rafraîchir les données du profil
-          queryClient.invalidateQueries({ queryKey: ['userProfileData'] });
-          refetchProfile();
-          
-        } catch (error) {
-          toast.dismiss(loadingToast);
-          toast.error('Erreur lors du téléchargement du document');
-          console.error('Error uploading document:', error);
-        }
-      };
-      
-      // Déclencher la sélection de fichier
-      fileInput.click();
-    } catch (error) {
-      console.error('Error initiating file upload:', error);
-      toast.error('Erreur lors de l\'initialisation du téléchargement');
+  // Track the last URL we received to avoid duplicate refetches
+  const [lastProfilePictureUrl, setLastProfilePictureUrl] = useState(null);
+  const [lastRefetchTime, setLastRefetchTime] = useState(0);
+  
+  // Handler for profile picture changes - DISABLED TO BREAK CIRCULAR DEPENDENCY
+  const handleProfilePictureChange = useCallback((newUrl) => {
+    // TEMPORARILY DISABLED TO BREAK CIRCULAR DEPENDENCY
+    console.log("UserProfileSettings - Profile picture change handler disabled to prevent infinite loops");
+    
+    /* Original code commented out
+    console.log("UserProfileSettings - Profile picture changed, conditionally refetching");
+    
+    // Skip if the URL is the same as what we already have
+    if (newUrl === lastProfilePictureUrl) {
+      console.log("UserProfileSettings - Skipping refetch (same URL)");
+      return;
     }
-  };
-
-  // Fonction pour supprimer un document
-  const handleDeleteDocument = async (documentId, documentName = 'Document d\'identité') => {
-    try {
-      const loadingToast = toast.loading('Suppression en cours...');
-      
-      // Appel API pour supprimer le document
-      await profileService.deleteIdentityDocument(documentId);
-      
-      // Créer directement une notification locale sans appeler l'API externe
-      // qui cause les problèmes CORS
-      const mockNotification = {
-        id: Date.now(),
-        title: 'Document supprimé',
-        message: `Votre document "${documentName}" a été supprimé avec succès.`,
-        type: 'document_deleted',
-        isRead: false,
-        createdAt: new Date().toISOString(),
-        targetUrl: '/documents'
-      };
-      
-      // Ajouter la notification au cache du service
-      if (notificationService.cache.notifications && notificationService.cache.notifications.notifications) {
-        notificationService.cache.notifications.notifications.unshift(mockNotification);
-        notificationService.cache.unreadCount = (notificationService.cache.unreadCount || 0) + 1;
-        notificationService.notifySubscribers();
-        
-        // Afficher également un toast pour notification immédiate
-        toast.info(mockNotification.message, {
-          action: {
-            label: 'Voir tous',
-            onClick: () => {
-              window.location.href = mockNotification.targetUrl;
-            }
-          }
-        });
-      }
-      
-      toast.dismiss(loadingToast);
-      toast.success('Document supprimé avec succès');
-      
-      // Rafraîchir les données du profil
-      queryClient.invalidateQueries({ queryKey: ['userProfileData'] });
+    
+    // Only refetch if we have a valid URL and it's different from the current one
+    // and we haven't refetched recently
+    if (newUrl && 
+        (!userData?.profilePictureUrl || newUrl !== userData.profilePictureUrl) &&
+        Date.now() - lastRefetchTime > 10000) { // Only refetch if it's been more than 10 seconds
+      console.log("UserProfileSettings - Refetching profile with new URL:", newUrl);
+      setLastProfilePictureUrl(newUrl);
+      setLastRefetchTime(Date.now());
       refetchProfile();
-      
-    } catch (error) {
-      toast.error('Erreur lors de la suppression du document');
-      console.error('Error deleting document:', error);
+    } else {
+      console.log("UserProfileSettings - Skipping refetch (too recent or no change)");
     }
-  };
-
-  // Fonction pour envoyer les documents
-  const handleSubmitDocuments = async () => {
-    try {
-      const loadingToast = toast.loading('Envoi des documents en cours...');
-      
-      // Appel API pour envoyer les documents
-      await profileService.submitIdentityDocuments();
-      
-      toast.dismiss(loadingToast);
-      toast.success('Documents envoyés avec succès');
-      
-      // Rafraîchir les données du profil
-      queryClient.invalidateQueries({ queryKey: ['userProfileData'] });
-      refetchProfile();
-      
-    } catch (error) {
-      toast.error('Erreur lors de l\'envoi des documents');
-      console.error('Error submitting documents:', error);
-    }
-  };
+    */
+  }, []);
 
   // Render loading state
   if (isProfileLoading) {
@@ -529,7 +480,7 @@ const UserProfileSettings = () => {
         <div className="flex flex-col xs:flex-row items-center p-2 xs:p-3">
           <ProfilePicture 
             userData={userData} 
-            onProfilePictureChange={() => refetchProfile()}
+            onProfilePictureChange={handleProfilePictureChange}
             isLoading={isProfileLoading}
           />
 
@@ -551,8 +502,6 @@ const UserProfileSettings = () => {
             userRole={userRole}
             onSave={handleSavePersonal}
             onSaveAddress={handleSaveAddress}
-            onUploadIdentity={handleUploadIdentity}
-            onDeleteDocument={handleDeleteDocument}
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
               <div className="space-y-2">
@@ -575,83 +524,6 @@ const UserProfileSettings = () => {
                   disabled={!editMode.personal}
                 />
               </div>
-            </div>
-
-            {/* Section conditionnelle pour les documents d'identité */}
-            <div className="space-y-4 mt-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-base">
-                    {editedData.personal.nationality === 'Français' ? 'Pièces d\'identité' : 'Titre de séjour'}
-                  </Label>
-                  <p className="text-sm text-gray-500">
-                    {editedData.personal.nationality === 'Français' 
-                      ? 'Téléchargez vos documents d\'identité'
-                      : 'Téléchargez votre titre de séjour'}
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleUploadIdentity}
-                    className="flex items-center gap-2"
-                  >
-                    <Upload className="h-4 w-4" />
-                    Télécharger
-                  </Button>
-                  {userData.identityDocuments && userData.identityDocuments.length > 0 && (
-                    <Button
-                      type="button"
-                      onClick={handleSubmitDocuments}
-                      className="flex items-center gap-2 bg-primary hover:bg-primary/90"
-                    >
-                      <Send className="h-4 w-4" />
-                      Envoyer
-                    </Button>
-                  )}
-                </div>
-              </div>
-
-              {/* Liste des documents téléchargés */}
-              {userData.identityDocuments && userData.identityDocuments.length > 0 ? (
-                <div className="space-y-2">
-                  {userData.identityDocuments.map((doc, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                    >
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-5 w-5 text-gray-500" />
-                        <div>
-                          <span className="text-sm block">{doc.name}</span>
-                          <span className="text-xs text-gray-500">
-                            {editedData.personal.nationality === 'Français' 
-                              ? 'Document d\'identité'
-                              : 'Titre de séjour'}
-                          </span>
-                        </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteDocument(doc.id, doc.name)}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-4 bg-gray-50 rounded-lg">
-                  <p className="text-sm text-gray-500">
-                    {editedData.personal.nationality === 'Français'
-                      ? 'Aucun document d\'identité téléchargé'
-                      : 'Aucun titre de séjour téléchargé'}
-                  </p>
-                </div>
-              )}
             </div>
           </PersonalInformation>
         </CardContent>

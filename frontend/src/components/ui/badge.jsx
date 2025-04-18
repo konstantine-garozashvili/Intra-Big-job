@@ -14,6 +14,15 @@ const badgeVariants = cva(
         destructive:
           "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
         outline: "text-foreground",
+        student: "border-transparent bg-blue-100 text-blue-700 hover:bg-blue-200",
+        teacher: "border-transparent bg-emerald-100 text-emerald-700 hover:bg-emerald-200",
+        admin: "border-transparent bg-amber-100 text-amber-700 hover:bg-amber-200",
+        super_admin: "border-transparent bg-red-100 text-red-700 hover:bg-red-200",
+        superadmin: "border-transparent bg-red-100 text-red-700 hover:bg-red-200",
+        hr: "border-transparent bg-purple-100 text-purple-700 hover:bg-purple-200",
+        recruiter: "border-transparent bg-pink-100 text-pink-700 hover:bg-pink-200",
+        guest: "border-transparent bg-teal-100 text-teal-700 hover:bg-teal-200",
+        user: "border-transparent bg-gray-100 text-gray-700 hover:bg-gray-200",
       },
     },
     defaultVariants: {
@@ -28,7 +37,7 @@ function Badge({
   ...props
 }) {
   return (
-    <div className={cn(badgeVariants({ variant }), className)} {...props} />
+    <span className={cn(badgeVariants({ variant }), className)} {...props} />
   )
 }
 

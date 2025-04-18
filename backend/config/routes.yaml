@@ -4,8 +4,21 @@ controllers:
         namespace: App\Controller
     type: attribute
 
+profile_controllers:
+    resource:
+        path: ../src/Controller/Profile/
+        namespace: App\Controller\Profile
+    type: attribute
+
+# Explicitly register profile test route
+profile_test:
+    path: /api/profile/test
+    controller: App\Controller\Profile\ProfileController::testProfile
+    methods: ['GET']
+
 api_login_check:
     path: /api/login_check
+    methods: ['POST']
 
 api_token_refresh:
     path: /api/token/refresh
@@ -29,6 +42,3 @@ api_token_devices:
 
 document_routes:
     resource: './routes/document.yaml'
-
-notification_routes:
-    resource: './routes/notification.yaml'

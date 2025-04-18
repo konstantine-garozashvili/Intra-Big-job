@@ -40,7 +40,6 @@ const FormationList = () => {
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [expandedFormation, setExpandedFormation] = useState(null);
-  const [hasCreatePermission, setHasCreatePermission] = useState(false);
   const [newFormation, setNewFormation] = useState({
     name: '',
     promotion: '',
@@ -48,8 +47,16 @@ const FormationList = () => {
   });
 
   useEffect(() => {
-    loadFormations();
-    checkPermissions();
+    const initialize = async () => {
+      try {
+        await loadFormations();
+      } catch (error) {
+        console.error('Error initializing:', error);
+        toast.error('Erreur lors de l\'initialisation');
+      }
+    };
+
+    initialize();
   }, []);
 
   const loadFormations = async () => {
@@ -67,13 +74,6 @@ const FormationList = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const checkPermissions = () => {
-    const isTeacher = authService.hasRole('teacher');
-    const isAdmin = authService.hasRole('admin');
-    const isSuperAdmin = authService.hasRole('superadmin');
-    setHasCreatePermission(isTeacher || isAdmin || isSuperAdmin);
   };
 
   const showAddStudentModal = async (formation) => {
@@ -129,9 +129,13 @@ const FormationList = () => {
         toast.error(response.message || 'Erreur lors de la création de la formation');
         return;
       }
+      
+      // Add the new formation to the existing formations array
+      setFormations(prevFormations => [...prevFormations, response]);
+      
       toast.success('Formation créée avec succès');
-      await loadFormations();
       closeCreateModal();
+      setNewFormation({ name: '', promotion: '', description: '' });
     } catch (error) {
       console.error('Erreur lors de la création de la formation:', error);
       toast.error('Erreur lors de la création de la formation');
@@ -152,8 +156,25 @@ const FormationList = () => {
       );
       
       await Promise.all(promises);
+      
+      // Update the formations state with the new students
+      setFormations(prevFormations => 
+        prevFormations.map(formation => {
+          if (formation.id === selectedFormation.id) {
+            // Get the newly added students from availableStudents
+            const newStudents = availableStudents.filter(student => 
+              selectedStudentIds.includes(student.id)
+            );
+            return {
+              ...formation,
+              students: [...formation.students, ...newStudents]
+            };
+          }
+          return formation;
+        })
+      );
+      
       toast.success('Étudiants ajoutés avec succès');
-      await loadFormations();
       closeModal();
     } catch (error) {
       console.error('Erreur lors de l\'ajout des étudiants:', error);
@@ -178,12 +199,10 @@ const FormationList = () => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <CardTitle className="text-2xl font-bold">Gestion des Formations</CardTitle>
-          {hasCreatePermission && (
-            <Button onClick={() => setShowCreateModal(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Créer une formation
-            </Button>
-          )}
+          <Button onClick={() => setShowCreateModal(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Créer une formation
+          </Button>
         </CardHeader>
         <CardContent>
           <Table>

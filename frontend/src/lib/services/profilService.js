@@ -62,32 +62,77 @@ const profilService = {
 
   /**
    * Récupère toutes les données du profil en une seule requête
-   * @returns {Promise<Object>} Toutes les données du profil
+   * @returns {Promise<Object>} Toutes les données du profil normalisées
    */
   getAllProfilData: async () => {
     try {
       const response = await apiService.get('/api/profile/all');
       
-      // La réponse est déjà response.data, donc vérifiez directement data
+      // Normalisation des données pour garantir une structure cohérente
+      let normalizedData = {};
+      
       if (response && response.data) {
-        return response.data;  // C'est déjà les données extraites
-      } else if (response && response.success) {
-        // Ou peut-être la structure est différente
-        // Essayez de construire l'objet attendu
-        return {
-          user: response.user,
-          diplomas: response.diplomas,
-          addresses: response.addresses,
-          stats: response.stats
-        };
-      } else {
-        console.error("Structure inattendue:", response);
-        return null;
+        const data = response.data.data;
+        
+        // Si la structure est data.user
+        if (data.user) {
+          normalizedData = {
+            ...data.user,
+            // S'assurer que addresses est toujours un tableau
+            addresses: Array.isArray(data.user.addresses) ? data.user.addresses : [],
+            // S'assurer que diplomas est toujours un tableau
+            diplomas: Array.isArray(data.user.diplomas) ? data.user.diplomas : 
+                     (Array.isArray(data.diplomas) ? data.diplomas : []),
+            // Récupérer les stats
+            stats: data.stats || { profile: { completionPercentage: 0 } }
+          };
+        } 
+        // Si la structure est data directement
+        else {
+          normalizedData = {
+            ...data,
+            addresses: Array.isArray(data.addresses) ? data.addresses : [],
+            diplomas: Array.isArray(data.diplomas) ? data.diplomas : [],
+            stats: data.stats || { profile: { completionPercentage: 0 } }
+          };
+        }
+        
+        // S'assurer que studentProfile existe même si vide
+        if (!normalizedData.studentProfile) {
+          normalizedData.studentProfile = {
+            portfolioUrl: null,
+            isSeekingInternship: false,
+            isSeekingApprenticeship: false,
+            currentInternshipCompany: null,
+            internshipStartDate: null,
+            internshipEndDate: null,
+            situationType: null
+          };
+        }
       }
+      
+      // Stocker en localStorage pour la persistance
+      try {
+        localStorage.setItem('user', JSON.stringify(normalizedData));
+      } catch (e) {
+        console.error('Error storing user data in localStorage:', e);
+      }
+      
+      return normalizedData;
     } catch (error) {
       console.error('Erreur lors de la récupération des données du profil:', error);
       
-      // En cas d'échec, essayer de récupérer les données individuellement
+      // En cas d'échec, on essaie de récupérer depuis le localStorage
+      try {
+        const localData = localStorage.getItem('user');
+        if (localData) {
+          return JSON.parse(localData);
+        }
+      } catch (e) {
+        console.error('Error getting user data from localStorage:', e);
+      }
+      
+      // Si le fallback localStorage échoue, essayer de récupérer les données individuellement
       try {
         const [user, diplomas, addresses, stats] = await Promise.all([
           profilService.getUserData(),
@@ -96,12 +141,20 @@ const profilService = {
           profilService.getUserStats()
         ]);
 
-        return {
-          user,
+        const fallbackData = {
+          ...user,
           diplomas,
           addresses,
           stats
         };
+        
+        try {
+          localStorage.setItem('user', JSON.stringify(fallbackData));
+        } catch (e) {
+          console.error('Error storing fallback user data in localStorage:', e);
+        }
+        
+        return fallbackData;
       } catch (fallbackError) {
         console.error('Échec du fallback pour récupérer les données:', fallbackError);
         throw error; // Renvoyer l'erreur originale

@@ -1,47 +1,25 @@
-import { Moon, Sun } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useTheme } from "@/context/ThemeContext";
-import { useEffect, useState } from "react";
+import React from 'react';
+import { useLocation } from 'react-router-dom';
+import { useTheme } from '@/contexts/ThemeContext';
+import { Moon, Sun } from 'lucide-react';
+import { Button } from './button';
 
-export function ThemeToggle({ variant = "ghost", size = "icon", className = "" }) {
-  const { theme, toggleTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  // Attendre que le composant soit monté pour éviter les problèmes d'hydratation
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Ne rien afficher pendant le montage pour éviter un rendu incorrect côté serveur
-  if (!mounted) {
-    return null;
-  }
+export function ThemeToggle() {
+  const { colorMode, toggleColorMode } = useTheme();
 
   return (
-    <Button 
-      variant={variant} 
-      size={size} 
-      onClick={toggleTheme}
-      aria-label={
-        theme === "light"
-          ? "Basculer vers le mode sombre"
-          : "Basculer vers le mode clair"
-      }
-      title={
-        theme === "light"
-          ? "Basculer vers le mode sombre"
-          : "Basculer vers le mode clair"
-      }
-      className={`hover:bg-accent/80 transition-colors duration-300 ${className}`}
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={toggleColorMode}
+      className="rounded-full"
     >
-      {theme === "light" ? (
-        <Sun className="h-5 w-5 text-amber-500" />
+      {colorMode === 'light' ? (
+        <Sun className="h-5 w-5 text-current" />
       ) : (
-        <Moon className="h-5 w-5 text-indigo-300" />
+        <Moon className="h-5 w-5 text-current" />
       )}
-      <span className="sr-only">
-        {theme === "light" ? "Mode sombre" : "Mode clair"}
-      </span>
+      <span className="sr-only">Toggle theme</span>
     </Button>
   );
 }

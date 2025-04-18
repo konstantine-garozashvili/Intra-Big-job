@@ -1,20 +1,22 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Edit, Trash2, Calendar as CalendarIcon, Users, Shield, Book, ChevronRight } from 'lucide-react';
-import Calendar from './Calendar';
+import { Users, Shield, Book, ChevronRight } from 'lucide-react';
 import { useAdminDashboardData } from '@/hooks/useDashboardQueries';
 import { useApiMutation } from '@/hooks/useReactQuery';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { motion } from 'framer-motion';
 import DashboardLayout from '@/components/DashboardLayout';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from 'sonner';
 import authService from '@/lib/services/authService';
+import { Checkbox } from '@/components/ui/checkbox';
+import apiService from '@/lib/services/apiService';
+import { useTranslation } from '@/contexts/TranslationContext';
+import AsyncTranslation from '@/components/Translation/AsyncTranslation';
+import DashboardHeader from '@/components/shared/DashboardHeader';
 
 const ROLE_COLORS = {
   'ADMIN': 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300',
@@ -24,6 +26,8 @@ const ROLE_COLORS = {
   'STUDENT': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300',
   'GUEST': 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
 };
+
+
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -46,6 +50,7 @@ const itemVariants = {
 };
 
 const AdminDashboard = () => {
+  const { translate, currentLanguage } = useTranslation();
   const { user, users, isLoading, isError, error, refetch } = useAdminDashboardData();
   
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -60,24 +65,42 @@ const AdminDashboard = () => {
     phoneNumber: '',
   });
   const hasAttemptedRefresh = useRef(false);
+  const [availableRoles, setAvailableRoles] = useState([]);
+  const [selectedRoles, setSelectedRoles] = useState([]);
+  const [isLoadingRoles, setIsLoadingRoles] = useState(false);
+  const [translations, setTranslations] = useState({
+    title: '',
+    cards: []
+  });
 
-  // Définir les cartes pour les accès rapides
   const quickAccessCards = [
     {
-      title: 'Gestion des rôles',
-      description: 'Gérer les rôles des étudiants invités',
-      icon: Users,
-      color: 'from-blue-500 to-blue-600',
-      textColor: 'text-blue-50',
-      link: '/recruiter/guest-student-roles',
+      id: 1,
+      title: 'Gestion des utilisateurs',
+      description: 'Gérer les utilisateurs, les rôles et les permissions',
+      link: '/admin/users',
+      color: 'bg-blue-500'
     },
     {
-      title: 'Formations',
-      description: 'Gérer et consulter les formations',
-      icon: Book,
-      color: 'from-purple-500 to-purple-600',
-      textColor: 'text-purple-50',
-      link: '/formations',
+      id: 2,
+      title: 'Gestion des entreprises',
+      description: 'Gérer les entreprises partenaires',
+      link: '/admin/companies',
+      color: 'bg-green-500'
+    },
+    {
+      id: 3,
+      title: 'Gestion des offres',
+      description: 'Gérer les offres d\'emploi et de stage',
+      link: '/admin/offers',
+      color: 'bg-purple-500'
+    },
+    {
+      id: 4,
+      title: 'Gestion des événements',
+      description: 'Gérer les événements et les actualités',
+      link: '/admin/events',
+      color: 'bg-yellow-500'
     }
   ];
 
@@ -115,6 +138,27 @@ const AdminDashboard = () => {
     }
   );
 
+  const fetchAvailableRoles = async () => {
+    setIsLoadingRoles(true);
+    try {
+      const response = await apiService.get('/user-roles/roles');
+      if (response.success && response.data) {
+        setAvailableRoles(response.data);
+      } else {
+        toast.error('Impossible de récupérer les rôles disponibles');
+      }
+    } catch (error) {
+      console.error('Erreur lors de la récupération des rôles:', error);
+      toast.error('Échec de la récupération des rôles');
+    } finally {
+      setIsLoadingRoles(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAvailableRoles();
+  }, []);
+
   const handleEditUser = async (e) => {
     e.preventDefault();
     if (!selectedUser || !selectedUser.id) {
@@ -124,7 +168,8 @@ const AdminDashboard = () => {
 
     const userData = {
       ...editFormData,
-      id: selectedUser.id
+      id: selectedUser.id,
+      roles: selectedRoles
     };
 
     try {
@@ -163,6 +208,14 @@ const AdminDashboard = () => {
       email: user.email || '',
       phoneNumber: user.phoneNumber || '',
     });
+    
+    if (user.roles && Array.isArray(user.roles)) {
+      const roleIds = user.roles.map(role => role.id);
+      setSelectedRoles(roleIds);
+    } else {
+      setSelectedRoles([]);
+    }
+    
     setIsEditModalOpen(true);
   };
 
@@ -185,6 +238,16 @@ const AdminDashboard = () => {
     }));
   };
 
+  const handleRoleChange = (roleId) => {
+    setSelectedRoles(prev => {
+      if (prev.includes(roleId)) {
+        return prev.filter(id => id !== roleId);
+      } else {
+        return [...prev, roleId];
+      }
+    });
+  };
+
   const filteredUsers = users?.filter(user => {
     if (roleFilter === 'ALL' || !roleFilter) return true;
 
@@ -203,29 +266,74 @@ const AdminDashboard = () => {
     }
   }, [user, isLoading]);
 
+  // Log initial mount
+  useEffect(() => {
+    console.log('[AdminDashboard] Component mounted');
+    console.log('[AdminDashboard] Current language:', currentLanguage);
+  }, []);
+
+  // Log language changes
+  useEffect(() => {
+    console.log('[Translation] Language changed to:', currentLanguage);
+  }, [currentLanguage]);
+
+  // Log translations
+  const loggedTranslate = async (text) => {
+    console.log('[Translation] Attempting to translate:', text);
+    try {
+      const result = await translate(text);
+      console.log('[Translation] Result:', {
+        original: text,
+        translated: result,
+        language: currentLanguage
+      });
+      return result;
+    } catch (error) {
+      console.error('[Translation] Error:', error);
+      return text;
+    }
+  };
+
+  const translateContent = useCallback(async () => {
+    try {
+      const [dashboardTitle, ...cardTranslations] = await Promise.all([
+        translate('Tableau de bord administrateur'),
+        ...quickAccessCards.map(async (card) => ({
+          ...card,
+          translatedTitle: await translate(card.title),
+          translatedDescription: await translate(card.description)
+        }))
+      ]);
+
+      setTranslations({
+        title: dashboardTitle,
+        cards: cardTranslations
+      });
+    } catch (error) {
+      console.error('Translation error:', error);
+    }
+  }, [translate]);
+
+  useEffect(() => {
+    translateContent();
+  }, [currentLanguage, translateContent]);
+
   return (
     <DashboardLayout 
       loading={isLoading} 
-      error={isError ? error?.message || 'Une erreur est survenue lors du chargement des données' : null}
+      error={isError ? error?.message || <AsyncTranslation text="Une erreur est survenue lors du chargement des données" /> : null}
       className="p-0"
       user={user}
       headerIcon={Shield}
-      headerTitle="Tableau de bord administrateur"
+      headerTitle={<AsyncTranslation text="Tableau de bord administrateur" />}
     >
       <div className="container p-4 mx-auto sm:p-6 lg:p-8 bg-gray-50 dark:bg-gray-900 min-h-screen">
-        {/* Statistiques essentielles */}
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8"
-        >
-          {/* ... existing stats code ... */}
-        </motion.div>
 
         <Card className="border-0 shadow-md mb-6">
           <CardContent className="p-6">
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-6">Accès rapide</h2>
+            <h2 className="text-xl font-semibold text-gray-800 mb-6">
+              <AsyncTranslation text="Accès rapide" />
+            </h2>
             
             <motion.div 
               variants={containerVariants}
@@ -233,7 +341,7 @@ const AdminDashboard = () => {
               animate="visible"
               className="grid grid-cols-1 md:grid-cols-2 gap-5"
             >
-              {quickAccessCards.map((card, index) => (
+              {translations.cards.map((card, index) => (
                 <motion.div key={index} variants={itemVariants} className="h-full">
                   <Link to={card.link} className="block h-full">
                     <div className="relative h-full overflow-hidden rounded-xl shadow-sm hover:shadow-md transition-all duration-300 group">
@@ -241,7 +349,7 @@ const AdminDashboard = () => {
                       <div className="relative p-5 h-full flex flex-col">
                         <div className="flex items-center justify-between mb-4">
                           <div className="p-2.5 rounded-lg bg-white/20 backdrop-blur-sm">
-                            <card.icon className="w-5 h-5 text-white" />
+                            <Users className="w-5 h-5 text-white" />
                           </div>
                           <div className="p-1.5 rounded-full bg-white/20 backdrop-blur-sm">
                             <ChevronRight className="w-4 h-4 text-white" />
@@ -249,10 +357,10 @@ const AdminDashboard = () => {
                         </div>
                         
                         <h2 className="text-xl font-semibold text-white mb-1">
-                          {card.title}
+                          {card.translatedTitle}
                         </h2>
                         <p className="text-white/80 text-sm mb-4">
-                          {card.description}
+                          {card.translatedDescription}
                         </p>
                       </div>
                     </div>
@@ -263,146 +371,11 @@ const AdminDashboard = () => {
           </CardContent>
         </Card>
         
-        <Card className="border-0 shadow-md">
-          <Tabs defaultValue="calendar" value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <div className="flex items-center justify-between px-4 py-2 border-b dark:border-gray-700">
-              <h1 className="text-xl font-semibold text-gray-800 dark:text-gray-100">Tableau de bord administrateur</h1>
-              <TabsList className="grid w-auto grid-cols-2 bg-gray-100 dark:bg-gray-700 no-focus-outline">
-                <TabsTrigger 
-                  value="calendar" 
-                  className="flex items-center gap-1.5 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white dark:text-gray-300 dark:data-[state=inactive]:bg-gray-800 no-focus-outline"
-                >
-                  <CalendarIcon className="w-4 h-4" />
-                  <span>Emploi du temps</span>
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="users" 
-                  className="flex items-center gap-1.5 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white dark:text-gray-300 dark:data-[state=inactive]:bg-gray-800 no-focus-outline"
-                >
-                  <Users className="w-4 h-4" />
-                  <span>Utilisateurs</span>
-                </TabsTrigger>
-              </TabsList>
-            </div>
-            
-            <CardContent className="p-0">
-              <TabsContent value="calendar" className="mt-0 no-focus-outline">
-                <Calendar />
-              </TabsContent>
-
-              <TabsContent value="users" className="mt-0 no-focus-outline">
-                <div className="p-4">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-3">
-                    <h2 className="text-lg font-medium text-gray-800 dark:text-gray-200">Utilisateurs de la formation</h2>
-                    <div className="flex items-center space-x-3">
-                      <Select value={roleFilter} onValueChange={setRoleFilter}>
-                        <SelectTrigger className="w-[180px] no-focus-outline">
-                          <SelectValue placeholder="Filtrer par rôle" />
-                        </SelectTrigger>
-                        <SelectContent className="no-focus-outline">
-                          <SelectItem value="ALL" className="no-focus-outline">Tous les rôles</SelectItem>
-                          <SelectItem value="ADMIN" className="no-focus-outline">Administrateurs</SelectItem>
-                          <SelectItem value="TEACHER" className="no-focus-outline">Formateurs</SelectItem>
-                          <SelectItem value="STUDENT" className="no-focus-outline">Étudiants</SelectItem>
-                          <SelectItem value="HR" className="no-focus-outline">RH</SelectItem>
-                          <SelectItem value="SUPERADMIN" className="no-focus-outline">Super Administrateurs</SelectItem>
-                          <SelectItem value="GUEST" className="no-focus-outline">Invités</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Button
-                        onClick={refetch}
-                        variant="outline"
-                        className="no-focus-outline"
-                      >
-                        Actualiser la liste
-                      </Button>
-                    </div>
-                  </div>
-
-                  {editUserMutation.isError && (
-                    <div className="p-3 mb-3 text-sm text-red-700 bg-red-100 dark:bg-red-900/30 dark:text-red-300 rounded-lg">
-                      <p>Erreur: {editUserMutation.error?.message || 'Une erreur est survenue'}</p>
-                      <p className="mt-1 font-mono text-xs">Vérifiez la console pour plus de détails.</p>
-                    </div>
-                  )}
-
-                  {editUserMutation.isLoading || deleteUserMutation.isLoading ? (
-                    <div className="flex justify-center py-6">
-                      <div className="flex flex-col items-center">
-                        <motion.div
-                          className="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full"
-                          animate={{ rotate: 360 }}
-                          transition={{ repeat: Infinity, ease: "linear", duration: 1 }}
-                        />
-                        <p className="mt-3 text-sm font-medium text-gray-600">Traitement en cours...</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto bg-white dark:bg-gray-800 rounded-lg shadow">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="text-xs font-medium tracking-wider text-left text-gray-500 dark:text-gray-400 uppercase border-b bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
-                            <th className="px-4 py-3">Nom</th>
-                            <th className="px-4 py-3">Email</th>
-                            <th className="px-4 py-3">Téléphone</th>
-                            <th className="px-4 py-3">Rôle(s)</th>
-                            <th className="px-4 py-3">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                          {filteredUsers.length > 0 ? (
-                            filteredUsers.map((user) => (
-                              <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                                <td className="px-4 py-3 text-sm font-medium text-gray-800 dark:text-gray-200">
-                                  {user.firstName} {user.lastName}
-                                </td>
-                                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{user.email}</td>
-                                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{user.phoneNumber}</td>
-                                <td className="px-4 py-3 text-sm">
-                                  {user.roles && user.roles.map((role) => (
-                                    <span
-                                      key={role.id}
-                                      className={`inline-block px-2 py-1 mr-1 mb-1 text-xs font-medium rounded-full ${ROLE_COLORS[role.name] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'}`}
-                                    >
-                                      {role.name}
-                                    </span>
-                                  ))}
-                                </td>
-                                <td className="px-4 py-3 text-sm">
-                                  <div className="flex items-center space-x-2">
-                                    <button
-                                      className="p-1 text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 rounded hover:bg-blue-200 dark:hover:bg-blue-800/50 no-focus-outline"
-                                      title="Modifier"
-                                      onClick={() => openEditModal(user)}
-                                    >
-                                      <Edit size={16} />
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))
-                          ) : (
-                            <tr>
-                              <td colSpan="5" className="px-4 py-6 text-center text-gray-500 dark:text-gray-400">
-                                {error ? 'Impossible de charger les utilisateurs' : 'Aucun utilisateur trouvé'}
-                              </td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              </TabsContent>
-            </CardContent>
-          </Tabs>
-        </Card>
-
         <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
           <DialogContent className="no-focus-outline">
             <DialogHeader>
-              <DialogTitle>Modifier l'utilisateur</DialogTitle>
-              <DialogDescription>Modifier les informations de l'utilisateur</DialogDescription>
+              <DialogTitle><AsyncTranslation text="Modifier l'utilisateur" /></DialogTitle>
+              <DialogDescription><AsyncTranslation text="Modifier les informations de l'utilisateur" /></DialogDescription>
             </DialogHeader>
             <form onSubmit={handleEditUser} className="space-y-4">
               <div>
@@ -449,6 +422,33 @@ const AdminDashboard = () => {
                   className="no-focus-outline"
                 />
               </div>
+              
+              <div>
+                <Label className="mb-2 block">Rôles</Label>
+                {isLoadingRoles ? (
+                  <div className="py-2 text-sm text-gray-500">Chargement des rôles...</div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    {availableRoles.map(role => (
+                      <div key={role.id} className="flex items-center space-x-2">
+                        <Checkbox 
+                          id={`role-${role.id}`}
+                          checked={selectedRoles.includes(role.id)}
+                          onCheckedChange={() => handleRoleChange(role.id)}
+                          className="no-focus-outline"
+                        />
+                        <Label 
+                          htmlFor={`role-${role.id}`}
+                          className="text-sm font-normal"
+                        >
+                          {role.name}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)} className="no-focus-outline">
                   Annuler
@@ -464,10 +464,9 @@ const AdminDashboard = () => {
         <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
           <DialogContent className="no-focus-outline">
             <DialogHeader>
-              <DialogTitle>Supprimer l'utilisateur</DialogTitle>
+              <DialogTitle><AsyncTranslation text="Supprimer l'utilisateur" /></DialogTitle>
               <DialogDescription>
-                Êtes-vous sûr de vouloir supprimer cet utilisateur ?
-                Cette action est irréversible.
+                <AsyncTranslation text="Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible." />
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>

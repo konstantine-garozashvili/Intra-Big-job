@@ -19,23 +19,23 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(['user:read', 'message:read'])]
+    #[Groups(['user:read', 'message:read', 'ticket:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(['user:read', 'message:read'])]
+    #[Groups(['user:read', 'message:read', 'ticket:read'])]
     private ?string $lastName = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(['user:read', 'message:read'])]
+    #[Groups(['user:read', 'message:read', 'ticket:read'])]
     private ?string $firstName = null;
 
     #[ORM\Column(type: Types::DATE_MUTABLE)]
     #[Groups(['user:read'])]
     private ?\DateTimeInterface $birthDate = null;
 
-    #[ORM\Column(length: 255, unique: true)]
-    #[Groups(['user:read'])]
+    #[ORM\Column(length: 180, unique: true)]
+    #[Groups(['user:read', 'ticket:read'])]
     private ?string $email = null;
 
     #[ORM\ManyToOne(inversedBy: 'users')]
@@ -82,6 +82,7 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     private ?\App\Domains\Student\Entity\StudentProfile $studentProfile = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['user:read', 'message:read'])]
     private ?string $profilePicturePath = null;
 
     #[ORM\ManyToOne]
@@ -116,6 +117,12 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     #[ORM\OneToMany(mappedBy: 'user', targetEntity: UserDiploma::class, orphanRemoval: true)]
     private Collection $userDiplomas;
 
+    #[ORM\OneToMany(mappedBy: 'creator', targetEntity: Ticket::class, orphanRemoval: true)]
+    private Collection $tickets;
+
+    #[ORM\OneToMany(mappedBy: 'assignedTo', targetEntity: Ticket::class)]
+    private Collection $assignedTickets;
+
     public function __construct()
     {
         $this->createdAt = new \DateTimeImmutable();
@@ -127,6 +134,8 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
         $this->groups = new ArrayCollection();
         $this->userDiplomas = new ArrayCollection();
         $this->formations = new ArrayCollection();
+        $this->tickets = new ArrayCollection();
+        $this->assignedTickets = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -656,6 +665,78 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     public function setProfilePicturePath(?string $profilePicturePath): self
     {
         $this->profilePicturePath = $profilePicturePath;
+        return $this;
+    }
+
+    /**
+     * Get the URL of the profile picture
+     */
+    public function getProfilePictureUrl(): ?string
+    {
+        if (!$this->profilePicturePath) {
+            return null;
+        }
+
+        return $this->profilePicturePath;
+    }
+
+    /**
+     * @return Collection<int, Ticket>
+     */
+    public function getTickets(): Collection
+    {
+        return $this->tickets;
+    }
+
+    public function addTicket(Ticket $ticket): static
+    {
+        if (!$this->tickets->contains($ticket)) {
+            $this->tickets->add($ticket);
+            $ticket->setCreator($this);
+        }
+
+        return $this;
+    }
+
+    public function removeTicket(Ticket $ticket): static
+    {
+        if ($this->tickets->removeElement($ticket)) {
+            // set the owning side to null (unless already changed)
+            if ($ticket->getCreator() === $this) {
+                $ticket->setCreator(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Ticket>
+     */
+    public function getAssignedTickets(): Collection
+    {
+        return $this->assignedTickets;
+    }
+
+    public function addAssignedTicket(Ticket $ticket): static
+    {
+        if (!$this->assignedTickets->contains($ticket)) {
+            $this->assignedTickets->add($ticket);
+            $ticket->setAssignedTo($this);
+        }
+
+        return $this;
+    }
+
+    public function removeAssignedTicket(Ticket $ticket): static
+    {
+        if ($this->assignedTickets->removeElement($ticket)) {
+            // set the owning side to null (unless already changed)
+            if ($ticket->getAssignedTo() === $this) {
+                $ticket->setAssignedTo(null);
+            }
+        }
+
         return $this;
     }
 }

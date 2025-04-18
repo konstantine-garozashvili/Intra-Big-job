@@ -5,6 +5,7 @@ import { AlertCircle } from 'lucide-react';
 import { useOutletContext } from 'react-router-dom';
 import DashboardSkeleton from './DashboardSkeleton';
 import DashboardHeader from './shared/DashboardHeader';
+import { authService } from '@/lib/services/authService';
 
 // Composant d'erreur optimisé
 const ErrorDisplay = memo(({ errorMessage }) => (
@@ -53,22 +54,17 @@ const DashboardLayout = ({
   headerTitle,
   showHeader = true
 }) => {
-  // Ajouter des logs pour tracer les données utilisateur
-  useEffect(() => {
-    console.log("DashboardLayout - Received user data:", user);
-    console.log("DashboardLayout - Loading state:", isLoading);
-    console.log("DashboardLayout - Show header:", showHeader);
-  }, [user, isLoading, showHeader]);
-  
   // Récupérer le contexte de chargement depuis le MainLayout
   const context = useOutletContext() || {};
+  
+  // Vérifier si l'utilisateur est authentifié
+  const isAuthenticated = authService.isLoggedIn();
   
   // Utiliser l'état de chargement passé en prop ou depuis le contexte
   const isLoadingState = isLoading || (context.isLoading && !context.hasMinimalData);
   
-  // Afficher le squelette pendant le chargement si demandé
-  if (isLoadingState && showSkeleton) {
-    console.log("DashboardLayout - Rendering skeleton due to loading state");
+  // Afficher le squelette pendant le chargement si demandé ET si l'utilisateur est authentifié
+  if (isLoadingState && showSkeleton && isAuthenticated) {
     return (
       <div className={`container mx-auto p-8 ${className}`}>
         <DashboardSkeleton />

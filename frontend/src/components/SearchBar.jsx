@@ -1,20 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import userAutocompleteService from '../lib/services/autocompleteService';
-import authService from '../lib/services/authService';
-import { useRoles, ROLES } from '../features/roles/roleContext';
-import { getPrimaryRole, matchRoleFromSearchTerm, ROLE_ALIASES } from '../lib/utils/roleUtils';
 import { getRoleDisplayFormat } from '../lib/utils/roleDisplay.jsx';
-import { Search, User, X, UserCircle2, Briefcase } from 'lucide-react';
+import { Search, X, Briefcase } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { useSearchRoles } from '../lib/hooks/useSearchRoles';
 import { useSearchSuggestions } from '../lib/hooks/useSearchSuggestions';
 import { SearchSuggestionsList } from './SearchSuggestionsList';
+import apiService from '../lib/services/apiService';
 
 export const SearchBar = () => {
-  // Références et state
   const wrapperRef = useRef(null);
   const inputRef = useRef(null);
   const suggestionsRef = useRef(null);
@@ -23,7 +19,6 @@ export const SearchBar = () => {
   const [containerWidth, setContainerWidth] = useState(0);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
 
-  // Custom hooks
   const { 
     allowedSearchRoles,
     isLoggedIn,
@@ -56,7 +51,6 @@ export const SearchBar = () => {
     checkForRoleSearch 
   });
 
-  // Mettre à jour la largeur du conteneur au montage et au redimensionnement
   useEffect(() => {
     const updateWidth = () => {
       if (wrapperRef.current) {
@@ -72,7 +66,6 @@ export const SearchBar = () => {
     };
   }, [showSuggestions]);
 
-  // Gérer les clics en dehors du composant pour fermer les suggestions
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
@@ -94,7 +87,6 @@ export const SearchBar = () => {
     };
   }, [setShowSuggestions]);
 
-  // Faire défiler la suggestion active dans la vue
   useEffect(() => {
     if (activeSuggestion >= 0 && suggestionsRef.current) {
       const activeElement = suggestionsRef.current.children[activeSuggestion];
@@ -104,7 +96,6 @@ export const SearchBar = () => {
     }
   }, [activeSuggestion]);
 
-  // Mettre à jour la position du dropdown quand il devient visible
   useEffect(() => {
     if (showSuggestions && wrapperRef.current) {
       const updatePosition = () => {
@@ -128,8 +119,7 @@ export const SearchBar = () => {
     }
   }, [showSuggestions]);
 
-  // Gérer la navigation vers le profil utilisateur sélectionné
-  const handleSuggestionClick = (suggestion, event) => {
+  const handleSuggestionClick = async (suggestion, event) => {
     if (event) {
       event.preventDefault();
       event.stopPropagation();
@@ -141,16 +131,31 @@ export const SearchBar = () => {
       return;
     }
     
-    setQuery(`${suggestion.firstName} ${suggestion.lastName}`);
-    setSuggestions([]);
-    setShowSuggestions(false);
-    
     try {
-      setTimeout(() => {
-        navigate(`/profile/${userId}`);
-      }, 10);
+      // Nettoyer le cache du profil public avant la navigation
+      apiService.clearPublicProfileCache(userId);
+      
+      // Mettre à jour l'interface utilisateur
+      setQuery(`${suggestion.firstName} ${suggestion.lastName}`);
+      setSuggestions([]);
+      setShowSuggestions(false);
+      setActiveSuggestion(-1);
+      
+      // Désactiver temporairement l'input pour éviter les doubles clics
+      if (inputRef.current) {
+        inputRef.current.disabled = true;
+      }
+      
+      // Navigation vers le profil public avec le bon chemin
+      await navigate(`/profile/${userId}`);
+      
+      // Réactiver l'input après la navigation
+      if (inputRef.current) {
+        inputRef.current.disabled = false;
+      }
     } catch (error) {
       console.error('Navigation error:', error);
+      // En cas d'erreur, tenter une redirection directe
       window.location.href = `/profile/${userId}`;
     }
   };
@@ -178,7 +183,6 @@ export const SearchBar = () => {
     }
   };
 
-  // Gérer le focus de l'input
   const handleInputFocus = () => {
     if (!isLoggedIn) {
       inputRef.current.blur();
@@ -254,7 +258,6 @@ export const SearchBar = () => {
           )}
         </AnimatePresence>
         
-        {/* Loading indicator */}
         {isLoading && (
           <div className="absolute right-10 z-10">
             <div className="w-3 h-3 border-2 border-t-transparent border-white/30 rounded-full animate-spin"></div>
@@ -262,7 +265,6 @@ export const SearchBar = () => {
         )}
       </div>
       
-      {/* Message d'aide (affiché uniquement quand focusé, query vide et PAS un rôle spécial) */}
       {isFocused && query.length === 0 && isLoggedIn && 
        !hasSpecialRole() &&
        !showSuggestions && (
@@ -281,14 +283,12 @@ export const SearchBar = () => {
         </div>
       )}
       
-      {/* Message d'aide pour les utilisateurs non connectés */}
       {!isLoggedIn && isFocused && (
         <div className="absolute top-full left-0 w-full mt-2 px-3 py-2 text-xs text-white/70 bg-[#02284f]/90 rounded-md dark:bg-gray-800 dark:text-gray-200">
           <p>Vous devez être connecté pour effectuer une recherche.</p>
         </div>
       )}
       
-      {/* Render dropdown portal */}
       {showSuggestions && createPortal(
         <AnimatePresence mode="wait">
           <SearchSuggestionsList

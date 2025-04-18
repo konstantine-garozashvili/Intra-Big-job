@@ -34,7 +34,7 @@ const ExperienceTab = ({ userData, isPublicProfile = false, documents = [] }) =>
 
   // Get the first role name in a safe way
   const getMainRole = () => {
-    const user = userData?.user || {};
+    const user = userData?.user || userData || {};
     const roles = user?.roles || [];
     
     if (roles.length === 0) return "USER";
@@ -52,9 +52,45 @@ const ExperienceTab = ({ userData, isPublicProfile = false, documents = [] }) =>
 
   const mainRole = getMainRole();
   
-  // Vérifier si l'utilisateur a des diplômes de manière sécurisée
-  const diplomas = userData?.diplomas || [];
-  const hasDiplomas = Array.isArray(diplomas) && diplomas.length > 0;
+  // Récupérer les diplômes de manière sécurisée depuis différentes sources possibles
+  const getDiplomas = () => {
+    // 1. Si les diplômes sont directement dans userData
+    if (Array.isArray(userData?.diplomas) && userData.diplomas.length > 0) {
+      return userData.diplomas;
+    }
+    
+    // 2. Si les diplômes sont dans userData.user
+    if (userData?.user?.diplomas && Array.isArray(userData.user.diplomas) && userData.user.diplomas.length > 0) {
+      return userData.user.diplomas;
+    }
+    
+    // 3. Si les diplômes sont dans un autre chemin
+    if (userData?.data?.diplomas && Array.isArray(userData.data.diplomas) && userData.data.diplomas.length > 0) {
+      return userData.data.diplomas;
+    }
+    
+    return [];
+  };
+
+  // Formater les données de diplôme pour gérer à la fois l'ancien et le nouveau format
+  const formatDiplomaData = (diploma) => {
+    // Si le diplôme a une structure imbriquée (nouveau format)
+    if (diploma.diploma && typeof diploma.diploma === 'object') {
+      return {
+        id: diploma.id,
+        name: diploma.diploma.name,
+        institution: diploma.diploma.institution,
+        obtainedAt: diploma.obtainedDate, // Nouveau nom de la propriété
+        // Autres propriétés à ajouter au besoin
+      };
+    }
+    
+    // Format existant (structure plate)
+    return diploma;
+  };
+  
+  const diplomas = getDiplomas().map(formatDiplomaData);
+  const hasDiplomas = diplomas.length > 0;
 
   return (
     <>
@@ -85,7 +121,7 @@ const ExperienceTab = ({ userData, isPublicProfile = false, documents = [] }) =>
                       <div className="flex items-center text-sm text-muted-foreground mb-3 bg-primary/5 px-2 py-1 rounded-full w-fit mt-2">
                         <ClockIcon className="h-4 w-4 mr-1" />
                         <span>
-                          {(diploma.obtainedAt || diploma.obtained_at) ? formatDate(diploma.obtainedAt || diploma.obtained_at) : "En cours"}
+                          {(diploma.obtainedAt || diploma.obtainedDate || diploma.obtained_at) ? formatDate(diploma.obtainedAt || diploma.obtainedDate || diploma.obtained_at) : "En cours"}
                         </span>
                       </div>
                       
@@ -107,6 +143,29 @@ const ExperienceTab = ({ userData, isPublicProfile = false, documents = [] }) =>
                     </div>
                   </div>
                 ))}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+      
+      {/* Section vide si aucun diplôme */}
+      {!hasDiplomas && (
+        <motion.div
+          variants={cardVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <Card className="overflow-hidden border-none shadow-md bg-white dark:bg-slate-800">
+            <CardHeader className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 pb-4">
+              <CardTitle className="text-xl flex items-center gap-2">
+                <GraduationCapIcon className="h-5 w-5 text-primary" />
+                Diplômes
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="text-center p-6 text-muted-foreground">
+                <p>Aucun diplôme n'a été ajouté pour le moment.</p>
               </div>
             </CardContent>
           </Card>

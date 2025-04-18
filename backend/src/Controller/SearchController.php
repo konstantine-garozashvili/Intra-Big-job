@@ -31,45 +31,38 @@ class SearchController extends AbstractController
     public function autocomplete(Request $request): JsonResponse
     {
         $query = $request->query->get('q', '');
-        $this->logger->info('User autocomplete search initiated', ['query' => $query]);
-
+        
         // Vérifier si l'utilisateur est connecté
         $currentUser = $this->security->getUser();
         if (!$currentUser) {
-            $this->logger->warning('Unauthorized access attempt to search feature by non-authenticated user');
             return $this->json(['error' => 'Vous devez être connecté pour effectuer une recherche.'], 401);
         }
 
         // Do not run search for very short terms
         if (strlen($query) < 1) {
-            $this->logger->debug('Search query too short, returning empty results');
             return $this->json([]);
         }
 
         // Determine allowed roles based on current user's role
         $allowedRoles = $this->getAllowedSearchRoles($currentUser);
         
-        $this->logger->info('Executing user search', [
-            'query' => $query, 
-            'allowedRoles' => $allowedRoles ?? []
-        ]);
-        
-        // Use a custom repository method to search users with role restrictions
-        $results = $this->userRepository->findAutocompleteResults($query, $allowedRoles);
-        $this->logger->debug('Search results count', ['count' => count($results)]);
+        // Use a custom repository method to search users
+        $results = $this->userRepository->findAutocompleteResults($query, $allowedRoles, $currentUser->getId());
 
-        // Prepare JSON data (returning id, lastName, firstName, and roles)
+        // Prepare JSON data
         $data = [];
         foreach ($results as $user) {
+            if ($user->getId() === $currentUser->getId()) {
+                continue;
+            }
+            
             $roles = [];
             foreach ($user->getUserRoles() as $userRole) {
                 $roles[] = $userRole->getRole()->getName();
             }
             
-            // If no roles found, add a default role
             if (empty($roles)) {
                 $roles[] = 'ROLE_USER';
-                $this->logger->warning('User has no roles assigned, adding default ROLE_USER', ['userId' => $user->getId()]);
             }
             
             $data[] = [
@@ -80,7 +73,6 @@ class SearchController extends AbstractController
             ];
         }
 
-        $this->logger->info('Returning autocomplete results', ['resultCount' => count($data)]);
         return $this->json($data);
     }
 

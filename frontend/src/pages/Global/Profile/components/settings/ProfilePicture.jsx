@@ -1,9 +1,10 @@
-import React, { useState, useRef } from 'react';
-import { UserRound, Camera, Upload, Loader2, Trash2 } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { UserRound, Camera, Upload, Loader2, Trash2, User } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { toast } from 'sonner';
 import { useProfilePicture } from '../../hooks/useProfilePicture';
 import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Dialog,
   DialogContent,
@@ -29,9 +30,8 @@ const ProfilePictureSkeleton = () => {
 
 const ProfilePicture = ({ userData, onProfilePictureChange, isLoading: externalLoading = false }) => {
   const fileInputRef = useRef(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [previousUrl, setPreviousUrl] = useState(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [isDeleting, setIsDeleting] = React.useState(false);
   
   // Use the custom hook for profile picture operations
   const {
@@ -45,12 +45,64 @@ const ProfilePicture = ({ userData, onProfilePictureChange, isLoading: externalL
     deleteStatus
   } = useProfilePicture();
 
-  // Notify parent component when profile picture changes
-  React.useEffect(() => {
-    if (onProfilePictureChange && profilePictureUrl !== undefined) {
-      onProfilePictureChange(profilePictureUrl);
+  // Debounce function to prevent multiple calls
+  const debounce = (func, wait) => {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  };
+
+  // Use a ref to track the previous URL to avoid unnecessary updates
+  const previousUrlRef = useRef(null);
+  
+  // Only notify parent when the URL actually changes and is not a blob URL
+  const shouldNotifyParent = (newUrl) => {
+    // Don't notify for blob URLs
+    if (newUrl && newUrl.startsWith('blob:')) {
+      return false;
     }
-  }, [profilePictureUrl, onProfilePictureChange]);
+    
+    // Don't notify if the URL hasn't changed
+    if (newUrl === previousUrlRef.current) {
+      return false;
+    }
+    
+    // Update the ref to track the latest URL
+    previousUrlRef.current = newUrl;
+    return true;
+  };
+  
+  // Notify parent component when profile picture changes - with debounce
+  const debouncedNotify = useRef(
+    debounce((url) => {
+      if (onProfilePictureChange && shouldNotifyParent(url)) {
+        console.log("ProfilePicture - Profile picture URL changed, notifying parent (debounced)");
+        onProfilePictureChange(url);
+      }
+    }, 2000) // 2 second debounce
+  ).current;
+
+  // Use effect to detect changes
+  React.useEffect(() => {
+    // TEMPORARILY DISABLED TO BREAK CIRCULAR DEPENDENCY
+    // This notification was causing an infinite loop with user data updates
+    /*
+    if (profilePictureUrl !== undefined && profilePictureUrl !== previousUrlRef.current) {
+      console.log("ProfilePicture - Profile picture URL changed");
+      
+      // Only notify if the URL is valid and has changed
+      if (profilePictureUrl && !profilePictureUrl.startsWith('blob:')) {
+        debouncedNotify(profilePictureUrl);
+      }
+    }
+    */
+  }, [profilePictureUrl]);
 
   const handleProfilePictureClick = () => {
     if (uploadStatus.isPending || deleteStatus.isPending) return; // Prevent clicks during operations
@@ -78,10 +130,10 @@ const ProfilePicture = ({ userData, onProfilePictureChange, isLoading: externalL
       return;
     }
     
-    // Validate file size (max 5MB)
-    const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+    // Validate file size (max 2MB)
+    const maxSize = 2 * 1024 * 1024; // 2MB in bytes
     if (file.size > maxSize) {
-      toast.error(`La taille du fichier dépasse la limite autorisée (5MB)`);
+      toast.error(`La taille du fichier dépasse la limite autorisée (2MB)`);
       return;
     }
 
@@ -121,7 +173,6 @@ const ProfilePicture = ({ userData, onProfilePictureChange, isLoading: externalL
       setIsDeleting(true);
       
       // Optimistic update - supprimer immédiatement l'image dans l'UI
-      setPreviousUrl(profilePictureUrl);
       refetch();
       
       // Use the mutation from the hook
@@ -156,6 +207,34 @@ const ProfilePicture = ({ userData, onProfilePictureChange, isLoading: externalL
     return <ProfilePictureSkeleton />;
   }
 
+  // Determine the image source to display
+  const getImageSrc = () => {
+    if (!profilePictureUrl) {
+      return null; // Will use the UserRound fallback
+    }
+    
+    // Check if the URL is a blob URL - but don't try to fetch it as that causes errors
+    if (profilePictureUrl.startsWith('blob:')) {
+      // Just log it and return null - we'll use the fallback
+      console.log("Blob URL detected, using fallback:", profilePictureUrl);
+      return null;
+    }
+    
+    return profilePictureUrl;
+  };
+
+  // Handle image load error
+  const handleImageError = (e) => {
+    console.error("Image failed to load:", e.target.src);
+    e.target.style.display = 'none'; // Hide the broken image
+    e.target.onerror = null; // Prevent infinite error loop
+    
+    // Show the fallback icon
+    const fallbackIcon = document.createElement('div');
+    fallbackIcon.innerHTML = '<div class="w-full h-full flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 text-gray-400"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div>';
+    e.target.parentNode.appendChild(fallbackIcon.firstChild);
+  };
+
   return (
     <div className="p-4 sm:p-6 max-w-md mx-auto">
       <div className="flex flex-col items-center">
@@ -164,16 +243,21 @@ const ProfilePicture = ({ userData, onProfilePictureChange, isLoading: externalL
             className="w-20 h-20 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden group relative cursor-pointer border-2 border-white dark:border-gray-700 shadow-sm"
             onClick={handleProfilePictureClick}
           >
-            {componentIsLoading ? (
+            {(uploadStatus.isPending || isDeleting) ? (
               <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 text-gray-400 animate-spin" />
             ) : profilePictureUrl ? (
               <img 
-                src={profilePictureUrl} 
-                alt="Profile" 
-                className="w-full h-full object-cover"
+                src={getImageSrc()} 
+                alt="Photo de profil" 
+                className="object-cover w-full h-full"
+                onError={handleImageError}
               />
             ) : (
-              <UserRound className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 text-gray-400" />
+              <Avatar className="w-full h-full">
+                <AvatarFallback className="bg-gradient-to-r from-[#02284f] to-[#03386b] text-white">
+                  <User className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16" />
+                </AvatarFallback>
+              </Avatar>
             )}
             <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
               <Camera className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 text-white" />
@@ -256,4 +340,4 @@ const ProfilePicture = ({ userData, onProfilePictureChange, isLoading: externalL
   );
 };
 
-export default ProfilePicture; 
+export default ProfilePicture;

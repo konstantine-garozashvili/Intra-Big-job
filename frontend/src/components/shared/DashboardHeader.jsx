@@ -1,13 +1,14 @@
-import React, { useEffect, useState, useRef, memo, useMemo } from 'react';
+import React, { useEffect, useState, useRef, memo } from 'react';
 import { Link } from 'react-router-dom';
 import { Clock, User, Sparkles } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
 import { authService } from '@/lib/services/authService';
 import userDataManager from '@/lib/services/userDataManager';
 import UserSkeleton from '@/components/ui/UserSkeleton';
+import ProfilePictureDisplay from '@/components/ProfilePictureDisplay';
+import { useTranslation } from '@/contexts/TranslationContext';
 
 const getInitials = (firstName, lastName) => {
   if (!firstName || !lastName) return '?';
@@ -34,71 +35,75 @@ const hasCompleteUserData = (userData) => {
  * Design inspiré du tableau de bord étudiant
  */
 const DashboardHeader = ({ user, icon: Icon, roleTitle }) => {
+  const { translate, currentLanguage } = useTranslation();
+  const [translatedTitle, setTranslatedTitle] = useState('');
+  const [translatedGreeting, setTranslatedGreeting] = useState('');
+  const [translatedProfile, setTranslatedProfile] = useState('');
+  
   // Données utilisateur stables (ne seront jamais réinitialisées à null une fois définies)
   const stableUserDataRef = useRef(null);
   
   // État local pour forcer les re-rendus quand les données stables changent
   const [userData, setUserData] = useState({});
   
-  // Ajouter des logs pour déboguer les données utilisateur
+  // État pour le temps actuel
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Effet pour mettre à jour l'heure
   useEffect(() => {
-    console.log("DashboardHeader - User data received:", user);
-    console.log("DashboardHeader - Current stable user data:", stableUserDataRef.current);
-    console.log("DashboardHeader - Has complete data:", hasCompleteUserData(user));
-    
-    // Si nous n'avons pas de données utilisateur valides, essayer de les récupérer de différentes sources
-    if (!hasCompleteUserData(user) && !stableUserDataRef.current) {
-      // 1. Essayer d'abord userDataManager (cache optimisé)
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Effet pour traduire les textes statiques
+  useEffect(() => {
+    const translateTexts = async () => {
       try {
-        const cachedUserData = userDataManager.getCachedUserData();
-        console.log("DashboardHeader - Attempting to get data from userDataManager:", cachedUserData);
-        
-        if (hasCompleteUserData(cachedUserData)) {
-          // Mettre à jour les données stables avec les données du userDataManager
-          const newUserData = {
-            firstName: cachedUserData.firstName,
-            lastName: cachedUserData.lastName,
-            profilePicture: cachedUserData.profilePicture || cachedUserData.avatar,
-            fullName: `${cachedUserData.firstName} ${cachedUserData.lastName}`
-          };
-          
-          stableUserDataRef.current = newUserData;
-          // IMPORTANT: Mettre à jour l'état pour forcer un re-rendu
-          setUserData(newUserData);
-          
-          console.log("DashboardHeader - Using userDataManager cache data as fallback");
-          return;
-        }
+        const [title, greeting, profile] = await Promise.all([
+          typeof roleTitle === 'string' ? translate(roleTitle) : roleTitle,
+          translate('Bonjour'),
+          translate('Mon profil')
+        ]);
+        setTranslatedTitle(title);
+        setTranslatedGreeting(greeting);
+        setTranslatedProfile(profile);
       } catch (error) {
-        console.error("DashboardHeader - Error retrieving data from userDataManager:", error);
+        console.error('Translation error:', error);
       }
-      
-      // 2. Sinon, essayer authService.getMinimalUserData (localStorage)
-      try {
-        const localStorageData = authService.getMinimalUserData();
-        console.log("DashboardHeader - Attempting to get data from localStorage:", localStorageData);
-        
-        if (hasCompleteUserData(localStorageData)) {
-          // Mettre à jour les données stables avec les données du localStorage
-          const newUserData = {
-            firstName: localStorageData.firstName,
-            lastName: localStorageData.lastName,
-            profilePicture: localStorageData.profilePicture || localStorageData.avatar,
-            fullName: `${localStorageData.firstName} ${localStorageData.lastName}`
-          };
-          
-          stableUserDataRef.current = newUserData;
-          // IMPORTANT: Mettre à jour l'état pour forcer un re-rendu
-          setUserData(newUserData);
-          
-          console.log("DashboardHeader - Using localStorage data as fallback");
-        }
-      } catch (error) {
-        console.error("DashboardHeader - Error retrieving data from localStorage:", error);
-      }
+    };
+    translateTexts();
+  }, [roleTitle, currentLanguage, translate]);
+
+  // Effet pour gérer les données utilisateur
+  useEffect(() => {
+    if (!user) return;
+
+    // Si nous avons des données complètes
+    if (hasCompleteUserData(user)) {
+      const newData = {
+        firstName: user.firstName,
+        lastName: user.lastName,
+        profilePicture: user.profilePicture,
+        fullName: `${user.firstName} ${user.lastName}`
+      };
+
+      // Mettre à jour les données stables
+      stableUserDataRef.current = newData;
+      setUserData(newData);
+    }
+    // Si nous avons des données partielles mais valides
+    else if (user.firstName && user.lastName) {
+      const partialData = {
+        firstName: user.firstName,
+        lastName: user.lastName
+      };
+      console.log('DashboardHeader - Updating with partial data:', partialData);
+      setUserData(prev => ({ ...prev, ...partialData }));
     }
   }, [user]);
-  
+
   // État pour gérer l'affichage du skeleton
   const [showSkeleton, setShowSkeleton] = useState(false);
   
@@ -110,14 +115,7 @@ const DashboardHeader = ({ user, icon: Icon, roleTitle }) => {
   const lastDataChangeRef = useRef(Date.now());
 
   // Obtenir les initiales de l'utilisateur pour l'avatar
-  const userInitials = useMemo(() => {
-    if (!userData.firstName || !userData.lastName) {
-      return user?.firstName && user?.lastName 
-        ? `${user.firstName[0]}${user.lastName[0]}` 
-        : 'U';
-    }
-    return `${userData.firstName[0]}${userData.lastName[0]}`;
-  }, [user, userData]);
+  const userInitials = getInitials(userData.firstName, userData.lastName);
 
   useEffect(() => {
     // Si les données utilisateur sont partiellement complètes (au moins prénom OU nom)
@@ -276,15 +274,14 @@ const DashboardHeader = ({ user, icon: Icon, roleTitle }) => {
     >
       <div className="flex flex-col md:flex-row md:items-center md:justify-between relative z-10">
         <div className="flex items-center">
-          <Avatar className="h-14 w-14 border-2 border-primary">
-            <AvatarImage src={profilePicture} alt={firstName} />
-            <AvatarFallback className="bg-primary text-primary-foreground">{userInitials}</AvatarFallback>
-          </Avatar>
+          <div className="relative h-16 w-16 sm:h-12 sm:w-12 md:h-16 md:w-16 lg:h-18 lg:w-18">
+            <ProfilePictureDisplay className="w-full h-full" />
+          </div>
           <div className="ml-4">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
-              {firstName ? (
+              {userData.firstName ? (
                 <>
-                  Bonjour, {firstName}{' '}
+                  {translatedGreeting}, {userData.firstName}{' '}
                   <span className="inline-block ml-2">
                     <motion.div 
                       className="w-5 h-5 text-yellow-500"
@@ -302,14 +299,14 @@ const DashboardHeader = ({ user, icon: Icon, roleTitle }) => {
                 </>
               ) : (
                 <div className="flex items-center gap-2">
-                  <span>Bonjour,</span>
+                  <span>{translatedGreeting},</span>
                   <Skeleton className="h-8 w-32" />
                 </div>
               )}
             </h1>
             <p className="text-gray-600 dark:text-gray-400 flex items-center gap-1.5 mt-1">
               {Icon ? <Icon className="h-3.5 w-3.5 text-primary" /> : <Sparkles className="h-3.5 w-3.5 text-primary" />}
-              <span>{roleTitle}</span>
+              <span>{translatedTitle}</span>
             </p>
           </div>
         </div>
@@ -317,13 +314,17 @@ const DashboardHeader = ({ user, icon: Icon, roleTitle }) => {
           <div className="flex items-center mr-4">
             <Clock className="w-5 h-5 mr-2 text-blue-500 dark:text-blue-400" />
             <span className="text-lg font-semibold text-gray-800 dark:text-gray-200">
-              {new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+              {currentTime.toLocaleTimeString(currentLanguage === 'fr' ? 'fr-FR' : 'en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: currentLanguage !== 'fr'
+              })}
             </span>
           </div>
           <Link to="/profile">
             <Button size="sm" className="gap-2 bg-primary hover:bg-primary/90">
-              <User className="h-4 w-4" />
-              <span className="hidden sm:inline">Mon profil</span>
+              <User className="h-5 w-5" />
+              <span className="hidden sm:inline">{translatedProfile}</span>
             </Button>
           </Link>
         </div>

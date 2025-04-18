@@ -1,113 +1,130 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Bell, FileCheck, FileX, File, Info, Calendar, Check, Undo, ChevronLeft, ChevronRight, Filter, Trash } from 'lucide-react';
+import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Bell, FileCheck, FileX, File, Info, Calendar, Check, Undo, ChevronLeft, Filter, Trash, Settings } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { notificationService } from '@/lib/services/notificationService';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { cn } from '@/lib/utils';
-import NotificationBadge from '@/components/NotificationBadge';
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import MockModeBanner from '@/components/MockModeBanner';
+import { useNotifications } from '@/lib/hooks/useNotifications';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-// Composant pour afficher une icône en fonction du type de notification
-const NotificationIcon = ({ type, className }) => {
-  // Adapter les types pour les notifications Mercure
-  switch (type) {
-    case 'DOCUMENT_APPROVED':
-    case 'document_approved':
-      return <FileCheck className={cn("h-5 w-5 text-green-500", className)} />;
-    case 'DOCUMENT_REJECTED':
-    case 'document_rejected':
-      return <FileX className={cn("h-5 w-5 text-red-500", className)} />;
-    case 'DOCUMENT_UPLOADED':
-    case 'document_uploaded':
-    case 'CV_UPLOADED':
-      return <File className={cn("h-5 w-5 text-blue-500", className)} />;
-    case 'DOCUMENT_DELETED':
-    case 'document_deleted':
-      return <Trash className={cn("h-5 w-5 text-red-500", className)} />;
-    case 'system':
-      return <Info className={cn("h-5 w-5 text-gray-500", className)} />;
-    case 'announcement':
-      return <Calendar className={cn("h-5 w-5 text-purple-500", className)} />;
-    default:
-      return <Bell className={cn("h-5 w-5 text-gray-500", className)} />;
+// Fonction utilitaire pour formatter la date
+const formatTimestamp = (timestamp) => {
+  try {
+    // Si c'est un objet Firestore Timestamp
+    if (timestamp && typeof timestamp.toDate === 'function') {
+      return format(timestamp.toDate(), 'PPp', { locale: fr });
+    }
+    // Si c'est une date JavaScript
+    else if (timestamp instanceof Date) {
+      return format(timestamp, 'PPp', { locale: fr });
+    }
+    // Si c'est un timestamp en millisecondes
+    else if (typeof timestamp === 'number') {
+      return format(new Date(timestamp), 'PPp', { locale: fr });
+    }
+    // Si c'est une chaîne ISO
+    else if (typeof timestamp === 'string') {
+      return format(new Date(timestamp), 'PPp', { locale: fr });
+    }
+    return 'Date inconnue';
+  } catch (error) {
+    console.error('Erreur lors du formatage de la date:', error);
+    return 'Date incorrecte';
   }
 };
 
-// Composant pour une notification individuelle
-const NotificationItem = ({ notification, onRead, onClick }) => {
-  const [isHovering, setIsHovering] = useState(false);
-  
-  const formattedDate = format(new Date(notification.createdAt), 'dd MMM yyyy, HH:mm', { locale: fr });
-  const relativeTime = formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true, locale: fr });
-  
-  // Vérifier si la notification est lue (compatible avec le format Mercure)
-  const isNotificationRead = notification.readAt || notification.isRead;
-  
-  return (
-    <Card 
-      className={cn(
-        "cursor-pointer mb-3 transition-shadow hover:shadow-md",
-        !isNotificationRead ? "border-l-4 border-l-blue-500 dark:border-l-blue-400" : ""
-      )}
-      onMouseEnter={() => setIsHovering(true)}
-      onMouseLeave={() => setIsHovering(false)}
-      onClick={() => onClick(notification)}
-    >
-      <CardContent className="p-4">
-        <div className="flex items-start">
-          <div className="mr-3 mt-1">
-            <NotificationIcon type={notification.type} />
-          </div>
-          <div className="flex-grow">
-            <div className="flex justify-between items-start">
-              <h3 className={cn(
-                "text-base font-medium",
-                !isNotificationRead ? "text-gray-900 dark:text-white" : "text-gray-700 dark:text-gray-300"
-              )}>
-                {notification.title}
-              </h3>
-              <div className="flex flex-col items-end">
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  {relativeTime}
-                </span>
-                <span className="text-[10px] text-gray-400 dark:text-gray-500">
-                  {formattedDate}
-                </span>
-              </div>
-            </div>
-            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-              {notification.message}
-            </p>
-            
-            {isHovering && notification.targetUrl && (
-              <div className="mt-2 text-xs text-blue-600 dark:text-blue-400">
-                Cliquer pour voir les détails
-              </div>
-            )}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
+// Configuration des badges de type
+const notificationTypeConfig = {
+  ROLE_UPDATE: {
+    label: 'Mise à jour de rôle',
+    color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+    icon: <Info className="h-4 w-4" />
+  },
+  SYSTEM: {
+    label: 'Système',
+    color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300',
+    icon: <Bell className="h-4 w-4" />
+  },
+  INFO: {
+    label: 'Information',
+    color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+    icon: <Info className="h-4 w-4" />
+  },
+  WARNING: {
+    label: 'Avertissement',
+    color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
+    icon: <Info className="h-4 w-4" />
+  },
+  ALERT: {
+    label: 'Alerte',
+    color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+    icon: <Info className="h-4 w-4" />
+  },
+  DOCUMENT_APPROVED: {
+    label: 'Document approuvé',
+    color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+    icon: <FileCheck className="h-4 w-4" />
+  },
+  DOCUMENT_REJECTED: {
+    label: 'Document rejeté',
+    color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+    icon: <FileX className="h-4 w-4" />
+  },
+  DOCUMENT_UPLOADED: {
+    label: 'Document téléchargé',
+    color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+    icon: <File className="h-4 w-4" />
+  }
 };
 
-// Composant de squelette pour le chargement
-const NotificationSkeleton = () => (
-  <Card className="mb-3">
+// Page principale des notifications
+const NotificationsPage = () => {
+  const navigate = useNavigate();
+  const { notifications, loading, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const [activeTab, setActiveTab] = useState('all');
+  const [filter, setFilter] = useState(null);
+
+  // Fonction pour obtenir les notifications filtrées
+  const getFilteredNotifications = () => {
+    if (!notifications) return [];
+    
+    let filtered = [...notifications];
+    
+    // Filtrer par statut de lecture
+    if (activeTab === 'unread') {
+      filtered = filtered.filter(n => !n.read);
+    }
+    
+    // Filtrer par type
+    if (filter) {
+      filtered = filtered.filter(n => n.type === filter);
+    }
+    
+    return filtered;
+  };
+  
+  const filteredNotifications = getFilteredNotifications();
+  
+  // Fonction pour gérer le clic sur une notification
+  const handleNotificationClick = (notification) => {
+    markAsRead(notification.id);
+    
+    // Si la notification a un lien de redirection, y naviguer
+    if (notification.targetUrl) {
+      navigate(notification.targetUrl);
+    }
+  };
+  
+  // Rendu du squelette de chargement
+  const renderSkeleton = () => (
+    <div className="space-y-4">
+      {Array(5).fill(0).map((_, i) => (
+        <Card key={i} className="mb-3">
     <CardContent className="p-4">
       <div className="flex items-start">
         <Skeleton className="h-5 w-5 rounded-full mr-3 mt-1" />
@@ -125,401 +142,183 @@ const NotificationSkeleton = () => (
       </div>
     </CardContent>
   </Card>
-);
-
-// Composant pour aucune notification
-const EmptyNotifications = () => (
-  <div className="text-center p-8">
-    <Bell className="h-10 w-10 text-gray-400 mx-auto mb-4" />
-    <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300">Pas de notification</h3>
-    <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 max-w-md mx-auto">
-      Vous n'avez aucune notification pour le moment. Les notifications apparaîtront ici lorsque vous recevrez des mises à jour importantes.
-    </p>
+      ))}
   </div>
 );
 
-// Page principale des notifications
-const NotificationsPage = () => {
-  const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 10,
-    total: 0,
-    pages: 1
-  });
-  const [activeTab, setActiveTab] = useState('all');
-  const hasFetchedRef = useRef(false);
-  const navigate = useNavigate();
-  
-  // État pour suivre si nous sommes en mode simulé
-  const [isSimulatedMode, setIsSimulatedMode] = useState(false);
-  
-  // Initialiser Mercure au montage
-  useEffect(() => {
-    // Initialiser la connexion Mercure
-    notificationService.initMercure();
-    
-    // Nettoyer la connexion au démontage
-    return () => {
-      notificationService.closeMercureConnection();
-    };
-  }, []);
-  
-  // Fonction pour charger les notifications
-  const loadNotifications = async (page = 1, includeRead = true) => {
-    // Si nous sommes déjà en train de charger, ne pas relancer
-    if (loading && hasFetchedRef.current) return;
-    
-    setLoading(true);
-    try {
-      // Obtenir les notifications de notre cache Mercure
-      const cachedNotifications = notificationService.cache.notifications.notifications || [];
-      
-      // Filtrer selon includeRead
-      const filteredNotifications = includeRead 
-        ? cachedNotifications 
-        : cachedNotifications.filter(n => !n.isRead && !n.readAt);
-      
-      // Trier par date (plus récent en premier)
-      const sortedNotifications = [...filteredNotifications].sort(
-        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-      );
-      
-      // Calculer la pagination
-      const total = sortedNotifications.length;
-      const pages = Math.max(1, Math.ceil(total / pagination.limit));
-      const startIndex = (page - 1) * pagination.limit;
-      const paginatedNotifications = sortedNotifications.slice(
-        startIndex, 
-        startIndex + pagination.limit
-      );
-      
-      // Mettre à jour l'état
-      setNotifications(paginatedNotifications);
-      setPagination({
-        page: page,
-        limit: pagination.limit,
-        total: total,
-        pages: pages,
-      });
-      
-      // Mettre à jour le compteur de non lus
-      const unreadCount = cachedNotifications.filter(n => !n.isRead && !n.readAt).length;
-      
-      // Mettre à jour le mode simulé
-      setIsSimulatedMode(notificationService.useMockBackend);
-      
-      setError(null);
-      hasFetchedRef.current = true;
-    } catch (error) {
-      console.error('Error loading notifications:', error);
-      
-      // Ne pas montrer d'erreur si nous avons déjà des données à afficher
-      if (notifications.length === 0) {
-        setError('Erreur lors du chargement des notifications. Veuillez réessayer.');
-      }
-      
-      // Mettre à jour le mode simulé
-      setIsSimulatedMode(notificationService.useMockBackend);
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  // Charger les notifications au chargement de la page
-  useEffect(() => {
-    const includeRead = activeTab === 'all';
-    loadNotifications(1, includeRead);
-  }, [activeTab]);
-  
-  // Surveiller les modifications du compteur de notifications non lues
-  useEffect(() => {
-    // S'abonner aux mises à jour des notifications
-    const unsubscribe = notificationService.subscribe(data => {
-      // Recharger les notifications quand on reçoit une mise à jour
-      const includeRead = activeTab === 'all';
-      loadNotifications(pagination.page, includeRead);
-    });
-    
-    return () => unsubscribe();
-  }, [activeTab, pagination.page]);
-  
-  // Gérer le changement de page
-  const handlePageChange = (newPage) => {
-    if (newPage >= 1 && newPage <= pagination.pages) {
-      const includeRead = activeTab === 'all';
-      loadNotifications(newPage, includeRead);
-    }
-  };
-  
-  // Gérer le marquage de toutes les notifications comme lues
-  const handleMarkAllAsRead = async () => {
-    try {
-      // Marquage local pour toutes les notifications
-      notificationService.markAllNotificationsAsReadLocally();
-      
-      // Mettre à jour les notifications affichées
-      setNotifications(notifications.map(notification => ({
-        ...notification,
-        readAt: new Date().toISOString(),
-        isRead: true
-      })));
-      
-      // Si on est sur l'onglet "non lues", recharger pour les retirer
-      if (activeTab === 'unread') {
-        loadNotifications(1, false);
-      }
-      
-      toast.success('Toutes les notifications ont été marquées comme lues');
-    } catch (error) {
-      console.error('Error marking all as read:', error);
-      setError('Erreur lors du marquage des notifications comme lues.');
-    }
-  };
-  
-  // Gestion des onglets
-  const handleTabChange = (value) => {
-    setActiveTab(value);
-  };
-  
-  // Fonction pour créer une notification de test
-  const createTestNotification = async (type = 'document', targetUrl = '/dashboard') => {
-    try {
-      await notificationService.createTestNotification(type, targetUrl);
-      toast.success(`Notification de test (${type}) créée avec succès`);
-      
-      // Forcer un rafraîchissement complet du cache
-      notificationService.resetCache();
-      hasFetchedRef.current = false;
-      
-      // Recharger les notifications avec une légère pause pour laisser le temps au service de se réinitialiser
-      setTimeout(() => {
-        loadNotifications(1, activeTab === 'all');
-      }, 100);
-    } catch (error) {
-      console.error('Error creating test notification:', error);
-      toast.error(`Erreur lors de la création de la notification: ${error.message || 'Erreur inconnue'}`);
-    }
-  };
-  
-  // Fonction pour marquer une notification comme lue et naviguer vers sa cible
-  const handleClick = async (notification) => {
-    try {
-      if (!notification.readAt && !notification.isRead) {
-        // Mettre à jour l'interface immédiatement pour un retour visuel instantané
-        const updatedNotifications = notifications.map(n => 
-          n.id === notification.id ? { ...n, readAt: new Date().toISOString(), isRead: true } : n
-        );
-        setNotifications(updatedNotifications);
-        
-        // Marquer comme lue localement
-        notificationService.markNotificationAsReadLocally(notification.id);
-      }
-      
-      // Vérifier si l'URL cible est valide avant de rediriger
-      if (notification.targetUrl && notification.targetUrl.startsWith('/')) {
-        navigate(notification.targetUrl);
-      } else {
-        // Si l'URL n'est pas valide, rester sur la page des notifications
-        console.warn('Invalid targetUrl in notification:', notification.targetUrl);
-      }
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
-      // Ne pas afficher de message d'erreur à l'utilisateur pour ne pas perturber l'expérience
-      // La navigation doit quand même se faire même si le marquage échoue
-      if (notification.targetUrl && notification.targetUrl.startsWith('/')) {
-        navigate(notification.targetUrl);
-      }
-    }
-  };
-  
-  // Calculer le nombre de notifications non lues
-  const unreadCount = notifications.filter(n => !n.readAt && !n.isRead).length;
-  
-  // Rendu des notifications ou des états alternatifs
+  // Rendu des notifications
   const renderNotifications = () => {
     if (loading) {
-      return (
-        <div className="space-y-3">
-          <NotificationSkeleton />
-          <NotificationSkeleton />
-          <NotificationSkeleton />
-          <NotificationSkeleton />
-          <NotificationSkeleton />
-        </div>
-      );
+      return renderSkeleton();
     }
     
-    if (error) {
+    if (filteredNotifications.length === 0) {
       return (
         <div className="text-center p-8">
-          <p className={isSimulatedMode ? "text-blue-500" : "text-red-500"}>
-            {isSimulatedMode 
-              ? "Le serveur n'est pas disponible. Les données sont simulées localement." 
-              : error}
+          <Bell className="h-10 w-10 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300">Pas de notification</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 max-w-md mx-auto">
+            {activeTab === 'all' 
+              ? "Vous n'avez aucune notification pour le moment."
+              : "Vous n'avez aucune notification non lue pour le moment."}
           </p>
-          
-          {!isSimulatedMode && (
-            <Button 
-              onClick={() => loadNotifications(pagination.page, activeTab === 'all')}
-              variant="outline"
-              className="mt-4"
-            >
-              <Undo className="h-4 w-4 mr-2" />
-              Réessayer
-            </Button>
-          )}
-          
-          {isSimulatedMode && (
-            <Button 
-              onClick={() => createTestNotification()}
-              variant="outline"
-              className="mt-4"
-            >
-              <Bell className="h-4 w-4 mr-2" />
-              Créer une notification de test
-            </Button>
-          )}
         </div>
       );
-    }
-    
-    if (notifications.length === 0) {
-      return <EmptyNotifications />;
     }
     
     return (
-      <div className="space-y-3">
-        {notifications.map((notification, index) => (
-          <NotificationItem 
-            key={notification.id || `notification-${index}`} 
-            notification={notification} 
-            onRead={() => {
-              // Rafraîchir la liste si on est dans l'onglet non lues
-              if (activeTab === 'unread') {
-                // Ajouter un petit délai pour que l'effet visuel soit visible
-                setTimeout(() => {
-                  loadNotifications(pagination.page, false);
-                }, 300);
-              }
-            }} 
-            onClick={handleClick}
-          />
+      <div className="space-y-4">
+        {filteredNotifications.map((notification) => (
+          <Card 
+            key={notification.id}
+            className={`cursor-pointer transition-shadow hover:shadow-md ${
+              !notification.read ? "border-l-4 border-l-blue-500 dark:border-l-blue-400" : ""
+            }`}
+            onClick={() => handleNotificationClick(notification)}
+          >
+            <CardContent className="p-4">
+              <div className="flex items-start">
+                <div className="mr-3 mt-1">
+                  {notificationTypeConfig[notification.type]?.icon || <Bell className="h-5 w-5 text-gray-500" />}
+                </div>
+                <div className="flex-grow">
+                  <div className="flex justify-between items-start">
+                    <h3 className={`text-base font-medium ${
+                      !notification.read ? "text-gray-900 dark:text-white" : "text-gray-700 dark:text-gray-300"
+                    }`}>
+                      {notification.title}
+                    </h3>
+                    <div className="flex flex-col items-end">
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {formatTimestamp(notification.timestamp)}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                    {notification.message}
+                  </p>
+                  
+                  <div className="mt-2 flex items-center gap-2">
+                    <Badge className={
+                      notificationTypeConfig[notification.type]?.color || 
+                      "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+                    }>
+                      {notificationTypeConfig[notification.type]?.label || notification.type || "Notification"}
+                    </Badge>
+                    
+                    {!notification.read && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="ml-auto text-xs py-1 h-auto"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          markAsRead(notification.id);
+                        }}
+                      >
+                        <Check className="h-3 w-3 mr-1" />
+                        Marquer comme lu
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         ))}
       </div>
     );
   };
   
+  // Rendu principal
   return (
-    <div className="container max-w-4xl px-4 py-8">
+    <div className="container mx-auto max-w-4xl p-4">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center">
-          <Bell className="h-6 w-6 text-blue-600 dark:text-blue-400 mr-2" />
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Notifications</h1>
-          {activeTab === 'unread' && unreadCount > 0 && (
-            <div className="ml-2 flex items-center">
-              <div className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300">
-                {unreadCount}
-              </div>
-            </div>
-          )}
+          <Link to="/dashboard" className="mr-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 hover:dark:text-blue-300">
+            <ChevronLeft className="h-6 w-6" />
+          </Link>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
+            Notifications
+            {unreadCount > 0 && activeTab !== 'unread' && (
+              <Badge className="ml-2 bg-red-500 text-white">
+                {unreadCount} non {unreadCount > 1 ? 'lues' : 'lue'}
+              </Badge>
+            )}
+          </h1>
         </div>
-        
-        <div className="flex items-center gap-2">
-          {unreadCount > 0 && (
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={handleMarkAllAsRead}
-              className="flex items-center"
-            >
-              <Check className="h-4 w-4 mr-2" />
-              <span>Tout marquer comme lu</span>
-            </Button>
-          )}
-          
-          {isSimulatedMode && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <span>Créer notification test</span>
+
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link to="/settings/notifications">
+                <Button variant="outline" size="sm" className="flex items-center gap-2">
+                  <Settings className="h-4 w-4" />
+                  <span className="hidden sm:inline">Paramètres</span>
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => createTestNotification('document_uploaded', '/documents')}>
-                  Document déposé
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => createTestNotification('document_approved', '/documents')}>
-                  Document approuvé
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => createTestNotification('document_rejected', '/documents')}>
-                  Document rejeté
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => createTestNotification('system', '/dashboard')}>
-                  Message système
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => createTestNotification('announcement', '/events')}>
-                  Annonce
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </div>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Gérer vos préférences de notifications</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
       
-      {isSimulatedMode && <MockModeBanner />}
-      
-      <Tabs defaultValue="all" value={activeTab} onValueChange={handleTabChange}>
-        <TabsList className="mb-4">
-          <TabsTrigger value="all">Toutes</TabsTrigger>
-          <TabsTrigger value="unread" className="relative">
-            Non lues
-            {activeTab !== 'unread' && unreadCount > 0 && (
-              <span className="ml-1.5 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-blue-600 rounded-full">
-                {unreadCount > 99 ? '99+' : unreadCount}
-              </span>
-            )}
-          </TabsTrigger>
-        </TabsList>
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full sm:w-auto">
+          <TabsList>
+            <TabsTrigger value="all">Toutes</TabsTrigger>
+            <TabsTrigger value="unread">
+              Non lues {unreadCount > 0 && `(${unreadCount})`}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
         
-        <TabsContent value="all" className="pt-2">
-          {renderNotifications()}
-        </TabsContent>
-        
-        <TabsContent value="unread" className="pt-2">
-          {renderNotifications()}
-        </TabsContent>
-      </Tabs>
-      
-      {/* Pagination */}
-      {pagination.pages > 1 && (
-        <div className="flex items-center justify-center space-x-2 mt-8">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handlePageChange(pagination.page - 1)}
-            disabled={pagination.page <= 1}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+          {Object.entries(notificationTypeConfig).map(([type, config]) => (
+            <Badge 
+              key={type}
+              className={`cursor-pointer ${
+                filter === type 
+                  ? 'bg-blue-500 text-white hover:bg-blue-600' 
+                  : 'bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+              }`}
+              onClick={() => setFilter(filter === type ? null : type)}
+            >
+              {config.label}
+            </Badge>
+          ))}
           
-          <span className="text-sm text-gray-700 dark:text-gray-300">
-            Page {pagination.page} sur {pagination.pages}
-          </span>
-          
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handlePageChange(pagination.page + 1)}
-            disabled={pagination.page >= pagination.pages}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+          {filter && (
+            <Button 
+              variant="ghost" 
+              size="sm"
+              className="text-xs h-7"
+              onClick={() => setFilter(null)}
+            >
+              Réinitialiser
+            </Button>
+          )}
         </div>
-      )}
+        
+        {unreadCount > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="ml-auto"
+            onClick={() => {
+              markAllAsRead();
+              toast.success('Toutes les notifications ont été marquées comme lues');
+            }}
+          >
+            <Check className="h-4 w-4 mr-2" />
+            Tout marquer comme lu
+          </Button>
+        )}
+      </div>
+      
+      {renderNotifications()}
     </div>
   );
 };

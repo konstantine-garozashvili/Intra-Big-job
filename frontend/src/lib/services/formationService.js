@@ -10,13 +10,30 @@ export const formationService = {
     },
 
     async createFormation(formationData) {
-        return await apiService.post('/formations', formationData);
+        const response = await apiService.post('/formations', formationData);
+        if (response.success === false) {
+            return response;
+        }
+        return {
+            id: response.id,
+            name: response.name,
+            promotion: response.promotion,
+            description: response.description,
+            students: response.students || []
+        };
     },
 
     async addStudentToFormation(formationId, studentId) {
-        return await apiService.post(`/formations/${formationId}/students`, {
+        const response = await apiService.post(`/formations/${formationId}/students`, {
             studentId: studentId
         });
+        if (response.success === false) {
+            return response;
+        }
+        return {
+            success: true,
+            message: 'Student added successfully'
+        };
     },
 
     async getFormationStudents(formationId) {

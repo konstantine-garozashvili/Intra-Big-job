@@ -1,46 +1,66 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, Mail, MessageSquare, Calendar, Clock, Shield } from 'lucide-react';
+import { Bell } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { authService } from '@/lib/services/authService';
 import ProfileSettingsSkeleton from '../components/ProfileSettingsSkeleton';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNotifications } from '@/lib/hooks/useNotifications';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/services/firebase';
+import { useAuth } from '@/contexts/AuthContext';
 
 const NotificationSettings = () => {
   const [loading, setLoading] = useState(true);
-  const [settings, setSettings] = useState(null);
+  const [settings, setSettings] = useState({
+    app: {
+      ROLE_UPDATE: true // Valeur par défaut, sera remplacée lors du chargement
+    }
+  });
   const [savingChanges, setSavingChanges] = useState(false);
   const [lastToggled, setLastToggled] = useState(null);
+  const { updateNotificationPreference } = useNotifications();
+  const { user } = useAuth();
 
   useEffect(() => {
     const loadNotificationSettings = async () => {
       setLoading(true);
       try {
-        // Mock data - added the 'schedule' category
-        setSettings({
-          email: {
-            newDocuments: true,
-            loginAlerts: true,
-            announcements: false,
-            courseUpdates: true
-          },
-          app: {
-            newMessages: true,
-            eventReminders: true,
-            systemUpdates: false
-          },
-          schedule: {
-            daily: false,
-            weekly: true,
-            immediate: true
+        if (user?.id) {
+          console.log('Chargement des préférences pour l\'utilisateur ID:', user.id);
+          
+          // Charger les préférences depuis Firestore
+          const preferencesRef = doc(db, 'notificationPreferences', String(user.id));
+          const preferencesSnap = await getDoc(preferencesRef);
+          
+          if (preferencesSnap.exists()) {
+            const preferences = preferencesSnap.data();
+            console.log('Préférences chargées depuis Firestore:', preferences);
+            
+            // Mettre à jour le state avec les valeurs exactes de Firestore
+            setSettings({
+              app: {
+                ROLE_UPDATE: preferences.ROLE_UPDATE !== false // true par défaut sauf si explicitement false
+              }
+            });
+          } else {
+            console.log('Aucune préférence trouvée pour cet utilisateur, utilisation des valeurs par défaut');
+            
+            // Si pas de préférences, on utilise les valeurs par défaut déjà définies
+            setSettings({
+              app: {
+                ROLE_UPDATE: true
+              }
+            });
           }
-        });
+        } else {
+          console.log('Pas d\'utilisateur, utilisation des valeurs par défaut');
+        }
       } catch (error) {
+        console.error('Erreur lors du chargement des paramètres:', error);
         toast.error('Erreur lors du chargement des paramètres');
       } finally {
         setLoading(false);
@@ -48,7 +68,7 @@ const NotificationSettings = () => {
     };
 
     loadNotificationSettings();
-  }, []);
+  }, [user]);
 
   const handleToggleChange = (category, setting) => {
     setLastToggled({ category, setting });
@@ -60,7 +80,6 @@ const NotificationSettings = () => {
       }
     }));
 
-    // Réinitialiser lastToggled après l'animation
     setTimeout(() => {
       setLastToggled(null);
     }, 1000);
@@ -69,8 +88,10 @@ const NotificationSettings = () => {
   const saveChanges = async () => {
     setSavingChanges(true);
     try {
+      await updateNotificationPreference('ROLE_UPDATE', settings.app.ROLE_UPDATE);
       toast.success('Paramètres de notification mis à jour');
     } catch (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
       toast.error('Erreur lors de la mise à jour des paramètres');
     } finally {
       setSavingChanges(false);
@@ -78,6 +99,7 @@ const NotificationSettings = () => {
   };
 
   const NotificationSwitch = ({ category, setting, label, description }) => {
+    // Utiliser la valeur actuelle du state settings au lieu d'une valeur par défaut
     const isToggled = settings[category][setting];
     const isLastToggled = lastToggled && lastToggled.category === category && lastToggled.setting === setting;
     
@@ -148,128 +170,28 @@ const NotificationSettings = () => {
       </Alert>
 
       <div className="grid gap-6">
-        {/* Email Notifications */}
         <Card className="border dark:border-gray-700 transition-all hover:shadow-md dark:hover:shadow-blue-900/10">
           <CardHeader className="dark:border-b dark:border-gray-700">
             <div className="flex items-center gap-2">
-              <Mail className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              <CardTitle className="dark:text-white">Notifications par email</CardTitle>
+              <Bell className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              <CardTitle className="dark:text-white">Notifications système</CardTitle>
             </div>
             <CardDescription className="dark:text-gray-400">
-              Gérez les emails que vous recevez de notre part.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <NotificationSwitch
-              category="email"
-              setting="newDocuments"
-              label="Nouveaux documents"
-              description="Recevez des notifications pour les nouveaux documents."
-            />
-            <Separator className="bg-gray-200 dark:bg-gray-700" />
-            <NotificationSwitch
-              category="email"
-              setting="loginAlerts"
-              label="Alertes de connexion"
-              description="Recevez des notifications pour les alertes de connexion."
-            />
-            <Separator className="bg-gray-200 dark:bg-gray-700" />
-            <NotificationSwitch
-              category="email"
-              setting="announcements"
-              label="Annonces"
-              description="Recevez des notifications pour les annonces importantes."
-            />
-            <Separator className="bg-gray-200 dark:bg-gray-700" />
-            <NotificationSwitch
-              category="email"
-              setting="courseUpdates"
-              label="Mises à jour de cours"
-              description="Recevez des notifications pour les mises à jour de cours."
-            />
-          </CardContent>
-        </Card>
-
-        {/* Push Notifications */}
-        <Card className="border dark:border-gray-700 transition-all hover:shadow-md dark:hover:shadow-blue-900/10">
-          <CardHeader className="dark:border-b dark:border-gray-700">
-            <div className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              <CardTitle className="dark:text-white">Notifications push</CardTitle>
-            </div>
-            <CardDescription className="dark:text-gray-400">
-              Configurez les notifications instantanées sur votre appareil.
+              Gérez vos notifications système.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <NotificationSwitch
               category="app"
-              setting="newMessages"
-              label="Nouveaux messages"
-              description="Recevez des notifications pour les nouveaux messages."
-            />
-            <Separator className="bg-gray-200 dark:bg-gray-700" />
-            <NotificationSwitch
-              category="app"
-              setting="eventReminders"
-              label="Rappels d'événement"
-              description="Recevez des notifications pour les rappels d'événement."
-            />
-            <Separator className="bg-gray-200 dark:bg-gray-700" />
-            <NotificationSwitch
-              category="app"
-              setting="systemUpdates"
-              label="Mises à jour du système"
-              description="Recevez des notifications pour les mises à jour du système."
-            />
-          </CardContent>
-        </Card>
-
-        {/* Schedule Preferences */}
-        <Card className="border dark:border-gray-700 transition-all hover:shadow-md dark:hover:shadow-blue-900/10">
-          <CardHeader className="dark:border-b dark:border-gray-700">
-            <div className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              <CardTitle className="dark:text-white">Préférences de planning</CardTitle>
-            </div>
-            <CardDescription className="dark:text-gray-400">
-              Définissez quand vous souhaitez recevoir les notifications.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <NotificationSwitch
-              category="schedule"
-              setting="daily"
-              label="Résumé quotidien"
-              description="Recevez un résumé quotidien de vos notifications."
-            />
-            <Separator className="bg-gray-200 dark:bg-gray-700" />
-            <NotificationSwitch
-              category="schedule"
-              setting="weekly"
-              label="Résumé hebdomadaire"
-              description="Recevez un résumé hebdomadaire de vos activités."
-            />
-            <Separator className="bg-gray-200 dark:bg-gray-700" />
-            <NotificationSwitch
-              category="schedule"
-              setting="immediate"
-              label="Notifications immédiates"
-              description="Recevez les notifications en temps réel."
+              setting="ROLE_UPDATE"
+              label="Changements de rôle"
+              description="Recevez des notifications lorsque votre rôle est modifié."
             />
           </CardContent>
         </Card>
       </div>
 
       <div className="flex justify-end gap-2">
-        <Button 
-          variant="outline" 
-          onClick={() => toast.success('Paramètres réinitialisés aux valeurs par défaut')}
-          disabled={savingChanges}
-          className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
-        >
-          Réinitialiser les paramètres
-        </Button>
         <Button 
           onClick={saveChanges} 
           disabled={savingChanges}

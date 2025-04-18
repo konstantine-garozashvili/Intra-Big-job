@@ -6,6 +6,7 @@ import documentService from '../services/documentService';
 import { studentProfileService } from '@/lib/services';
 import { diplomaService } from '../services/diplomaService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { isStudent, isGuest } from '../utils/roleUtils'; // Importer les fonctions utilitaires
 
 // Import des composants liés à la carrière
 import { CVUpload, JobSeekingSettings, DiplomaManager } from '../components/settings';
@@ -42,11 +43,11 @@ const CareerSettings = () => {
 
   // Extraire et valider le rôle de l'utilisateur avec protection supplémentaire
   const userRole = currentUser?.roles?.[0] || null;
-  
+
   // Déterminer les rôles de façon sécurisée
-  const isStudent = userRole === 'ROLE_STUDENT';
-  const isGuest = userRole === 'ROLE_GUEST';
-  const hasValidRole = userStatus === 'success' && (isStudent || isGuest);
+  const userIsStudent = isStudent(userRole);
+  const userIsGuest = isGuest(userRole);
+  const hasValidRole = userStatus === 'success' && (userIsStudent || userIsGuest);
 
   // 2. REQUÊTE PROFIL ÉTUDIANT - Uniquement si l'utilisateur est un étudiant confirmé
   const {
@@ -56,7 +57,7 @@ const CareerSettings = () => {
   } = useQuery({
     queryKey: ['studentProfile'],
     queryFn: studentProfileService.getMyProfile,
-    enabled: isStudent && userStatus === 'success',
+    enabled: userStatus === 'success' && !!currentUser?.roles?.includes('ROLE_STUDENT'),
     staleTime: 30 * 1000, // Réduit à 30 secondes au lieu de 5 minutes
     refetchOnMount: true, // Toujours refetch quand le composant est monté
     refetchOnWindowFocus: true, // Refetch quand la fenêtre reprend le focus
@@ -307,8 +308,20 @@ const CareerSettings = () => {
             userData={{ role: userRole }}
             diplomas={diplomas || []}
             setDiplomas={(updatedDiplomas) => {
-              // Conserver la compatibilité avec l'API existante
+              // Update the React Query cache without triggering additional refetches
               queryClient.setQueryData(['userDiplomas'], updatedDiplomas);
+              
+              // Explicitly invalidate and refetch to ensure API call occurs
+              queryClient.invalidateQueries(['userDiplomas']);
+              queryClient.refetchQueries(['userDiplomas']);
+              
+              // Also refetch profile data for completeness
+              queryClient.invalidateQueries(['/api/profile']);
+              
+              // Force a direct API call regardless of React Query's cache
+              diplomaService.getUserDiplomas().catch(err => 
+                console.error("[CareerSettings] Error directly fetching user diplomas:", err)
+              );
             }}
           />
         </div>

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import userDataManager, { USER_DATA_EVENTS } from '@/lib/services/userDataManager';
 import { getSessionId } from '@/lib/services/authService';
+import { authService } from '@/lib/services/authService';
 import apiService from '@/lib/services/apiService';
 
 /**
@@ -9,23 +10,25 @@ import apiService from '@/lib/services/apiService';
  * Remplace différents hooks dispersés dans l'application
  * @param {Object} options - Options du hook
  * @param {boolean} options.enabled - Active ou désactive la requête
- * @param {boolean} options.preferComprehensiveData - Préfère les données complètes (profile/consolidated)
  * @param {function} options.onSuccess - Callback appelé en cas de succès
  * @param {function} options.onError - Callback appelé en cas d'erreur
+ * @param {string} options.userId - ID de l'utilisateur à récupérer (facultatif)
  * @returns {Object} - Données et fonctions utilisateur
  */
 export function useUserData(options = {}) {
   const {
     enabled = true,
-    preferComprehensiveData = false,
     onSuccess,
     onError,
+    userId,
     ...queryOptions
   } = options;
 
   const queryClient = useQueryClient();
   const [isInitialLoading, setIsInitialLoading] = useState(false);
   const sessionId = getSessionId();
+  // Add isAuthenticated state
+  const [isAuthenticated, setIsAuthenticated] = useState(() => authService.isLoggedIn());
   
   const [componentId] = useState(() => 
     `user_data_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
@@ -41,23 +44,19 @@ export function useUserData(options = {}) {
     return null;
   });
 
-  const routeKey = preferComprehensiveData ? '/profile/consolidated' : '/api/me';
+  // Construire la clé de la requête en fonction de l'ID de l'utilisateur
+  const routeKey = userId ? `/api/public-profile/${userId}` : '/api/profile';
+  
+  // Add a ref to track the last time we fetched data to prevent too frequent refreshes
+  const [lastFetchTime, setLastFetchTime] = useState(0);
   
   useEffect(() => {
     userDataManager.requestRegistry.registerRouteUser(routeKey, componentId);
     
-    if (preferComprehensiveData) {
-      userDataManager.requestRegistry.registerRouteUser('/api/profile/picture', componentId);
-    }
-    
     return () => {
       userDataManager.requestRegistry.unregisterRouteUser(routeKey, componentId);
-      
-      if (preferComprehensiveData) {
-        userDataManager.requestRegistry.unregisterRouteUser('/api/profile/picture', componentId);
-      }
     };
-  }, [routeKey, componentId, preferComprehensiveData]);
+  }, [routeKey, componentId]);
   
   useEffect(() => {
     if (!enabled || !sessionId) return;
@@ -65,12 +64,23 @@ export function useUserData(options = {}) {
     const hasToken = !!localStorage.getItem('token');
     if (!hasToken) return;
     
+    // Only fetch if we haven't fetched in the last 10 seconds
+    const now = Date.now();
+    if (now - lastFetchTime < 10000) {
+      return;
+    }
+    
     const fetchData = async () => {
+      setIsInitialLoading(true);
       try {
+        // Use a timestamp-based requestId to help with debugging
+        const requestId = `useUserData_${componentId}_${now}`;
+        
         const freshData = await userDataManager.getUserData({
           routeKey,
-          forceRefresh: true,
-          useCache: false,
+          forceRefresh: false, // Change to false to allow using cache
+          useCache: true,      // Allow using cache
+          requestId           // Add requestId for tracing
         });
         
         if (freshData) {
@@ -83,26 +93,37 @@ export function useUserData(options = {}) {
             // Error saving to localStorage
           }
         }
+        
+        // Update the last fetch time
+        setLastFetchTime(now);
       } catch (error) {
         // Error in initial data fetch
+        console.warn("Error fetching user data:", error);
+      } finally {
+        setIsInitialLoading(false);
       }
     };
     
     fetchData();
-  }, [enabled, sessionId, routeKey, queryClient]);
+  }, [enabled, sessionId, routeKey, queryClient, lastFetchTime]);
 
   const getCachedData = useCallback(() => {
-    const cached = userDataManager.getCachedUserData();
-    if (cached) {
-      return cached;
-    }
-    
-    if (localStorageUser) {
+    // Add debouncing/memoization to prevent excessive cache reads
+    try {
+      // First try to get from query cache which is faster
+      const queryCached = queryClient.getQueryData(['unified-user-data', routeKey, sessionId]);
+      if (queryCached) return queryCached;
+      
+      // Then try userDataManager cache
+      const cached = userDataManager.getCachedUserData();
+      if (cached) return cached;
+      
+      // Finally try localStorage
+      return localStorageUser;
+    } catch (e) {
       return localStorageUser;
     }
-    
-    return null;
-  }, [localStorageUser]);
+  }, [routeKey, sessionId, localStorageUser, queryClient]);
 
   const fetchUserData = useCallback(async () => {
     setIsInitialLoading(true);
@@ -192,10 +213,10 @@ export function useUserData(options = {}) {
     error,
     refetch
   } = useQuery({
-    queryKey: ['unified-user-data', routeKey, sessionId],
+    queryKey: ['unified-user-data', routeKey, sessionId, isAuthenticated],
     queryFn: fetchUserData,
     initialData: getCachedData,
-    enabled: enabled && !!sessionId,
+    enabled: enabled && !!sessionId && isAuthenticated,
     staleTime: 1 * 60 * 1000,
     cacheTime: 20 * 60 * 1000,
     refetchOnWindowFocus: true,
@@ -275,6 +296,32 @@ export function useUserData(options = {}) {
       (typeof r === 'object' && r.name === role)
     );
   }, [userData, localStorageUser]);
+
+  // Add listener for auth state changes
+  useEffect(() => {
+    const handleAuthChange = () => {
+      const newAuthState = authService.isLoggedIn();
+      
+      if (newAuthState !== isAuthenticated) {
+        setIsAuthenticated(newAuthState);
+        
+        // We'll let the React Query hook handle the refetch based on auth state
+        // No direct refetch call here to avoid infinite loops
+      }
+    };
+    
+    // Check auth state immediately
+    handleAuthChange();
+    
+    // Listen for auth state changes
+    window.addEventListener('auth-state-change', handleAuthChange);
+    window.addEventListener('login-success', handleAuthChange);
+    
+    return () => {
+      window.removeEventListener('auth-state-change', handleAuthChange);
+      window.removeEventListener('login-success', handleAuthChange);
+    };
+  }, []); // Empty dependency array to ensure this only runs once
 
   // Améliorer la gestion des événements de mise à jour
   useEffect(() => {
@@ -399,78 +446,75 @@ export function useUserData(options = {}) {
       return defaultValue;
     };
     
-    // Extraire les rôles avec normalisation
-    const extractRoles = (source) => {
-      if (!source || !source.roles) return [{ id: 0, name: 'USER' }];
-      
-      if (Array.isArray(source.roles)) {
-        return source.roles.map(role => {
-          if (typeof role === 'string') {
-            return { id: 0, name: role };
-          } else if (typeof role === 'object' && role !== null && role.name) {
-            return role;
-          } else {
-            return { id: 0, name: 'USER' };
-          }
-        });
-      } else if (typeof source.roles === 'object' && source.roles !== null) {
-        // Cas où les rôles sont un objet { 0: "ROLE_X", 1: "ROLE_Y" }
-        return Object.values(source.roles).map(role => {
-          if (typeof role === 'string') {
-            return { id: 0, name: role };
-          } else if (typeof role === 'object' && role !== null && role.name) {
-            return role;
-          } else {
-            return { id: 0, name: 'USER' };
-          }
-        });
-      }
-      
-      return [{ id: 0, name: 'USER' }];
-    };
+    // Extraire et normaliser le profil étudiant 
+    let studentProfile = null;
     
-    // Construire l'objet utilisateur normalisé
-    const normalizedObj = {
-      // Conserver les propriétés originales pour la compatibilité
-      ...rawData,
-      
-      // Propriétés standards de l'utilisateur avec normalisations et fallbacks
+    // Vérifier les différentes sources possibles pour studentProfile
+    if (userSource.studentProfile) {
+      studentProfile = { ...userSource.studentProfile };
+    } else if (rawData.studentProfile) {
+      studentProfile = { ...rawData.studentProfile };
+    } else if (hasNestedData && rawData.data.studentProfile) {
+      studentProfile = { ...rawData.data.studentProfile };
+    }
+    
+    // Ensure portfolioUrl is captured and preserved
+    if (studentProfile) {
+      // Make sure we preserve the portfolioUrl if it exists
+      if (studentProfile.portfolioUrl === undefined) {
+        const possibleSources = [
+          userSource.studentProfile?.portfolioUrl,
+          rawData.studentProfile?.portfolioUrl,
+          rawData.data?.studentProfile?.portfolioUrl
+        ];
+        
+        for (const source of possibleSources) {
+          if (source !== undefined) {
+            studentProfile.portfolioUrl = source;
+            break;
+          }
+        }
+      }
+    }
+    
+    return {
+      // Extraire et normaliser les propriétés utilisateur
       id: extractValue(userSource, ['id']),
-      firstName: extractValue(userSource, ['firstName', 'firstname', 'first_name']),
-      lastName: extractValue(userSource, ['lastName', 'lastname', 'last_name']),
+      firstName: extractValue(userSource, ['firstName', 'first_name']),
+      lastName: extractValue(userSource, ['lastName', 'last_name']),
+      fullName: extractValue(userSource, ['fullName', 'full_name']),
       email: extractValue(userSource, ['email']),
-      phoneNumber: extractValue(userSource, ['phoneNumber', 'phone_number', 'phonenumber']),
-      birthDate: extractValue(userSource, ['birthDate', 'birth_date', 'birthdate']),
+      phoneNumber: extractValue(userSource, ['phoneNumber', 'phone_number']),
+      linkedinUrl: extractValue(userSource, ['linkedinUrl', 'linkedin_url']),
       profilePictureUrl: extractValue(userSource, ['profilePictureUrl', 'profile_picture_url']),
       profilePicturePath: extractValue(userSource, ['profilePicturePath', 'profile_picture_path']),
-      city: extractValue(userSource, ['city']),
-      nationality: extractValue(userSource, ['nationality']),
-      gender: extractValue(userSource, ['gender']),
-      linkedinUrl: extractValue(userSource, ['linkedinUrl', 'linkedin_url']),
-      specialization: userSource.specialization || {},
+      birthDate: extractValue(userSource, ['birthDate', 'birth_date']),
+      age: extractValue(userSource, ['age'], null),
+      nationality: userSource.nationality || null,
+      theme: userSource.theme || null,
+      roles: Array.isArray(userSource.roles) ? userSource.roles : [],
+      specialization: userSource.specialization || null,
       
-      // S'assurer que les rôles sont correctement formatés
-      roles: extractRoles(userSource),
+      // Extraire et normaliser les tableaux associés
+      diplomas: Array.isArray(userSource.diplomas) ? userSource.diplomas : 
+                (Array.isArray(rawData.diplomas) ? rawData.diplomas : []),
       
-      // Propriétés spécifiques au profil étudiant (avec valeurs par défaut)
-      studentProfile: userSource.studentProfile || {
-        isSeekingInternship: false,
-        isSeekingApprenticeship: false,
-        currentInternshipCompany: null,
-        internshipStartDate: null,
-        internshipEndDate: null,
-        portfolioUrl: null,
-        situationType: null
-      },
+      addresses: Array.isArray(userSource.addresses) ? userSource.addresses : 
+                 (Array.isArray(rawData.addresses) ? rawData.addresses : []),
       
-      // Collections (avec valeurs par défaut)
-      diplomas: Array.isArray(userSource.diplomas) ? userSource.diplomas : [],
-      addresses: Array.isArray(userSource.addresses) ? userSource.addresses : [],
-      documents: Array.isArray(userSource.documents) ? userSource.documents : [],
-      stats: userSource.stats || { profile: { completionPercentage: 0 } }
+      documents: Array.isArray(userSource.documents) ? userSource.documents : 
+                 (Array.isArray(rawData.documents) ? rawData.documents : []),
+      
+      // Ajouter le profil étudiant normalisé
+      studentProfile,
+      
+      // Statistiques utilisateur
+      stats: userSource.stats || (rawData.stats || { profile: { completionPercentage: 0 } }),
+      
+      // Dates de création/modification
+      createdAt: extractValue(userSource, ['createdAt', 'created_at']),
+      updatedAt: extractValue(userSource, ['updatedAt', 'updated_at']),
     };
-    
-    return normalizedObj;
   }, [userData, localStorageUser]);
 
   // Retourner tout ce dont les composants pourraient avoir besoin

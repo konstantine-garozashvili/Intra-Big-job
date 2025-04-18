@@ -70,9 +70,9 @@ const SuperAdminDashboard = () => {
       return;
     }
     
-    // Si une tentative a déjà été faite, ne pas réessayer
-    if (refreshAttemptedRef.current) {
-      console.log("SuperAdminDashboard - Refresh already attempted, skipping");
+    // Si une tentative a déjà été faite ou si le chargement est en cours, ne pas réessayer
+    if (refreshAttemptedRef.current || isLoading) {
+      console.log("SuperAdminDashboard - Refresh already attempted or loading, skipping");
       return;
     }
     
@@ -91,19 +91,27 @@ const SuperAdminDashboard = () => {
     
     // Attendre un court instant pour permettre aux données initiales de se charger
     const timeoutId = setTimeout(() => {
-      if (!user?.firstName) {
+      if (!user?.firstName && !refreshAttemptedRef.current) {
         console.log("SuperAdminDashboard - No firstName available, triggering refresh");
         refreshUserData();
       } else {
         console.log("SuperAdminDashboard - firstName is available, no need to refresh");
       }
-    }, 100);
+    }, 500); // Augmenter le délai pour réduire les chances de conflit
     
     return () => clearTimeout(timeoutId);
-  }, [user, refetch]);
+  }, [user, refetch, isLoading]);
 
   // Définir les cartes pour les accès rapides
   const quickAccessCards = [
+    {
+      title: 'Gestion des utilisateurs',
+      description: 'Gérer les utilisateurs',
+      icon: Users,
+      color: 'from-blue-500 to-blue-600',
+      textColor: 'text-blue-50',
+      link: '/admin/users',
+    },
     {
       title: 'Gestion des rôles',
       description: 'Gérer les rôles des étudiants invités',

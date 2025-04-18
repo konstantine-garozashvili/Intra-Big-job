@@ -6,6 +6,51 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Configuration personnalisée du container */
+@layer components {
+  .container {
+    @apply mx-auto px-4;
+    max-width: 100%;
+  }
+  
+  /* Breakpoints personnalisés pour le container */
+  @media (min-width: 640px) {
+    .container {
+      max-width: 640px;
+    }
+  }
+  
+  @media (min-width: 768px) {
+    .container {
+      max-width: 768px;
+    }
+  }
+  
+  @media (min-width: 1024px) {
+    .container {
+      max-width: 1024px;
+    }
+  }
+  
+  @media (min-width: 1280px) {
+    .container {
+      max-width: 1280px;
+    }
+  }
+  
+  @media (min-width: 1536px) {
+    .container {
+      max-width: 1536px;
+    }
+  }
+  
+  @media (min-width: 1920px) {
+    .container {
+      max-width: 1800px;
+    }
+  }
+}
+
 @layer base {
   :root {
     --color-primary: 200 39% 51%; /* #528eb2 - Couleur principale du nouveau frontend */
@@ -52,7 +97,6 @@
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
     --accent: 200 39% 30%; /* #528eb2 avec une transparence plus élevée pour le mode sombre */
-   /*  --accent-foreground: 210 40% 98%; */
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
     --border: 217.2 32.6% 17.5%;
@@ -172,6 +216,17 @@
   line-height: 1.125em;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
   overflow: hidden;
+}
+
+/* Star animation for space theme */
+@keyframes twinkle {
+  0% { opacity: 0.2; }
+  50% { opacity: 0.8; }
+  100% { opacity: 0.2; }
+}
+
+.animate-twinkle {
+  animation: twinkle 3s infinite ease-in-out;
 }
 
 /* Calendar navigation */
@@ -468,6 +523,7 @@
   border-radius: 0.375rem;
   overflow: hidden;
   transition: all 0.15s ease;
+  
 }
 
 .phone-input-fr .prefix {
@@ -685,20 +741,15 @@
     @apply text-gray-200 border-gray-700;
   }
 
-  /* Spécifique aux éléments de navigation */
-  .dark nav {
+  /* Spécifique aux éléments de navigation protégés */
+  .dark nav:not(.public-nav) {
     @apply bg-[#011627] border-gray-700;
   }
 
-  /* Ajustements pour les boutons en mode sombre */
-  .dark button:not([class*="bg-"]):not(.btn-primary):not(.btn-secondary) {
-    @apply bg-gray-700 text-white hover:bg-gray-600;
-  }
-
-  /* Style spécifique pour la navbar en mode sombre */
-  .dark .navbar-fixed,
-  .dark .bg-\[\#02284f\] {
-    @apply bg-[#011627] !important;
+  /* Style spécifique pour la navbar protégée en mode sombre */
+  .dark .navbar-fixed:not(.public-nav),
+  .dark .bg-\[\#02284f\]:not(.public-nav) {
+    @apply bg-[#011627];
   }
 
   /* Style spécifique pour le contenu principal en mode sombre */
@@ -836,4 +887,14 @@
   .dark button.text-green-600.bg-green-100 {
     @apply text-green-300 bg-green-900/40 hover:bg-green-800;
   }
+}
+
+/* Exception pour la sidebar du profil */
+.dark [key="sidebar"] nav,
+.dark [key="sidebar"],
+.dark .sidebar-profile nav,
+.dark .sidebar-profile {
+  background-color: transparent !important;
+  background: transparent !important;
+  border: none !important;
 }

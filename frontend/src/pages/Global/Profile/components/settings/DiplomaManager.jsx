@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { GraduationCap, Plus, Trash2, X, Save, Calendar, Check, ChevronsUpDown } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,8 +19,11 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import * as roleUtils from '../../utils/roleUtils';
 import { useApiQuery, useApiMutation } from '@/hooks/useReactQuery';
+import { useQueryClient } from '@tanstack/react-query';
+import { getSessionId } from '@/lib/services/authService';
 
 const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
+  const queryClient = useQueryClient();
   const userRole = userData?.role;
   const [isAdding, setIsAdding] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -37,7 +40,8 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
   // Fetch available diplomas using React Query
   const { 
     data: availableDiplomasResponse, 
-    isLoading 
+    isLoading,
+    refetch: refetchAvailableDiplomas  // Get direct refetch function
   } = useApiQuery(
     '/api/user-diplomas/available', 
     'availableDiplomas',
@@ -47,6 +51,64 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
       }
     }
   );
+
+  // Get user diplomas query reference to allow explicit refetching
+  const { refetch: refetchUserDiplomas } = useApiQuery(
+    '/api/user-diplomas',
+    'userDiplomas',
+    {
+      enabled: true, // Always enabled to ensure we have the data
+      onSuccess: (data) => {
+        // Ensure diplomas state is always in sync with API data
+        console.log("[DiplomaManager] Successfully fetched user diplomas:", data);
+        if (data && Array.isArray(data)) {
+          setDiplomas(data);
+        } else if (data && data.data && Array.isArray(data.data)) {
+          setDiplomas(data.data);
+        }
+      },
+      onError: (error) => {
+        console.error('Error fetching user diplomas:', error);
+      }
+    }
+  );
+
+  // Add an effect to refetch available diplomas when diplomas change
+  useEffect(() => {
+    if (diplomas && Array.isArray(diplomas)) {
+      // Force refetch available diplomas when diplomas list changes
+      refetchAvailableDiplomas();
+    }
+  }, [diplomas, refetchAvailableDiplomas]);
+
+  // Function to ensure we definitely call both API endpoints
+  const forceRefreshAllData = () => {
+    console.log("[DiplomaManager] Force refreshing all diploma data");
+    
+    // Clear caches first
+    queryClient.invalidateQueries(['userDiplomas']);
+    queryClient.invalidateQueries(['availableDiplomas']);
+    queryClient.invalidateQueries(['/api/profile']);
+    
+    // Force direct API calls regardless of React Query cache
+    setTimeout(() => {
+      // Call user diplomas endpoint with direct service call
+      console.log("[DiplomaManager] Calling getUserDiplomas directly");
+      diplomaService.getUserDiplomas()
+        .then(data => console.log("[DiplomaManager] Direct getUserDiplomas success"))
+        .catch(err => console.error("[DiplomaManager] Error in direct getUserDiplomas call:", err));
+      
+      // Call available diplomas endpoint with direct service call
+      console.log("[DiplomaManager] Calling getAvailableDiplomas directly");
+      diplomaService.getAvailableDiplomas()
+        .then(data => console.log("[DiplomaManager] Direct getAvailableDiplomas success"))
+        .catch(err => console.error("[DiplomaManager] Error in direct getAvailableDiplomas call:", err));
+      
+      // Also refetch through React Query
+      refetchUserDiplomas();
+      refetchAvailableDiplomas();
+    }, 500); // Increased delay to ensure backend has processed changes
+  };
 
   // Ensure availableDiplomas is always an array
   const availableDiplomas = React.useMemo(() => {
@@ -77,6 +139,23 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
       onSuccess: (response) => {
         toast.success('Diplôme ajouté avec succès');
         
+        // First invalidate the cache immediately
+        queryClient.invalidateQueries(['userDiplomas']);      // User's diplomas list
+        queryClient.invalidateQueries(['/api/profile']);      // Profile data for completeness widget
+        
+        // Then queue a refetch of available diplomas with a slight delay to ensure backend processing is complete
+        setTimeout(() => {
+          console.log("[DiplomaManager] Refetching available diplomas after add");
+          // Use both methods to ensure the API call happens
+          refetchAvailableDiplomas();
+          diplomaService.getAvailableDiplomas().catch(err => 
+            console.error("[DiplomaManager] Error fetching available diplomas:", err)
+          );
+        }, 300);
+        
+        // Force a complete refresh of all relevant data
+        forceRefreshAllData();
+        
         // Add the new diploma to the list using the setDiplomas prop
         // If response has data property, use it, otherwise use the whole response
         const newDiplomaData = response.data || response;
@@ -89,6 +168,9 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
         });
         
         setDiplomas(updatedDiplomas);
+        
+        // Dispatch event to notify MainLayout about the update
+        document.dispatchEvent(new CustomEvent('user:data-updated'));
         
         // Reset form
         setNewDiploma({
@@ -140,9 +222,29 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
       onSuccess: (_, variables) => {
         toast.success('Diplôme supprimé avec succès');
         
+        // First invalidate the cache immediately
+        queryClient.invalidateQueries(['userDiplomas']);      // User's diplomas list
+        queryClient.invalidateQueries(['/api/profile']);      // Profile data for completeness widget
+        
+        // Then queue a refetch of available diplomas with a slight delay to ensure backend processing is complete
+        setTimeout(() => {
+          console.log("[DiplomaManager] Refetching available diplomas after delete");
+          // Use both methods to ensure the API call happens
+          refetchAvailableDiplomas();
+          diplomaService.getAvailableDiplomas().catch(err => 
+            console.error("[DiplomaManager] Error fetching available diplomas:", err)
+          );
+        }, 300);
+        
+        // Force a complete refresh of all relevant data
+        forceRefreshAllData();
+        
         // Remove the diploma from the list using the setDiplomas prop
         setDiplomas(diplomas.filter(diploma => diploma.id !== variables));
         setDiplomaToDelete(null);
+        
+        // Dispatch event to notify MainLayout about the update
+        document.dispatchEvent(new CustomEvent('user:data-updated'));
       },
       onError: (error) => {
         toast.error('Erreur lors de la suppression du diplôme');
@@ -162,7 +264,16 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
     
     // Check if the user already has this diploma
     const alreadyHasDiploma = diplomas.some(
-      diploma => diploma.diploma.id.toString() === newDiploma.diplomaId.toString()
+      diploma => {
+        // Handle both old and new data formats
+        if (diploma.diploma && typeof diploma.diploma === 'object') {
+          // New format: diploma object is nested
+          return diploma.diploma.id.toString() === newDiploma.diplomaId.toString();
+        } else {
+          // Old format: diploma id is at the root level
+          return diploma.id.toString() === newDiploma.diplomaId.toString();
+        }
+      }
     );
     
     if (alreadyHasDiploma) {

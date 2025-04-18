@@ -7,19 +7,24 @@
 Avant de commencer, assurez-vous d'avoir un environnement propre (Attention cette action supprimera les volumes de vos anciens projets) :
 
 ```bash
-# Nettoyer le cache Docker et les volumes
-docker system prune -a --volumes
+# Relancer complètement les containers
+docker-compose down -v && docker system prune -a --volumes && docker-compose build --no-cache && docker-compose up -d
+```
 
+
+```bash
+# Nettoyer le cache Docker et les volumes
+docker-compose down -v && docker system prune -a --volumes
 ```
 
 2. **Lancer les conteneurs Docker**
 
 ```bash
 # Reconstruire les images Docker
-docker-compose -f infra/docker-compose.yml build --no-cache
+docker-compose build --no-cache
 
 # Démarrer les conteneurs
-docker-compose -f infra/docker-compose.yml up -d
+docker-compose up -d
 
 ## 📝 Commandes fréquentes
 

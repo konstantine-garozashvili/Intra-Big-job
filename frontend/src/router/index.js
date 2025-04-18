@@ -5,6 +5,7 @@ import Register from '../pages/Register';
 import Home from '../pages/Home';
 import Profile from '../pages/Profile';
 import FormationList from '../pages/FormationList';
+import TranslationTest from '../components/Translation/TranslationTest';
 import { ProtectedRoute } from '../components/ProtectedRoute';
 import { PublicRoute } from '../components/PublicRoute';
 
@@ -46,6 +47,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute roles={['ROLE_TEACHER']}>
             <FormationList />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'translation',
+        element: (
+          <ProtectedRoute>
+            <TranslationTest />
           </ProtectedRoute>
         ),
       },

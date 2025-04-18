@@ -1,0 +1,416 @@
+---
+description: Comprehensive documentation of database structure
+globs: 
+alwaysApply: true
+---
+# Database Structure
+
+> **Comprehensive documentation of the database tables, columns, and relationships**
+
+## User Management
+
+### User
+- **Primary Keys**: `id` (auto-increment)
+- **Main Columns**:
+  - `id`: int, Primary Key
+  - `lastName`: string (255)
+  - `firstName`: string (255)
+  - `birthDate`: datetime
+  - `email`: string (180), unique
+  - `phoneNumber`: string (20)
+  - `password`: string (255)
+  - `profilePicturePath`: string (255), nullable
+  - `linkedinUrl`: string (255), nullable
+  - `createdAt`: datetime_immutable
+  - `updatedAt`: datetime_immutable, nullable
+- **Security Fields**:
+  - `isEmailVerified`: boolean
+  - `verificationToken`: string (255), nullable
+  - `resetPasswordToken`: string (255), nullable
+  - `resetPasswordExpires`: datetime_immutable, nullable
+- **Foreign Keys**:
+  - `nationality_id` → `Nationality.id`
+  - `theme_id` → `Theme.id`
+  - `specialization_id` → `Specialization.id`, nullable
+- **Relations**:
+  - OneToMany: `userRoles`, `addresses`, `signatures`, `createdGroups`, `tickets`, `assignedTickets`, `userDiplomas`
+  - ManyToMany: `formations`, `groups`
+  - OneToOne: `studentProfile`
+
+### UserRole
+- **Primary Keys**: `id` (auto-increment)
+- **Columns**:
+  - `id`: int, Primary Key
+  - `user_id`: int
+  - `role_id`: int
+- **Foreign Keys**:
+  - `user_id` → `User.id` (cascade delete)
+  - `role_id` → `Role.id`
+- **Junction Table**: Links users to roles
+
+### Role
+- **Primary Keys**: `id` (auto-increment)
+- **Columns**:
+  - `id`: int, Primary Key
+  - `name`: string (255)
+  - `code`: string (255)
+  - `createdAt`: datetime_immutable
+  - `updatedAt`: datetime_immutable
+- **Standard Values**:
+  - ADMIN (100)
+  - SUPERADMIN (101)
+  - HR (102)
+  - TEACHER (103)
+  - STUDENT (104)
+  - GUEST (105)
+  - RECRUITER (106)
+
+### UserStatus
+- **Primary Keys**: `id` (auto-increment)
+- **Columns**:
+  - `id`: int, Primary Key
+  - `name`: string (255)
+  - `code`: string (255)
+
+### UserStatusHistory
+- **Primary Keys**: `id` (auto-increment)
+- **Columns**:
+  - `id`: int, Primary Key
+  - `user_id`: int
+  - `status_id`: int
+  - `createdAt`: datetime_immutable
+  - `notes`: text, nullable
+- **Foreign Keys**:
+  - `user_id` → `User.id`
+  - `status_id` → `UserStatus.id`
+
+### UserSituationType
+- **Primary Keys**: `id` (auto-increment)
+- **Columns**:
+  - `id`: int, Primary Key
+  - `name`: string (255)
+  - `code`: string (255)
+
+## Student Domain
+
+### StudentProfile
+- **Primary Keys**: `id` (auto-increment)
+- **Columns**:
+  - `id`: int, Primary Key
+  - `user_id`: int
+  - `isSeekingInternship`: boolean
+  - `isSeekingApprenticeship`: boolean
+  - `currentInternshipCompany`: string (255), nullable
+  - `internshipStartDate`: date, nullable
+  - `internshipEndDate`: date, nullable
+  - `portfolioUrl`: string (255), nullable
+  - `createdAt`: datetime
+  - `updatedAt`: datetime
+- **Foreign Keys**:
+  - `user_id` → `User.id` (cascade delete)
+  - `situationType_id` → `UserSituationType.id`, nullable
+- **Relations**:
+  - OneToOne: `user`
+
+## Education Data
+
+### Formation
+- **Primary Keys**: `id` (auto-increment)
+- **Columns**:
+  - `id`: int, Primary Key
+  - `name`: string (255)
+  - `promotion`: string (255)
+  - `description`: text, nullable
+- **Relations**:
+  - ManyToMany: `students` (junction: `formation_student`)
+
+### Diploma
+- **Primary Keys**: `id` (auto-increment)
+- **Columns**:
+  - `id`: int, Primary Key
+  - `name`: string (255)
+  - `description`: text, nullable
+  - `level`: string (255), nullable
+
+### UserDiploma
+- **Primary Keys**: `id` (auto-increment)
+- **Columns**:
+  - `id`: int, Primary Key
+  - `user_id`: int
+  - `diploma_id`: int
+  - `obtainedAt`: date, nullable
+  - `institution`: string (255), nullable
+- **Foreign Keys**:
+  - `user_id` → `User.id` (cascade delete)
+  - `diploma_id` → `Diploma.id` (cascade delete)
+
+### Domain
+- **Primary Keys**: `id` (auto-increment)
+- **Columns**:
+  - `id`: int, Primary Key
+  - `name`: string (255)
+  - `description`: text, nullable
+
+### Specialization
+- **Primary Keys**: `id` (auto-increment)
+- **Columns**:
+  - `id`: int, Primary Key
+  - `name`: string (255)
+  - `description`: text, nullable
+  - `domain_id`: int
+- **Foreign Keys**:
+  - `domain_id` → `Domain.id`
+
+## Location Data
+
+### Address
+- **Primary Keys**: `id` (auto-increment)
+- **Columns**:
+  - `id`: int, Primary Key
+  - `streetAddress`: string (255)
+  - `additionalAddress`: string (255), nullable
+  - `user_id`: int
+  - `city_id`: int
+  - `postalCode_id`: int
+  - `isPrimary`: boolean
+- **Foreign Keys**:
+  - `user_id` → `User.id` (cascade delete)
+  - `city_id` → `City.id`
+  - `postalCode_id` → `PostalCode.id`
+
+### City
+- **Primary Keys**: `id` (auto-increment)
+- **Columns**:
+  - `id`: int, Primary Key
+  - `name`: string (255)
+  - `zipCode`: string (255)
+
+### PostalCode
+- **Primary Keys**: `id` (auto-increment)
+- **Columns**:
+  - `id`: int, Primary Key
+  - `code`: string (255)
+
+### Nationality
+- **Primary Keys**: `id` (auto-increment)
+- **Columns**:
+  - `id`: int, Primary Key
+  - `name`: string (255)
+  - `code`: string (255)
+
+## Document Management
+
+### Document
+- **Primary Keys**: `id` (auto-increment)
+- **Columns**:
+  - `id`: int, Primary Key
+  - `user_id`: int
+  - `documentType_id`: int
+  - `name`: string (255)
+  - `filename`: string (255)
+  - `mimeType`: string (100)
+  - `size`: int
+  - `path`: string (255)
+  - `status`: enum (DocumentStatus)
+  - `comment`: text, nullable
+  - `validatedBy_id`: int, nullable
+  - `validatedAt`: datetime, nullable
+  - `uploadedAt`: datetime
+  - `updatedAt`: datetime
+- **Foreign Keys**:
+  - `user_id` → `User.id`
+  - `documentType_id` → `DocumentType.id`
+  - `validatedBy_id` → `User.id`
+- **Relations**:
+  - OneToMany: `history`
+
+### DocumentType
+- **Primary Keys**: `id` (auto-increment)
+- **Columns**:
+  - `id`: int, Primary Key
+  - `name`: string (255)
+  - `description`: text, nullable
+  - `category_id`: int, nullable
+- **Foreign Keys**:
+  - `category_id` → `DocumentCategory.id`
+
+### DocumentCategory
+- **Primary Keys**: `id` (auto-increment)
+- **Columns**:
+  - `id`: int, Primary Key
+  - `name`: string (255)
+  - `description`: text, nullable
+
+### DocumentHistory
+- **Primary Keys**: `id` (auto-increment)
+- **Columns**:
+  - `id`: int, Primary Key
+  - `document_id`: int
+  - `action`: string (255)
+  - `actor_id`: int, nullable
+  - `createdAt`: datetime
+  - `details`: text, nullable
+- **Foreign Keys**:
+  - `document_id` → `Document.id` (cascade delete)
+  - `actor_id` → `User.id`
+
+## Communication
+
+### Ticket
+- **Primary Keys**: `id` (auto-increment)
+- **Columns**:
+  - `id`: int, Primary Key
+  - `title`: string (255)
+  - `description`: text
+  - `creator_id`: int
+  - `assignedTo_id`: int, nullable
+  - `status_id`: int
+  - `priority`: string (50), nullable
+  - `service_id`: int, nullable
+  - `createdAt`: datetime_immutable
+  - `updatedAt`: datetime_immutable, nullable
+  - `resolvedAt`: datetime_immutable, nullable
+- **Foreign Keys**:
+  - `creator_id` → `User.id` (cascade delete)
+  - `assignedTo_id` → `User.id`
+  - `status_id` → `TicketStatus.id`
+  - `service_id` → `TicketService.id`
+- **Relations**:
+  - OneToMany: `comments`
+
+### TicketComment
+- **Primary Keys**: `id` (auto-increment)
+- **Columns**:
+  - `id`: int, Primary Key
+  - `content`: text
+  - `ticket_id`: int
+  - `author_id`: int
+  - `createdAt`: datetime_immutable
+- **Foreign Keys**:
+  - `ticket_id` → `Ticket.id` (cascade delete)
+  - `author_id` → `User.id`
+
+### TicketStatus
+- **Primary Keys**: `id` (auto-increment)
+- **Columns**:
+  - `id`: int, Primary Key
+  - `name`: string (255)
+  - `code`: string (255)
+  - `color`: string (255)
+  - `createdAt`: datetime_immutable
+  - `updatedAt`: datetime_immutable
+- **Standard Values**:
+  - OPEN
+  - IN_PROGRESS
+  - PENDING
+  - RESOLVED
+  - CLOSED
+
+### TicketService
+- **Primary Keys**: `id` (auto-increment)
+- **Columns**:
+  - `id`: int, Primary Key
+  - `name`: string (255)
+  - `description`: text
+  - `createdAt`: datetime_immutable
+  - `updatedAt`: datetime_immutable
+- **Standard Values**:
+  - Support Technique
+  - Administration
+  - Pédagogie
+  - Absences
+
+### Message
+- **Primary Keys**: `id` (auto-increment)
+- **Columns**:
+  - `id`: int, Primary Key
+  - `sender_id`: int
+  - `recipient_id`: int, nullable
+  - `content`: text
+  - `createdAt`: datetime_immutable
+  - `isGlobal`: boolean
+  - `readBy`: json array
+  - `group_id`: int, nullable
+- **Foreign Keys**:
+  - `sender_id` → `User.id`
+  - `recipient_id` → `User.id`
+  - `group_id` → `Group.id`
+
+### Group (Messaging Group)
+- **Primary Keys**: `id` (auto-increment)
+- **Columns**:
+  - `id`: int, Primary Key
+  - `name`: string (255)
+  - `description`: text, nullable
+  - `createdAt`: datetime_immutable
+  - `creator_id`: int
+- **Foreign Keys**:
+  - `creator_id` → `User.id`
+- **Relations**:
+  - ManyToMany: `members` (User)
+  - OneToMany: `messages`
+
+## Events & Calendar
+
+### ScheduleEvent
+- **Primary Keys**: `id` (auto-increment)
+- **Columns**:
+  - `id`: int, Primary Key
+  - `title`: string (255)
+  - `description`: text, nullable
+  - `startDateTime`: datetime_immutable
+  - `endDateTime`: datetime_immutable
+  - `location`: string (255), nullable
+  - `type`: string (255)
+  - `createdBy_id`: int
+  - `createdAt`: datetime_immutable
+- **Foreign Keys**:
+  - `createdBy_id` → `User.id`
+- **Relations**:
+  - OneToMany: `eventParticipants`
+
+### EventParticipant
+- **Primary Keys**: `id` (auto-increment)
+- **Columns**:
+  - `id`: int, Primary Key
+  - `event_id`: int
+  - `user_id`: int
+  - `status`: string (255), nullable
+- **Foreign Keys**:
+  - `event_id` → `ScheduleEvent.id` (cascade delete)
+  - `user_id` → `User.id`
+
+## UI Settings
+
+### Theme
+- **Primary Keys**: `id` (auto-increment)
+- **Columns**:
+  - `id`: int, Primary Key
+  - `name`: string (255)
+  - `code`: string (255)
+- **Standard Values**:
+  - LIGHT
+  - DARK
+  - SYSTEM
+
+### Signature
+- **Primary Keys**: `id` (auto-increment)
+- **Columns**:
+  - `id`: int, Primary Key
+  - `image`: longblob
+  - `user_id`: int
+  - `createdAt`: datetime_immutable
+  - `isActive`: boolean
+- **Foreign Keys**:
+  - `user_id` → `User.id` (cascade delete)
+
+## Security
+
+### RefreshToken
+- **Primary Keys**: `id` (auto-increment)
+- **Columns**:
+  - `id`: int, Primary Key
+  - `refreshToken`: string (255)
+  - `username`: string (255)
+  - `valid`: datetime
+- **Used for**: JWT token refresh mechanism 

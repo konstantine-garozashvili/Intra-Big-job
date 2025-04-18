@@ -9,15 +9,14 @@ import { MapPin, Loader2 } from "lucide-react";
  */
 export const AddressAutocomplete = React.forwardRef(({
   className,
-  label,
   error,
   required = false,
+  onValueChange,
   onAddressSelect,
   inputClassName,
   ...props
 }, ref) => {
   // États
-  const [isFocused, setIsFocused] = useState(false);
   const [hasValue, setHasValue] = useState(false);
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState([]);
@@ -117,14 +116,12 @@ export const AddressAutocomplete = React.forwardRef(({
   
   // Handlers
   const handleFocus = useCallback(() => {
-    setIsFocused(true);
     if (query && query.length >= 3 && suggestions.length > 0) {
       setShowSuggestions(true);
     }
   }, [query, suggestions.length]);
   
   const handleBlur = useCallback(() => {
-    setIsFocused(false);
     setTimeout(() => {
       if (!suggestionsRef.current?.contains(document.activeElement)) {
         setShowSuggestions(false);
@@ -136,10 +133,10 @@ export const AddressAutocomplete = React.forwardRef(({
     const value = e.target.value;
     setQuery(value);
     
-    if (props.onChange) {
-      props.onChange(e);
+    if (onValueChange) {
+      onValueChange(value);
     }
-  }, [props.onChange]);
+  }, [onValueChange]);
   
   const handleSuggestionClick = useCallback((suggestion) => {
     const formattedAddress = suggestion.label;
@@ -159,17 +156,10 @@ export const AddressAutocomplete = React.forwardRef(({
       });
     }
     
-    const syntheticEvent = {
-      target: {
-        name: props.name,
-        value: formattedAddress
-      }
-    };
-    
-    if (props.onChange) {
-      props.onChange(syntheticEvent);
+    if (onValueChange) {
+      onValueChange(formattedAddress);
     }
-  }, [onAddressSelect, props.onChange, props.name]);
+  }, [onAddressSelect, onValueChange, props.name]);
   
   // Gestion des touches du clavier pour la navigation dans les suggestions
   const handleKeyDown = useCallback((e) => {
@@ -200,47 +190,21 @@ export const AddressAutocomplete = React.forwardRef(({
   }, [showSuggestions, suggestions, selectedIndex, handleSuggestionClick]);
   
   // Classes
-  const isFloating = isFocused || hasValue;
-  
   const containerClasses = cn(
     "relative border border-gray-300 rounded-md transition-all duration-200",
-    isFloating ? "border-[#0062FF]" : "",
     error ? "border-red-500" : "",
     className
   );
-  
-  const labelClasses = cn(
-    "absolute left-3 transition-all duration-200 pointer-events-none",
-    isFloating 
-      ? "transform -translate-y-1/2 top-0 text-xs bg-white px-1 z-10" 
-      : "transform translate-y-0 top-1/2 -translate-y-1/2 text-gray-500",
-    isFocused ? "text-[#0062FF]" : "text-gray-500",
-    error ? "text-red-500" : ""
-  );
-  
+
   const inputClasses = cn(
-    "block w-full h-11 px-3 pt-5 pb-5 text-base bg-transparent rounded-md appearance-none focus:outline-none",
+    "block w-full h-11 px-3 py-2 text-base bg-transparent rounded-md appearance-none focus:outline-none text-white",
     "transition-all duration-200",
     inputClassName
   );
-  
+
   return (
-    <div
-      ref={containerRef}
-      className={cn(
-        "relative",
-        className
-      )}
-    >
+    <div className="relative">
       <div className={containerClasses}>
-        {/* Étiquette flottante */}
-        <label 
-          htmlFor={props.id} 
-          className={labelClasses}
-        >
-          {label} {required && <span className="text-red-500">*</span>}
-        </label>
-        
         {/* Champ de saisie */}
         <input
           type="text"
@@ -274,7 +238,7 @@ export const AddressAutocomplete = React.forwardRef(({
       {showSuggestions && suggestions.length > 0 && (
         <div
           ref={suggestionsRef}
-          className="absolute z-50 w-full mt-1 bg-white rounded-md shadow-lg max-h-60 overflow-y-auto fade-in-up"
+          className="absolute z-50 w-full mt-1 bg-gray-800 rounded-md shadow-lg max-h-60 overflow-y-auto fade-in-up border border-gray-700"
         >
           <ul className="py-1">
             {suggestions.map((suggestion, index) => (
@@ -282,15 +246,15 @@ export const AddressAutocomplete = React.forwardRef(({
                 key={suggestion.id || index}
                 className={cn(
                   "px-3 py-2 cursor-pointer flex items-start gap-2",
-                  "hover:bg-gray-100 transition-colors duration-150",
-                  selectedIndex === index ? "bg-gray-100" : ""
+                  "hover:bg-gray-700 transition-colors duration-150 text-white",
+                  selectedIndex === index ? "bg-gray-700" : ""
                 )}
                 onClick={() => handleSuggestionClick(suggestion)}
                 onMouseEnter={() => setSelectedIndex(index)}
               >
                 <MapPin className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
                 <div className="flex flex-col">
-                  <span className="font-medium text-gray-800">{suggestion.label}</span>
+                  <span className="font-medium text-gray-200">{suggestion.label}</span>
                   <span className="text-xs text-gray-500">{suggestion.context}</span>
                 </div>
               </li>

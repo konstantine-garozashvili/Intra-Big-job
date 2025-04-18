@@ -4,12 +4,14 @@ namespace App\Service;
 
 use App\Entity\User;
 use App\Repository\UserRepository;
+use App\Domains\Global\Document\Repository\DocumentRepository;
+use App\Domains\Global\Document\Repository\DocumentTypeRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Serializer\SerializerInterface;
-use App\Repository\UserStatusRepository;
-use App\Repository\UserStatusHistoryRepository;
+use Psr\Log\LoggerInterface;
+use App\Service\UserDiplomaService;
 
 /**
  * Service to centralize common user profile operations
@@ -20,23 +22,29 @@ class UserProfileService
     private $userRepository;
     private $serializer;
     private $documentStorageFactory;
-    private $userStatusRepository;
-    private $userStatusHistoryRepository;
+    private $documentRepository;
+    private $documentTypeRepository;
+    private $logger;
+    private $userDiplomaService;
     
     public function __construct(
         EntityManagerInterface $entityManager,
         UserRepository $userRepository,
         SerializerInterface $serializer,
         DocumentStorageFactory $documentStorageFactory,
-        UserStatusRepository $userStatusRepository = null,
-        UserStatusHistoryRepository $userStatusHistoryRepository = null
+        DocumentRepository $documentRepository,
+        DocumentTypeRepository $documentTypeRepository,
+        LoggerInterface $logger,
+        UserDiplomaService $userDiplomaService
     ) {
         $this->entityManager = $entityManager;
         $this->userRepository = $userRepository;
         $this->serializer = $serializer;
         $this->documentStorageFactory = $documentStorageFactory;
-        $this->userStatusRepository = $userStatusRepository;
-        $this->userStatusHistoryRepository = $userStatusHistoryRepository;
+        $this->documentRepository = $documentRepository;
+        $this->documentTypeRepository = $documentTypeRepository;
+        $this->logger = $logger;
+        $this->userDiplomaService = $userDiplomaService;
     }
     
     /**
@@ -44,10 +52,41 @@ class UserProfileService
      */
     public function getUserProfileData(User $user): array
     {
+        $this->logger->info('Fetching profile data for user ID: ' . $user->getId());
         // Récupérer l'utilisateur avec toutes ses relations chargées
         $user = $this->userRepository->findOneWithAllRelations($user->getId());
+
+        // Check for CV Document
+        $cvExists = false;
+        try {
+            $this->logger->info('Looking for DocumentType with code: CV');
+            $cvType = $this->documentTypeRepository->findOneBy(['code' => 'CV']);
+            
+            if ($cvType) {
+                $this->logger->info('Found DocumentType "CV" with ID: ' . $cvType->getId());
+                $this->logger->info('Looking for Document with user ID: ' . $user->getId() . ' and type ID: ' . $cvType->getId());
+                
+                $cvDocument = $this->documentRepository->findOneBy([
+                    'user' => $user,
+                    'documentType' => $cvType
+                ]);
+                
+                if ($cvDocument) {
+                    $this->logger->info('Found CV Document with ID: ' . $cvDocument->getId());
+                    $cvExists = true;
+                } else {
+                    $this->logger->warning('CV Document NOT found for user ID: ' . $user->getId() . ' and type ID: ' . $cvType->getId());
+                }
+            } else {
+                $this->logger->warning('DocumentType with code "CV" NOT found.');
+            }
+        } catch (\Exception $e) {
+            $this->logger->error('Exception during CV check: ' . $e->getMessage());
+        }
         
-        // Récupérer les données utilisateur avec les relations
+        $this->logger->info('Final cvExists value: ' . ($cvExists ? 'true' : 'false'));
+
+        // Récupérer les données utilisateur avec les relations    
         $userData = [
             'id' => $user->getId(),
             'firstName' => $user->getFirstName(),
@@ -60,16 +99,36 @@ class UserProfileService
             'isEmailVerified' => $user->isEmailVerified(),
             'linkedinUrl' => $user->getLinkedinUrl(),
             'pictureProfilePath' => $user->getProfilePicturePath(),
+            'roles' => $user->getRoles(),
+            'addresses' => array_map(function($address) {
+                return [
+                    'id' => $address->getId(),
+                    'name' => $address->getName(),
+                    'complement' => $address->getComplement(),     
+                    'city' => $address->getCity() ? [
+                        'id' => $address->getCity()->getId(),      
+                        'name' => $address->getCity()->getName()   
+                    ] : null,
+                    'postalCode' => $address->getPostalCode() ? [  
+                        'id' => $address->getPostalCode()->getId(),
+                        'code' => $address->getPostalCode()->getCode()
+                    ] : null
+                ];
+            }, $user->getAddresses()->toArray()),
             'nationality' => $user->getNationality() ? [
                 'id' => $user->getNationality()->getId(),
-                'name' => $user->getNationality()->getName(),
+                'name' => $user->getNationality()->getName(),      
             ] : null,
             'theme' => $user->getTheme() ? [
                 'id' => $user->getTheme()->getId(),
                 'name' => $user->getTheme()->getName(),
             ] : null,
             'profilePicture' => null,
+            'hasCvDocument' => $cvExists,
         ];
+
+        // Ajouter les diplômes de l'utilisateur
+        $userData['diplomas'] = $this->userDiplomaService->formatUserDiplomas($user);
 
         // Ajouter le profile étudiant
         if ($user->getStudentProfile()) {
@@ -78,6 +137,7 @@ class UserProfileService
                 'id' => $studentProfile->getId(),
                 'isSeekingInternship' => $studentProfile->isSeekingInternship(),
                 'isSeekingApprenticeship' => $studentProfile->isSeekingApprenticeship(),
+                'portfolioUrl' => $studentProfile->getPortfolioUrl(),
             ];
         } else {
             $userData['studentProfile'] = null;
@@ -248,117 +308,6 @@ class UserProfileService
             return [
                 'success' => false,
                 'message' => 'Erreur lors de la récupération de la photo de profil: ' . $e->getMessage()
-            ];
-        }
-    }
-    
-    /**
-     * Désactive un compte utilisateur en le marquant comme "Archivé"
-     * Cette fonction ne s'applique qu'aux utilisateurs ayant le rôle Guest/Invité
-     * @param User $user L'utilisateur à désactiver
-     * @return array Résultat de l'opération
-     */
-    public function deactivateAccount(User $user): array
-    {
-        try {
-            // Vérifier si les repositories nécessaires sont injectés
-            if (!$this->userStatusRepository || !$this->userStatusHistoryRepository) {
-                return [
-                    'success' => false,
-                    'message' => 'Services requis non disponibles pour la désactivation du compte.'
-                ];
-            }
-            
-            // Vérifier si l'utilisateur a le rôle GUEST/Invité
-            $hasGuestRole = false;
-            foreach ($user->getUserRoles() as $userRole) {
-                $roleName = $userRole->getRole()->getName();
-                if (strpos(strtoupper($roleName), 'GUEST') !== false || strpos(strtoupper($roleName), 'INVITE') !== false) {
-                    $hasGuestRole = true;
-                    break;
-                }
-            }
-            
-            if (!$hasGuestRole) {
-                return [
-                    'success' => false,
-                    'message' => 'Seuls les utilisateurs avec le rôle Invité peuvent désactiver leur compte.'
-                ];
-            }
-            
-            // Rechercher le statut "Archivé"
-            $archivedStatus = $this->userStatusRepository->findByName('Archivé');
-            
-            if (!$archivedStatus) {
-                return [
-                    'success' => false,
-                    'message' => 'Le statut "Archivé" n\'existe pas dans le système.'
-                ];
-            }
-            
-            // Rechercher l'entrée de statut actuelle de l'utilisateur
-            $currentStatusHistory = $this->userStatusHistoryRepository->findCurrentByUser($user->getId());
-            
-            // Si l'utilisateur a déjà un statut actif, le terminer
-            if ($currentStatusHistory) {
-                $currentStatusHistory->setEndDate(new \DateTime());
-                $this->entityManager->persist($currentStatusHistory);
-            }
-            
-            // Créer une nouvelle entrée d'historique de statut
-            $newStatusHistory = new \App\Entity\UserStatusHistory();
-            $newStatusHistory->setUser($user);
-            $newStatusHistory->setStatus($archivedStatus);
-            $newStatusHistory->setStartDate(new \DateTime());
-            
-            $this->entityManager->persist($newStatusHistory);
-            $this->entityManager->flush();
-            
-            return [
-                'success' => true,
-                'message' => 'Votre compte a été désactivé avec succès. Vous serez déconnecté lors de votre prochaine connexion.'
-            ];
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'message' => 'Une erreur est survenue lors de la désactivation de votre compte: ' . $e->getMessage()
-            ];
-        }
-    }
-    
-    /**
-     * Récupère le statut actuel d'un utilisateur
-     * @param User $user L'utilisateur
-     * @return array Informations sur le statut actuel
-     */
-    public function getCurrentUserStatus(User $user): array
-    {
-        try {
-            // Vérifier si les repositories nécessaires sont injectés
-            if (!$this->userStatusHistoryRepository) {
-                return [
-                    'success' => false,
-                    'message' => 'Services requis non disponibles pour récupérer le statut.'
-                ];
-            }
-            
-            $currentStatusHistory = $this->userStatusHistoryRepository->findCurrentByUser($user->getId());
-            
-            if (!$currentStatusHistory) {
-                return [
-                    'success' => false,
-                    'message' => 'Aucun statut n\'est actuellement attribué à votre compte.'
-                ];
-            }
-            
-            return [
-                'success' => true,
-                'status' => $currentStatusHistory->getStatus()
-            ];
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'message' => 'Une erreur est survenue lors de la récupération du statut: ' . $e->getMessage()
             ];
         }
     }

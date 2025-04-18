@@ -48,6 +48,9 @@ const CVUpload = memo(({ userData, onUpdate }) => {
       setCvFile(null);
       refetchCV();
       
+      // Dispatch event to notify MainLayout about the update
+      document.dispatchEvent(new CustomEvent('user:data-updated'));
+      
       if (onUpdate) onUpdate();
       
       // Créer une notification locale pour l'utilisateur
@@ -102,6 +105,9 @@ const CVUpload = memo(({ userData, onUpdate }) => {
       toast.success('CV deleted successfully');
       refetchCV();
       
+      // Dispatch event to notify MainLayout about the update
+      document.dispatchEvent(new CustomEvent('user:data-updated'));
+
       if (onUpdate) onUpdate();
     },
     onError: (error) => {

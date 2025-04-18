@@ -16,8 +16,6 @@ parameters:
     aws.use_s3_storage: true  # Set to false to use local storage instead of S3
     # URL du frontend (from group3)
     app.frontend_url: 'http://localhost:5173'  # URL du frontend
-    # URL de l'API pour les notifications
-    app.api_url: 'http://localhost:8000'  # URL de l'API backend
 
 services:
     # default configuration for services in *this* file
@@ -33,13 +31,17 @@ services:
             - '../src/DependencyInjection/'
             - '../src/Entity/'
             - '../src/Kernel.php'
+            
+    # Explicitly register controllers in subdirectories
+    App\Controller\Profile\:
+        resource: '../src/Controller/Profile/'
+        tags: ['controller.service_arguments']
 
     # Configuration du DocumentController
     App\Domains\Global\Document\Controller\DocumentController:
         arguments:
             $documentDirectory: '%document_directory%'
             $storageFactory: '@App\Service\DocumentStorageFactory'
-            $httpClient: '@Symfony\Contracts\HttpClient\HttpClientInterface'
             
     # Configuration des repositories Document
     App\Domains\Global\Document\Repository\DocumentRepository:
@@ -66,15 +68,6 @@ services:
         arguments:
             $s3Service: '@App\Service\S3StorageService'
             $params: '@parameter_bag'
-            
-    # Configuration du service de notification
-    App\Domains\Global\Notification\Service\NotificationService:
-        arguments:
-            $entityManager: '@doctrine.orm.entity_manager'
-            $notificationRepository: '@App\Domains\Global\Notification\Repository\NotificationRepository'
-            $urlGenerator: '@router'
-            $hub: '@Symfony\Component\Mercure\HubInterface'
-            $httpClient: '@Symfony\Contracts\HttpClient\HttpClientInterface'
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
@@ -83,6 +76,17 @@ services:
     App\Service\RefreshTokenService:
         arguments:
             $params: '@parameter_bag'
+
+    # Configuration du UserProfileService
+    App\Service\UserProfileService:
+        arguments:
+            $entityManager: '@doctrine.orm.entity_manager'
+            $userRepository: '@App\Repository\UserRepository'
+            $serializer: '@serializer'
+            $documentStorageFactory: '@App\Service\DocumentStorageFactory'
+            $documentRepository: '@App\Domains\Global\Document\Repository\DocumentRepository'
+            $documentTypeRepository: '@App\Domains\Global\Document\Repository\DocumentTypeRepository'
+            $logger: '@logger'
 
     # Configuration du contrôleur RefreshTokenController
     App\Controller\RefreshTokenController:

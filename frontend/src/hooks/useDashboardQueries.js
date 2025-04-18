@@ -5,39 +5,68 @@ import apiService from '@/lib/services/apiService';
 import { getQueryClient } from '@/lib/services/queryClient';
 import useUserDataHook from './useUserData';
 import { useQuery } from '@tanstack/react-query';
+import { useOptimizedProfile } from './useOptimizedProfile';
 
 /**
  * Hook pour récupérer et gérer les données de l'utilisateur
  * Optimisé pour éviter les problèmes d'affichage intermittent
  */
 export const useUserData = () => {
+  // Use a unique session ID to prevent unnecessary refetches
+  const sessionId = getSessionId();
+  
   return useQuery({
-    queryKey: ['user'],
+    queryKey: ['dashboard-user', sessionId],
     queryFn: async () => {
-      console.log("useUserData - Starting user data fetch");
+      // First check if we have cached data
+      const cachedData = localStorage.getItem('user');
+      if (cachedData) {
+        try {
+          const parsedData = JSON.parse(cachedData);
+          // Only use cache if it's less than 5 minutes old
+          const cacheTime = parsedData._extractedAt || 0;
+          const cacheAge = Date.now() - cacheTime;
+          if (cacheAge < 5 * 60 * 1000) { // 5 minutes
+            return parsedData;
+          }
+        } catch (e) {
+          // Error parsing cache, continue to fetch
+        }
+      }
+      
+      // Check if we should throttle requests
+      const lastFetchTime = sessionStorage.getItem('last_user_data_fetch');
+      if (lastFetchTime) {
+        const timeSinceLastFetch = Date.now() - parseInt(lastFetchTime, 10);
+        if (timeSinceLastFetch < 2000) { // 2 seconds throttle
+          if (cachedData) {
+            try {
+              return JSON.parse(cachedData);
+            } catch (e) {
+              // Error parsing cache
+            }
+          }
+        }
+      }
+      
+      // Update last fetch time
+      sessionStorage.setItem('last_user_data_fetch', Date.now().toString());
+      
       try {
         // Récupérer les données complètes de l'utilisateur
-        console.log("useUserData - Calling authService.getCurrentUser()");
         const userData = await authService.getCurrentUser();
-        console.log("useUserData - Received user data:", userData);
         return userData;
       } catch (error) {
-        console.error("useUserData - Error fetching user data:", error);
-        
         // En cas d'erreur, essayer de récupérer les données minimales du localStorage
         try {
-          console.log("useUserData - Attempting to get minimal data from localStorage");
           const minimalData = authService.getMinimalUserData();
-          console.log("useUserData - Minimal data from localStorage:", minimalData);
           if (minimalData) {
             return minimalData;
           }
         } catch (localError) {
-          console.error("useUserData - Error retrieving minimal data:", localError);
+          // Si toutes les tentatives échouent, propager l'erreur
+          throw error;
         }
-        
-        // Si toutes les tentatives échouent, propager l'erreur
-        throw error;
       }
     },
     // Paramètres optimisés pour la stabilité et la performance
@@ -45,14 +74,27 @@ export const useUserData = () => {
     cacheTime: 60 * 60 * 1000, // 1 heure
     refetchOnWindowFocus: false,
     refetchOnMount: true,
+    refetchInterval: false, // Disable automatic refetching
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
     onSuccess: (data) => {
-      console.log("useUserData - Success callback with data:", data);
     },
     onError: (error) => {
-      console.error("useUserData - Error callback:", error);
     }
+  });
+};
+
+/**
+ * Version optimisée du hook useUserData avec des performances améliorées
+ * Utilise le service API optimisé pour les requêtes de profil
+ */
+export const useOptimizedUserData = () => {
+  // Utiliser directement le hook optimisé pour le profil
+  return useOptimizedProfile({
+    // Paramètres spécifiques pour le dashboard
+    queryKey: ['dashboard-optimized-user'],
+    staleTime: 3 * 60 * 1000, // 3 minutes (plus court que l'original)
+    retry: 1, // Moins de tentatives pour une meilleure réactivité
   });
 };
 
@@ -109,6 +151,67 @@ export const useRecentActivities = () => {
     },
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
+};
+
+/**
+ * Custom hook for fetching dashboard data with optimized memory usage
+ * @param {Object} options - Query options
+ * @returns {Object} Query result
+ */
+export const useDashboardData = (options = {}) => {
+  return useQuery({
+    queryKey: ['dashboard-data'],
+    queryFn: async () => {
+      // Use minimal data by default to save memory
+      return apiService.get('/dashboard', { 
+        minimal: !options.fullData,
+        timeout: 3000 // Shorter timeout for dashboard data
+      });
+    },
+    staleTime: 60000, // 1 minute
+    cacheTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1,
+    retryDelay: 1000,
+    ...options,
+  });
+};
+
+/**
+ * Custom hook for fetching user data with memory optimization
+ * This is the original implementation, kept for backward compatibility
+ * @param {Object} options - Query options
+ * @returns {Object} Query result
+ */
+export const useDashboardUserData = (options = {}) => {
+  return useQuery({
+    queryKey: ['user-data'],
+    queryFn: async () => {
+      return apiService.getUserProfile();
+    },
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    cacheTime: 10 * 60 * 1000, // 10 minutes
+    retry: 1,
+    ...options,
+  });
+};
+
+/**
+ * Optimized version of useUserData that leverages the useOptimizedProfile hook
+ * This version is more memory-efficient and has better performance
+ * @param {Object} options - Query options
+ * @returns {Object} Query result with the same interface as useUserData
+ */
+export const useOptimizedDashboardUserData = (options = {}) => {
+  // Use the optimized profile hook with memory efficiency settings
+  const result = useOptimizedProfile({
+    // Pass memory optimization options
+    minimal: !options.fullData,
+    // Keep backward compatibility with useUserData
+    staleTime: options.staleTime || 2 * 60 * 1000,
+    ...options
+  });
+  
+  return result;
 };
 
 /**
