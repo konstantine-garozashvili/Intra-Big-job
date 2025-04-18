@@ -9,3 +9,11 @@ infra/*.sh merge=ours
 infra/*.ps1 merge=ours
 infra/*.cmd merge=ours
 infra/*.bat merge=ours
+
+# Backend configuration files
+backend/config/*.yaml merge=ours
+backend/config/*.php merge=ours
+backend/config/*.yml merge=ours
+backend/config/packages/** merge=ours
+backend/config/routes/** merge=ours
+backend/.env* merge=ours
