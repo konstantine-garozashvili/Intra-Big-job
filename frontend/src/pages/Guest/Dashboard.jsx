@@ -1,10 +1,20 @@
-import React, { useMemo, useRef, useEffect } from 'react';
+import React, { useMemo, useRef, useEffect, useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useUserData } from '@/hooks/useDashboardQueries';
-import { FileText, Upload, Clock, CheckCircle2, XCircle, School, ArrowRight, Calendar, BookOpen, User } from 'lucide-react';
+import { FileText, Upload, Clock, CheckCircle2, XCircle, School, ArrowRight, Calendar, BookOpen, User, ChevronDown, ChevronUp, Users, Award, Clock3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import gsap from 'gsap';
+import { 
+  Expandable, 
+  ExpandableCard, 
+  ExpandableCardHeader, 
+  ExpandableCardContent, 
+  ExpandableCardFooter,
+  ExpandableContent,
+  ExpandableTrigger
+} from '@/components/ui/expandable';
+import { useClickAway } from 'react-use';
 
 // Header sticky animé
 const GuestHeader = ({ firstName }) => {
@@ -19,7 +29,7 @@ const GuestHeader = ({ firstName }) => {
       style={{ pointerEvents: 'none' }}
     >
       <div
-        className="w-full max-w-[1100px] bg-gradient-to-r from-blue-100 via-blue-50 to-blue-200 rounded-2xl shadow-lg px-6 py-4 sm:py-6 flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-0 border border-blue-200"
+        className="w-full max-w-[1100px] bg-gradient-to-r from-blue-100 via-blue-50 to-blue-200 px-6 py-4 sm:py-6 flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-0 border border-blue-200"
         style={{ pointerEvents: 'auto' }}
       >
         <div className="flex-1 text-center sm:text-left">
@@ -31,7 +41,7 @@ const GuestHeader = ({ firstName }) => {
           </p>
         </div>
         <div className="flex-shrink-0 w-full sm:w-auto flex justify-center sm:justify-end">
-          <Button size="sm" className="bg-blue-600/90 text-white font-bold border border-blue-300 hover:bg-blue-700/90 transition-all shadow-lg">
+          <Button size="sm" className="bg-blue-600/90 text-white font-bold border border-blue-300 hover:bg-blue-700/90 transition-all">
             Découvrir les formations
           </Button>
         </div>
@@ -183,97 +193,185 @@ const DocumentsGrid = () => {
   );
 };
 
-// Card Formation animée
-const FormationCard = ({ formation, idx }) => {
-  const cardRef = useRef(null);
-  const [hovered, setHovered] = React.useState(false);
-  useEffect(() => {
-    gsap.fromTo(
-      cardRef.current,
-      { opacity: 0, y: 40, scale: 0.96 },
-      { opacity: 1, y: 0, scale: 1, duration: 0.8, delay: idx * 0.12, ease: 'power3.out' }
-    );
-  }, [idx]);
-  // Hover animation
-  const handleMouseEnter = () => {
-    setHovered(true);
-    gsap.to(cardRef.current, {
-      boxShadow: '0 8px 32px 0 rgba(30,64,175,0.18)',
-      y: -8,
-      borderColor: '#528eb2',
-      background: 'linear-gradient(120deg, #528eb2 0%, #2563eb 60%, #60a5fa 100%)',
-      duration: 0.4,
-      ease: 'power2.out',
-    });
-  };
-  const handleMouseLeave = () => {
-    setHovered(false);
-    gsap.to(cardRef.current, {
-      boxShadow: '0 2px 8px 0 rgba(0,0,0,0.08)',
-      y: 0,
-      borderColor: 'rgba(255,255,255,0.2)',
-      background: 'rgba(255,255,255,0.9)',
-      duration: 0.4,
-      ease: 'power2.in',
-    });
-  };
-  return (
-    <div
-      ref={cardRef}
-      tabIndex={0}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      className="min-w-[280px] max-w-[340px] w-full flex flex-col rounded-2xl border-2 border-white/20 dark:border-gray-700/40 bg-white/90 dark:bg-gray-900/90 shadow-xl hover:shadow-2xl transition-all duration-300 backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-blue-400 relative overflow-hidden mt-6"
-      style={{ transitionDelay: `${idx * 80}ms` }}
-    >
-      <div className="relative h-40 w-full rounded-t-2xl overflow-hidden">
-        <img src={formation.image} alt={formation.name} className="object-cover w-full h-full" />
-        {hovered && <div className="absolute inset-0 bg-black/30 transition-all duration-200" />}
-        <div className="absolute top-2 right-2 flex gap-2 z-10">
-          <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">{formation.domain}</Badge>
-          <Badge className="bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-200">{formation.specialization}</Badge>
-        </div>
-      </div>
-      <div className={`flex-1 flex flex-col p-4 sm:p-5 z-10 ${hovered ? 'text-white' : 'text-gray-900 dark:text-white'}`}> 
-        <h3 className={`font-bold text-lg mb-1 ${hovered ? 'text-white' : 'text-gray-900 dark:text-white'}`}>{formation.name}</h3>
-        <p className={`text-sm mb-2 ${hovered ? 'text-white/90' : 'text-gray-500 dark:text-gray-300'}`}>{formation.description}</p>
-        <div className="flex items-center gap-3 mb-2">
-          <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">{formation.level}</Badge>
-          <span className={`text-xs flex items-center gap-1 ${hovered ? 'text-white/80' : 'text-gray-400'}`}><Calendar className="h-4 w-4" /> {formation.startDate}</span>
-        </div>
-        <span className={`text-xs flex items-center gap-1 mb-2 ${hovered ? 'text-white/80' : 'text-gray-400'}`}><BookOpen className="h-4 w-4" /> Promotion {formation.promotion}</span>
-        <Button size="sm" className={`mt-auto bg-gradient-to-r from-blue-500 via-blue-400 to-blue-300 text-white shadow-md ${hovered ? 'ring-2 ring-white' : ''}`}>En savoir plus</Button>
-      </div>
-    </div>
-  );
-};
-
-// Carrousel Formations animé
-const FormationsCarousel = () => {
+// Accordéon Expandable pour formations (une seule ouverte à la fois)
+const FormationsGrid = () => {
   const formations = [
-    { id: 1, name: "Développement Web Fullstack", description: "Formation complète au développement web front-end et back-end", domain: "Informatique", specialization: "Développement Web", level: "Bac+3/4", startDate: "15 septembre 2023", promotion: "2023-2024", image: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=400&q=80" },
-    { id: 2, name: "Data Science & Intelligence Artificielle", description: "Maîtrisez l'analyse de données et les algorithmes d'IA", domain: "Informatique", specialization: "Data Science", level: "Bac+5", startDate: "10 octobre 2023", promotion: "2023-2024", image: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&w=400&q=80" },
-    { id: 3, name: "Cybersécurité", description: "Devenez expert en sécurité informatique et protection des données", domain: "Informatique", specialization: "Sécurité", level: "Bac+5", startDate: "5 novembre 2023", promotion: "2023-2024", image: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80" }
+    {
+      id: 1,
+      name: "Design Sync",
+      description: "Weekly design sync to discuss ongoing projects, share updates, and address any design-related challenges.",
+      domain: "Design",
+      specialization: "UI/UX",
+      level: "All levels",
+      startDate: "1:30PM",
+      promotion: "2023-2024",
+      duration: "1h",
+      skills: ["Figma", "Prototyping", "Teamwork"],
+      image: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=400&q=80"
+    },
+    {
+      id: 2,
+      name: "Web Fullstack",
+      description: "Formation complète au développement web front-end et back-end avec React et Node.js.",
+      domain: "Informatique",
+      specialization: "Développement Web",
+      level: "Bac+3/4",
+      startDate: "15 septembre 2023",
+      promotion: "2023-2024",
+      duration: "12 mois",
+      skills: ["JavaScript", "React", "Node.js", "Express", "MongoDB"],
+      image: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&w=400&q=80"
+    },
+    {
+      id: 3,
+      name: "Data Science & IA",
+      description: "Maîtrisez l'analyse de données et les algorithmes d'intelligence artificielle pour des applications concrètes.",
+      domain: "Informatique",
+      specialization: "Data Science",
+      level: "Bac+5",
+      startDate: "10 octobre 2023",
+      promotion: "2023-2024",
+      duration: "18 mois",
+      skills: ["Python", "Pandas", "TensorFlow", "Scikit-learn", "NLP"],
+      image: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80"
+    },
+    {
+      id: 4,
+      name: "Cybersécurité",
+      description: "Devenez expert en sécurité informatique et protection des données sensibles contre les cyberattaques.",
+      domain: "Informatique",
+      specialization: "Sécurité",
+      level: "Bac+5",
+      startDate: "5 novembre 2023",
+      promotion: "2023-2024",
+      duration: "15 mois",
+      skills: ["Pentest", "Cryptographie", "Sécurité réseau", "Forensics", "OSINT"],
+      image: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=400&q=80"
+    }
   ];
-  const carouselRef = useRef(null);
+  const [openId, setOpenId] = useState(null);
+  const cardRefs = useRef([]);
+
+  // Fermer la card ouverte si on clique à l'extérieur
   useEffect(() => {
-    gsap.fromTo(carouselRef.current, { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 1, delay: 0.3, ease: 'power3.out' });
-  }, []);
+    if (openId === null) return;
+    function handleClick(e) {
+      const ref = cardRefs.current[openId];
+      if (ref && !ref.contains(e.target)) {
+        setOpenId(null);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [openId]);
+
   return (
-    <section
-      ref={carouselRef}
-      className="p-4 sm:p-6 md:p-8 flex flex-col min-h-[420px] rounded-3xl shadow-2xl w-full max-w-[1400px] mx-auto mt-8 lg:mt-0 flex-shrink-0 overflow-visible pt-12"
-    >
+    <section className="p-4 sm:p-6 md:p-8 w-full max-w-4xl mx-auto mt-8 flex-shrink-0 overflow-visible pt-8 pb-40">
       <h2 className="text-2xl font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-6">
         <School className="h-6 w-6 text-blue-400" /> Formations disponibles
       </h2>
-      <div className="flex gap-4 sm:gap-6 overflow-x-auto pb-2 hide-scrollbar">
-        {formations.map((formation, idx) => <FormationCard key={formation.id} formation={formation} idx={idx} />)}
-      </div>
-      <div className="flex justify-end mt-6">
-        <Button variant="outline" className="border-blue-200 dark:border-blue-700 text-blue-600 dark:text-blue-300 font-semibold">
-          Voir toutes les formations <ArrowRight className="h-4 w-4 ml-2" />
-        </Button>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {formations.map((formation, idx) => (
+          <div
+            key={formation.id}
+            ref={el => cardRefs.current[formation.id] = el}
+            style={{ zIndex: idx < 2 ? 20 : 10, position: 'relative' }}
+          >
+            <Expandable
+              expandDirection="both"
+              expanded={openId === formation.id}
+              onToggle={() => setOpenId(openId === formation.id ? null : formation.id)}
+              transitionDuration={0.4}
+            >
+              <ExpandableCard
+                className="mx-auto"
+                collapsedSize={{ width: 340, height: 210 }}
+                expandedSize={{ width: 420, height: 420 }}
+                hoverToExpand={false}
+              >
+                <ExpandableCardHeader className="p-0">
+                  <div className="w-full">
+                    <div className="relative h-32 w-full rounded-t-xl overflow-hidden">
+                      <img src={formation.image} alt={formation.name} className="object-cover w-full h-full" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-black/10"></div>
+                      <div className="absolute top-2 right-2 flex gap-2 z-10">
+                        <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">{formation.domain}</Badge>
+                      </div>
+                      <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
+                        <h3 className="font-bold text-lg text-shadow-sm">{formation.name}</h3>
+                        <p className="text-sm text-white/80 text-shadow-sm line-clamp-1">{formation.description}</p>
+                      </div>
+                    </div>
+                  </div>
+                </ExpandableCardHeader>
+                <ExpandableContent preset="slide-down" stagger={true}>
+                  <div className="px-2 py-3">
+                    <div className="mb-3">
+                      <p className="text-gray-700 dark:text-gray-300">{formation.description}</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                      <div className="bg-blue-50 dark:bg-blue-900/20 p-2 rounded-lg">
+                        <div className="flex items-center mb-1">
+                          <Calendar className="h-4 w-4 text-blue-500 mr-1" />
+                          <span className="text-xs font-medium text-blue-700 dark:text-blue-300">Date de début</span>
+                        </div>
+                        <span className="text-sm text-gray-700 dark:text-gray-300">{formation.startDate}</span>
+                      </div>
+                      <div className="bg-blue-50 dark:bg-blue-900/20 p-2 rounded-lg">
+                        <div className="flex items-center mb-1">
+                          <BookOpen className="h-4 w-4 text-blue-500 mr-1" />
+                          <span className="text-xs font-medium text-blue-700 dark:text-blue-300">Niveau</span>
+                        </div>
+                        <span className="text-sm text-gray-700 dark:text-gray-300">{formation.level}</span>
+                      </div>
+                      <div className="bg-blue-50 dark:bg-blue-900/20 p-2 rounded-lg">
+                        <div className="flex items-center mb-1">
+                          <Users className="h-4 w-4 text-blue-500 mr-1" />
+                          <span className="text-xs font-medium text-blue-700 dark:text-blue-300">Promotion</span>
+                        </div>
+                        <span className="text-sm text-gray-700 dark:text-gray-300">{formation.promotion}</span>
+                      </div>
+                      <div className="bg-blue-50 dark:bg-blue-900/20 p-2 rounded-lg">
+                        <div className="flex items-center mb-1">
+                          <Clock3 className="h-4 w-4 text-blue-500 mr-1" />
+                          <span className="text-xs font-medium text-blue-700 dark:text-blue-300">Durée</span>
+                        </div>
+                        <span className="text-sm text-gray-700 dark:text-gray-300">{formation.duration || "12 mois"}</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {formation.skills && formation.skills.map((skill, i) => (
+                        <Badge key={i} variant="outline" className="bg-gray-50 text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                          {skill}
+                        </Badge>
+                      ))}
+                    </div>
+                    <div className="text-gray-600 dark:text-gray-300 text-sm mt-2">
+                      {formation.description}
+                    </div>
+                    <div className="flex items-center gap-2 mt-4">
+                      <Users className="h-5 w-5 text-blue-400" />
+                      <span className="font-medium">Attendees:</span>
+                      <div className="flex -space-x-2">
+                        {[1,2,3,4].map((n) => (
+                          <span key={n} className="inline-block w-7 h-7 rounded-full bg-gray-200 border-2 border-white"></span>
+                        ))}
+                      </div>
+                    </div>
+                    <Button className="w-full mt-6 bg-red-500 hover:bg-red-600 text-white font-semibold">
+                      <svg className="inline-block mr-2 h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553 2.276A2 2 0 0121 14.026V17a2 2 0 01-2 2H5a2 2 0 01-2-2v-2.974a2 2 0 01.447-1.75L8 10m7 0V6a3 3 0 00-6 0v4m6 0H9"></path></svg>
+                      Join Meeting
+                    </Button>
+                    <Button variant="outline" className="w-full mt-2 border-gray-300 text-gray-700">
+                      <svg className="inline-block mr-2 h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 8h2a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2v-8a2 2 0 012-2h2m10 0V6a2 2 0 00-2-2H9a2 2 0 00-2 2v2m10 0H7"></path></svg>
+                      Open Chat
+                    </Button>
+                  </div>
+                </ExpandableContent>
+              </ExpandableCard>
+            </Expandable>
+          </div>
+        ))}
       </div>
     </section>
   );
@@ -295,7 +393,7 @@ const GuestDashboard = () => {
     >
       <GuestHeader firstName={user?.firstName} />
       <div className="w-full max-w-[1400px] mx-auto px-2 sm:px-4 min-w-0">
-        <FormationsCarousel />
+        <FormationsGrid />
       </div>
     </DashboardLayout>
   );

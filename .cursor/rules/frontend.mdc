@@ -19,7 +19,7 @@ alwaysApply: false
 - **Severity: CRITICAL**
 - Always read the entire file contents before suggesting modifications
 - This ensures you understand the component's purpose and dependencies
-- Always use the frontend commands in the frontend container
+- Always use the frontend commands in the frontend container (docker exec -it infra-frontend-1)
 - Always import Toaster from 'sonner' and never use-toast or something
 
 
