@@ -24,11 +24,14 @@ use Symfony\Component\String\Slugger\SluggerInterface;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\HttpClient\NativeHttpClient;
+use Psr\Log\LoggerInterface;
 
 #[Route('/documents')]
 class DocumentController extends AbstractController
 {
     private const CV_DOCUMENT_TYPE_CODE = 'CV'; // Assuming 'CV' is the code for CV document type
+    private ?LoggerInterface $logger = null;
     
     public function __construct(
         private EntityManagerInterface $entityManager,
@@ -37,9 +40,11 @@ class DocumentController extends AbstractController
         private UserRepository $userRepository,
         private SluggerInterface $slugger,
         private string $documentDirectory,
-        private DocumentStorageFactory $storageFactory
+        private DocumentStorageFactory $storageFactory,
+        LoggerInterface $logger = null
     ) {
         // The $documentDirectory will need to be configured in services.yaml
+        $this->logger = $logger;
     }
 
     /**
@@ -260,6 +265,15 @@ class DocumentController extends AbstractController
             
             $this->entityManager->flush();
             
+            // Create notification for document upload success
+            $this->createDocumentNotification(
+                $user, 
+                'Document téléchargé avec succès', 
+                "Votre document {$document->getName()} a été téléchargé avec succès.", 
+                'DOCUMENT_UPLOADED',
+                '/documents'
+            );
+            
             return $this->json([
                 'success' => true,
                 'message' => 'CV uploaded successfully',
@@ -363,6 +377,15 @@ class DocumentController extends AbstractController
             $this->entityManager->remove($document);
             $this->entityManager->flush();
             
+            // Create notification for document deletion
+            $this->createDocumentNotification(
+                $document->getUser(),
+                'Document supprimé',
+                "Votre document {$document->getName()} a été supprimé avec succès.",
+                'DOCUMENT_DELETED',
+                '/documents'
+            );
+            
             return $this->json([
                 'success' => true,
                 'message' => 'Document deleted successfully'
@@ -462,5 +485,229 @@ class DocumentController extends AbstractController
                 'message' => 'Failed to fetch documents: ' . $e->getMessage()
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
+    }
+
+    /**
+     * Create a document-related notification in Firebase
+     */
+    private function createDocumentNotification(User $recipient, string $title, string $message, string $type, string $targetUrl = null): void
+    {
+        try {
+            // Get the Firebase database URL from environment or configuration
+            $firebaseUrl = $this->getParameter('firebase_database_url') ?? 'https://firestore.googleapis.com/v1/projects/bigproject-d6daf/databases/(default)/documents';
+            
+            // Ensure userId is always converted to string to match frontend expectations
+            $userId = (string)$recipient->getId();
+            
+            // Log important debugging information
+            $this->logger?->info('Attempting to create notification', [
+                'recipient_id' => $userId,
+                'type' => $type,
+                'recipient_roles' => $recipient->getRoles(),
+                'title' => $title
+            ]);
+            
+            // Force la création de la notification sans vérifier les préférences
+            // pour les étudiants et guests afin de résoudre le problème temporairement
+            $isStudent = in_array('ROLE_STUDENT', $recipient->getRoles());
+            $isGuest = in_array('ROLE_GUEST', $recipient->getRoles());
+            
+            if (!$isStudent && !$isGuest) {
+                // Vérifier les préférences de notification de l'utilisateur avant d'envoyer
+                try {
+                    // Construire le chemin pour accéder au document de préférences
+                    $preferencesUrl = $firebaseUrl . '/notificationPreferences/' . $userId;
+                    $client = new \Symfony\Component\HttpClient\NativeHttpClient();
+                    $response = $client->request('GET', $preferencesUrl, [
+                        'timeout' => 3.0,
+                        'headers' => [
+                            'Content-Type' => 'application/json',
+                        ]
+                    ]);
+                    
+                    if ($response->getStatusCode() >= 200 && $response->getStatusCode() < 300) {
+                        $data = json_decode($response->getContent(false), true);
+                        
+                        // Si les préférences existent et que ce type de notification est désactivé
+                        if (isset($data['fields'][$type]['booleanValue']) && $data['fields'][$type]['booleanValue'] === false) {
+                            $this->logger?->info('Notification skipped: disabled by user preferences', [
+                                'userId' => $userId,
+                                'type' => $type
+                            ]);
+                            return;
+                        }
+                        
+                        // Vérification de sécurité: s'assurer que les préférences appartiennent bien à cet utilisateur
+                        if (isset($data['fields']['userId']['stringValue']) && $data['fields']['userId']['stringValue'] !== $userId) {
+                            $this->logger?->error('Security issue: preferences user ID does not match recipient ID', [
+                                'expectedId' => $userId,
+                                'actualId' => $data['fields']['userId']['stringValue']
+                            ]);
+                            // Continue anyway but log the issue
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    $this->logger?->info('Could not check notification preferences, creating notification anyway', [
+                        'error' => $e->getMessage()
+                    ]);
+                    // Continue with notification creation as the default
+                }
+            } else {
+                $this->logger?->info('Bypassing preferences check for student/guest role', [
+                    'userId' => $userId,
+                    'roles' => $recipient->getRoles()
+                ]);
+            }
+            
+            // Prepare the notification data
+            $notificationData = [
+                'recipientId' => $userId,
+                'title' => $title,
+                'message' => $message,
+                'timestamp' => (new \DateTime())->format('c'), // ISO 8601 format
+                'read' => false,
+                'type' => $type,
+                'userId' => $userId, // Add userId field for additional verification
+                'userRoles' => json_encode($recipient->getRoles()) // Add roles for debugging
+            ];
+            
+            if ($targetUrl) {
+                $notificationData['targetUrl'] = $targetUrl;
+            }
+            
+            // Log notification data for debugging
+            $this->logger?->info('Sending notification to Firebase', [
+                'userId' => $userId,
+                'notificationData' => $notificationData
+            ]);
+            
+            // Essayer une méthode de création de notification plus directe
+            try {
+                // Créer un ID unique pour le document
+                $documentId = uniqid('notification_', true);
+                
+                // Construire l'URL du document spécifique
+                $documentUrl = $firebaseUrl . '/notifications/' . $documentId;
+                
+                // Utiliser une requête POST directe pour créer le document avec un ID spécifique
+                $client = new \Symfony\Component\HttpClient\NativeHttpClient();
+                $response = $client->request('POST', $documentUrl, [
+                    'json' => ['fields' => $this->convertToFirestoreFields($notificationData)],
+                    'timeout' => 3.0,
+                    'headers' => [
+                        'Content-Type' => 'application/json',
+                    ]
+                ]);
+                
+                $statusCode = $response->getStatusCode();
+                $this->logger?->info('Notification creation with direct method response', [
+                    'statusCode' => $statusCode,
+                    'content' => $response->getContent(false)
+                ]);
+            } catch (\Throwable $directError) {
+                $this->logger?->error('Error with direct notification creation: ' . $directError->getMessage(), [
+                    'exception' => get_class($directError),
+                    'trace' => $directError->getTraceAsString()
+                ]);
+                
+                // Fallback to classic method
+                $client = new \Symfony\Component\HttpClient\NativeHttpClient();
+                $response = $client->request('POST', $firebaseUrl . '/notifications', [
+                    'json' => ['fields' => $this->convertToFirestoreFields($notificationData)],
+                    'timeout' => 3.0,
+                    'headers' => [
+                        'Content-Type' => 'application/json',
+                    ]
+                ]);
+            }
+            
+            // Log the response for debugging
+            $statusCode = $response->getStatusCode();
+            if ($statusCode >= 200 && $statusCode < 300) {
+                $this->logger?->info('Document notification created successfully', [
+                    'userId' => $userId,
+                    'type' => $type,
+                    'responseStatus' => $statusCode
+                ]);
+            } else {
+                $this->logger?->error('Failed to create document notification', [
+                    'userId' => $userId,
+                    'type' => $type,
+                    'statusCode' => $statusCode,
+                    'responseContent' => $response->getContent(false)
+                ]);
+            }
+            
+            // Check if notification preferences document exists, and create it if not
+            try {
+                $preferencesUrl = $firebaseUrl . '/notificationPreferences/' . $userId;
+                $client = new \Symfony\Component\HttpClient\NativeHttpClient();
+                $response = $client->request('GET', $preferencesUrl, [
+                    'timeout' => 2.0
+                ]);
+                
+                // If preferences document doesn't exist (404), create it with defaults
+                if ($response->getStatusCode() === 404) {
+                    $this->logger?->info('Creating default notification preferences for user', [
+                        'userId' => $userId
+                    ]);
+                    
+                    $defaultPreferences = [
+                        'userId' => $userId,
+                        'ROLE_UPDATE' => true,
+                        'DOCUMENT_UPLOADED' => true,
+                        'DOCUMENT_DELETED' => true,
+                        'DOCUMENT_APPROVED' => true,
+                        'DOCUMENT_REJECTED' => true,
+                        'createdAt' => (new \DateTime())->format('c')
+                    ];
+                    
+                    $client->request('POST', $preferencesUrl, [
+                        'json' => ['fields' => $this->convertToFirestoreFields($defaultPreferences)],
+                        'timeout' => 3.0,
+                        'headers' => [
+                            'Content-Type' => 'application/json',
+                        ]
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                // Just log the error, don't interrupt the flow
+                $this->logger?->info('Failed to check/create preferences, not critical', [
+                    'error' => $e->getMessage()
+                ]);
+            }
+        } catch (\Throwable $e) {
+            // Catch and log errors but don't interrupt the main workflow
+            $this->logger?->error('Error creating document notification: ' . $e->getMessage(), [
+                'userId' => $recipient->getId(),
+                'type' => $type,
+                'exception' => get_class($e),
+                'trace' => $e->getTraceAsString()
+            ]);
+        }
+    }
+
+    /**
+     * Convert PHP array to Firestore fields format
+     */
+    private function convertToFirestoreFields(array $data): array
+    {
+        $fields = [];
+        foreach ($data as $key => $value) {
+            if (is_string($value)) {
+                $fields[$key] = ['stringValue' => $value];
+            } elseif (is_bool($value)) {
+                $fields[$key] = ['booleanValue' => $value];
+            } elseif (is_numeric($value)) {
+                $fields[$key] = ['integerValue' => $value];
+            } elseif ($value instanceof \DateTime) {
+                $fields[$key] = ['timestampValue' => $value->format(\DateTime::RFC3339)];
+            } elseif (is_array($value)) {
+                $fields[$key] = ['mapValue' => ['fields' => $this->convertToFirestoreFields($value)]];
+            } else {
+                $fields[$key] = ['nullValue' => null];
+            }
+        }
+        return $fields;
     }
 } 
