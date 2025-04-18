@@ -31,12 +31,12 @@ const PublicNavbar = () => {
         <div className="flex items-center space-x-4">
           {/* Theme toggle button with animation */}
           <motion.button
-            className="relative w-10 h-10 rounded-full overflow-hidden"
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
+            className="border border-transparent shadow-lg py-2 px-2 rounded-full transition-colors bg-transparent hover:scale-105 active:scale-95 flex items-center justify-center"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={toggleColorMode}
           >
-            <div className={`absolute inset-0 ${colorMode === 'navy' ? 'bg-gradient-to-br from-[#0a3c6e] to-[#001a38]' : 'bg-gradient-to-br from-gray-800 to-black'} rounded-full flex items-center justify-center shadow-lg ${currentTheme.shadow}`}>
+            <div className="flex items-center justify-center w-full h-full">
               <AnimatePresence mode="wait">
                 {colorMode === 'navy' ? (
                   <motion.div
