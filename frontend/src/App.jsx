@@ -84,6 +84,9 @@ const TeacherSignatureMonitoring = lazy(() =>
   import("./pages/Teacher/SignatureMonitoring")
 );
 const TeacherAttendance = lazy(() => import("./pages/Teacher/Attendance"));
+const TeacherSignatureHistory = lazy(() =>
+  import("./pages/Teacher/SignatureHistory")
+);
 const HRDashboard = lazy(() => import("./pages/HR/Dashboard"));
 const SuperAdminDashboard = lazy(() => import("./pages/SuperAdmin/Dashboard"));
 const GuestDashboard = lazy(() => import("./pages/Guest/Dashboard"));
@@ -305,6 +308,7 @@ const App = () => {
                           <Route path="dashboard" element={<RoleGuard roles={ROLES.TEACHER} fallback={<Navigate to="/dashboard" replace />}><TeacherDashboard /></RoleGuard>} />
                           <Route path="attendance" element={<RoleGuard roles={ROLES.TEACHER} fallback={<Navigate to="/dashboard" replace />}><TeacherAttendance /></RoleGuard>} />
                           <Route path="signature-monitoring" element={<RoleGuard roles={ROLES.TEACHER} fallback={<Navigate to="/dashboard" replace />}><TeacherSignatureMonitoring /></RoleGuard>} />
+                          <Route path="signature-history" element={<RoleGuard roles={ROLES.TEACHER} fallback={<Navigate to="/dashboard" replace />}><TeacherSignatureHistory /></RoleGuard>} />
                         </Route>
 
                         {/* Routes HR */}
