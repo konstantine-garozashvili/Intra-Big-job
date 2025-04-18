@@ -4,7 +4,6 @@ import { useOptimizedProfile } from '../hooks/useOptimizedProfile';
 import { motion } from 'framer-motion';
 import apiService from '@/lib/services/apiService';
 import { useUserData } from '../hooks/useDashboardQueries';
-import DocumentNotifications from '../components/DocumentNotifications';
 import axios from 'axios';
 /**
  * Composant Tableau de bord affiché comme page d'accueil pour les utilisateurs connectés
