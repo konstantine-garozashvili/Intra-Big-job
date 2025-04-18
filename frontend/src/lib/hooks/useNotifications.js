@@ -1,25 +1,36 @@
 import { useState, useEffect } from 'react';
-import { collection, addDoc, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, query, where, onSnapshot, doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@services/firebase';
 import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 export const useNotifications = () => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
+  // Fonction pour extraire et formater l'ID utilisateur
+  const getUserId = () => {
+    let userId = null;
+    
+    if (user?.id) userId = user.id;
+    else if (user?.uid) userId = user.uid;
+    else if (user?.user?.id) userId = user.user.id;
+    
+    // S'assurer que l'ID est une chaîne de caractères
+    if (userId !== null) {
+      userId = String(userId);
+      console.log('ID utilisateur formaté:', userId);
+    } else {
+      console.log('Aucun ID utilisateur trouvé dans:', user);
+    }
+    
+    return userId;
+  };
+
   useEffect(() => {
     console.log('useNotifications - Current user:', user);
     
-    // Fonction pour extraire l'ID utilisateur
-    const getUserId = () => {
-      // Vérifier toutes les possibilités d'ID utilisateur
-      if (user?.id) return user.id;
-      if (user?.uid) return user.uid;
-      if (user?.user?.id) return user.user.id;
-      return null;
-    };
-
     const userId = getUserId();
     
     if (!userId) {
@@ -105,19 +116,58 @@ export const useNotifications = () => {
     }
   };
 
-  // Fonction pour créer une nouvelle notification
+  // Nouvelle fonction pour gérer les préférences
+  const updateNotificationPreference = async (type, enabled) => {
+    try {
+      const userId = getUserId();
+      if (!userId) {
+        console.error('No user ID available');
+        toast.error('Erreur: Utilisateur non identifié');
+        return;
+      }
+
+      console.log('Mise à jour des préférences pour:', { userId, type, enabled });
+
+      // Créer la référence du document avec l'ID formaté
+      const preferencesRef = doc(db, 'notificationPreferences', userId);
+      
+      // Log de vérification
+      console.log('Référence du document:', preferencesRef.path);
+
+      await setDoc(preferencesRef, {
+        [type]: enabled
+      }, { merge: true });
+      
+      toast.success('Préférences de notification mises à jour');
+    } catch (error) {
+      console.error('Erreur détaillée lors de la mise à jour des préférences:', error);
+      toast.error('Erreur lors de la mise à jour des préférences');
+    }
+  };
+
+  // Modifier la fonction createNotification
   const createNotification = async (recipientId, title, message, type = 'INFO') => {
     try {
-      console.log('useNotifications - Creating new notification:', { recipientId, title, message, type });
+      // S'assurer que recipientId est une chaîne de caractères
+      const formattedRecipientId = String(recipientId);
+      
+      const preferencesRef = doc(db, 'notificationPreferences', formattedRecipientId);
+      const preferencesSnap = await getDoc(preferencesRef);
+      const preferences = preferencesSnap.data() || {};
+
+      if (preferences[type] === false) {
+        console.log('Notifications désactivées pour ce type:', type);
+        return;
+      }
+
       await addDoc(collection(db, 'notifications'), {
-        recipientId,
+        recipientId: formattedRecipientId,
         title,
         message,
         type,
         timestamp: new Date(),
         read: false,
       });
-      console.log('useNotifications - Successfully created notification');
     } catch (error) {
       console.error('Erreur lors de la création de la notification:', error);
       throw error;
@@ -130,6 +180,7 @@ export const useNotifications = () => {
     unreadCount: notifications.filter(n => !n.read).length,
     markAsRead,
     markAllAsRead,
+    updateNotificationPreference,
     createNotification
   };
 }; 

@@ -112,6 +112,7 @@ const GameDevelopment = lazy(() =>
   import("./pages/formations/GameDevelopment")
 );
 const SkillAssessment = lazy(() => import("./pages/Games"));
+const NotificationsPage = lazy(() => import("./pages/Global/Notifications/NotificationsPage"));
 
 // Import du composant HomePage
 const HomePage = lazy(() => import("./components/HomePage"));
@@ -263,6 +264,9 @@ const App = () => {
                       }>
                         {/* Regular protected routes */}
                         <Route path="/dashboard" element={<RoleDashboardRedirect />} />
+
+                        {/* Notifications route */}
+                        <Route path="/notifications" element={<NotificationsPage />} />
 
                         {/* Profile routes */}
                         <Route path="/profile" element={<ProfileView />} />

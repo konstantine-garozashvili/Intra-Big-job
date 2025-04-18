@@ -274,7 +274,7 @@ const MenuBurger = memo(() => {
       label: 'Notifications',
       icon: <Bell className="w-5 h-5 mr-2 text-[#528eb2]" />,
       roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.STUDENT],
-      to: '#',
+      to: '/notifications',
     },
     {
       key: 'messagerie',
