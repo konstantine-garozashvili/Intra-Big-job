@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bell, ArrowRight, Settings, CheckCheck, Clock, User } from 'lucide-react';
+import { Bell, ArrowRight, Settings, CheckCheck, Clock, FileCheck, FileX, File, Trash } from 'lucide-react';
 import { useNotifications } from '../../lib/hooks/useNotifications';
 import { format, formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -15,6 +15,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Link } from 'react-router-dom';
 import { Badge } from './badge';
 import { motion, AnimatePresence } from 'framer-motion';
+import { addDoc, collection } from 'firebase/firestore';
+import { db } from '@/lib/services/firebase';
 
 // Fonction utilitaire pour formatter la date
 const formatTimestamp = (timestamp) => {
@@ -93,6 +95,27 @@ const notificationTypeConfig = {
   ALERT: {
     color: 'bg-red-100 text-red-800',
     icon: <Bell className="h-4 w-4 text-red-600" />
+  },
+  // Ajout des types de notification pour les documents
+  DOCUMENT_APPROVED: {
+    color: 'bg-green-100 text-green-800',
+    icon: <FileCheck className="h-4 w-4 text-green-600" />
+  },
+  DOCUMENT_REJECTED: {
+    color: 'bg-red-100 text-red-800',
+    icon: <FileX className="h-4 w-4 text-red-600" />
+  },
+  DOCUMENT_UPLOADED: {
+    color: 'bg-blue-100 text-blue-800',
+    icon: <File className="h-4 w-4 text-blue-600" />
+  },
+  DOCUMENT_DELETED: {
+    color: 'bg-red-100 text-red-800',
+    icon: <Trash className="h-4 w-4 text-red-600" />
+  },
+  DOCUMENT_UPDATED: {
+    color: 'bg-yellow-100 text-yellow-800',
+    icon: <File className="h-4 w-4 text-yellow-600" />
   }
 };
 
@@ -102,11 +125,20 @@ export const NotificationBell = () => {
   const [isHovering, setIsHovering] = useState(false);
 
   console.log('NotificationBell - User object from auth context:', user);
+  console.log('NotificationBell - userId from localStorage:', localStorage.getItem('userId'));
   console.log('NotificationBell - Rendering with:', {
     notificationsCount: notifications?.length,
     unreadCount,
     loading
   });
+
+  // Journaliser les types de notifications reçus
+  if (notifications?.length > 0) {
+    console.log('NotificationBell - Notification types received:', notifications.map(n => n.type));
+    console.log('NotificationBell - First notification details:', notifications[0]);
+  } else {
+    console.log('NotificationBell - No notifications available');
+  }
 
   if (loading) {
     console.log('NotificationBell - Still loading');
@@ -117,6 +149,11 @@ export const NotificationBell = () => {
     console.log('NotificationBell - Notification clicked:', notificationId);
     markAsRead(notificationId);
   };
+
+  // Determine if user is a student or guest
+  const isStudent = user?.roles?.includes('ROLE_STUDENT');
+  const isGuest = user?.roles?.includes('ROLE_GUEST');
+  console.log('NotificationBell - User roles detected:', { isStudent, isGuest });
 
   return (
     <DropdownMenu>
@@ -180,6 +217,70 @@ export const NotificationBell = () => {
                 <span className="hidden sm:inline">Tout marquer comme lu</span>
               </Button>
             )}
+            {process.env.NODE_ENV === 'development' && (
+              <Button
+                onClick={async () => {
+                  try {
+                    console.log('NotificationBell - Creating test notification');
+                    let userId = user?.id;
+                    
+                    // Get user ID from various sources
+                    if (!userId) {
+                      if (localStorage.getItem('user')) {
+                        try {
+                          const localUser = JSON.parse(localStorage.getItem('user'));
+                          userId = localUser?.id;
+                        } catch (e) {
+                          console.error('Error parsing user from localStorage:', e);
+                        }
+                      }
+                      
+                      if (!userId) {
+                        userId = localStorage.getItem('userId') || localStorage.getItem('user_id');
+                      }
+                    }
+                    
+                    if (!userId) {
+                      console.error('NotificationBell - No user ID found for test notification');
+                      return;
+                    }
+                    
+                    // Convert to string to ensure compatibility
+                    userId = String(userId);
+                    
+                    console.log(`NotificationBell - Creating test notification for user ID: ${userId}`);
+                    
+                    const testNotification = {
+                      recipientId: userId,
+                      title: `Test notification for ${isStudent ? 'student' : isGuest ? 'guest' : 'user'}`,
+                      message: `Ceci est une notification de test pour l'ID: ${userId}`,
+                      type: 'DOCUMENT_UPLOADED', // Test avec type document spécifique
+                      timestamp: new Date(),
+                      read: false,
+                      targetUrl: '/documents'
+                    };
+                    
+                    console.log('NotificationBell - Adding test notification:', testNotification);
+                    const docRef = await addDoc(collection(db, 'notifications'), testNotification);
+                    console.log(`NotificationBell - Test notification added with ID: ${docRef.id}`);
+                    
+                    // Vérifier et afficher les rôles de l'utilisateur
+                    if (user?.roles) {
+                      console.log('NotificationBell - User roles:', user.roles);
+                    } else {
+                      console.log('NotificationBell - No roles found in user object');
+                    }
+                  } catch (error) {
+                    console.error('NotificationBell - Error creating test notification:', error);
+                  }
+                }}
+                variant="ghost"
+                size="sm"
+                className="text-xs p-1.5"
+              >
+                <Bell className="h-4 w-4 text-blue-500" />
+              </Button>
+            )}
             <Link to="/settings/notifications">
               <Button
                 variant="ghost"
@@ -204,8 +305,18 @@ export const NotificationBell = () => {
           ) : (
             notifications.slice(0, 5).map((notification) => {
               console.log('NotificationBell - Rendering notification:', notification);
-              const typeConfig = notificationTypeConfig[notification.type] || {};
+              const typeConfig = notificationTypeConfig[notification.type] || {
+                color: 'bg-gray-100 text-gray-600',
+                icon: <Bell className="h-4 w-4 text-gray-500" />
+              };
               const relativeTime = getRelativeTime(notification.timestamp);
+              
+              // Journaliser chaque notification rendue
+              console.log('NotificationBell - Notification type config:', {
+                type: notification.type,
+                hasConfig: !!notificationTypeConfig[notification.type],
+                usingConfig: typeConfig
+              });
               
               return (
                 <div

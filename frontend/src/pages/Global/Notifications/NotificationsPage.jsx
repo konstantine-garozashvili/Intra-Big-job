@@ -84,6 +84,16 @@ const notificationTypeConfig = {
     label: 'Document téléchargé',
     color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
     icon: <File className="h-4 w-4" />
+  },
+  DOCUMENT_DELETED: {
+    label: 'Document supprimé',
+    color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+    icon: <Trash className="h-4 w-4" />
+  },
+  DOCUMENT_UPDATED: {
+    label: 'Document mis à jour',
+    color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
+    icon: <File className="h-4 w-4" />
   }
 };
 
@@ -107,6 +117,7 @@ const NotificationsPage = () => {
     
     // Filtrer par type
     if (filter) {
+      // Filter by specific notification type
       filtered = filtered.filter(n => n.type === filter);
     }
     

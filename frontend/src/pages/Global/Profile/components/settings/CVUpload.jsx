@@ -16,6 +16,7 @@ import {
 // Importer le service documentService directement dans le composant
 import documentService from '../../services/documentService';
 import { notificationService } from '@/lib/services/notificationService';
+import { documentNotifications } from '@/lib/utils/documentNotifications';
 
 const CVUpload = memo(({ userData, onUpdate }) => {
   const [cvFile, setCvFile] = useState(null);
@@ -51,41 +52,21 @@ const CVUpload = memo(({ userData, onUpdate }) => {
       // Dispatch event to notify MainLayout about the update
       document.dispatchEvent(new CustomEvent('user:data-updated'));
       
-      if (onUpdate) onUpdate();
-      
-      // Créer une notification locale pour l'utilisateur
-      const mockNotification = {
-        id: Date.now(),
-        title: 'CV téléchargé avec succès',
-        message: 'Votre CV a été téléchargé avec succès et est prêt à être consulté par les recruteurs.',
-        type: 'document_uploaded',
-        isRead: false,
-        createdAt: new Date().toISOString(),
-        targetUrl: '/documents'
-      };
-      
-      // Ajouter la notification directement dans le cache du service 
-      if (notificationService.cache.notifications && notificationService.cache.notifications.notifications) {
-        // Insérer au début du tableau
-        notificationService.cache.notifications.notifications.unshift(mockNotification);
-        
-        // Mettre à jour le compteur de notifications non lues
-        notificationService.cache.unreadCount = (notificationService.cache.unreadCount || 0) + 1;
-        
-        // Mettre à jour le compteur dans les données de pagination
-        if (notificationService.cache.notifications.pagination) {
-          notificationService.cache.notifications.pagination.total += 1;
-        }
-        
-        // Notifier les abonnés du changement
-        notificationService.notifySubscribers();
-        
-        // Forcer le rafraîchissement du compteur 
-        setTimeout(() => {
-          notificationService.getUnreadCount(true)
-            .catch(console.error);
-        }, 300);
-      }
+      // Create document uploaded notification using the utility
+      // refetchCV().then(data => {
+      //   if (data && data.data) {
+      //     documentNotifications.uploaded({
+      //       name: data.data.name || 'CV',
+      //       id: data.data.id
+      //     });
+      //   } else {
+      //     // Fallback if we can't get the document data
+      //     documentNotifications.uploaded({
+      //       name: 'CV',
+      //       id: Date.now()
+      //     });
+      //   }
+      // });
       
       // Reset file input
       const fileInput = document.getElementById('cv-upload');
@@ -170,44 +151,28 @@ const CVUpload = memo(({ userData, onUpdate }) => {
     // Close dialog immediately for fluid interaction
     setDeleteDialogOpen(false);
     
-    // Stocker les informations du document avant la suppression
+    // Store document info before deletion
     const documentInfo = {
       id: cvDocument.id,
       name: cvDocument.name
     };
     
+    // Supprimer le document - le backend créera la notification
     deleteCV(cvDocument.id);
     
-    // Créer directement une notification locale sans appeler l'API externe
-    // qui cause les problèmes CORS
-    const mockNotification = {
-      id: Date.now(),
-      title: 'Document supprimé',
-      message: `Votre document ${documentInfo.name} a été supprimé avec succès.`,
-      type: 'document_deleted',
-      isRead: false,
-      createdAt: new Date().toISOString(),
-      targetUrl: '/documents'
-    };
+    // Check if user is student or guest and create frontend notification as backup
+    // This is a redundancy mechanism to ensure notifications work for all user roles
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const isStudent = user?.roles?.includes('ROLE_STUDENT');
+    const isGuest = user?.roles?.includes('ROLE_GUEST');
     
-    // Ajouter la notification au cache directement
-    if (notificationService.cache.notifications && notificationService.cache.notifications.notifications) {
-      notificationService.cache.notifications.notifications.unshift(mockNotification);
-      notificationService.cache.unreadCount = (notificationService.cache.unreadCount || 0) + 1;
-      notificationService.notifySubscribers();
-      
-      // Afficher également un toast pour notification immédiate
-      toast.info(mockNotification.message, {
-        action: {
-          label: 'Voir tous',
-          onClick: () => {
-            window.location.href = mockNotification.targetUrl;
-          }
-        }
-      });
+    if (isStudent || isGuest) {
+      console.log('Creating backup frontend notification for student/guest user');
+      // Force creation of notification in frontend (bypassing backend check)
+      documentNotifications.deleted(documentInfo, null, true);
     }
     
-  }, [cvDocument, deleteCV, userData]);
+  }, [cvDocument, deleteCV]);
 
   // Handle document download
   const handleDownloadDocument = useCallback(async () => {
