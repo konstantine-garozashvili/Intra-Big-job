@@ -47,26 +47,36 @@ const CVUpload = memo(({ userData, onUpdate }) => {
     onSuccess: () => {
       toast.success('CV téléchargé avec succès');
       setCvFile(null);
-      refetchCV();
       
       // Dispatch event to notify MainLayout about the update
       document.dispatchEvent(new CustomEvent('user:data-updated'));
       
       // Create document uploaded notification using the utility
-      // refetchCV().then(data => {
-      //   if (data && data.data) {
-      //     documentNotifications.uploaded({
-      //       name: data.data.name || 'CV',
-      //       id: data.data.id
-      //     });
-      //   } else {
-      //     // Fallback if we can't get the document data
-      //     documentNotifications.uploaded({
-      //       name: 'CV',
-      //       id: Date.now()
-      //     });
-      //   }
-      // });
+      // D'abord récupérer les données à jour du document
+      refetchCV().then(data => {
+        if (data && data.data && data.data[0]) {
+          // Forcer la création de la notification frontend (même si normalement gérée par le backend)
+          documentNotifications.uploaded({
+            name: data.data[0].name || 'CV',
+            id: data.data[0].id
+          }, null, true);
+          console.log('Notification de téléchargement de CV créée avec succès');
+        } else {
+          // Fallback si on ne peut pas obtenir les données du document
+          documentNotifications.uploaded({
+            name: 'CV',
+            id: Date.now()
+          }, null, true);
+          console.log('Notification de téléchargement de CV créée avec données par défaut');
+        }
+      }).catch(err => {
+        console.error('Erreur lors de la récupération du document CV:', err);
+        // Créer quand même une notification en cas d'erreur
+        documentNotifications.uploaded({
+          name: 'CV',
+          id: Date.now()
+        }, null, true);
+      });
       
       // Reset file input
       const fileInput = document.getElementById('cv-upload');
