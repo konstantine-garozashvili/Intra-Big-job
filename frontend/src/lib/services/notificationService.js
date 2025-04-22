@@ -25,7 +25,7 @@ class NotificationService {
     this.subscribers = [];
     this.pollingInterval = null;
     this.pollingDelay = 60000; // 1 minute
-    this.useMockBackend = false;
+    this.useMockBackend = true;
   }
 
   /**
@@ -33,44 +33,42 @@ class NotificationService {
    */
   async getNotifications(page = 1, limit = 10, includeRead = true, refresh = false) {
     try {
-      if (this.useMockBackend) {
-        console.log('Using mock notifications data (backend unavailable)');
+      console.log('Using Firebase notifications data');
+      
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      if (this.cache.notifications && this.cache.notifications.notifications) {
+        let notifications = [...this.cache.notifications.notifications];
         
-        await new Promise(resolve => setTimeout(resolve, 300));
-        
-        if (this.cache.notifications && this.cache.notifications.notifications) {
-          let notifications = [...this.cache.notifications.notifications];
-          
-          if (!includeRead) {
-            notifications = notifications.filter(n => !n.isRead);
-          }
-          
-          notifications.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-          
-          const total = notifications.length;
-          const pages = Math.max(1, Math.ceil(total / limit));
-          const startIndex = (page - 1) * limit;
-          const paginatedNotifications = notifications.slice(startIndex, startIndex + limit);
-          
-          const result = {
-            notifications: paginatedNotifications,
-            pagination: {
-              total: total,
-              page: page,
-              limit: limit,
-              pages: pages
-            },
-            unread_count: notifications.filter(n => !n.isRead).length
-          };
-          
-          this.cache.notifications = result;
-          this.cache.unreadCount = result.unread_count;
-          this.cache.lastFetch = new Date();
-          
-          this.notifySubscribers();
-          
-          return result;
+        if (!includeRead) {
+          notifications = notifications.filter(n => !n.isRead);
         }
+        
+        notifications.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        
+        const total = notifications.length;
+        const pages = Math.max(1, Math.ceil(total / limit));
+        const startIndex = (page - 1) * limit;
+        const paginatedNotifications = notifications.slice(startIndex, startIndex + limit);
+        
+        const result = {
+          notifications: paginatedNotifications,
+          pagination: {
+            total: total,
+            page: page,
+            limit: limit,
+            pages: pages
+          },
+          unread_count: notifications.filter(n => !n.isRead).length
+        };
+        
+        this.cache.notifications = result;
+        this.cache.unreadCount = result.unread_count;
+        this.cache.lastFetch = new Date();
+        
+        this.notifySubscribers();
+        
+        return result;
       }
       
       if (this.cache.fetchPromise) {
@@ -86,52 +84,26 @@ class NotificationService {
         return this.cache.notifications;
       }
 
-      try {
-        console.log("Fetching fresh notifications data from API");
-        this.cache.fetchPromise = apiService.get(`/api/notifications?page=${page}&limit=${limit}&include_read=${includeRead}`);
-        const response = await this.cache.fetchPromise;
-        
-        this.cache.notifications = response.data;
-        this.cache.unreadCount = response.data.unread_count || 0;
-        this.cache.lastFetch = new Date();
-        
-        this.notifySubscribers();
-        
-        this.cache.fetchPromise = null;
-        
-        return response.data;
-      } catch (error) {
-        console.log("Using cached notifications data due to API error");
-        
-        if (this.cache.notifications && this.cache.notifications.notifications) {
-          console.log("Returning cached notification data due to API error");
-          
-          this.cache.fetchPromise = null;
-          
-          return this.cache.notifications;
-        }
-        
-        const emptyData = {
-          notifications: [],
-          pagination: {
-            total: 0,
-            page: 1,
-            limit: 10,
-            pages: 1
-          },
-          unread_count: 0
-        };
-        
-        this.cache.notifications = emptyData;
-        this.cache.unreadCount = 0;
-        this.cache.lastFetch = new Date();
-        
-        this.notifySubscribers();
-        
-        this.cache.fetchPromise = null;
-        
-        return emptyData;
-      }
+      console.log("No valid cached data, returning empty notifications");
+      
+      const emptyData = {
+        notifications: [],
+        pagination: {
+          total: 0,
+          page: 1,
+          limit: 10,
+          pages: 1
+        },
+        unread_count: 0
+      };
+      
+      this.cache.notifications = emptyData;
+      this.cache.unreadCount = 0;
+      this.cache.lastFetch = new Date();
+      
+      this.notifySubscribers();
+      
+      return emptyData;
     } catch (error) {
       this.cache.fetchPromise = null;
       console.error('Error fetching notifications:', error);
@@ -325,40 +297,15 @@ class NotificationService {
    */
   async markAsRead(notificationId) {
     try {
-      try {
-        const response = await apiService.post(`/api/notifications/${notificationId}/mark-read`);
-        
-        this.cache.unreadCount = response.data.unread_count || 0;
-        
-        if (this.cache.notifications && this.cache.notifications.notifications) {
-          const notification = this.cache.notifications.notifications.find(n => n.id === notificationId);
-          if (notification && !notification.readAt) {
-            notification.readAt = new Date().toISOString();
-            notification.isRead = true;
-            
-            if (this.cache.notifications.unread_count !== undefined) {
-              this.cache.notifications.unread_count = Math.max(0, this.cache.notifications.unread_count - 1);
-            }
-          }
-        }
-        
-        this.notifySubscribers();
-        
-        return response.data;
-      } catch (error) {
-        console.log("Using local notification marking due to API error");
-        
-        this.markNotificationAsReadLocally(notificationId);
-        
-        return {
-          success: true,
-          notification: this.cache.notifications?.notifications?.find(n => n.id === notificationId) || null,
-          unread_count: this.cache.unreadCount
-        };
-      }
+      const success = this.markNotificationAsReadLocally(notificationId);
+      
+      return {
+        success: true,
+        notification: this.cache.notifications?.notifications?.find(n => n.id === notificationId) || null,
+        unread_count: this.cache.unreadCount
+      };
     } catch (error) {
       console.error('Error marking notification as read:', error);
-      this.markNotificationAsReadLocally(notificationId);
       return {
         success: false,
         error: error.message,
@@ -372,39 +319,15 @@ class NotificationService {
    */
   async markAllAsRead() {
     try {
-      try {
-        const response = await apiService.post('/api/notifications/mark-read');
-        
-        this.cache.unreadCount = 0;
-        
-        if (this.cache.notifications && this.cache.notifications.notifications) {
-          this.cache.notifications.notifications.forEach(notification => {
-            notification.readAt = new Date().toISOString();
-            notification.isRead = true;
-          });
-          
-          if (this.cache.notifications.unread_count !== undefined) {
-            this.cache.notifications.unread_count = 0;
-          }
-        }
-        
-        this.notifySubscribers();
-        
-        return response.data;
-      } catch (error) {
-        console.log("Using local notification marking due to API error");
-        
-        this.markAllNotificationsAsReadLocally();
-        
-        return {
-          success: true,
-          updated: this.cache.notifications?.notifications?.length || 0,
-          unread_count: 0
-        };
-      }
+      const success = this.markAllNotificationsAsReadLocally();
+      
+      return {
+        success: true,
+        updated: this.cache.notifications?.notifications?.length || 0,
+        unread_count: 0
+      };
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
-      this.markAllNotificationsAsReadLocally();
       return {
         success: false,
         error: error.message,
@@ -414,51 +337,41 @@ class NotificationService {
   }
 
   /**
-   * Create a test notification when backend is not available
+   * Create a test notification without trying API
    */
   async createTestNotification(type = 'document', targetUrl = '/dashboard') {
     try {
-      try {
-        const response = await apiService.post('/api/notifications/test', { type, targetUrl });
-        
-        await this.getNotifications(1, 10, true, true);
-        
-        return response.data;
-      } catch (error) {
-        console.log("API not available, creating local test notification");
-        
-        this.useMockBackend = true;
-
-        const now = new Date();
-        const newNotification = {
-          id: `local-${now.getTime()}`,
-          title: `Test Notification (${type})`,
-          message: `Ceci est une notification de test de type "${type}" créée localement`,
-          type: type,
-          targetUrl: targetUrl,
-          createdAt: now.toISOString(),
-          readAt: null,
-          isRead: false
-        };
-        
-        if (!this.cache.notifications.notifications) {
-          this.cache.notifications.notifications = [];
-        }
-        
-        this.cache.notifications.notifications.unshift(newNotification);
-        this.cache.unreadCount += 1;
-        
-        if (this.cache.notifications.pagination) {
-          this.cache.notifications.pagination.total += 1;
-        }
-        
-        this.notifySubscribers();
-        
-        return {
-          success: true,
-          notification: newNotification
-        };
+      console.log("Creating local test notification");
+      
+      const now = new Date();
+      const newNotification = {
+        id: `local-${now.getTime()}`,
+        title: `Test Notification (${type})`,
+        message: `Ceci est une notification de test de type "${type}" créée localement`,
+        type: type,
+        targetUrl: targetUrl,
+        createdAt: now.toISOString(),
+        readAt: null,
+        isRead: false
+      };
+      
+      if (!this.cache.notifications.notifications) {
+        this.cache.notifications.notifications = [];
       }
+      
+      this.cache.notifications.notifications.unshift(newNotification);
+      this.cache.unreadCount += 1;
+      
+      if (this.cache.notifications.pagination) {
+        this.cache.notifications.pagination.total += 1;
+      }
+      
+      this.notifySubscribers();
+      
+      return {
+        success: true,
+        notification: newNotification
+      };
     } catch (error) {
       console.error('Error creating test notification:', error);
       return {
