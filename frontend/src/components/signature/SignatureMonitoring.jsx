@@ -25,8 +25,8 @@ const SignatureMonitoring = () => {
   const [weeklyStats, setWeeklyStats] = useState([]);
 
   // Fetch signatures
-  const fetchSignatures = async () => {
-    try {
+    const fetchSignatures = async () => {
+      try {
       setIsLoading(true);
       
       const token = localStorage.getItem('token');
@@ -34,29 +34,29 @@ const SignatureMonitoring = () => {
         throw new Error('Authentification requise');
       }
       
-      const response = await fetch('/api/signatures', {
+        const response = await fetch('/api/signatures', {
         method: 'GET',
-        headers: {
+          headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
-      });
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch signatures');
+        }
+
+        const data = await response.json();
       
-      if (!response.ok) {
-        throw new Error('Failed to fetch signatures');
-      }
-      
-      const data = await response.json();
-      
-      setSignatures(data.signatures);
-      setError(null);
+        setSignatures(data.signatures);
+        setError(null);
     } catch (error) {
       console.error('Error fetching signatures:', error);
-      setError('Impossible de récupérer les signatures. Veuillez réessayer plus tard.');
-      toast.error('Erreur', {
-        description: 'Impossible de récupérer les signatures. Veuillez réessayer plus tard.'
-      });
-    } finally {
+        setError('Impossible de récupérer les signatures. Veuillez réessayer plus tard.');
+        toast.error('Erreur', {
+          description: 'Impossible de récupérer les signatures. Veuillez réessayer plus tard.'
+        });
+      } finally {
       setIsLoading(false);
     }
   };
@@ -214,16 +214,16 @@ const SignatureMonitoring = () => {
           'Content-Type': 'application/json'
         }
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to validate signature');
       }
-      
+
       // Update the signatures list
-      setSignatures(signatures.map(sig =>
+      setSignatures(signatures.map(sig => 
         sig.id === signatureId ? { ...sig, validated: true } : sig
       ));
-      
+
       toast.success('Signature validée', {
         description: 'La signature a été validée avec succès.'
       });
@@ -296,8 +296,8 @@ const SignatureMonitoring = () => {
                 <div className="text-center py-12 border border-dashed border-gray-300 rounded-md">
                   <p className="text-gray-500">
                     Aucune signature n'est disponible pour le moment.
-                  </p>
-                </div>
+                </p>
+              </div>
               ) : (
                 <div className="border rounded-md overflow-hidden">
                   <Table>
@@ -319,25 +319,25 @@ const SignatureMonitoring = () => {
                             {format(new Date(signature.date), 'PPP à HH:mm', { locale: fr })}
                           </TableCell>
                           <TableCell>
-                            <Badge variant={signature.validated ? "success" : "pending"}>
-                              {signature.validated ? "Validé" : "En attente"}
-                            </Badge>
+              <Badge variant={signature.validated ? "success" : "pending"}>
+                {signature.validated ? "Validé" : "En attente"}
+              </Badge>
                           </TableCell>
                           <TableCell>
-                            <p><strong>Localisation:</strong> {signature.location}</p>
-                            
-                            {!signature.validated && (
+              <p><strong>Localisation:</strong> {signature.location}</p>
+            
+            {!signature.validated && (
                               <Button 
                                 variant="default"
                                 size="sm"
-                                onClick={() => handleValidate(signature.id)}
+                onClick={() => handleValidate(signature.id)}
                                 className="mt-2"
-                              >
+              >
                                 Valider
                               </Button>
-                            )}
-                            
-                            {signature.validated && (
+            )}
+            
+            {signature.validated && (
                               <span className="text-green-600 flex items-center mt-2">
                                 <CheckCircle className="h-4 w-4 mr-1" /> Signature validée
                               </span>
@@ -347,8 +347,8 @@ const SignatureMonitoring = () => {
                       ))}
                     </TableBody>
                   </Table>
-                </div>
-              )}
+              </div>
+            )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -412,7 +412,7 @@ const SignatureMonitoring = () => {
                                   <PresencePercentage percentage={day.afternoon.percentage} />
                                   <div className="text-xs text-gray-500 mt-1">
                                     {day.afternoon.present}/{day.totalStudents} présents
-                                  </div>
+          </div>
                                 </>
                               ) : (
                                 <Badge variant="outline">À venir</Badge>
@@ -470,7 +470,7 @@ const SignatureMonitoring = () => {
                       })}
                     </div>
                   </Card>
-                </div>
+      </div>
               )}
             </CardContent>
           </Card>
