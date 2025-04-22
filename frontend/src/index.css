@@ -81,6 +81,11 @@
     --chart-3: 211 95% 16%; /* #02284f */
     --chart-4: 197 37% 24%; /* #235465 - Variante de bleu */
     --chart-5: 195 53% 79%; /* #addde6 - Variante claire */
+    --brand-primary: #528eb2;
+    --brand-secondary: #02284f;
+    --brand-bg: #f7fafc;
+    --brand-accent: #eaf4fa;
+    --brand-border: #dbeafe;
   }
 
   .dark {
@@ -228,6 +233,16 @@
 
 .animate-twinkle {
   animation: twinkle 3s infinite ease-in-out;
+}
+
+/* Animation for dropdown suggestions */
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-slideDown {
+  animation: slideDown 0.2s ease-out forwards;
 }
 
 /* Calendar navigation */
@@ -586,4 +601,242 @@
   0%, 20% { content: "."; }
   40% { content: ".."; }
   60%, 100% { content: "..."; }
+}
+
+/* Glassmorphism card style */
+.glass-card {
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.10);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  transition: box-shadow 0.3s cubic-bezier(.4,2,.6,1), background 0.3s;
+}
+
+/* Card entrance animation */
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(30px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.animate-cardIn {
+  animation: cardIn 0.5s cubic-bezier(.4,2,.6,1);
+}
+
+/* Suggestion item fade-in */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.suggestion-fadeIn {
+  animation: fadeInUp 0.25s cubic-bezier(.4,2,.6,1);
+}
+
+/* Floating label styles */
+.floating-label-group {
+  position: relative;
+  margin-bottom: 1.5rem;
+}
+.floating-label-group input:focus ~ label,
+.floating-label-group input:not(:placeholder-shown) ~ label {
+  top: -0.7rem;
+  left: 0.75rem;
+  font-size: 0.85rem;
+  color: #2563eb;
+  background: white;
+  padding: 0 0.25rem;
+  border-radius: 0.25rem;
+  transition: all 0.2s;
+}
+.floating-label-group label {
+  position: absolute;
+  top: 0.75rem;
+  left: 1rem;
+  color: #64748b;
+  font-size: 1rem;
+  pointer-events: none;
+  background: transparent;
+  transition: all 0.2s;
+}
+.floating-label-group input {
+  padding-top: 1.25rem !important;
+}
+
+/* Animated button */
+.animated-btn {
+  transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+}
+.animated-btn:hover {
+  transform: translateY(-2px) scale(1.04);
+  box-shadow: 0 4px 16px 0 rgba(82,142,178,0.10);
+  background: #2563eb !important;
+  color: #fff !important;
+}
+
+/* Modern card style for address edit */
+.address-edit-card {
+  background: var(--brand-bg);
+  border-radius: 1.25rem;
+  box-shadow: 0 4px 24px 0 rgba(82, 142, 178, 0.10);
+  border: 1.5px solid var(--brand-border);
+  padding: 1.5rem 1.25rem;
+  max-width: 540px;
+  margin: 0 auto;
+  position: relative;
+  transition: box-shadow 0.2s, border 0.2s;
+}
+.address-edit-card .accent-bar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 5px;
+  background: linear-gradient(90deg, var(--brand-primary), var(--brand-secondary));
+  border-radius: 1.25rem 1.25rem 0 0;
+}
+
+@media (max-width: 640px) {
+  .address-edit-card {
+    padding: 1rem 0.5rem;
+    max-width: 100vw;
+    border-radius: 0.75rem;
+  }
+}
+
+.address-section-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--brand-secondary);
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.5px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.address-section-title .icon {
+  color: var(--brand-primary);
+}
+.address-section-underline {
+  width: 48px;
+  height: 4px;
+  background: linear-gradient(90deg, var(--brand-primary), var(--brand-secondary));
+  border-radius: 2px;
+  margin-bottom: 1.25rem;
+}
+
+/* Inputs */
+.address-input {
+  background: #fff;
+  border: 1.5px solid var(--brand-border);
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem 0.75rem 2.5rem;
+  font-size: 1rem;
+  color: var(--brand-secondary);
+  transition: border 0.2s, box-shadow 0.2s;
+  box-shadow: 0 1px 2px 0 rgba(82,142,178,0.03);
+}
+.address-input:focus {
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 2px #528eb220;
+  outline: none;
+}
+.address-input-icon {
+  position: absolute;
+  left: 0.9rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--brand-primary);
+  pointer-events: none;
+}
+
+/* Responsive grid */
+.address-fields-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+@media (max-width: 640px) {
+  .address-fields-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+/* Suggestion dropdown */
+.address-suggestions {
+  position: absolute;
+  left: 0; right: 0; top: 110%;
+  background: #fff;
+  border: 1.5px solid var(--brand-border);
+  border-radius: 0.75rem;
+  box-shadow: 0 8px 32px 0 rgba(82,142,178,0.10);
+  z-index: 50;
+  max-height: 220px;
+  overflow-y: auto;
+  animation: slideDown 0.18s cubic-bezier(.4,2,.6,1);
+}
+.address-suggestion-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  cursor: pointer;
+  border-left: 4px solid transparent;
+  transition: background 0.15s, border-color 0.15s;
+}
+.address-suggestion-item:hover {
+  background: var(--brand-accent);
+  border-left: 4px solid var(--brand-primary);
+}
+.address-suggestion-label {
+  font-weight: 500;
+  color: var(--brand-secondary);
+}
+.address-suggestion-context {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+/* Buttons */
+.address-btn-primary {
+  background: linear-gradient(90deg, var(--brand-primary), var(--brand-secondary));
+  color: #fff;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  padding: 0.7rem 1.5rem;
+  font-size: 1rem;
+  box-shadow: 0 2px 8px 0 rgba(82,142,178,0.08);
+  border: none;
+  transition: background 0.18s, transform 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.address-btn-primary:hover {
+  background: linear-gradient(90deg, #3b6e8c, #01172a);
+  transform: translateY(-2px) scale(1.03);
+}
+.address-btn-secondary {
+  background: #fff;
+  color: var(--brand-secondary);
+  border: 1.5px solid var(--brand-border);
+  border-radius: 0.75rem;
+  font-weight: 600;
+  padding: 0.7rem 1.5rem;
+  font-size: 1rem;
+  transition: background 0.18s, color 0.18s, border 0.18s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.address-btn-secondary:hover {
+  background: var(--brand-accent);
+  color: var(--brand-primary);
+  border-color: var(--brand-primary);
+}
+
+/* Section for error/help text */
+.address-help {
+  font-size: 0.92rem;
+  color: #eab308;
+  margin-top: 0.25rem;
 }

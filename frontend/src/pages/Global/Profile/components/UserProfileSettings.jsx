@@ -105,7 +105,9 @@ const UserProfileSettings = () => {
 
   // Initialize editedData when userData changes
   useEffect(() => {
-    if (userData && Object.keys(userData).length > 0) {
+    // Only reset if no field is being edited
+    const isAnyFieldEditing = Object.values(editMode).some(Boolean);
+    if (!isAnyFieldEditing && userData && Object.keys(userData).length > 0) {
       // Use a deep comparison to avoid unnecessary updates
       const newPersonalData = {
         firstName: userData.firstName ?? '',
@@ -128,7 +130,7 @@ const UserProfileSettings = () => {
         }));
       }
     }
-  }, [profileData]); // Only depend on profileData, not derived values
+  }, [profileData, editMode]);
 
   // Add event listener for portfolio URL updates from other components
   useEffect(() => {
@@ -228,6 +230,11 @@ const UserProfileSettings = () => {
     try {
       const value = editedData.personal[field];
       
+      // Debug log for linkedinUrl
+      if (field === 'linkedinUrl') {
+        console.log(`handleSavePersonal - linkedinUrl value: ${JSON.stringify(value)}`);
+      }
+      
       // Validation spécifique selon le type de champ
       if (field === 'birthDate' && value) {
         const birthDate = new Date(value);
@@ -271,6 +278,11 @@ const UserProfileSettings = () => {
           toast.error("L'URL LinkedIn doit commencer par 'https://www.linkedin.com/in/'");
           return;
         }
+      }
+      // Special case: allow null/empty for linkedinUrl deletion
+      if (field === 'linkedinUrl' && (value === null || value === '')) {
+        console.log('Deleting LinkedIn URL');
+        // Continue with deletion
       }
 
       // Validate portfolio URL

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Briefcase, GraduationCap, Linkedin, Link, Globe } from 'lucide-react';
 import EditableField from './EditableField';
-import { StaticField } from './StaticField';
+import StaticField from './StaticField';
 import { studentProfileService } from '@/lib/services';
 import { synchronizePortfolioUpdate } from '@/lib/utils/profileUtils';
 import { toast } from 'sonner';
@@ -11,47 +11,31 @@ const formatLinkedinUrl = (input) => {
   if (!input) return '';
   let trimmedInput = input.trim();
 
-  // Remove placeholder if user didn't add anything after it
-  if (trimmedInput === 'https://www.linkedin.com/in/') {
-      return ''; // Treat as empty if only placeholder remains
+  // If user enters only the username (no slashes, no spaces, reasonable length)
+  if (/^[a-zA-Z0-9._-]{3,100}$/.test(trimmedInput)) {
+    return `https://www.linkedin.com/in/${trimmedInput}`;
   }
 
-  // Check if it already looks like a valid LinkedIn profile URL
-  if (/^https?:\/\/(www\.)?linkedin\.com\/in\/[^\/\s]+(\/?)$/i.test(trimmedInput)) {
-    // Ensure it starts with https
-    if (trimmedInput.startsWith('http://')) {
-      trimmedInput = trimmedInput.replace('http://', 'https://');
-    }
+  // If user pastes a full LinkedIn URL, extract the username after /in/
+  const match = trimmedInput.match(/linkedin\.com\/in\/([a-zA-Z0-9._-]{3,100})/);
+  if (match && match[1]) {
+    return `https://www.linkedin.com/in/${match[1]}`;
+  }
+
+  // If user pastes a partial URL (e.g., /in/username)
+  const partialMatch = trimmedInput.match(/\/in\/([a-zA-Z0-9._-]{3,100})/);
+  if (partialMatch && partialMatch[1]) {
+    return `https://www.linkedin.com/in/${partialMatch[1]}`;
+  }
+
+  // If it already looks like a valid LinkedIn profile URL
+  if (/^https?:\/\/(www\.)?linkedin\.com\/in\/[a-zA-Z0-9._-]{3,100}\/?$/.test(trimmedInput)) {
     // Remove trailing slash if present
     return trimmedInput.replace(/\/$/, '');
   }
 
-  // Check if it's just the username part (potentially pasted after the pre-filled base)
-  if (trimmedInput.startsWith('https://www.linkedin.com/in/')) {
-      const usernamePart = trimmedInput.substring('https://www.linkedin.com/in/'.length);
-      // Ensure the extracted part is not empty and looks like a valid username part
-      if (usernamePart && /^[a-z0-9_-]{3,100}$/i.test(usernamePart)) {
-          return `https://www.linkedin.com/in/${usernamePart}`;
-      }
-      // If only the base URL was present after trimming, consider it empty or invalid
-      if (!usernamePart) return '';
-  }
-
-  // Check if it looks like just the username part (basic check)
-  if (/^[a-z0-9_-]{3,100}$/i.test(trimmedInput)) {
-    return `https://www.linkedin.com/in/${trimmedInput}`;
-  }
-
-  // Check if it's a partial URL like linkedin.com/in/username or www.linkedin.com/in/username
-  const match = trimmedInput.match(/(?:www\.)?linkedin\.com\/in\/([^\/\s]+)/i);
-  if (match && match[1]) {
-    // Remove trailing slash from extracted username if present
-    const username = match[1].replace(/\/$/, '');
-    return `https://www.linkedin.com/in/${username}`;
-  }
-
   // If it doesn't match expected formats, show an error
-  toast.error("Format LinkedIn invalide. Utilisez l'identifiant ou le lien complet.");
+  toast.error("Format LinkedIn invalide. Entrez uniquement l'identifiant ou le lien complet.");
   return null; // Indicate invalid format
 };
 
@@ -197,65 +181,86 @@ export const ProfessionalInfoSection = ({
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6">
-      <StaticField 
-        label="Domaine"
-        icon={<Briefcase className="h-4 w-4 mr-2 text-blue-500" />}
-        value={userData.specialization?.domain?.name || 'Non renseigné'}
-      />
-
-      <StaticField 
-        label="Spécialisation"
-        icon={<GraduationCap className="h-4 w-4 mr-2 text-blue-500" />}
-        value={userData.specialization?.name || 'Non renseignée'}
-      />
-
-      <EditableField
-        field="linkedinUrl"
-        label="LinkedIn"
-        icon={<Linkedin className="h-4 w-4" />}
-        value={editMode.linkedinUrl ? editedData.personal.linkedinUrl : (userData.linkedinUrl || '')}
-        editedValue={editedData.personal.linkedinUrl}
-        type="text"
-        placeholder="Lien complet ou identifiant"
-        isEditing={editMode.linkedinUrl}
-        isEditable={true}
-        displayAsLink={true}
-        onEdit={handleEditLinkedin}
-        onSave={handleSaveLinkedin}
-        onCancel={() => handleCancelField('linkedinUrl')}
-        onChange={handleLinkedinInputChange}
-      />
-
-      {isStudent && (
-        <EditableField
-          field="portfolioUrl"
-          label="Portfolio"
-          icon={<Globe className="h-4 w-4" />}
-          value={localPortfolioUrl}
-          editedValue={editedData.personal.portfolioUrl}
-          type="url"
-          isEditing={editMode.portfolioUrl}
-          isEditable={true}
-          onEdit={() => {
-            handleInputChange('portfolioUrl', localPortfolioUrl);
-            toggleFieldEdit('portfolioUrl');
-          }}
-          onSave={() => handleSavePortfolio(editedData.personal.portfolioUrl)}
-          onCancel={() => {
-            handleCancelField('portfolioUrl');
-            setLocalPortfolioUrl(currentPortfolioUrl);
-          }}
-          onChange={(value) => handleInputChange('portfolioUrl', value)}
-          loading={loading}
-        />
-      )}
-
-      {isStudent && (
+      <div className="address-edit-card w-full">
         <StaticField 
-          label="Situation actuelle"
+          label="Domaine"
           icon={<Briefcase className="h-4 w-4 mr-2 text-blue-500" />}
-          value={studentProfile?.situationType?.name || 'Non renseignée'}
+          value={userData.specialization?.domain?.name || 'Non renseigné'}
         />
+      </div>
+      <div className="address-edit-card w-full">
+        <StaticField 
+          label="Spécialisation"
+          icon={<GraduationCap className="h-4 w-4 mr-2 text-blue-500" />}
+          value={userData.specialization?.name || 'Non renseignée'}
+        />
+      </div>
+      <div className="address-edit-card w-full">
+        <EditableField
+          field="linkedinUrl"
+          label="LinkedIn"
+          icon={<Linkedin className="h-4 w-4" />}
+          value={editMode.linkedinUrl ? editedData.personal.linkedinUrl : (userData.linkedinUrl || '')}
+          editedValue={editedData.personal.linkedinUrl}
+          type="text"
+          placeholder="Lien complet ou identifiant"
+          isEditing={editMode.linkedinUrl}
+          isEditable={true}
+          displayAsLink={true}
+          onEdit={handleEditLinkedin}
+          onSave={handleSaveLinkedin}
+          onCancel={() => handleCancelField('linkedinUrl')}
+          onChange={handleLinkedinInputChange}
+        />
+        {editMode.linkedinUrl && (
+          <button
+            type="button"
+            className="mt-2 text-xs text-red-600 hover:underline ml-2"
+            onClick={() => {
+              handleInputChange('linkedinUrl', null);
+              setTimeout(() => {
+                onSave('linkedinUrl', null);
+                toggleFieldEdit('linkedinUrl');
+              }, 0);
+            }}
+          >
+            Supprimer le lien LinkedIn
+          </button>
+        )}
+      </div>
+      {isStudent && (
+        <div className="address-edit-card w-full">
+          <EditableField
+            field="portfolioUrl"
+            label="Portfolio"
+            icon={<Globe className="h-4 w-4" />}
+            value={localPortfolioUrl}
+            editedValue={editedData.personal.portfolioUrl}
+            type="url"
+            isEditing={editMode.portfolioUrl}
+            isEditable={true}
+            onEdit={() => {
+              handleInputChange('portfolioUrl', localPortfolioUrl);
+              toggleFieldEdit('portfolioUrl');
+            }}
+            onSave={() => handleSavePortfolio(editedData.personal.portfolioUrl)}
+            onCancel={() => {
+              handleCancelField('portfolioUrl');
+              setLocalPortfolioUrl(currentPortfolioUrl);
+            }}
+            onChange={(value) => handleInputChange('portfolioUrl', value)}
+            loading={loading}
+          />
+        </div>
+      )}
+      {isStudent && (
+        <div className="address-edit-card w-full">
+          <StaticField 
+            label="Situation actuelle"
+            icon={<Briefcase className="h-4 w-4 mr-2 text-blue-500" />}
+            value={studentProfile?.situationType?.name || 'Non renseignée'}
+          />
+        </div>
       )}
     </div>
   );
