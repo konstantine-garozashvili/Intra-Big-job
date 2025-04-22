@@ -284,16 +284,26 @@ const SignatureHistory = () => {
         // Always count morning for past days
         if (isMorningPast) {
           totalPeriods += 1;
-          if (day.signatures.morning) presentPeriods += 1;
+          // Vérifier si la signature du matin existe
+          if (day.signatures && day.signatures.morning) {
+            presentPeriods += 1;
+            console.log(`Présence du matin comptée pour ${day.date}`);
+          }
         }
         
         // Always count afternoon for past days
         if (isAfternoonPast) {
           totalPeriods += 1;
-          if (day.signatures.afternoon) presentPeriods += 1;
+          // Vérifier si la signature de l'après-midi existe
+          if (day.signatures && day.signatures.afternoon) {
+            presentPeriods += 1;
+            console.log(`Présence de l'après-midi comptée pour ${day.date}`);
+          }
         }
       }
     });
+    
+    console.log(`Résumé de la semaine - Total: ${totalPeriods}, Présent: ${presentPeriods}`);
     
     return {
       total: totalPeriods,

@@ -220,6 +220,31 @@ const TeacherDashboard = () => {
           </motion.div>
         )}
 
+        {/* Liens rapides */}
+        <div className="flex flex-wrap gap-4 mb-8">
+          <Link 
+            to="/teacher/signature-monitoring" 
+            className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+          >
+            <ClipboardCheck className="h-5 w-5" />
+            <span>Suivi des signatures</span>
+          </Link>
+          <Link 
+            to="/teacher/signature-history" 
+            className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors"
+          >
+            <Calendar className="h-5 w-5" />
+            <span>Mon historique de signatures</span>
+          </Link>
+          <Link 
+            to="/teacher/attendance" 
+            className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600 transition-colors"
+          >
+            <Users className="h-5 w-5" />
+            <span>Gestion des présences</span>
+          </Link>
+        </div>
+
         {/* Contenu principal */}
         {dashboardData && (
           <motion.div

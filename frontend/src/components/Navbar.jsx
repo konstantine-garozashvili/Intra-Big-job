@@ -702,7 +702,7 @@ const Navbar = memo(() => {
                 {/* Attendance button based on role */}
                 {isAuthenticated &&
                   (permissions.isStudent() || permissions.isTeacher()) && (
-                    <div className="desktop-only relative">
+                    <div className="desktop-only relative mr-2">
                       <button
                         onClick={() =>
                           navigate(
