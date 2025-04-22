@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bell } from 'lucide-react';
+import { Bell, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -27,7 +27,8 @@ const NotificationSettings = () => {
   const [initialSettings, setInitialSettings] = useState(null);
   const [savingChanges, setSavingChanges] = useState(false);
   const [lastToggled, setLastToggled] = useState(null);
-  const { updateNotificationPreference } = useNotifications();
+  const [isResetting, setIsResetting] = useState(false);
+  const { updateNotificationPreference, forceReinitializePreferences } = useNotifications();
   const { user } = useAuth();
 
   // Function to get user ID in a consistent way
@@ -288,6 +289,26 @@ const NotificationSettings = () => {
     }, 1000);
   };
 
+  // Handler for the reset button
+  const handleResetNotifications = async () => {
+    setIsResetting(true);
+    try {
+      const success = await forceReinitializePreferences();
+      if (success) {
+        toast.success('Préférences de notification réinitialisées avec succès');
+        // Reload the page to reflect the changes
+        window.location.reload();
+      } else {
+        toast.error('Erreur lors de la réinitialisation des préférences');
+      }
+    } catch (error) {
+      console.error('Erreur lors de la réinitialisation des préférences:', error);
+      toast.error('Erreur lors de la réinitialisation des préférences');
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   const NotificationSwitch = ({ category, setting, label, description }) => {
     // Utiliser la valeur actuelle du state settings au lieu d'une valeur par défaut
     const isToggled = settings[category][setting];
@@ -345,7 +366,26 @@ const NotificationSettings = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <motion.div
+      className="space-y-6"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <div className="flex items-center justify-between">
+        <h2 className="text-3xl font-bold tracking-tight">Paramètres de notification</h2>
+        
+        <Button 
+          variant="outline" 
+          className="flex items-center gap-2"
+          onClick={handleResetNotifications}
+          disabled={isResetting || loading}
+        >
+          <RefreshCw className={`h-4 w-4 ${isResetting ? 'animate-spin' : ''}`} />
+          Réinitialiser les notifications
+        </Button>
+      </div>
+
       <div className="flex items-center gap-2">
         <Bell className="h-6 w-6 text-blue-600 dark:text-blue-400" />
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Notifications</h1>
@@ -405,7 +445,7 @@ const NotificationSettings = () => {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </motion.div>
   );
 };
 

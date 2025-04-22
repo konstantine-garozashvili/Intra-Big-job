@@ -2,6 +2,8 @@ import {
   Routes,
   Route,
   Navigate,
+  useLocation,
+  useNavigate,
 } from "react-router-dom";
 import { lazy, Suspense, useEffect } from "react";
 import MainLayout from "./components/MainLayout";

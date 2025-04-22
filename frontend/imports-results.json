@@ -1,0 +1,32 @@
+[
+  {
+    "file": "/app/src/find-imports.js",
+    "lines": [
+      {
+        "line": 1,
+        "content": "// Script pour trouver les imports de react-i18next\r"
+      },
+      {
+        "line": 40,
+        "content": "const searchResults = searchDirectory(path.resolve('./src'), 'react-i18next');\r"
+      },
+      {
+        "line": 43,
+        "content": "console.log('Fichiers contenant des imports de react-i18next:');\r"
+      }
+    ]
+  },
+  {
+    "file": "/app/src/lib/shims/react-i18next.js",
+    "lines": [
+      {
+        "line": 2,
+        "content": " * Shim pour react-i18next\r"
+      },
+      {
+        "line": 6,
+        "content": "console.log('[SHIM] react-i18next shim has been loaded');\r"
+      }
+    ]
+  }
+]

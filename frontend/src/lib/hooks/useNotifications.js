@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { collection, addDoc, query, where, onSnapshot, doc, updateDoc, getDoc, setDoc, getDocs, orderBy } from 'firebase/firestore';
-import { db } from '@services/firebase';
+import { db } from '../services/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
@@ -15,15 +15,6 @@ export const useNotifications = () => {
    */
   const getUserId = () => {
     try {
-      // Analyser les propriétés de l'utilisateur pour mieux comprendre
-      console.log('useNotifications - Propriétés utilisateur:', {
-        id: user?.id,
-        type: typeof user?.id,
-        roles: user?.roles,
-        hasRoles: !!user?.roles,
-        rolesType: typeof user?.roles
-      });
-      
       let userId;
       
       // Try to get ID from user object first
@@ -35,7 +26,6 @@ export const useNotifications = () => {
         try {
           const localUser = JSON.parse(localStorage.getItem('user'));
           userId = localUser?.id;
-          console.log('useNotifications - Got user ID from localStorage:', userId);
         } catch (e) {
           console.warn('Error parsing user from localStorage:', e);
         }
@@ -53,10 +43,9 @@ export const useNotifications = () => {
       // Always convert to string to ensure consistent comparison
       userId = String(userId);
       
-      const isStudent = user?.roles?.includes('ROLE_STUDENT');
-      const isGuest = user?.roles?.includes('ROLE_GUEST');
+      // Store userId in localStorage to ensure consistency
+      localStorage.setItem('userId', userId);
       
-      console.log(`useNotifications - ID utilisateur formaté (${isStudent ? 'STUDENT' : isGuest ? 'GUEST' : 'OTHER'})`, userId);
       return userId;
     } catch (error) {
       console.error('useNotifications - Erreur lors de la récupération de l\'ID utilisateur:', error);
@@ -100,15 +89,6 @@ export const useNotifications = () => {
   };
 
   useEffect(() => {
-    console.log('useNotifications - Current user:', user);
-    console.log('useNotifications - User roles:', user?.roles);
-    console.log('useNotifications - User type:', typeof user);
-    if (user) {
-      for (const key in user) {
-        console.log(`useNotifications - User property ${key}:`, user[key]);
-      }
-    }
-    
     const userId = getUserId();
     
     if (!userId) {
@@ -118,89 +98,38 @@ export const useNotifications = () => {
       return;
     }
 
-    // Initialiser les préférences de notification si nécessaire
+    // Force initialize notification preferences with consistent userId
     initializeNotificationPreferences(userId);
     
-    // Mettre à jour le timestamp de dernière connexion
+    // Update the last login timestamp
     updateLastLogin(userId);
 
     console.log('useNotifications - Setting up listener for user ID:', userId);
-    console.log('useNotifications - User roles:', user?.roles || 'No roles found');
     
     const notificationsRef = collection(db, 'notifications');
     
     // Create a query that handles all possible ID formats for the current user
-    // This uses "in" operator to check multiple possible formats in a single query
-    const possibleIdFormats = [
-      userId,                // Original string format
-      Number(userId),        // Number format
-      parseInt(userId, 10),  // parseInt format
-      `${userId}`            // Template string format
-    ];
-    
-    console.log('useNotifications - Querying with multiple ID formats:', possibleIdFormats);
-    
     const q = query(
       notificationsRef,
-      where('recipientId', 'in', possibleIdFormats)
+      where('recipientId', '==', userId)
     );
 
     console.log('useNotifications - Query created with path:', q.path);
     
-    // Solution temporaire: log les notifications directement
-    getCollection();
-
-    async function getCollection() {
-      try {
-        console.log('useNotifications - Trying direct collection fetch');
-        const snapshot = await getDocs(notificationsRef);
-        console.log('useNotifications - All notifications in collection:', snapshot.docs.length);
-        
-        // Compter les notifications pour chaque type d'utilisateur
-        const userNotifications = snapshot.docs.filter(doc => {
-          const data = doc.data();
-          const recipientId = data.recipientId;
-          
-          // Check if this notification belongs to current user in any ID format
-          return possibleIdFormats.some(format => 
-            recipientId === format || recipientId == format
-          );
-        });
-        
-        console.log('useNotifications - Document notifications count for this user:', userNotifications.length);
-        
-        if (userNotifications.length > 0) {
-          console.log('useNotifications - First notification for current user:', userNotifications[0].data());
-        }
-        
-        // Check for different types of document notifications
-        const documentTypes = ['DOCUMENT_UPLOADED', 'DOCUMENT_DELETED', 'DOCUMENT_APPROVED', 'DOCUMENT_REJECTED'];
-        documentTypes.forEach(type => {
-          const count = userNotifications.filter(doc => doc.data().type === type).length;
-          console.log(`useNotifications - ${type} notifications for this user:`, count);
-        });
-      } catch (err) {
-        console.error('useNotifications - Direct fetch error:', err);
-      }
-    }
-
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
         try {
           console.log('useNotifications - Received snapshot with', snapshot.docs.length, 'notifications');
           const notificationsData = snapshot.docs.map(doc => {
-            const data = {
+            return {
               id: doc.id,
               ...doc.data()
             };
-            console.log('useNotifications - Notification data:', data);
-            return data;
           });
           
           // Sort notifications by timestamp client-side
           notificationsData.sort((a, b) => {
-            // Gérer les différents formats de timestamp
             const getTimestamp = (ts) => {
               if (ts && typeof ts.toDate === 'function') return ts.toDate().getTime();
               if (ts instanceof Date) return ts.getTime();
@@ -212,13 +141,11 @@ export const useNotifications = () => {
             return getTimestamp(b.timestamp) - getTimestamp(a.timestamp);
           });
           
-          // Vérifier les types des notifications chargées
-          const notificationTypes = notificationsData.map(n => n.type);
-          console.log('useNotifications - Loaded notification types:', notificationTypes);
-          console.log('useNotifications - All notifications:', notificationsData);
-          
           setNotifications(notificationsData);
           setLoading(false);
+          
+          // Store notification count in localStorage for better UX
+          localStorage.setItem('unreadNotificationCount', notificationsData.filter(n => !n.read).length);
         } catch (error) {
           console.error('Error processing notifications:', error);
           setLoading(false);
@@ -226,15 +153,11 @@ export const useNotifications = () => {
       },
       (error) => {
         console.error('Error fetching notifications:', error);
-        if (error.code === 'failed-precondition') {
-          console.warn('Please create the required index for notifications collection');
-        }
         setLoading(false);
       }
     );
 
     return () => {
-      console.log('useNotifications - Cleaning up listener');
       unsubscribe();
     };
   }, [user]);
@@ -765,6 +688,74 @@ export const useNotifications = () => {
     diagnoseNotifications();
   }, [user]);
 
+  // Force reinitialize notification preferences to fix consistency issues
+  const forceReinitializePreferences = async () => {
+    try {
+      const userId = getUserId();
+      if (!userId) return;
+      
+      // Get the user email for additional identification
+      const userEmail = getUserEmail();
+      
+      // First delete existing preferences to avoid conflicts
+      const preferencesRef = doc(db, 'notificationPreferences', userId);
+      
+      // Create new preferences with proper type mappings
+      const defaultPreferences = {
+        userId: userId,
+        userEmail: userEmail,
+        ROLE_UPDATE: true,
+        DOCUMENT_UPLOADED: true,
+        DOCUMENT_DELETED: true,
+        DOCUMENT_APPROVED: true,
+        DOCUMENT_REJECTED: true,
+        DOCUMENT_UPDATED: true,
+        createdAt: new Date(),
+        lastLogin: new Date(),
+        lastReset: new Date()
+      };
+      
+      await setDoc(preferencesRef, defaultPreferences);
+      console.log('Notification preferences forcefully reset with correct mappings');
+      
+      // Save to localStorage as backup
+      localStorage.setItem('notificationPreferences', JSON.stringify({
+        ...defaultPreferences,
+        createdAt: defaultPreferences.createdAt.toISOString(),
+        lastLogin: defaultPreferences.lastLogin.toISOString(),
+        lastReset: defaultPreferences.lastReset.toISOString()
+      }));
+      
+      // Force notification refresh
+      getNotifications();
+      
+      return true;
+    } catch (error) {
+      console.error('Error resetting notification preferences:', error);
+      return false;
+    }
+  };
+
+  // Fonction utilitaire pour récupérer les notifications
+  const getNotifications = async () => {
+    const userId = getUserId();
+    if (!userId) return [];
+    
+    try {
+      const notificationsRef = collection(db, 'notifications');
+      const q = query(notificationsRef, where('recipientId', '==', userId));
+      const snapshot = await getDocs(q);
+      
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      return [];
+    }
+  };
+
   return {
     notifications,
     loading,
@@ -772,6 +763,7 @@ export const useNotifications = () => {
     markAsRead,
     markAllAsRead,
     updateNotificationPreference,
-    createNotification
+    createNotification,
+    forceReinitializePreferences
   };
 }; 

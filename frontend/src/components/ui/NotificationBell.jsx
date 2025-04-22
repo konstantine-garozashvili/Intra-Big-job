@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bell, ArrowRight, Settings, CheckCheck, Clock, FileCheck, FileX, File, Trash } from 'lucide-react';
+import { Bell, ArrowRight, Settings, CheckCheck, Clock, FileCheck, FileX, File, Trash, User } from 'lucide-react';
 import { useNotifications } from '../../lib/hooks/useNotifications';
 import { format, formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
