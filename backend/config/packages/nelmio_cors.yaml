@@ -1,18 +1,14 @@
 nelmio_cors:
     defaults:
         origin_regex: true
-        # Allow both localhost and development domain
-        allow_origin: ['http://localhost:5173', 'https://bigproject-development.konstantine.fr']
+        allow_origin: ['%env(CORS_ALLOW_ORIGIN)%']
         allow_methods: ['GET', 'OPTIONS', 'POST', 'PUT', 'PATCH', 'DELETE']
-        allow_headers: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
-        expose_headers: ['Link', 'Location', 'X-Debug-Token', 'X-Debug-Token-Link']
+        allow_headers: ['Content-Type', 'Authorization']
+        expose_headers: ['Link']
         max_age: 3600
-        allow_credentials: true
     paths:
         '^/api/':
-            origin_regex: true
-            allow_origin: ['http://localhost:5173', 'https://bigproject-development.konstantine.fr']
-            allow_headers: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
-            allow_methods: ['GET', 'OPTIONS', 'POST', 'PUT', 'PATCH', 'DELETE']
+            allow_origin: ['http://localhost:5173']
+            allow_headers: ['*']
+            allow_methods: ['POST', 'PUT', 'GET', 'DELETE', 'OPTIONS']
             max_age: 3600
-            allow_credentials: true

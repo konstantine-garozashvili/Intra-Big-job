@@ -277,7 +277,7 @@ const DocumentSignature = () => {
           
           // Race the fetch against a timeout
           const data = await Promise.race([
-            fetchDataWithRetry('http://localhost:8000/api/signatures/today', {
+            fetchDataWithRetry('/api/signatures/today', {
               method: 'GET',
               headers: {
                 'Authorization': `Bearer ${token}`,
