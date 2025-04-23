@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '@/contexts/ThemeContext';
+import { Sun, Moon } from 'lucide-react';
 
 const PublicNavbar = () => {
   const { colorMode, toggleColorMode, currentTheme } = useTheme();
@@ -46,11 +47,7 @@ const PublicNavbar = () => {
                     transition={{ duration: 0.3 }}
                     className="w-full h-full flex items-center justify-center"
                   >
-                    <div className="w-6 h-6 bg-blue-200 rounded-full relative overflow-hidden">
-                      <div className="absolute -right-2 top-0 w-5 h-5 bg-[#001a38] rounded-full"></div>
-                      <div className="absolute w-1 h-1 bg-blue-100 rounded-full top-2 left-2 opacity-80"></div>
-                      <div className="absolute w-1.5 h-1.5 bg-blue-100 rounded-full bottom-1 left-3 opacity-60"></div>
-                    </div>
+                    <Moon className="w-7 h-7 text-blue-200" />
                   </motion.div>
                 ) : (
                   <motion.div
@@ -61,19 +58,7 @@ const PublicNavbar = () => {
                     transition={{ duration: 0.3 }}
                     className="w-full h-full flex items-center justify-center"
                   >
-                    <div className="w-6 h-6 bg-yellow-300 rounded-full relative">
-                      {[...Array(8)].map((_, i) => (
-                        <div 
-                          key={i} 
-                          className="absolute w-1 h-2 bg-yellow-300 origin-bottom"
-                          style={{ 
-                            left: '50%', 
-                            top: '-20%',
-                            transform: `translateX(-50%) rotate(${i * 45}deg) translateY(-100%)` 
-                          }}
-                        ></div>
-                      ))}
-                    </div>
+                    <Sun className="w-7 h-7 text-yellow-300" />
                   </motion.div>
                 )}
               </AnimatePresence>
