@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Bell, ArrowRight, Settings, CheckCheck, Clock, FileCheck, FileX, File, Trash, User } from 'lucide-react';
 import { useNotifications } from '../../lib/hooks/useNotifications';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -123,37 +123,80 @@ export const NotificationBell = () => {
   const { user } = useAuth();
   const { notifications, loading, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const [isHovering, setIsHovering] = useState(false);
+  const [displayedNotifications, setDisplayedNotifications] = useState([]);
+  const lastNotificationRef = useRef(null);
+  const hasRenderedRef = useRef(false);
 
-  console.log('NotificationBell - User object from auth context:', user);
-  console.log('NotificationBell - userId from localStorage:', localStorage.getItem('userId'));
-  console.log('NotificationBell - Rendering with:', {
-    notificationsCount: notifications?.length,
-    unreadCount,
-    loading
-  });
+  // Utiliser useEffect pour éviter l'affichage multiple des notifications
+  useEffect(() => {
+    // Ignorer le premier rendu pour éviter les notifications multiples au démarrage
+    if (!hasRenderedRef.current) {
+      hasRenderedRef.current = true;
+      setDisplayedNotifications(notifications || []);
+      return;
+    }
 
-  // Journaliser les types de notifications reçus
-  if (notifications?.length > 0) {
-    console.log('NotificationBell - Notification types received:', notifications.map(n => n.type));
-    console.log('NotificationBell - First notification details:', notifications[0]);
-  } else {
-    console.log('NotificationBell - No notifications available');
-  }
+    // Si les notifications ont changé, mettre à jour l'affichage
+    if (notifications && notifications.length > 0) {
+      // Vérifier si de nouvelles notifications sont arrivées
+      const lastNotificationId = lastNotificationRef.current;
+      const newNotificationsCount = notifications.filter(n => 
+        !n.read && (!lastNotificationId || n.id !== lastNotificationId)
+      ).length;
 
-  if (loading) {
-    console.log('NotificationBell - Still loading');
-    return null;
+      // Mettre à jour la référence de la dernière notification
+      if (notifications.length > 0) {
+        lastNotificationRef.current = notifications[0].id;
+      }
+
+      // Mettre à jour les notifications affichées
+      setDisplayedNotifications(notifications);
+    }
+  }, [notifications]);
+
+  // Console logs uniquement en développement
+  if (process.env.NODE_ENV === 'development') {
+    console.log('NotificationBell - User object from auth context:', user);
+    console.log('NotificationBell - userId from localStorage:', localStorage.getItem('userId'));
+    console.log('NotificationBell - Rendering with:', {
+      notificationsCount: displayedNotifications?.length,
+      unreadCount,
+      loading
+    });
+
+    // Journaliser les types de notifications reçus
+    if (displayedNotifications?.length > 0) {
+      console.log('NotificationBell - Notification types displayed:', displayedNotifications.map(n => n.type));
+      console.log('NotificationBell - First notification details:', displayedNotifications[0]);
+    } else {
+      console.log('NotificationBell - No notifications available');
+    }
+
+    if (loading) {
+      console.log('NotificationBell - Still loading');
+    }
   }
 
   const handleNotificationClick = (notificationId) => {
     console.log('NotificationBell - Notification clicked:', notificationId);
     markAsRead(notificationId);
+    
+    // Mettre à jour l'état local pour une UX plus réactive
+    setDisplayedNotifications(prevNotifications => 
+      prevNotifications.map(n => 
+        n.id === notificationId ? { ...n, read: true } : n
+      )
+    );
   };
+
+  // Ne pas afficher pendant le chargement initial
+  if (loading) {
+    return null;
+  }
 
   // Determine if user is a student or guest
   const isStudent = user?.roles?.includes('ROLE_STUDENT');
   const isGuest = user?.roles?.includes('ROLE_GUEST');
-  console.log('NotificationBell - User roles detected:', { isStudent, isGuest });
 
   return (
     <DropdownMenu>
@@ -248,37 +291,27 @@ export const NotificationBell = () => {
                     // Convert to string to ensure compatibility
                     userId = String(userId);
                     
-                    console.log(`NotificationBell - Creating test notification for user ID: ${userId}`);
-                    
-                    const testNotification = {
+                    // Create a notification in Firestore (for testing purposes)
+                    await addDoc(collection(db, 'notifications'), {
                       recipientId: userId,
-                      title: `Test notification for ${isStudent ? 'student' : isGuest ? 'guest' : 'user'}`,
-                      message: `Ceci est une notification de test pour l'ID: ${userId}`,
-                      type: 'DOCUMENT_UPLOADED', // Test avec type document spécifique
+                      title: 'Notification de test',
+                      message: 'Ceci est une notification de test créée manuellement.',
+                      type: 'INFO',
                       timestamp: new Date(),
                       read: false,
-                      targetUrl: '/documents'
-                    };
+                      testNotification: true
+                    });
                     
-                    console.log('NotificationBell - Adding test notification:', testNotification);
-                    const docRef = await addDoc(collection(db, 'notifications'), testNotification);
-                    console.log(`NotificationBell - Test notification added with ID: ${docRef.id}`);
-                    
-                    // Vérifier et afficher les rôles de l'utilisateur
-                    if (user?.roles) {
-                      console.log('NotificationBell - User roles:', user.roles);
-                    } else {
-                      console.log('NotificationBell - No roles found in user object');
-                    }
+                    console.log('NotificationBell - Test notification created successfully');
                   } catch (error) {
                     console.error('NotificationBell - Error creating test notification:', error);
                   }
                 }}
-                variant="ghost"
+                variant="outline"
                 size="sm"
-                className="text-xs p-1.5"
+                className="text-xs"
               >
-                <Bell className="h-4 w-4 text-blue-500" />
+                Test
               </Button>
             )}
             <Link to="/settings/notifications">
@@ -294,7 +327,7 @@ export const NotificationBell = () => {
         </div>
 
         <div className="max-h-96 overflow-y-auto">
-          {notifications.length === 0 ? (
+          {displayedNotifications.length === 0 ? (
             <div className="py-8 px-4 text-center">
               <Bell className="h-12 w-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
               <p className="text-gray-500 dark:text-gray-400 font-medium">Aucune notification</p>
@@ -303,7 +336,7 @@ export const NotificationBell = () => {
               </p>
             </div>
           ) : (
-            notifications.slice(0, 5).map((notification) => {
+            displayedNotifications.slice(0, 5).map((notification) => {
               console.log('NotificationBell - Rendering notification:', notification);
               const typeConfig = notificationTypeConfig[notification.type] || {
                 color: 'bg-gray-100 text-gray-600',
@@ -379,10 +412,10 @@ export const NotificationBell = () => {
           )}
         </div>
         
-        {notifications.length > 5 && (
+        {displayedNotifications.length > 5 && (
           <div className="p-2 text-center border-t border-gray-100 dark:border-gray-700">
             <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-              {notifications.length - 5} notifications supplémentaires
+              {displayedNotifications.length - 5} notifications supplémentaires
             </p>
           </div>
         )}

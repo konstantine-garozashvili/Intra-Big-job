@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, addDoc, query, where, onSnapshot, doc, updateDoc, getDoc, setDoc, getDocs, orderBy } from 'firebase/firestore';
+import { collection, addDoc, query, where, onSnapshot, doc, updateDoc, getDoc, setDoc, getDocs, orderBy, deleteDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -88,77 +88,107 @@ export const useNotifications = () => {
     }
   };
 
+  // Ajouter une variable d'état pour suivre si c'est le premier chargement
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+  // Modifier le useEffect principal pour éviter les notifications multiples
   useEffect(() => {
-    const userId = getUserId();
+    // Variable pour suivre si le composant est monté
+    let isMounted = true;
     
-    if (!userId) {
-      console.log('useNotifications - No user ID available');
-      setNotifications([]);
-      setLoading(false);
-      return;
-    }
+    const setupNotifications = async () => {
+      const userId = getUserId();
+      
+      if (!userId) {
+        console.log('useNotifications - No user ID available');
+        setNotifications([]);
+        setLoading(false);
+        return;
+      }
 
-    // Force initialize notification preferences with consistent userId
-    initializeNotificationPreferences(userId);
-    
-    // Update the last login timestamp
-    updateLastLogin(userId);
+      // Force initialize notification preferences only if needed
+      if (isInitialLoad) {
+        await initializeNotificationPreferences(userId);
+        
+        // Mise à jour du dernier login uniquement lors du premier chargement
+        await updateLastLogin(userId);
+        
+        // Marquer comme chargé initialement pour éviter des initialisations multiples
+        if (isMounted) {
+          setIsInitialLoad(false);
+        }
+      }
 
-    console.log('useNotifications - Setting up listener for user ID:', userId);
-    
-    const notificationsRef = collection(db, 'notifications');
-    
-    // Create a query that handles all possible ID formats for the current user
-    const q = query(
-      notificationsRef,
-      where('recipientId', '==', userId)
-    );
+      console.log('useNotifications - Setting up listener for user ID:', userId);
+      
+      const notificationsRef = collection(db, 'notifications');
+      
+      // Create a query that handles all possible ID formats for the current user
+      const q = query(
+        notificationsRef,
+        where('recipientId', '==', userId),
+        orderBy('timestamp', 'desc') // Ajouter un orderBy pour éviter de recharger toutes les notifs
+      );
 
-    console.log('useNotifications - Query created with path:', q.path);
-    
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        try {
-          console.log('useNotifications - Received snapshot with', snapshot.docs.length, 'notifications');
-          const notificationsData = snapshot.docs.map(doc => {
-            return {
-              id: doc.id,
-              ...doc.data()
-            };
-          });
+      console.log('useNotifications - Query created with path:', q.path);
+      
+      const unsubscribe = onSnapshot(
+        q,
+        (snapshot) => {
+          if (!isMounted) return;
           
-          // Sort notifications by timestamp client-side
-          notificationsData.sort((a, b) => {
-            const getTimestamp = (ts) => {
-              if (ts && typeof ts.toDate === 'function') return ts.toDate().getTime();
-              if (ts instanceof Date) return ts.getTime();
-              if (typeof ts === 'string') return new Date(ts).getTime();
-              if (typeof ts === 'number') return ts;
-              return 0;
-            };
+          try {
+            console.log('useNotifications - Received snapshot with', snapshot.docs.length, 'notifications');
             
-            return getTimestamp(b.timestamp) - getTimestamp(a.timestamp);
-          });
-          
-          setNotifications(notificationsData);
-          setLoading(false);
-          
-          // Store notification count in localStorage for better UX
-          localStorage.setItem('unreadNotificationCount', notificationsData.filter(n => !n.read).length);
-        } catch (error) {
-          console.error('Error processing notifications:', error);
+            // Créer un Map pour suivre les notifications déjà vues
+            const seenNotifications = new Map();
+            localStorage.getItem('seenNotifications')?.split(',').forEach(id => {
+              if (id) seenNotifications.set(id, true);
+            });
+            
+            const notificationsData = snapshot.docs.map(doc => {
+              // Marquer automatiquement comme vue si elle a déjà été vue
+              const notif = {
+                id: doc.id,
+                ...doc.data(),
+                // Si la notification a déjà été vue, maintenir l'état "read"
+                read: seenNotifications.has(doc.id) ? true : doc.data().read || false
+              };
+              
+              return notif;
+            });
+            
+            // Enregistrer les IDs des notifications vues
+            localStorage.setItem('seenNotifications', 
+              [...seenNotifications.keys(), ...notificationsData.filter(n => n.read).map(n => n.id)].join(',')
+            );
+            
+            setNotifications(notificationsData);
+            setLoading(false);
+            
+            // Store notification count in localStorage for better UX
+            localStorage.setItem('unreadNotificationCount', notificationsData.filter(n => !n.read).length);
+          } catch (error) {
+            console.error('Error processing notifications:', error);
+            setLoading(false);
+          }
+        },
+        (error) => {
+          console.error('Error fetching notifications:', error);
           setLoading(false);
         }
-      },
-      (error) => {
-        console.error('Error fetching notifications:', error);
-        setLoading(false);
-      }
-    );
+      );
 
+      return () => {
+        isMounted = false;
+        unsubscribe();
+      };
+    };
+    
+    setupNotifications();
+    
     return () => {
-      unsubscribe();
+      isMounted = false;
     };
   }, [user]);
 
@@ -496,7 +526,7 @@ export const useNotifications = () => {
     }
   };
 
-  // Modifier la fonction createNotification pour vérifier les préférences de façon plus sécurisée
+  // Modifier la fonction createNotification pour éviter les doublons
   const createNotification = async (recipientId, title, message, type = 'INFO') => {
     try {
       // S'assurer que recipientId est une chaîne de caractères
@@ -504,14 +534,14 @@ export const useNotifications = () => {
       
       // Vérifier les préférences de notification de l'utilisateur (seulement si ce n'est pas un message système critique)
       if (type !== 'SYSTEM_CRITICAL') {
-      const preferencesRef = doc(db, 'notificationPreferences', formattedRecipientId);
+        const preferencesRef = doc(db, 'notificationPreferences', formattedRecipientId);
         
         // Tentative de récupération des préférences depuis Firestore
         let preferences = null;
         let preferencesSource = 'firestore';
         
         try {
-      const preferencesSnap = await getDoc(preferencesRef);
+          const preferencesSnap = await getDoc(preferencesRef);
           if (preferencesSnap.exists()) {
             preferences = preferencesSnap.data();
           }
@@ -550,9 +580,9 @@ export const useNotifications = () => {
           }
           
           // Vérifier si l'utilisateur a désactivé ce type de notification
-      if (preferences[type] === false) {
+          if (preferences[type] === false) {
             console.log(`Notification de type ${type} désactivée pour l'utilisateur ${formattedRecipientId}`);
-        return;
+            return;
           }
         } else {
           // Si les préférences n'existent pas, les initialiser
@@ -561,7 +591,36 @@ export const useNotifications = () => {
         }
       }
 
-      // Créer la notification
+      // Vérifier si une notification similaire a été créée récemment (dans les 5 dernières minutes)
+      const notificationsRef = collection(db, 'notifications');
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+      
+      const q = query(
+        notificationsRef,
+        where('recipientId', '==', formattedRecipientId),
+        where('title', '==', title),
+        where('type', '==', type)
+      );
+      
+      const existingNotifications = await getDocs(q);
+      
+      // Vérifier s'il existe déjà une notification similaire récente
+      const hasSimilarRecentNotification = existingNotifications.docs.some(doc => {
+        const notif = doc.data();
+        const timestamp = notif.timestamp?.toDate ? notif.timestamp.toDate() : new Date(notif.timestamp);
+        return timestamp > fiveMinutesAgo && notif.message === message;
+      });
+      
+      if (hasSimilarRecentNotification) {
+        console.log('Notification similaire détectée dans les 5 dernières minutes, ignorée:', {
+          title,
+          type,
+          recipientId: formattedRecipientId
+        });
+        return;
+      }
+
+      // Créer la notification si elle n'existe pas déjà
       await addDoc(collection(db, 'notifications'), {
         recipientId: formattedRecipientId,
         title,
@@ -571,7 +630,8 @@ export const useNotifications = () => {
         read: false,
         userId: formattedRecipientId, // Stockage explicite de l'ID utilisateur pour vérification
         source: 'frontend',
-        appVersion: process.env.REACT_APP_VERSION || 'unknown'
+        appVersion: process.env.REACT_APP_VERSION || 'unknown',
+        createdAt: new Date() // Horodatage explicite pour le déduplication
       });
       
       console.log(`Notification créée avec succès pour l'utilisateur ${formattedRecipientId}`, {
@@ -683,10 +743,10 @@ export const useNotifications = () => {
     }
   };
 
-  // Exécuter le diagnostic au chargement du hook
-  useEffect(() => {
-    diagnoseNotifications();
-  }, [user]);
+  // Exécuter le diagnostic au chargement du hook - DÉSACTIVÉ pour éviter les notifications multiples
+  // useEffect(() => {
+  //   diagnoseNotifications();
+  // }, [user]);
 
   // Force reinitialize notification preferences to fix consistency issues
   const forceReinitializePreferences = async () => {
@@ -756,6 +816,77 @@ export const useNotifications = () => {
     }
   };
 
+  // Ajouter une fonction pour nettoyer les anciennes notifications
+  const cleanupOldNotifications = async () => {
+    try {
+      const userId = getUserId();
+      if (!userId) return;
+      
+      // Obtenir les 50 dernières notifications
+      const notificationsRef = collection(db, 'notifications');
+      const q = query(
+        notificationsRef,
+        where('recipientId', '==', userId),
+        orderBy('timestamp', 'desc')
+      );
+      
+      const snapshot = await getDocs(q);
+      
+      // Calculer la date de 30 jours dans le passé
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      // Identifier les notifications à supprimer (lues et anciennes)
+      const notificationsToDelete = snapshot.docs
+        .filter(doc => {
+          const data = doc.data();
+          const timestamp = data.timestamp?.toDate ? data.timestamp.toDate() : new Date(data.timestamp);
+          
+          // Supprimer si lue ET ancienne de plus de 30 jours
+          return data.read && timestamp < thirtyDaysAgo;
+        })
+        .map(doc => doc.id);
+      
+      // Limiter le nombre de suppressions à 20 par lot
+      const batchSize = 20;
+      const notificationsToDeleteBatch = notificationsToDelete.slice(0, batchSize);
+      
+      console.log(`Nettoyage de ${notificationsToDeleteBatch.length} anciennes notifications`);
+      
+      // Supprimer les notifications anciennes
+      for (const notificationId of notificationsToDeleteBatch) {
+        await deleteDoc(doc(db, 'notifications', notificationId));
+      }
+      
+      return notificationsToDeleteBatch.length;
+    } catch (error) {
+      console.error('Erreur lors du nettoyage des anciennes notifications:', error);
+      return 0;
+    }
+  };
+  
+  // Exécuter le nettoyage une fois par session
+  useEffect(() => {
+    // Vérifier si le nettoyage a déjà été effectué récemment (dans les dernières 24h)
+    const lastCleanup = localStorage.getItem('lastNotificationsCleanup');
+    const now = Date.now();
+    const oneDayMs = 24 * 60 * 60 * 1000;
+    
+    if (!lastCleanup || now - parseInt(lastCleanup, 10) > oneDayMs) {
+      // Attendre 30 secondes après le chargement initial pour effectuer le nettoyage
+      const cleanupTimeout = setTimeout(() => {
+        cleanupOldNotifications().then(count => {
+          if (count > 0) {
+            console.log(`${count} anciennes notifications ont été supprimées`);
+          }
+          localStorage.setItem('lastNotificationsCleanup', now.toString());
+        });
+      }, 30000);
+      
+      return () => clearTimeout(cleanupTimeout);
+    }
+  }, []);
+
   return {
     notifications,
     loading,
@@ -764,6 +895,7 @@ export const useNotifications = () => {
     markAllAsRead,
     updateNotificationPreference,
     createNotification,
-    forceReinitializePreferences
+    forceReinitializePreferences,
+    cleanupOldNotifications
   };
 }; 
