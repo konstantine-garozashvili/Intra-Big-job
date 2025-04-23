@@ -24,11 +24,14 @@ use Symfony\Component\String\Slugger\SluggerInterface;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\HttpClient\NativeHttpClient;
+use Psr\Log\LoggerInterface;
 
 #[Route('/documents')]
 class DocumentController extends AbstractController
 {
     private const CV_DOCUMENT_TYPE_CODE = 'CV'; // Assuming 'CV' is the code for CV document type
+    private ?LoggerInterface $logger = null;
     
     public function __construct(
         private EntityManagerInterface $entityManager,
@@ -37,9 +40,11 @@ class DocumentController extends AbstractController
         private UserRepository $userRepository,
         private SluggerInterface $slugger,
         private string $documentDirectory,
-        private DocumentStorageFactory $storageFactory
+        private DocumentStorageFactory $storageFactory,
+        LoggerInterface $logger = null
     ) {
         // The $documentDirectory will need to be configured in services.yaml
+        $this->logger = $logger;
     }
 
     /**
@@ -260,6 +265,15 @@ class DocumentController extends AbstractController
             
             $this->entityManager->flush();
             
+            // Create notification for document upload success
+            $this->createDocumentNotification(
+                $user, 
+                'Document téléchargé avec succès', 
+                "Votre document {$document->getName()} a été téléchargé avec succès.", 
+                'DOCUMENT_UPLOADED',
+                '/documents'
+            );
+            
             return $this->json([
                 'success' => true,
                 'message' => 'CV uploaded successfully',
@@ -363,6 +377,15 @@ class DocumentController extends AbstractController
             $this->entityManager->remove($document);
             $this->entityManager->flush();
             
+            // Create notification for document deletion
+            $this->createDocumentNotification(
+                $document->getUser(),
+                'Document supprimé',
+                "Votre document {$document->getName()} a été supprimé avec succès.",
+                'DOCUMENT_DELETED',
+                '/documents'
+            );
+            
             return $this->json([
                 'success' => true,
                 'message' => 'Document deleted successfully'
@@ -462,5 +485,96 @@ class DocumentController extends AbstractController
                 'message' => 'Failed to fetch documents: ' . $e->getMessage()
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
+    }
+
+    /**
+     * Create a document-related notification in Firebase
+     */
+    private function createDocumentNotification(User $recipient, string $title, string $message, string $type, string $targetUrl = null): void
+    {
+        try {
+            // Ensure user ID is consistently handled as a string
+            $userId = (string)$recipient->getId();
+            
+            // Log the notification creation attempt
+            if ($this->logger) {
+                $this->logger->info('Creating document notification', [
+                    'recipient_id' => $userId,
+                    'type' => $type,
+                    'title' => $title
+                ]);
+            }
+            
+            // API endpoint for Firebase functions or direct Firestore access
+            $firebaseUrl = $this->getParameter('firebase_database_url') ?? 'https://firestore.googleapis.com/v1/projects/bigproject-d6daf/databases/(default)/documents';
+            
+            // Create a notification document
+            $notificationData = [
+                'fields' => $this->convertToFirestoreFields([
+                    'recipientId' => $userId, // Always use string for consistency
+                    'title' => $title,
+                    'message' => $message,
+                    'type' => $type,
+                    'timestamp' => new \DateTime(),
+                    'read' => false,
+                    'targetUrl' => $targetUrl,
+                    'source' => 'backend',
+                    'appVersion' => '1.0'
+                ])
+            ];
+            
+            // Create a HTTP client
+            $client = new NativeHttpClient();
+            
+            // Send the request to Firebase
+            $response = $client->request('POST', $firebaseUrl . '/notifications', [
+                'json' => $notificationData,
+                'headers' => [
+                    'Content-Type' => 'application/json',
+                ]
+            ]);
+            
+            // Log success
+            if ($this->logger) {
+                $this->logger->info('Document notification created successfully', [
+                    'recipient_id' => $userId,
+                    'type' => $type,
+                    'status_code' => $response->getStatusCode()
+                ]);
+            }
+        } catch (\Exception $e) {
+            // Log error but don't fail the main operation
+            if ($this->logger) {
+                $this->logger->error('Failed to create document notification', [
+                    'error' => $e->getMessage(),
+                    'recipient_id' => $recipient->getId(),
+                    'type' => $type
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Convert PHP array to Firestore fields format
+     */
+    private function convertToFirestoreFields(array $data): array
+    {
+        $fields = [];
+        foreach ($data as $key => $value) {
+            if (is_string($value)) {
+                $fields[$key] = ['stringValue' => $value];
+            } elseif (is_bool($value)) {
+                $fields[$key] = ['booleanValue' => $value];
+            } elseif (is_numeric($value)) {
+                $fields[$key] = ['integerValue' => $value];
+            } elseif ($value instanceof \DateTime) {
+                $fields[$key] = ['timestampValue' => $value->format(\DateTime::RFC3339)];
+            } elseif (is_array($value)) {
+                $fields[$key] = ['mapValue' => ['fields' => $this->convertToFirestoreFields($value)]];
+            } else {
+                $fields[$key] = ['nullValue' => null];
+            }
+        }
+        return $fields;
     }
 } 

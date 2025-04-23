@@ -2,6 +2,8 @@ import {
   Routes,
   Route,
   Navigate,
+  useLocation,
+  useNavigate,
 } from "react-router-dom";
 import { lazy, Suspense, useEffect } from "react";
 import MainLayout from "./components/MainLayout";
@@ -31,6 +33,8 @@ import deduplicationService from "./lib/services/deduplicationService";
 import apiService from "./lib/services/apiService";
 import PublicProfileView from "@/pages/Global/Profile/views/PublicProfileView";
 import TranslationTest from "./components/Translation/TranslationTest";
+import { notificationService } from './lib/services/notificationService';
+import React from 'react';
 
 // Export queryClient to be used elsewhere
 export { queryClient };
@@ -84,6 +88,9 @@ const TeacherSignatureMonitoring = lazy(() =>
   import("./pages/Teacher/SignatureMonitoring")
 );
 const TeacherAttendance = lazy(() => import("./pages/Teacher/Attendance"));
+const TeacherSignatureHistory = lazy(() =>
+  import("./pages/Teacher/SignatureHistory")
+);
 const HRDashboard = lazy(() => import("./pages/HR/Dashboard"));
 const SuperAdminDashboard = lazy(() => import("./pages/SuperAdmin/Dashboard"));
 const GuestDashboard = lazy(() => import("./pages/Guest/Dashboard"));
@@ -222,6 +229,18 @@ function ErrorFallback({ error, resetErrorBoundary }) {
 
 // Main App Component
 const App = () => {
+  useEffect(() => {
+    // Précharger les notifications au démarrage de l'application
+    console.log('App - Initializing notification service');
+    notificationService.getNotifications(1, 10, true, true)
+      .then(data => {
+        console.log('App - Notification service initialized with data:', data);
+      })
+      .catch(error => {
+        console.error('App - Error initializing notification service:', error);
+      });
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
@@ -305,6 +324,7 @@ const App = () => {
                           <Route path="dashboard" element={<RoleGuard roles={ROLES.TEACHER} fallback={<Navigate to="/dashboard" replace />}><TeacherDashboard /></RoleGuard>} />
                           <Route path="attendance" element={<RoleGuard roles={ROLES.TEACHER} fallback={<Navigate to="/dashboard" replace />}><TeacherAttendance /></RoleGuard>} />
                           <Route path="signature-monitoring" element={<RoleGuard roles={ROLES.TEACHER} fallback={<Navigate to="/dashboard" replace />}><TeacherSignatureMonitoring /></RoleGuard>} />
+                          <Route path="signature-history" element={<RoleGuard roles={ROLES.TEACHER} fallback={<Navigate to="/dashboard" replace />}><TeacherSignatureHistory /></RoleGuard>} />
                         </Route>
 
                         {/* Routes HR */}

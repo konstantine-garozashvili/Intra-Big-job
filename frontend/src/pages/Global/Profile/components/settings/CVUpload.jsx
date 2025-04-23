@@ -16,6 +16,7 @@ import {
 // Importer le service documentService directement dans le composant
 import documentService from '../../services/documentService';
 import { notificationService } from '@/lib/services/notificationService';
+import { documentNotifications } from '@/lib/utils/documentNotifications';
 
 const CVUpload = memo(({ userData, onUpdate }) => {
   const [cvFile, setCvFile] = useState(null);
@@ -46,12 +47,36 @@ const CVUpload = memo(({ userData, onUpdate }) => {
     onSuccess: () => {
       toast.success('CV téléchargé avec succès');
       setCvFile(null);
-      refetchCV();
       
       // Dispatch event to notify MainLayout about the update
       document.dispatchEvent(new CustomEvent('user:data-updated'));
       
-      if (onUpdate) onUpdate();
+      // Create document uploaded notification using the utility
+      // D'abord récupérer les données à jour du document
+      refetchCV().then(data => {
+        if (data && data.data && data.data[0]) {
+          // Forcer la création de la notification frontend (même si normalement gérée par le backend)
+          documentNotifications.uploaded({
+            name: data.data[0].name || 'CV',
+            id: data.data[0].id
+          }, null, true);
+          console.log('Notification de téléchargement de CV créée avec succès');
+        } else {
+          // Fallback si on ne peut pas obtenir les données du document
+          documentNotifications.uploaded({
+            name: 'CV',
+            id: Date.now()
+          }, null, true);
+          console.log('Notification de téléchargement de CV créée avec données par défaut');
+        }
+      }).catch(err => {
+        console.error('Erreur lors de la récupération du document CV:', err);
+        // Créer quand même une notification en cas d'erreur
+        documentNotifications.uploaded({
+          name: 'CV',
+          id: Date.now()
+        }, null, true);
+      });
       
       // Créer une notification locale pour l'utilisateur
       const mockNotification = {
@@ -170,44 +195,28 @@ const CVUpload = memo(({ userData, onUpdate }) => {
     // Close dialog immediately for fluid interaction
     setDeleteDialogOpen(false);
     
-    // Stocker les informations du document avant la suppression
+    // Store document info before deletion
     const documentInfo = {
       id: cvDocument.id,
       name: cvDocument.name
     };
     
+    // Supprimer le document - le backend créera la notification
     deleteCV(cvDocument.id);
     
-    // Créer directement une notification locale sans appeler l'API externe
-    // qui cause les problèmes CORS
-    const mockNotification = {
-      id: Date.now(),
-      title: 'Document supprimé',
-      message: `Votre document ${documentInfo.name} a été supprimé avec succès.`,
-      type: 'document_deleted',
-      isRead: false,
-      createdAt: new Date().toISOString(),
-      targetUrl: '/documents'
-    };
+    // Check if user is student or guest and create frontend notification as backup
+    // This is a redundancy mechanism to ensure notifications work for all user roles
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const isStudent = user?.roles?.includes('ROLE_STUDENT');
+    const isGuest = user?.roles?.includes('ROLE_GUEST');
     
-    // Ajouter la notification au cache directement
-    if (notificationService.cache.notifications && notificationService.cache.notifications.notifications) {
-      notificationService.cache.notifications.notifications.unshift(mockNotification);
-      notificationService.cache.unreadCount = (notificationService.cache.unreadCount || 0) + 1;
-      notificationService.notifySubscribers();
-      
-      // Afficher également un toast pour notification immédiate
-      toast.info(mockNotification.message, {
-        action: {
-          label: 'Voir tous',
-          onClick: () => {
-            window.location.href = mockNotification.targetUrl;
-          }
-        }
-      });
+    if (isStudent || isGuest) {
+      console.log('Creating backup frontend notification for student/guest user');
+      // Force creation of notification in frontend (bypassing backend check)
+      documentNotifications.deleted(documentInfo, null, true);
     }
     
-  }, [cvDocument, deleteCV, userData]);
+  }, [cvDocument, deleteCV]);
 
   // Handle document download
   const handleDownloadDocument = useCallback(async () => {
@@ -240,7 +249,7 @@ const CVUpload = memo(({ userData, onUpdate }) => {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
       
-      toast.success('Document téléchargé avec succès');
+      toast.success('Document importé avec succès');
     } catch (error) {
       console.error('Erreur lors du téléchargement du CV:', error);
       toast.error('Erreur lors du téléchargement du CV');

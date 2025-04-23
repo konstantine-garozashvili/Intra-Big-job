@@ -56,7 +56,7 @@ services:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: bigproject
       MYSQL_USER: user
-      MYSQL_PASSWORD: "password"
+      MYSQL_PASSWORD: password
     volumes:
       - database_data:/var/lib/mysql
     ports:

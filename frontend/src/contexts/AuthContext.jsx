@@ -61,6 +61,20 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       const userData = await authService.getCurrentUser();
       setUser(userData);
+      
+      // Store user ID explicitly for notification purposes
+      if (userData && userData.id) {
+        console.log('Storing user ID in localStorage:', userData.id);
+        localStorage.setItem('userId', String(userData.id));
+        
+        // Stocker également l'utilisateur complet pour référence
+        try {
+          localStorage.setItem('user', JSON.stringify(userData));
+        } catch (e) {
+          console.error('Error storing user object in localStorage:', e);
+        }
+      }
+      
       return userData;
     } catch (error) {
       console.error('Failed to load user data:', error);
@@ -136,7 +150,14 @@ export const AuthProvider = ({ children }) => {
       
       if (response && response.token) {
         // Load user data
-        await loadUserData();
+        const userData = await loadUserData();
+        
+        // Double-check user ID storage
+        if (userData && userData.id) {
+          localStorage.setItem('userId', String(userData.id));
+          console.log('User ID stored in localStorage after login:', userData.id);
+        }
+        
         toast.success('Connexion réussie');
         return response;
       } else {

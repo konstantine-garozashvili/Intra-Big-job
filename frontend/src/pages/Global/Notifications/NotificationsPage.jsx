@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Bell, FileCheck, FileX, File, Info, Calendar, Check, Undo, ChevronLeft, Filter, Trash, Settings } from 'lucide-react';
+import { Bell, FileCheck, FileX, File, Info, Calendar, Check, Undo, ChevronLeft, Filter, Trash, Settings, User } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
@@ -45,6 +45,11 @@ const notificationTypeConfig = {
     color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
     icon: <Info className="h-4 w-4" />
   },
+  INFO_UPDATE: {
+    label: 'Mise à jour de profil',
+    color: 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-300',
+    icon: <User className="h-4 w-4" />
+  },
   SYSTEM: {
     label: 'Système',
     color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300',
@@ -76,8 +81,18 @@ const notificationTypeConfig = {
     icon: <FileX className="h-4 w-4" />
   },
   DOCUMENT_UPLOADED: {
-    label: 'Document téléchargé',
+    label: 'Document importé',
     color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+    icon: <File className="h-4 w-4" />
+  },
+  DOCUMENT_DELETED: {
+    label: 'Document supprimé',
+    color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+    icon: <Trash className="h-4 w-4" />
+  },
+  DOCUMENT_UPDATED: {
+    label: 'Document mis à jour',
+    color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
     icon: <File className="h-4 w-4" />
   }
 };
@@ -102,6 +117,7 @@ const NotificationsPage = () => {
     
     // Filtrer par type
     if (filter) {
+      // Filter by specific notification type
       filtered = filtered.filter(n => n.type === filter);
     }
     

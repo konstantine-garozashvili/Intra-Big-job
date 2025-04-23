@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Bell, ArrowRight, Settings, CheckCheck, Clock } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Bell, ArrowRight, Settings, CheckCheck, Clock, FileCheck, FileX, File, Trash, User } from 'lucide-react';
 import { useNotifications } from '../../lib/hooks/useNotifications';
 import { format, formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -15,6 +15,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Link } from 'react-router-dom';
 import { Badge } from './badge';
 import { motion, AnimatePresence } from 'framer-motion';
+import { addDoc, collection } from 'firebase/firestore';
+import { db } from '@/lib/services/firebase';
 
 // Fonction utilitaire pour formatter la date
 const formatTimestamp = (timestamp) => {
@@ -74,6 +76,10 @@ const notificationTypeConfig = {
     color: 'bg-blue-100 text-blue-800',
     icon: <Settings className="h-4 w-4 text-blue-600" />
   },
+  INFO_UPDATE: {
+    color: 'bg-teal-100 text-teal-800',
+    icon: <User className="h-4 w-4 text-teal-600" />
+  },
   SYSTEM: {
     color: 'bg-purple-100 text-purple-800',
     icon: <Bell className="h-4 w-4 text-purple-600" />
@@ -89,6 +95,27 @@ const notificationTypeConfig = {
   ALERT: {
     color: 'bg-red-100 text-red-800',
     icon: <Bell className="h-4 w-4 text-red-600" />
+  },
+  // Ajout des types de notification pour les documents
+  DOCUMENT_APPROVED: {
+    color: 'bg-green-100 text-green-800',
+    icon: <FileCheck className="h-4 w-4 text-green-600" />
+  },
+  DOCUMENT_REJECTED: {
+    color: 'bg-red-100 text-red-800',
+    icon: <FileX className="h-4 w-4 text-red-600" />
+  },
+  DOCUMENT_UPLOADED: {
+    color: 'bg-blue-100 text-blue-800',
+    icon: <File className="h-4 w-4 text-blue-600" />
+  },
+  DOCUMENT_DELETED: {
+    color: 'bg-red-100 text-red-800',
+    icon: <Trash className="h-4 w-4 text-red-600" />
+  },
+  DOCUMENT_UPDATED: {
+    color: 'bg-yellow-100 text-yellow-800',
+    icon: <File className="h-4 w-4 text-yellow-600" />
   }
 };
 
@@ -96,23 +123,80 @@ export const NotificationBell = () => {
   const { user } = useAuth();
   const { notifications, loading, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const [isHovering, setIsHovering] = useState(false);
+  const [displayedNotifications, setDisplayedNotifications] = useState([]);
+  const lastNotificationRef = useRef(null);
+  const hasRenderedRef = useRef(false);
 
-  console.log('NotificationBell - User object from auth context:', user);
-  console.log('NotificationBell - Rendering with:', {
-    notificationsCount: notifications?.length,
-    unreadCount,
-    loading
-  });
+  // Utiliser useEffect pour éviter l'affichage multiple des notifications
+  useEffect(() => {
+    // Ignorer le premier rendu pour éviter les notifications multiples au démarrage
+    if (!hasRenderedRef.current) {
+      hasRenderedRef.current = true;
+      setDisplayedNotifications(notifications || []);
+      return;
+    }
 
-  if (loading) {
-    console.log('NotificationBell - Still loading');
-    return null;
+    // Si les notifications ont changé, mettre à jour l'affichage
+    if (notifications && notifications.length > 0) {
+      // Vérifier si de nouvelles notifications sont arrivées
+      const lastNotificationId = lastNotificationRef.current;
+      const newNotificationsCount = notifications.filter(n => 
+        !n.read && (!lastNotificationId || n.id !== lastNotificationId)
+      ).length;
+
+      // Mettre à jour la référence de la dernière notification
+      if (notifications.length > 0) {
+        lastNotificationRef.current = notifications[0].id;
+      }
+
+      // Mettre à jour les notifications affichées
+      setDisplayedNotifications(notifications);
+    }
+  }, [notifications]);
+
+  // Console logs uniquement en développement
+  if (process.env.NODE_ENV === 'development') {
+    console.log('NotificationBell - User object from auth context:', user);
+    console.log('NotificationBell - userId from localStorage:', localStorage.getItem('userId'));
+    console.log('NotificationBell - Rendering with:', {
+      notificationsCount: displayedNotifications?.length,
+      unreadCount,
+      loading
+    });
+
+    // Journaliser les types de notifications reçus
+    if (displayedNotifications?.length > 0) {
+      console.log('NotificationBell - Notification types displayed:', displayedNotifications.map(n => n.type));
+      console.log('NotificationBell - First notification details:', displayedNotifications[0]);
+    } else {
+      console.log('NotificationBell - No notifications available');
+    }
+
+    if (loading) {
+      console.log('NotificationBell - Still loading');
+    }
   }
 
   const handleNotificationClick = (notificationId) => {
     console.log('NotificationBell - Notification clicked:', notificationId);
     markAsRead(notificationId);
+    
+    // Mettre à jour l'état local pour une UX plus réactive
+    setDisplayedNotifications(prevNotifications => 
+      prevNotifications.map(n => 
+        n.id === notificationId ? { ...n, read: true } : n
+      )
+    );
   };
+
+  // Ne pas afficher pendant le chargement initial
+  if (loading) {
+    return null;
+  }
+
+  // Determine if user is a student or guest
+  const isStudent = user?.roles?.includes('ROLE_STUDENT');
+  const isGuest = user?.roles?.includes('ROLE_GUEST');
 
   return (
     <DropdownMenu>
@@ -189,7 +273,7 @@ export const NotificationBell = () => {
         </div>
 
         <div className="max-h-96 overflow-y-auto">
-          {notifications.length === 0 ? (
+          {displayedNotifications.length === 0 ? (
             <div className="py-8 px-4 text-center">
               <Bell className="h-12 w-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
               <p className="text-gray-500 dark:text-gray-400 font-medium">Aucune notification</p>
@@ -198,10 +282,20 @@ export const NotificationBell = () => {
               </p>
             </div>
           ) : (
-            notifications.slice(0, 5).map((notification) => {
+            displayedNotifications.slice(0, 5).map((notification) => {
               console.log('NotificationBell - Rendering notification:', notification);
-              const typeConfig = notificationTypeConfig[notification.type] || {};
+              const typeConfig = notificationTypeConfig[notification.type] || {
+                color: 'bg-gray-100 text-gray-600',
+                icon: <Bell className="h-4 w-4 text-gray-500" />
+              };
               const relativeTime = getRelativeTime(notification.timestamp);
+              
+              // Journaliser chaque notification rendue
+              console.log('NotificationBell - Notification type config:', {
+                type: notification.type,
+                hasConfig: !!notificationTypeConfig[notification.type],
+                usingConfig: typeConfig
+              });
               
               return (
                 <div
@@ -264,10 +358,10 @@ export const NotificationBell = () => {
           )}
         </div>
         
-        {notifications.length > 5 && (
+        {displayedNotifications.length > 5 && (
           <div className="p-2 text-center border-t border-gray-100 dark:border-gray-700">
             <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-              {notifications.length - 5} notifications supplémentaires
+              {displayedNotifications.length - 5} notifications supplémentaires
             </p>
           </div>
         )}
