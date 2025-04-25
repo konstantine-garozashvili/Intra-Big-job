@@ -116,16 +116,27 @@ export const isStudent = (userRole) => {
  * @returns {boolean} - Whether the user is a guest
  */
 export const isGuest = (userRole) => {
-  if (!userRole) return false;
-  
-  if (Array.isArray(userRole)) {
-    return userRole.some(role => {
-      const roleName = typeof role === 'object' && role !== null ? role.name : role;
-      return roleName === 'ROLE_GUEST' || roleName === 'GUEST';
-    });
+  if (!userRole) {
+    console.log('isGuest check with null/undefined userRole');
+    return false;
   }
   
-  return userRole === 'ROLE_GUEST' || userRole === 'GUEST';
+  if (Array.isArray(userRole)) {
+    console.log('isGuest check with array:', userRole);
+    const result = userRole.some(role => {
+      const roleName = typeof role === 'object' && role !== null ? role.name : role;
+      const isGuestRole = roleName === 'ROLE_GUEST' || roleName === 'GUEST';
+      console.log(`Role ${roleName} is guest? ${isGuestRole}`);
+      return isGuestRole;
+    });
+    console.log('isGuest result with array:', result);
+    return result;
+  }
+  
+  console.log('isGuest check with string:', userRole);
+  const result = userRole === 'ROLE_GUEST' || userRole === 'GUEST';
+  console.log('isGuest result with string:', result);
+  return result;
 };
 
 /**
@@ -173,7 +184,20 @@ export const isFieldEditable = (userRole, fieldName) => {
  * @returns {boolean} - Whether the user can edit address information
  */
 export const canEditAddress = (userRole) => {
-  return isAdmin(userRole) || isSuperAdmin(userRole);
+  // Only admins and guests can edit addresses (guests can only edit their own in the UI)
+  const isAdminResult = isAdmin(userRole);
+  const isSuperAdminResult = isSuperAdmin(userRole);
+  const isGuestResult = isGuest(userRole);
+  
+  console.log('canEditAddress check:', {
+    userRole,
+    isAdminResult,
+    isSuperAdminResult,
+    isGuestResult,
+    result: isAdminResult || isSuperAdminResult || isGuestResult
+  });
+  
+  return isAdminResult || isSuperAdminResult || isGuestResult;
 };
 
 /**

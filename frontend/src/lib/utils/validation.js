@@ -97,7 +97,8 @@ export const isValidPhone = (phone) => {
     return false;
   }
   
-  return true;
+  // If none of the above French formats match, it's invalid
+  return false;
 };
 
 /**
@@ -107,7 +108,7 @@ export const isValidPhone = (phone) => {
  */
 export const formatPhone = (phone) => {
   // Nettoyer le numéro (enlever les espaces, tirets, etc.)
-  let cleanPhone = phone.replace(/\D/g, '');
+  let cleanPhone = phone?.replace(/\D/g, '') || ''; // Ensure cleanPhone is always a string
   
   // Si le numéro commence par +33, on le garde
   if (cleanPhone.startsWith('33')) {
@@ -115,19 +116,31 @@ export const formatPhone = (phone) => {
     cleanPhone = cleanPhone.substring(0, 11);
     // Si le numéro est complet (11 chiffres), formater
     if (cleanPhone.length === 11) {
-      return `+33 ${cleanPhone.substring(2,4)} ${cleanPhone.substring(4,6)} ${cleanPhone.substring(6,8)} ${cleanPhone.substring(8,10)} ${cleanPhone.substring(10)}`;
+      // Format as +33 X XX XX XX XX
+      return `+33 ${cleanPhone.substring(2, 3)} ${cleanPhone.substring(3, 5)} ${cleanPhone.substring(5, 7)} ${cleanPhone.substring(7, 9)} ${cleanPhone.substring(9, 11)}`;
     }
-    // Sinon, juste afficher le numéro tel quel
-    return `+33 ${cleanPhone.substring(2)}`;
+    // Si moins de 11 chiffres, afficher le préfixe et le reste
+    return `+33 ${cleanPhone.substring(2)}`; 
   }
   
   // Si le numéro commence par 0
   if (cleanPhone.startsWith('0') && cleanPhone.length <= 10) {
-    return `${cleanPhone.substring(0,2)} ${cleanPhone.substring(2,4)} ${cleanPhone.substring(4,6)} ${cleanPhone.substring(6,8)} ${cleanPhone.substring(8)}`;
+    // Limiter à 10 chiffres
+    cleanPhone = cleanPhone.substring(0, 10);
+    // Format as 0X XX XX XX XX
+    if (cleanPhone.length >= 2) {
+      let formatted = cleanPhone.substring(0, 2);
+      if (cleanPhone.length > 2) formatted += ` ${cleanPhone.substring(2, 4)}`;
+      if (cleanPhone.length > 4) formatted += ` ${cleanPhone.substring(4, 6)}`;
+      if (cleanPhone.length > 6) formatted += ` ${cleanPhone.substring(6, 8)}`;
+      if (cleanPhone.length > 8) formatted += ` ${cleanPhone.substring(8, 10)}`;
+      return formatted;
+    }
+    return cleanPhone; // Return just 0 if only 0 is typed
   }
   
-  // Pour les autres formats, ne rien faire
-  return phone;
+  // Pour les autres formats ou entrées incomplètes, retourner l'entrée nettoyée
+  return cleanPhone;
 };
 
 /**

@@ -23,7 +23,8 @@ const EditableField = memo(({
   onCancel,
   onChange,
   className = '',
-  loading = false
+  loading = false,
+  displayAsLink = false
 }) => {
   // Local state for optimistic updates
   const [localValue, setLocalValue] = useState(value);
@@ -98,113 +99,89 @@ const EditableField = memo(({
   }, [onSave, field, editedValue, onEdit, value, type]);
 
   return (
-    <div 
-      className={`
-        rounded-lg transition-all duration-200 
-        ${isEditing ? 'bg-white dark:bg-gray-800 border-2 border-blue-200 dark:border-[#78b9dd]/40 shadow-sm dark:shadow-[0_0_10px_rgba(120,185,221,0.15)]' : 'bg-gray-50 dark:bg-gray-800/60 dark:border dark:border-gray-700'} 
-        ${!isEditing ? 'hover:bg-gray-100 dark:hover:bg-gray-700/70' : ''} 
-        p-3 sm:p-4 md:p-5 
-        ${className}
-      `}
-    >
-      <Label className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center justify-between">
-      <span className="flex items-center gap-2">
-          {icon}
-          {label}
-        </span>
-        {isEditable && !isEditing && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onEdit}
-            className="h-7 w-7 p-1 text-blue-600 dark:text-[#78b9dd] hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-[#78b9dd]/20 dark:hover:text-[#a0d0ec] transition-colors"
-            disabled={loading}
-          >
-            <Pencil className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-          </Button>
-        )}
-      </Label>
-
+    <div className={`address-edit-card w-full ${className} flex flex-col justify-between`}>
       {isEditing ? (
-        <div className="mt-2 space-y-2">
-          {type === 'phone' ? (
-            <PhoneInput
-              value={editedValue}
-              onChange={onChange}
-              className="w-full"
-              disabled={loading}
-            />
-          ) : (
-            <Input
-              type={type}
-              value={editedValue}
-              onChange={(e) => onChange(e.target.value)}
-              className={`w-full ${error ? 'border-red-500' : ''}`}
-              disabled={loading}
-              placeholder={type === 'url' ? 'https://...' : ''}
-            />
-          )}
-          {error && (
-            <p className="text-sm text-red-500">{error}</p>
-          )}
-          <div className="flex justify-end space-x-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onCancel}
-              disabled={loading}
-            >
-              Annuler
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleSave}
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Enregistrement...
-                </>
-              ) : (
-                'Enregistrer'
-              )}
-            </Button>
+        <>
+          <div className="flex items-center gap-4 mb-2">
+            {icon && <span className="flex items-center justify-center"><span className="h-5 w-5 text-blue-500 flex items-center justify-center">{icon}</span></span>}
+            <Label className="text-sm font-semibold text-gray-700 p-0 m-0 leading-none">{label}</Label>
           </div>
-        </div>
-      ) : (
-        <div className="mt-1 min-h-[1.5rem]">
-          {loading ? (
-            <Skeleton className="h-5 w-full" />
-          ) : displayValue ? (
-            type === 'url' ? (
-              <a
-                href={displayValue}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 break-all"
-              >
-                <span className="truncate mr-1">{getTruncatedUrl(displayValue)}</span>
-                <ExternalLink className="h-3 w-3 opacity-70 group-hover:opacity-100 flex-shrink-0" />
-              </a>
+          <div className="mt-1 space-y-2">
+            {type === 'phone' ? (
+              <PhoneInput
+                value={editedValue}
+                onChange={onChange}
+                className="address-input w-full pl-10"
+                disabled={loading}
+              />
             ) : (
-              <span className="text-gray-900 dark:text-gray-100">{getFormattedDisplayValue()}</span>
-            )
-          ) : (
-            <span className="text-gray-500 dark:text-gray-400">Non renseigné</span>
-          )}
-        </div>
+              <div className="relative">
+                <Input
+                  type={type}
+                  value={editedValue}
+                  onChange={(e) => onChange(e.target.value)}
+                  className={`address-input w-full pl-10 ${error ? 'border-red-500' : ''} break-all`}
+                  disabled={loading}
+                  placeholder={type === 'url' ? 'https://...' : ''}
+                />
+                {icon && <span className="address-input-icon h-5 w-5 text-blue-500 flex items-center justify-center">{icon}</span>}
+              </div>
+            )}
+            {error && (
+              <p className="text-sm text-red-500">{error}</p>
+            )}
+            <div className="flex justify-end space-x-2 mt-2">
+              <button
+                type="button"
+                className="address-btn-secondary"
+                onClick={onCancel}
+                disabled={loading}
+              >Annuler</button>
+              <button
+                type="button"
+                className="address-btn-primary"
+                onClick={handleSave}
+                disabled={loading}
+              >Enregistrer</button>
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="flex items-center gap-2 mb-1">
+            {icon && <span className="flex items-center justify-center"><span className="h-5 w-5 text-blue-500 flex items-center justify-center">{icon}</span></span>}
+            <Label className="text-sm font-semibold text-gray-700 p-0 m-0 leading-none">{label}</Label>
+            {isEditable && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="ml-auto text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-colors flex items-center justify-center"
+                onClick={onEdit}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+          <div className="mt-1 min-h-[2.2rem] flex items-center text-base text-gray-900 pl-0">
+            {displayAsLink && displayValue ? (
+              <a href={displayValue} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline break-all">{getFormattedDisplayValue()}</a>
+            ) : (
+              <span className="break-all">{getFormattedDisplayValue()}</span>
+            )}
+          </div>
+        </>
       )}
     </div>
   );
 }, (prevProps, nextProps) => {
   // Custom comparison function for memo
-  // N'inclure que les propriétés essentielles pour éviter des re-rendus inutiles
+  // Include displayAsLink if its changes should trigger re-render
   return (
     prevProps.value === nextProps.value &&
     prevProps.isEditing === nextProps.isEditing &&
     prevProps.editedValue === nextProps.editedValue &&
-    prevProps.loading === nextProps.loading
+    prevProps.loading === nextProps.loading &&
+    prevProps.displayAsLink === nextProps.displayAsLink
   );
 });
 

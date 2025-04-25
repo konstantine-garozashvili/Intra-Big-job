@@ -198,17 +198,29 @@ const LayoutConfetti = ({ isActive }) => {
 
 // Congratulations modal component
 const CongratulationsModal = ({ isOpen, onClose }) => {
-  if (!isOpen) return null;
+  // Debug: log when modal state changes
+  React.useEffect(() => {
+    console.log(`CongratulationsModal isOpen changed to: ${isOpen}`);
+  }, [isOpen]);
+
+  // Return null early if not open - but log it
+  if (!isOpen) {
+    console.log('CongratulationsModal not rendering because isOpen is false');
+    return null;
+  }
+  
+  console.log('CongratulationsModal is rendering with isOpen=true');
   
   const handleClose = () => {
-    // Ensure we stop animations when closing
+    // Call the onClose function which will handle acknowledgment
+    console.log('Modal close button clicked');
     onClose();
   };
   
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -228,7 +240,7 @@ const CongratulationsModal = ({ isOpen, onClose }) => {
               stiffness: 200,
               duration: 0.8
             }}
-            className="relative w-full max-w-[85vw] sm:max-w-md bg-white dark:bg-gray-900 rounded-xl shadow-xl overflow-hidden z-50"
+            className="relative w-full max-w-[85vw] sm:max-w-md bg-white dark:bg-gray-900 rounded-xl shadow-xl overflow-hidden z-[61]"
           >
             <div className="relative p-4 sm:p-6 md:p-8 flex flex-col items-center justify-center text-center">
               <div className="relative z-10 w-full">
@@ -304,43 +316,72 @@ const MainLayout = () => {
     setMinContentHeight(`${viewportHeight - 64 + 200}px`);
   }, []);
 
-  // Properly handle closing the modal
-  const handleCloseCongratulations = useCallback(() => {
-    // Stop confetti animation first, then hide modal
-    setIsShowingConfetti(false);
-    setShowCongratulations(false);
+  // Create a memoized refresh function that can be called from child components
+  const refreshProfileData = useCallback(async (options = {}) => {
+    if (authService.isLoggedIn()) {
+      try {
+        setLoadingState(LOADING_STATES.LOADING);
+        // Fetch profile data, forcing a refresh to bypass cache
+        const newProfileData = await profileService.getAllProfileData({ 
+          forceRefresh: options.forceRefresh || true,
+          preventImmediateRefresh: options.preventImmediateRefresh || false 
+        });
+        // S'assurer que les données sont bien mises à jour avant de les retourner
+        setProfileData(newProfileData);
+        setLoadingState(LOADING_STATES.COMPLETE);
+        return newProfileData; // Retourner les nouvelles données pour permettre aux composants de les utiliser
+      } catch (error) {
+        // Silently handle error
+        setLoadingState(LOADING_STATES.ERROR);
+        return null;
+      }
+    }
+    return null;
   }, []);
 
-  // Listen for profile completion event
+  // Listen for profile completion event - improved version
   useEffect(() => {
-    const handleProfileCompletion = () => {
-      // Start confetti animation
-      setIsShowingConfetti(true);
-      
-      // Show congratulations modal after a slight delay
-      const modalTimer = setTimeout(() => {
-        setShowCongratulations(true);
-      }, 800);
-      
-      // Safety cleanup - stop confetti after 15 seconds even if modal isn't closed
-      const animationTimer = setTimeout(() => {
-        setIsShowingConfetti(false);
-      }, 15000);
-      
-      // Clean up timers if component unmounts
-      return () => {
-        clearTimeout(modalTimer);
-        clearTimeout(animationTimer);
-        setIsShowingConfetti(false);
-      };
-    };
-    
+    let isMounted = true;
+    async function handleProfileCompletion(event) {
+      // Always force refresh profile data before showing popup
+      await refreshProfileData({ forceRefresh: true });
+      // Use the latest profileData after refresh
+      const latestIsAcknowledged = profileService && profileData?.stats?.profile?.isAcknowledged;
+      if (isShowingConfetti || showCongratulations) {
+        return;
+      }
+      if (latestIsAcknowledged) {
+        console.log('[MainLayout] Not showing congratulations modal because isAcknowledged is true (after refresh)');
+        return;
+      }
+      if (isMounted) {
+        setIsShowingConfetti(true);
+        setTimeout(() => {
+          setShowCongratulations(true);
+        }, 800);
+      }
+    }
     document.addEventListener('profile:completion', handleProfileCompletion);
-    
     return () => {
+      isMounted = false;
       document.removeEventListener('profile:completion', handleProfileCompletion);
     };
-  }, []);
+  }, [isShowingConfetti, showCongratulations, profileData, refreshProfileData]);
+
+  // Properly handle closing the modal - now defined AFTER refreshProfileData
+  const handleCloseCongratulations = useCallback(() => {
+    setIsShowingConfetti(false);
+    setShowCongratulations(false);
+    // Do not set any localStorage keys here. Only rely on backend acknowledgment.
+    profileService.acknowledgeProfileCompletion()
+      .then(() => {
+        // Always force refresh after acknowledgment
+        return refreshProfileData({ forceRefresh: true });
+      })
+      .catch(err => {
+        console.error('Failed to acknowledge profile completion from modal:', err);
+      });
+  }, [refreshProfileData]);
 
   // Effect to calculate the minimum content height
   useEffect(() => {
@@ -361,26 +402,6 @@ const MainLayout = () => {
     window.scrollTo(0, 0);
   }, [location.pathname, calculateMinHeight]);
 
-  // Create a memoized refresh function that can be called from child components
-  const refreshProfileData = useCallback(async () => {
-    if (authService.isLoggedIn()) {
-      try {
-        setLoadingState(LOADING_STATES.LOADING);
-        // Fetch profile data, forcing a refresh to bypass cache
-        const newProfileData = await profileService.getAllProfileData({ forceRefresh: true });
-        // S'assurer que les données sont bien mises à jour avant de les retourner
-        setProfileData(newProfileData);
-        setLoadingState(LOADING_STATES.COMPLETE);
-        return newProfileData; // Retourner les nouvelles données pour permettre aux composants de les utiliser
-      } catch (error) {
-        // Silently handle error
-        setLoadingState(LOADING_STATES.ERROR);
-        return null;
-      }
-    }
-    return null;
-  }, []);
-
   // Écouter les événements d'authentification
   useEffect(() => {
     // Fonction pour récupérer les données utilisateur initiales
@@ -399,10 +420,28 @@ const MainLayout = () => {
             if (!minimalUser._minimal) {
               setLoadingState(LOADING_STATES.COMPLETE);
               
-              // Charger les données de profil quand même pour s'assurer d'avoir les dernières données
+              // Initial loading with minimal data first
               try {
-                const profileData = await profileService.getAllProfileData();
-                setProfileData(profileData);
+                // Get initial data first (no refresh)
+                const initialProfileData = await profileService.getAllProfileData({ forceRefresh: false });
+                setProfileData(initialProfileData);
+                
+                // Then set a timer to refresh after 9 seconds to avoid interrupting the celebration
+                setTimeout(async () => {
+                  console.log('Executing delayed refresh of profile data (9s)');
+                  // Always force refresh to avoid cache issues with profile completion status
+                  const refreshedProfileData = await profileService.getAllProfileData({ forceRefresh: true });
+                  
+                  // Also ensure stats are fresh to get the latest completion status
+                  const stats = await profileService.getStats({ forceRefresh: true });
+                  
+                  // Merge stats into the profile data
+                  if (stats && stats.stats && refreshedProfileData) {
+                    refreshedProfileData.stats = stats.stats;
+                  }
+                  
+                  setProfileData(refreshedProfileData);
+                }, 9000); // 9 second delay for auto refresh
               } catch (profileError) {
                 // Silently handle profile loading error
               }
@@ -553,12 +592,8 @@ const MainLayout = () => {
           </>
         )}
 
-        {/* Confetti and congratulations modal */}
+        {/* Confetti animation */}
         <LayoutConfetti isActive={isShowingConfetti} />
-        <CongratulationsModal
-          isOpen={showCongratulations}
-          onClose={handleCloseCongratulations}
-        />
       </div>
     </ProfileContext.Provider>
   );

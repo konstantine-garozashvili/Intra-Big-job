@@ -26,7 +26,7 @@ class Document
     #[Groups(['document:read'])]
     private ?User $user = null;
 
-    #[ORM\ManyToOne(targetEntity: DocumentType::class)]
+    #[ORM\ManyToOne(targetEntity: DocumentType::class, inversedBy: 'documents')]
     #[ORM\JoinColumn(nullable: false)]
     #[Groups(['document:read'])]
     private ?DocumentType $documentType = null;

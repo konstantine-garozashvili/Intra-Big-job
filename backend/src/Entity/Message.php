@@ -16,7 +16,7 @@ class Message
     #[Groups(['message:read'])]
     private ?int $id = null;
 
-    #[ORM\ManyToOne(inversedBy: 'messages')]
+    #[ORM\ManyToOne(inversedBy: 'sentMessages')]
     #[ORM\JoinColumn(nullable: false)]
     #[Groups(['message:read'])]
     private ?User $sender = null;

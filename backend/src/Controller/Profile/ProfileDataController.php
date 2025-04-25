@@ -24,6 +24,8 @@ class ProfileDataController extends AbstractController
     private $diplomaRepository;
     private $userDiplomaService;
     private $documentStorageFactory;
+    private $documentRepository;
+    private $documentTypeRepository;
     
     public function __construct(
         Security $security,
@@ -32,7 +34,9 @@ class ProfileDataController extends AbstractController
         UserRepository $userRepository,
         DiplomaRepository $diplomaRepository,
         UserDiplomaService $userDiplomaService,
-        DocumentStorageFactory $documentStorageFactory
+        DocumentStorageFactory $documentStorageFactory,
+        \App\Domains\Global\Document\Repository\DocumentRepository $documentRepository,
+        \App\Domains\Global\Document\Repository\DocumentTypeRepository $documentTypeRepository
     ) {
         $this->security = $security;
         $this->serializer = $serializer;
@@ -41,6 +45,8 @@ class ProfileDataController extends AbstractController
         $this->diplomaRepository = $diplomaRepository;
         $this->userDiplomaService = $userDiplomaService;
         $this->documentStorageFactory = $documentStorageFactory;
+        $this->documentRepository = $documentRepository;
+        $this->documentTypeRepository = $documentTypeRepository;
     }
 
     /**
@@ -110,7 +116,10 @@ class ProfileDataController extends AbstractController
                     'id' => $user->getNationality()->getId(),
                     'name' => $user->getNationality()->getName(),
                 ] : null,
-                'cvFilePath' => $user->getCvFilePath(),
+                'hasCvDocument' => !empty($this->documentRepository->findBy([
+                    'user' => $user,
+                    'documentType' => $this->documentTypeRepository->findOneBy(['code' => 'CV'])
+                ])),
                 'theme' => $user->getTheme() ? [
                     'id' => $user->getTheme()->getId(),
                     'name' => $user->getTheme()->getName(),
@@ -294,6 +303,120 @@ class ProfileDataController extends AbstractController
             'success' => true,
             'data' => $userData
         ]);
+    }
+
+    /**
+     * Get profile statistics including completion percentage
+     */
+    #[Route('/stats', name: 'api_profile_stats', methods: ['GET'])]
+    public function getProfileStats(): JsonResponse
+    {
+        /** @var User $user */
+        $user = $this->security->getUser();
+        
+        if (!$user) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Utilisateur non authentifié'
+            ], 401);
+        }
+        
+        try {
+            // Calculate profile completion percentage based on the three criteria:
+            // 1. LinkedIn URL
+            // 2. CV Document
+            // 3. At least one diploma
+            
+            $requiredItems = 3;
+            $completedItems = 0;
+            
+            // Check LinkedIn URL
+            if ($user->getLinkedinUrl()) {
+                $completedItems++;
+            }
+            
+            // Check CV Document
+            $cvDocuments = $this->documentRepository->findBy([
+                'user' => $user,
+                'documentType' => $this->documentTypeRepository->findOneBy(['code' => 'CV'])
+            ]);
+            
+            if (!empty($cvDocuments)) {
+                $completedItems++;
+            }
+            
+            // Check Diplomas
+            if (!$user->getUserDiplomas()->isEmpty()) {
+                $completedItems++;
+            }
+            
+            $completionPercentage = round(($completedItems / $requiredItems) * 100);
+            $isProfileComplete = $completionPercentage >= 100;
+            
+            // Get acknowledgment status
+            $isAcknowledged = $user->isProfileCompletionAcknowledged();
+            
+            // Reset acknowledgment if profile was complete but is no longer complete
+            if (!$isProfileComplete && $isAcknowledged) {
+                $user->setProfileCompletionAcknowledged(false);
+                $this->entityManager->persist($user);
+                $this->entityManager->flush();
+                $isAcknowledged = false;
+            }
+            
+            return $this->json([
+                'success' => true,
+                'stats' => [
+                    'profile' => [
+                        'completionPercentage' => $completionPercentage,
+                        'requiredItems' => $requiredItems,
+                        'completedItems' => $completedItems,
+                        'isComplete' => $isProfileComplete,
+                        'isAcknowledged' => $isAcknowledged
+                    ]
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Erreur lors du calcul des statistiques: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Acknowledge profile completion
+     * This endpoint is called when the user acknowledges the profile completion message
+     */
+    #[Route('/acknowledge-completion', name: 'api_profile_acknowledge_completion', methods: ['POST'])]
+    public function acknowledgeProfileCompletion(): JsonResponse
+    {
+        /** @var User $user */
+        $user = $this->security->getUser();
+        
+        if (!$user) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Utilisateur non authentifié'
+            ], 401);
+        }
+        
+        try {
+            // Set acknowledgment flag to true
+            $user->setProfileCompletionAcknowledged(true);
+            $this->entityManager->persist($user);
+            $this->entityManager->flush();
+            
+            return $this->json([
+                'success' => true,
+                'message' => 'Accusé de réception de la complétion de profil enregistré'
+            ]);
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Erreur lors de l\'enregistrement de l\'accusé de réception: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
