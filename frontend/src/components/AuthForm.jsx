@@ -5,6 +5,7 @@ import { authService } from "@/lib/services/authService"
 import { toast } from "sonner"
 import { useRolePermissions } from "@/features/roles/useRolePermissions"
 import { useRoles } from "@/features/roles/roleContext"
+import { profileService } from "../pages/Global/Profile/services/profileService"
 
 // Separate input component to prevent re-renders of the entire form
 const FormInput = React.memo(({ 
@@ -136,6 +137,20 @@ const AuthFormComponent = React.forwardRef((props, ref) => {
         localStorage.setItem('rememberedEmail', formState.email)
       } else {
         localStorage.removeItem('rememberedEmail')
+      }
+      
+      // Vérification du profil après login
+      try {
+        // Charger les données de profil complètes immédiatement après le login
+        const profileData = await profileService.getAllProfileData({ forceRefresh: true });
+        // Vérifier la complétion du profil
+        const isAcknowledged = !!(profileData && profileData.stats && profileData.stats.profile && profileData.stats.profile.isAcknowledged);
+        // Stocker l'information dans le localStorage pour que MainLayout puisse la lire immédiatement
+        localStorage.setItem('profileIsAcknowledged', isAcknowledged ? 'true' : 'false');
+      } catch (profileError) {
+        // En cas d'erreur, on ne bloque pas la connexion, mais on log l'erreur
+        console.warn('Erreur lors de la récupération du profil après login:', profileError);
+        localStorage.removeItem('profileIsAcknowledged');
       }
       
       // Dispatch login success event

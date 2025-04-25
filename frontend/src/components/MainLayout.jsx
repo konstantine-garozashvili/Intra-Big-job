@@ -343,22 +343,17 @@ const MainLayout = () => {
   useEffect(() => {
     let isMounted = true;
     async function handleProfileCompletion(event) {
-      // Always force refresh profile data before showing popup
-      await refreshProfileData({ forceRefresh: true });
-      // Use the latest profileData after refresh
-      const latestIsAcknowledged = profileService && profileData?.stats?.profile?.isAcknowledged;
-      if (isShowingConfetti || showCongratulations) {
-        return;
-      }
+      // Toujours forcer le refresh et utiliser la valeur retournée
+      const newProfileData = await refreshProfileData({ forceRefresh: true });
+      const latestIsAcknowledged = !!(newProfileData && newProfileData.stats && newProfileData.stats.profile && newProfileData.stats.profile.isAcknowledged);
+      if (isShowingConfetti || showCongratulations) return;
       if (latestIsAcknowledged) {
-        console.log('[MainLayout] Not showing congratulations modal because isAcknowledged is true (after refresh)');
+        // Ne rien faire si acknowledged
         return;
       }
       if (isMounted) {
         setIsShowingConfetti(true);
-        setTimeout(() => {
-          setShowCongratulations(true);
-        }, 800);
+        setTimeout(() => setShowCongratulations(true), 800);
       }
     }
     document.addEventListener('profile:completion', handleProfileCompletion);
@@ -366,7 +361,7 @@ const MainLayout = () => {
       isMounted = false;
       document.removeEventListener('profile:completion', handleProfileCompletion);
     };
-  }, [isShowingConfetti, showCongratulations, profileData, refreshProfileData]);
+  }, [isShowingConfetti, showCongratulations, refreshProfileData]);
 
   // Properly handle closing the modal - now defined AFTER refreshProfileData
   const handleCloseCongratulations = useCallback(() => {
@@ -408,58 +403,49 @@ const MainLayout = () => {
     const fetchInitialUserData = async () => {
       if (authService.isLoggedIn()) {
         try {
-          // Essayer de récupérer les données minimales de l'utilisateur depuis le localStorage
           const minimalUser = authService.getUser();
-          
           if (minimalUser) {
-            // Mettre à jour l'état avec les données minimales
             setUserData(minimalUser);
             setLoadingState(LOADING_STATES.MINIMAL);
-            
-            // Si les données sont déjà complètes, ne pas les recharger
             if (!minimalUser._minimal) {
               setLoadingState(LOADING_STATES.COMPLETE);
-              
-              // Initial loading with minimal data first
               try {
-                // Get initial data first (no refresh)
-                const initialProfileData = await profileService.getAllProfileData({ forceRefresh: false });
+                // OPTIMISATION : fetch profil et stats en parallèle
+                const [initialProfileData, stats] = await Promise.all([
+                  profileService.getAllProfileData({ forceRefresh: false }),
+                  profileService.getStats({ forceRefresh: false })
+                ]);
+                // Fusionner les stats dans le profileData pour rendre isAcknowledged disponible plus vite
+                if (stats && stats.stats) {
+                  initialProfileData.stats = stats.stats;
+                }
                 setProfileData(initialProfileData);
-                
-                // Then set a timer to refresh after 9 seconds to avoid interrupting the celebration
+                // Refresh différé (9s) toujours en parallèle
                 setTimeout(async () => {
                   console.log('Executing delayed refresh of profile data (9s)');
-                  // Always force refresh to avoid cache issues with profile completion status
-                  const refreshedProfileData = await profileService.getAllProfileData({ forceRefresh: true });
-                  
-                  // Also ensure stats are fresh to get the latest completion status
-                  const stats = await profileService.getStats({ forceRefresh: true });
-                  
-                  // Merge stats into the profile data
-                  if (stats && stats.stats && refreshedProfileData) {
-                    refreshedProfileData.stats = stats.stats;
+                  const [refreshedProfileData, refreshedStats] = await Promise.all([
+                    profileService.getAllProfileData({ forceRefresh: true }),
+                    profileService.getStats({ forceRefresh: true })
+                  ]);
+                  if (refreshedStats && refreshedStats.stats) {
+                    refreshedProfileData.stats = refreshedStats.stats;
                   }
-                  
                   setProfileData(refreshedProfileData);
-                }, 9000); // 9 second delay for auto refresh
+                }, 9000);
               } catch (profileError) {
                 // Silently handle profile loading error
               }
             }
           } else {
-            // Aucune donnée utilisateur disponible, charger depuis l'API
             setLoadingState(LOADING_STATES.LOADING);
             const userData = await authService.getCurrentUser();
             setUserData(userData);
             setLoadingState(LOADING_STATES.COMPLETE);
           }
-          
-          // Attendre un court instant avant d'afficher le composant de progression
           setTimeout(() => {
             setShowProgress(true);
           }, 300);
         } catch (error) {
-          // Silently handle error
           setLoadingState(LOADING_STATES.ERROR);
         }
       }
@@ -548,9 +534,9 @@ const MainLayout = () => {
         {/* Only show Navbar for authenticated users */}
         {isAuthenticated && <Navbar />}
         
-        {/* Congratulations Modal */}
+        {/* Congratulations Modal : n'afficher que si le profil est chargé ET acknowledged à false */}
         <CongratulationsModal 
-          isOpen={showCongratulations} 
+          isOpen={showCongratulations && profileData && profileData.stats && profileData.stats.profile && !profileData.stats.profile.isAcknowledged} 
           onClose={handleCloseCongratulations} 
         />
         
