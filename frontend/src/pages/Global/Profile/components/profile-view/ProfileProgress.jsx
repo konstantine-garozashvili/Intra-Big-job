@@ -31,33 +31,16 @@ const ProfileProgress = () => {
     };
   }, [refreshProfileData]);
 
-  // Initialize the acknowledged state from profile data and localStorage
+  // Initialize the acknowledged state from profile data
   useEffect(() => {
-    // First check localStorage for persistent storage
-    try {
-      const localStorageAck = localStorage.getItem('profile_completion_acknowledged');
-      if (localStorageAck === 'true') {
-        setLocalAcknowledged(true);
-        setIsProfileComplete(true);
-        return;
-      }
-    } catch (e) {
-      // Ignore localStorage errors
-    }
-    
-    // Then check from the profile data
+    // Only use backend value for acknowledgment
     if (profileData?.stats?.profile?.isAcknowledged) {
       setLocalAcknowledged(true);
       setIsProfileComplete(true);
-      
-      // Also store in localStorage for persistence
-      try {
-        localStorage.setItem('profile_completion_acknowledged', 'true');
-      } catch (e) {
-        // Ignore localStorage errors
-      }
     }
   }, [profileData]);
+
+  // NOTE: To ensure dynamic congratulation popup, always call refreshProfileData after any profile update (CV, LinkedIn, diploma, etc)
 
   // Function to refresh data with cache busting
   const forceFreshProfileData = async () => {
@@ -192,123 +175,76 @@ const ProfileProgress = () => {
 
   // Check if profile just became complete
   useEffect(() => {
-    // First, always check localStorage directly for the most up-to-date acknowledgment status
-    let currentAcknowledged = false;
-    try {
-      currentAcknowledged = localStorage.getItem('profile_completion_acknowledged') === 'true';
-      if (currentAcknowledged && !localAcknowledged) {
-        console.log('Found acknowledgment in localStorage, updating local state');
-        setLocalAcknowledged(true);
-      }
-    } catch (e) {
-      // Ignore localStorage errors
+    // Log backend value for debugging
+    console.log('[ProfileProgress] profileData.stats.profile.isAcknowledged:', profileData?.stats?.profile?.isAcknowledged);
+    // Always trust backend: if acknowledged in DB, never show popup/event
+    if (profileData?.stats?.profile?.isAcknowledged) {
+      setLocalAcknowledged(true);
+      setIsProfileComplete(true);
+      // Do not trigger any event or popup
+      return;
     }
-    
     // Log current state for debugging
-    console.log('Profile status:', {
+    console.log('[ProfileProgress] Profile status:', {
       completedItems,
       previousCompletion: previousCompletionRef.current,
       isAcknowledged,
       localAcknowledged,
-      currentLocalStorage: currentAcknowledged,
       hasDispatchedEvent,
       profileDataPresent: !!profileData
     });
-    
     // Check if the items were just completed (transition from incomplete to complete)
     const justCompleted = completedItems === 3 && previousCompletionRef.current < 3;
-    
     // If we're in dev mode, allow forcing the event regardless of hasDispatchedEvent state
     const isDevMode = process.env.NODE_ENV === 'development';
     const forceDispatch = isDevMode && window.location.search.includes('force_event');
-    
     // Logging to help debug the completion detection
     if (completedItems === 3) {
-      console.log('Profile is complete! Checking conditions for celebration:');
-      console.log('- isAcknowledged:', isAcknowledged);
-      console.log('- localAcknowledged:', localAcknowledged);
-      console.log('- localStorage acknowledgment:', currentAcknowledged);
-      console.log('- hasDispatchedEvent:', hasDispatchedEvent);
-      console.log('- justCompleted:', justCompleted);
-      console.log('- forceDispatch:', forceDispatch);
+      console.log('[ProfileProgress] Profile is complete! Checking conditions for celebration:', {
+        isAcknowledged,
+        localAcknowledged,
+        hasDispatchedEvent,
+        justCompleted,
+        forceDispatch
+      });
     }
-    
     // If completedItems is 3, this means the profile is complete
     if (completedItems === 3) {
-      // Check if profile completion was recently acknowledged
-      let recentlyAcknowledged = false;
-      try {
-        const lastShownAt = parseInt(localStorage.getItem('profile_completion_acknowledged_at') || '0', 10);
-        const now = Date.now();
-        recentlyAcknowledged = (now - lastShownAt < 10000); // 10 seconds
-        
-        if (recentlyAcknowledged) {
-          console.log('Profile was recently acknowledged, skipping celebration');
-        }
-      } catch (e) {
-        // Ignore localStorage errors
-      }
-      
-      // Also check if it's currently showing
-      let currentlyShowing = false;
-      try {
-        currentlyShowing = localStorage.getItem('profile_completion_showing') === 'true';
-      } catch (e) {
-        // Ignore localStorage errors
-      }
-      
-      // If not yet acknowledged, show celebration
-      if ((!isAcknowledged && !localAcknowledged && !currentAcknowledged && !hasDispatchedEvent && !recentlyAcknowledged && !currentlyShowing) || forceDispatch) {
-        console.log('🎉 TRIGGERING PROFILE COMPLETION EVENT 🎉');
-        
-        // Clear any existing acknowledgment in localStorage for testing in dev mode
-        if (forceDispatch && isDevMode) {
-          localStorage.removeItem('profile_completion_acknowledged');
-          console.log('Cleared localStorage acknowledgment for testing');
-        }
-        
-        // Mark that we've dispatched the event to prevent multiple dispatches
+      // Only dispatch event if not acknowledged and not already dispatched
+      if (!isAcknowledged && !localAcknowledged && !hasDispatchedEvent && (justCompleted || forceDispatch)) {
         setHasDispatchedEvent(true);
-        
-        // Dispatch an event that MainLayout will listen for to trigger animation
-        const celebrationEvent = new CustomEvent('profile:completion', {
-          detail: { 
-            timestamp: Date.now(),
-            completedItems,
-            justCompleted,
-            forceDispatch
+        // Force a profile data refresh, then dispatch event if still not acknowledged
+        (async () => {
+          await forceFreshProfileData();
+          // After refresh, check again
+          const latestAck = profileData?.stats?.profile?.isAcknowledged;
+          if (!latestAck) {
+            console.log('[ProfileProgress] 🎉 TRIGGERING PROFILE COMPLETION EVENT (after refresh) 🎉');
+            const celebrationEvent = new CustomEvent('profile:completion', {
+              detail: {
+                timestamp: Date.now(),
+                completedItems,
+                justCompleted,
+                forceDispatch
+              }
+            });
+            document.dispatchEvent(celebrationEvent);
+            console.log('[ProfileProgress] Event dispatched:', celebrationEvent);
           }
-        });
-        document.dispatchEvent(celebrationEvent);
-        console.log('Event dispatched:', celebrationEvent);
-        
-        // Log if the event was actually received by checking in next tick
-        setTimeout(() => {
-          console.log('Checking if event was received...');
-        }, 100);
-        
-        // We no longer send the acknowledgment here with a delay
-        // Instead, the "Continue" button in the congratulations modal will handle it
-        
-        // Delay hiding the widget by 4 seconds
+        })();
         const timer = setTimeout(() => {
           setIsProfileComplete(true);
         }, 4000);
-        
         return () => {
           clearTimeout(timer);
         };
       }
-      // Mark as complete even if already acknowledged
       setIsProfileComplete(true);
     } else {
-      // If profile is no longer complete, reset the event dispatch flag
       setHasDispatchedEvent(false);
     }
-    
-    // Update the previous completion reference
     previousCompletionRef.current = completedItems;
-  }, [completedItems, isAcknowledged, localAcknowledged, forceFreshProfileData, hasDispatchedEvent, profileData]);
+  }, [completedItems, isAcknowledged, localAcknowledged, hasDispatchedEvent, profileData]);
 
   const handleRefresh = async () => {
     if (isRefreshing || isProfileLoading) return;

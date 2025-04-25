@@ -328,103 +328,49 @@ const MainLayout = () => {
     return null;
   }, []);
 
+  // Listen for profile completion event - improved version
+  useEffect(() => {
+    let isMounted = true;
+    async function handleProfileCompletion(event) {
+      // Always force refresh profile data before showing popup
+      await refreshProfileData({ forceRefresh: true });
+      // Use the latest profileData after refresh
+      const latestIsAcknowledged = profileService && profileData?.stats?.profile?.isAcknowledged;
+      if (isShowingConfetti || showCongratulations) {
+        return;
+      }
+      if (latestIsAcknowledged) {
+        console.log('[MainLayout] Not showing congratulations modal because isAcknowledged is true (after refresh)');
+        return;
+      }
+      if (isMounted) {
+        setIsShowingConfetti(true);
+        setTimeout(() => {
+          setShowCongratulations(true);
+        }, 800);
+      }
+    }
+    document.addEventListener('profile:completion', handleProfileCompletion);
+    return () => {
+      isMounted = false;
+      document.removeEventListener('profile:completion', handleProfileCompletion);
+    };
+  }, [isShowingConfetti, showCongratulations, profileData, refreshProfileData]);
+
   // Properly handle closing the modal - now defined AFTER refreshProfileData
   const handleCloseCongratulations = useCallback(() => {
-    console.log('Modal close: handleCloseCongratulations called');
-    
-    // Stop confetti animation first, then hide modal
     setIsShowingConfetti(false);
     setShowCongratulations(false);
-    
-    // Immediately set local acknowledgment to prevent event from triggering again
-    // even if the server acknowledgment hasn't been sent yet
-    try {
-      localStorage.setItem('profile_completion_acknowledged', 'true');
-      console.log('Setting profile_completion_acknowledged to true on modal close');
-      
-      // Also set a timestamp to ensure we don't show it again too soon
-      localStorage.setItem('profile_completion_acknowledged_at', Date.now().toString());
-    } catch (e) {
-      // Ignore localStorage errors
-      console.error('Failed to set localStorage:', e);
-    }
-    
-    // Send acknowledgment to the server immediately when the modal is closed
-    console.log('Sending acknowledgment from Continue button');
+    // Do not set any localStorage keys here. Only rely on backend acknowledgment.
     profileService.acknowledgeProfileCompletion()
       .then(() => {
-        console.log('Successfully acknowledged profile completion from modal close');
-        // Force refresh profile data to get updated acknowledgment status
+        // Always force refresh after acknowledgment
         return refreshProfileData({ forceRefresh: true });
       })
       .catch(err => {
         console.error('Failed to acknowledge profile completion from modal:', err);
       });
   }, [refreshProfileData]);
-  
-  // Listen for profile completion event - simplified version
-  useEffect(() => {
-    function handleProfileCompletion(event) {
-      // Immediately check localStorage to prevent showing multiple times
-      try {
-        const isAcknowledged = localStorage.getItem('profile_completion_acknowledged') === 'true';
-        if (isAcknowledged) {
-          console.log('Profile already acknowledged in localStorage, ignoring event');
-          return;
-        }
-        
-        // Also check if we've shown this recently (within last 10 seconds)
-        const lastShownAt = parseInt(localStorage.getItem('profile_completion_acknowledged_at') || '0', 10);
-        const now = Date.now();
-        if (now - lastShownAt < 10000) { // 10 seconds
-          console.log('Profile completion was acknowledged recently, ignoring event');
-          return;
-        }
-      } catch (e) {
-        // Ignore localStorage errors
-      }
-      
-      // Immediate logging to confirm event received
-      console.log('PROFILE COMPLETION EVENT RECEIVED!', event.detail);
-      
-      // Check if modal is already showing
-      if (isShowingConfetti || showCongratulations) {
-        console.log('Celebration already in progress, ignoring event');
-        return;
-      }
-      
-      // Don't check localStorage or any conditions at first - just show the celebration
-      // This is for debug purposes to verify the event flow works
-      console.log('Starting celebration sequence...');
-      
-      // Mark as shown in localStorage right away to prevent multiple popups
-      try {
-        // Use a temporary flag for showing - will be replaced with true acknowledgment on close
-        localStorage.setItem('profile_completion_showing', 'true');
-      } catch (e) {
-        // Ignore localStorage errors
-      }
-      
-      // Start confetti animation
-      setIsShowingConfetti(true);
-      
-      // Show congratulations modal after a slight delay
-      setTimeout(() => {
-        setShowCongratulations(true);
-        console.log('Setting showCongratulations = true');
-      }, 800);
-    }
-    
-    // Add the event listener with explicit function reference
-    console.log('Attaching profile:completion event listener');
-    document.addEventListener('profile:completion', handleProfileCompletion);
-    
-    // Return cleanup function
-    return () => {
-      console.log('Removing profile:completion event listener');
-      document.removeEventListener('profile:completion', handleProfileCompletion);
-    };
-  }, [isShowingConfetti, showCongratulations]); // Add dependencies
 
   // Effect to calculate the minimum content height
   useEffect(() => {

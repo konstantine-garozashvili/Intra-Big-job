@@ -48,26 +48,22 @@ class ProfileService {
     }
   }
 
-  async updateProfile(profileData) {
+  async updateProfile(profileData, onSuccess) {
     try {
       // If portfolioUrl is present, use the student profile endpoint
       if (profileData.portfolioUrl !== undefined) {
         const response = await apiService.put('/student/profile/portfolio-url', {
           portfolioUrl: profileData.portfolioUrl
         });
-        
-        // Invalider le cache après une mise à jour
         this.invalidateCache('profile_data');
-        
+        if (onSuccess) onSuccess();
         return response.data;
       }
       
       // Otherwise use the regular profile update endpoint
       const response = await apiService.put('/profile', profileData);
-      
-      // Invalider le cache après une mise à jour
       this.invalidateCache('profile_data');
-      
+      if (onSuccess) onSuccess();
       return response.data;
     } catch (error) {
       throw error;
@@ -97,35 +93,22 @@ class ProfileService {
    */
   async getStats(options = {}) {
     const { preventRecursion = true, forceRefresh = false } = options;
-    
     try {
-      // Add cache busting parameter to the URL for forceRefresh
       let endpoint = '/api/profile/stats';
       if (forceRefresh) {
         endpoint = `${endpoint}?_t=${Date.now()}`;
       }
-      
       const response = await apiService.get(endpoint, {
         ...apiService.withAuth(),
         preventRecursion,
         forceRefresh,
-        // Add cache control headers
         headers: forceRefresh ? {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'Pragma': 'no-cache',
           'Expires': '0'
         } : undefined
       });
-      
-      // Store acknowledgment in localStorage if it's true
-      if (response?.stats?.profile?.isAcknowledged) {
-        try {
-          localStorage.setItem('profile_completion_acknowledged', 'true');
-        } catch (e) {
-          // Ignore localStorage errors
-        }
-      }
-      
+      // Do not set localStorage for acknowledgment anymore
       return {
         stats: response.stats || { profile: { completionPercentage: 0 } }
       };
@@ -143,14 +126,7 @@ class ProfileService {
    */
   async acknowledgeProfileCompletion() {
     try {
-      // Immediately set localStorage flag to prevent showing the message on refresh
-      try {
-        localStorage.setItem('profile_completion_acknowledged', 'true');
-      } catch (e) {
-        // Ignore localStorage errors
-      }
-      
-      // Call the server API
+      // Do not set localStorage for acknowledgment anymore
       const response = await apiService.post('/api/profile/acknowledge-completion', {}, {
         ...apiService.withAuth(),
         headers: {
@@ -159,14 +135,9 @@ class ProfileService {
           'Expires': '0'
         }
       });
-      
-      // Force refresh stats
       await this.getStats({ forceRefresh: true });
-      
-      // Clear caches
       this.invalidateCache('profile_data');
       apiService.invalidateCache('/api/profile/stats');
-      
       return response;
     } catch (error) {
       console.error('Error acknowledging profile completion:', error);
