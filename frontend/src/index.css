@@ -912,6 +912,8 @@
   background-color: transparent !important;
   background: transparent !important;
   border: none !important;
+}
+
 /* Glassmorphism card style */
 .glass-card {
   background: rgba(255, 255, 255, 0.7);
@@ -1148,4 +1150,10 @@
   font-size: 0.92rem;
   color: #eab308;
   margin-top: 0.25rem;
+}
+
+.dark .address-edit-card {
+  background: #181f2a;
+  color: #f3f4f6;
+  border-color: #22304a;
 }
