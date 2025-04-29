@@ -291,6 +291,30 @@ const MenuBurger = memo(() => {
       to: '/trombinoscope',
     },
     
+    // Formations 
+    {
+      key: 'formations_section',
+      label: 'Formations',
+      icon: <BookOpen className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.RECRUITER],
+      links: [
+        { 
+          name: 'Toutes les formations', 
+          to: '/formations', 
+          roles: [ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.RECRUITER] 
+        },
+        { 
+          name: 'Créer une formation', 
+          to: '/formations/new', 
+          roles: [ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.RECRUITER] 
+        },
+        { 
+          name: 'Demandes en attente', 
+          to: '/formations/pending', 
+          roles: [ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.RECRUITER] 
+        },
+      ],
+    },
     // --- SECTION ÉTUDES ET FORMATIONS ---
     {
       key: 'etudiants',
@@ -521,29 +545,6 @@ const MenuBurger = memo(() => {
         { name: 'Documents à fournir', to: '/guest/required-documents', roles: [ROLES.GUEST] },
         { name: 'Compléter mon dossier', to: '/guest/complete-profile', roles: [ROLES.GUEST] },
         { name: 'Historique des échanges', to: '/guest/communications', roles: [ROLES.GUEST] },
-      ],
-    },
-    {
-      key: 'formations_section',
-      label: 'Formations',
-      icon: <BookOpen className="w-5 h-5 mr-2 text-[#528eb2]" />,
-      roles: [ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.RECRUITER],
-      links: [
-        { 
-          name: 'Créer une formation', 
-          to: '/formations/create', 
-          roles: [ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.RECRUITER] 
-        },
-        { 
-          name: 'Toutes les formations', 
-          to: '/formations/all', 
-          roles: [ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.RECRUITER] 
-        },
-        { 
-          name: 'Demandes en attente', 
-          to: '/formations/pending', 
-          roles: [ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.RECRUITER] 
-        },
       ],
     },
     {
