@@ -127,6 +127,15 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     #[ORM\OneToMany(mappedBy: 'sender', targetEntity: Message::class)]
     private Collection $sentMessages;
 
+    #[ORM\ManyToMany(targetEntity: Formation::class, mappedBy: 'students')]
+    private Collection $formations;
+
+    #[ORM\OneToMany(mappedBy: 'user', targetEntity: FormationEnrollmentRequest::class)]
+    private Collection $enrollmentRequests;
+
+    #[ORM\OneToMany(mappedBy: 'reviewedBy', targetEntity: FormationEnrollmentRequest::class)]
+    private Collection $reviewedEnrollmentRequests;
+
     public function __construct()
     {
         $this->createdAt = new \DateTimeImmutable();
@@ -139,6 +148,9 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
         $this->tickets = new ArrayCollection();
         $this->assignedTickets = new ArrayCollection();
         $this->sentMessages = new ArrayCollection();
+        $this->formations = new ArrayCollection();
+        $this->enrollmentRequests = new ArrayCollection();
+        $this->reviewedEnrollmentRequests = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -703,6 +715,62 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
             }
         }
 
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, FormationEnrollmentRequest>
+     */
+    public function getEnrollmentRequests(): Collection
+    {
+        return $this->enrollmentRequests;
+    }
+
+    public function addEnrollmentRequest(FormationEnrollmentRequest $enrollmentRequest): static
+    {
+        if (!$this->enrollmentRequests->contains($enrollmentRequest)) {
+            $this->enrollmentRequests->add($enrollmentRequest);
+            $enrollmentRequest->setUser($this);
+        }
+        return $this;
+    }
+
+    public function removeEnrollmentRequest(FormationEnrollmentRequest $enrollmentRequest): static
+    {
+        if ($this->enrollmentRequests->removeElement($enrollmentRequest)) {
+            // set the owning side to null (unless already changed)
+            if ($enrollmentRequest->getUser() === $this) {
+                $enrollmentRequest->setUser(null);
+            }
+        }
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, FormationEnrollmentRequest>
+     */
+    public function getReviewedEnrollmentRequests(): Collection
+    {
+        return $this->reviewedEnrollmentRequests;
+    }
+
+    public function addReviewedEnrollmentRequest(FormationEnrollmentRequest $enrollmentRequest): static
+    {
+        if (!$this->reviewedEnrollmentRequests->contains($enrollmentRequest)) {
+            $this->reviewedEnrollmentRequests->add($enrollmentRequest);
+            $enrollmentRequest->setReviewedBy($this);
+        }
+        return $this;
+    }
+
+    public function removeReviewedEnrollmentRequest(FormationEnrollmentRequest $enrollmentRequest): static
+    {
+        if ($this->reviewedEnrollmentRequests->removeElement($enrollmentRequest)) {
+            // set the owning side to null (unless already changed)
+            if ($enrollmentRequest->getReviewedBy() === $this) {
+                $enrollmentRequest->setReviewedBy(null);
+            }
+        }
         return $this;
     }
 }
