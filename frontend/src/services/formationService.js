@@ -7,9 +7,12 @@ const formationService = {
   // Get all formations
   getAllFormations: async () => {
     try {
+      console.log('Calling getAllFormations API...');
       const response = await apiService.get(API_URL);
-      return Array.isArray(response.data) ? response.data : [];
+      console.log('API Response:', response);
+      return response;
     } catch (error) {
+      console.error('Error in getAllFormations:', error);
       throw error;
     }
   },
@@ -17,9 +20,19 @@ const formationService = {
   // Get formation by ID
   getFormation: async (id) => {
     try {
+      console.log('Fetching formation with ID:', id);
       const response = await apiService.get(`${API_URL}/${id}`);
-      return response.data;
+      console.log('Formation response:', response);
+      
+      // Si la réponse est une chaîne JSON, la parser
+      if (typeof response === 'string') {
+        return JSON.parse(response);
+      }
+      
+      // Si la réponse est déjà un objet, le retourner directement
+      return response;
     } catch (error) {
+      console.error('Error in getFormation:', error);
       throw error;
     }
   },
@@ -28,8 +41,9 @@ const formationService = {
   createFormation: async (formationData) => {
     try {
       const response = await apiService.post(API_URL, formationData);
-      return response.data;
+      return response;
     } catch (error) {
+      console.error('Error in createFormation:', error);
       throw error;
     }
   },
@@ -38,8 +52,9 @@ const formationService = {
   updateFormation: async (id, formationData) => {
     try {
       const response = await apiService.put(`${API_URL}/${id}`, formationData);
-      return response.data;
+      return response;
     } catch (error) {
+      console.error('Error in updateFormation:', error);
       throw error;
     }
   },
@@ -47,8 +62,34 @@ const formationService = {
   // Delete formation
   deleteFormation: async (id) => {
     try {
-      await apiService.delete(`${API_URL}/${id}`);
-      return true;
+      console.log('Deleting formation with ID:', id);
+      const response = await apiService.delete(`${API_URL}/${id}`);
+      console.log('Delete response:', response);
+      return response;
+    } catch (error) {
+      console.error('Error in deleteFormation:', error);
+      if (error.response?.data) {
+        throw new Error(error.response.data.message || 'Erreur lors de la suppression');
+      }
+      throw error;
+    }
+  },
+
+  // Get available students for a formation
+  getAvailableStudents: async (formationId) => {
+    try {
+      const response = await apiService.get(`${API_URL}/${formationId}/available-students`);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Add student to formation
+  addStudentToFormation: async (formationId, studentId) => {
+    try {
+      const response = await apiService.post(`${API_URL}/${formationId}/students/${studentId}`);
+      return response.data;
     } catch (error) {
       throw error;
     }

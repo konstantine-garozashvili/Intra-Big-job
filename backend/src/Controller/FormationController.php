@@ -14,7 +14,7 @@ use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[Route('/api/formations')]
+#[Route('/api/formations', name: 'api_formations_')]
 class FormationController extends AbstractController
 {
     public function __construct(
@@ -30,12 +30,11 @@ class FormationController extends AbstractController
     {
         try {
             $formations = $this->formationRepository->findAll();
-            $data = $this->serializer->serialize($formations, 'json', ['groups' => 'formation:read']);
-            return new JsonResponse($data, Response::HTTP_OK, [], true);
+            return $this->json($formations, Response::HTTP_OK, [], ['groups' => 'formation:read']);
         } catch (\Exception $e) {
-            return new JsonResponse([
+            return $this->json([
                 'success' => false,
-                'message' => $e->getMessage(),
+                'message' => 'Error fetching formations',
                 'code' => 'SERVER_ERROR'
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
@@ -48,19 +47,17 @@ class FormationController extends AbstractController
             $formation = $this->formationRepository->find($id);
             
             if (!$formation) {
-                return new JsonResponse(['message' => 'Formation not found'], Response::HTTP_NOT_FOUND);
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Formation not found'
+                ], Response::HTTP_NOT_FOUND);
             }
 
-            return new JsonResponse(
-                $this->serializer->serialize($formation, 'json'),
-                Response::HTTP_OK,
-                [],
-                true
-            );
+            return $this->json($formation, Response::HTTP_OK, [], ['groups' => 'formation:read']);
         } catch (\Exception $e) {
-            return new JsonResponse([
+            return $this->json([
                 'success' => false,
-                'message' => $e->getMessage(),
+                'message' => 'Error fetching formation',
                 'code' => 'SERVER_ERROR'
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
@@ -84,22 +81,20 @@ class FormationController extends AbstractController
 
             $errors = $this->validator->validate($formation);
             if (count($errors) > 0) {
-                return new JsonResponse(['errors' => (string) $errors], Response::HTTP_BAD_REQUEST);
+                return $this->json([
+                    'success' => false,
+                    'errors' => (string) $errors
+                ], Response::HTTP_BAD_REQUEST);
             }
 
             $this->entityManager->persist($formation);
             $this->entityManager->flush();
 
-            return new JsonResponse(
-                $this->serializer->serialize($formation, 'json'),
-                Response::HTTP_CREATED,
-                [],
-                true
-            );
+            return $this->json($formation, Response::HTTP_CREATED, [], ['groups' => 'formation:read']);
         } catch (\Exception $e) {
-            return new JsonResponse([
+            return $this->json([
                 'success' => false,
-                'message' => $e->getMessage(),
+                'message' => 'Error creating formation',
                 'code' => 'SERVER_ERROR'
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
@@ -113,7 +108,10 @@ class FormationController extends AbstractController
             $formation = $this->formationRepository->find($id);
             
             if (!$formation) {
-                return new JsonResponse(['message' => 'Formation not found'], Response::HTTP_NOT_FOUND);
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Formation not found'
+                ], Response::HTTP_NOT_FOUND);
             }
 
             $data = json_decode($request->getContent(), true);
@@ -142,21 +140,19 @@ class FormationController extends AbstractController
 
             $errors = $this->validator->validate($formation);
             if (count($errors) > 0) {
-                return new JsonResponse(['errors' => (string) $errors], Response::HTTP_BAD_REQUEST);
+                return $this->json([
+                    'success' => false,
+                    'errors' => (string) $errors
+                ], Response::HTTP_BAD_REQUEST);
             }
 
             $this->entityManager->flush();
 
-            return new JsonResponse(
-                $this->serializer->serialize($formation, 'json'),
-                Response::HTTP_OK,
-                [],
-                true
-            );
+            return $this->json($formation, Response::HTTP_OK, [], ['groups' => 'formation:read']);
         } catch (\Exception $e) {
-            return new JsonResponse([
+            return $this->json([
                 'success' => false,
-                'message' => $e->getMessage(),
+                'message' => 'Error updating formation',
                 'code' => 'SERVER_ERROR'
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
@@ -170,17 +166,32 @@ class FormationController extends AbstractController
             $formation = $this->formationRepository->find($id);
             
             if (!$formation) {
-                return new JsonResponse(['message' => 'Formation not found'], Response::HTTP_NOT_FOUND);
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Formation not found'
+                ], Response::HTTP_NOT_FOUND);
             }
 
+            // Supprimer d'abord les relations
+            $formation->getStudents()->clear();
+            
+            // Supprimer les demandes d'inscription
+            $this->entityManager->createQuery('DELETE FROM App\Entity\FormationEnrollmentRequest e WHERE e.formation = :formation')
+                ->setParameter('formation', $formation)
+                ->execute();
+            
             $this->entityManager->remove($formation);
             $this->entityManager->flush();
 
-            return new JsonResponse(null, Response::HTTP_NO_CONTENT);
+            return $this->json([
+                'success' => true,
+                'message' => 'Formation deleted successfully'
+            ], Response::HTTP_OK);
+
         } catch (\Exception $e) {
-            return new JsonResponse([
+            return $this->json([
                 'success' => false,
-                'message' => $e->getMessage(),
+                'message' => 'Error deleting formation: ' . $e->getMessage(),
                 'code' => 'SERVER_ERROR'
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }

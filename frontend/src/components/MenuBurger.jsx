@@ -524,6 +524,29 @@ const MenuBurger = memo(() => {
       ],
     },
     {
+      key: 'formations_section',
+      label: 'Formations',
+      icon: <BookOpen className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.RECRUITER],
+      links: [
+        { 
+          name: 'Créer une formation', 
+          to: '/formations/create', 
+          roles: [ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.RECRUITER] 
+        },
+        { 
+          name: 'Toutes les formations', 
+          to: '/formations/all', 
+          roles: [ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.RECRUITER] 
+        },
+        { 
+          name: 'Demandes en attente', 
+          to: '/formations/pending', 
+          roles: [ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.RECRUITER] 
+        },
+      ],
+    },
+    {
       key: 'formations',
       label: 'Formations',
       icon: <BookOpen className="w-5 h-5 mr-2 text-[#528eb2]" />,

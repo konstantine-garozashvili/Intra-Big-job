@@ -12,45 +12,80 @@ import {
   TableRow,
 } from '../ui/table';
 
-const FormationList = () => {
-  const [formations, setFormations] = useState([]);
+const FormationTable = () => {
+  console.log('FormationTable component rendering');
+  const [formations, setFormations] = useState(() => {
+    console.log('Initial state setup');
+    return [];
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log('FormationTable useEffect triggered');
+    let isMounted = true;
+
+    const loadFormations = async () => {
+      console.log('Starting loadFormations...');
+      try {
+        console.log('Before API call');
+        const data = await formationService.getAllFormations();
+        console.log('After API call, data:', data);
+        
+        if (isMounted) {
+          console.log('Setting formations state with:', data);
+          setFormations(data || []);
+          console.log('State should be updated now');
+        }
+      } catch (error) {
+        console.error('Detailed error:', error);
+        if (isMounted) {
+          toast.error('Erreur lors du chargement des formations');
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+          console.log('Loading complete');
+        }
+      }
+    };
+
     loadFormations();
+    
+    return () => {
+      console.log('Component cleanup');
+      isMounted = false;
+    };
   }, []);
 
-  const loadFormations = async () => {
-    try {
-      const data = await formationService.getAllFormations();
-      console.log('Formations reçues:', data);
-      setFormations(data || []);
-    } catch (error) {
-      toast.error('Erreur lors du chargement des formations');
-      console.error('Error loading formations:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  console.log('Current formations state:', formations);
+  console.log('Current loading state:', loading);
 
   const handleDelete = async (id) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cette formation ?')) {
       try {
-        await formationService.deleteFormation(id);
-        toast.success('Formation supprimée avec succès');
-        loadFormations();
+        const response = await formationService.deleteFormation(id);
+        if (response && response.success) {
+          toast.success('Formation supprimée avec succès');
+          // Recharger la liste des formations
+          const updatedFormations = formations.filter(f => f.id !== id);
+          setFormations(updatedFormations);
+        } else {
+          throw new Error(response?.message || 'Erreur lors de la suppression');
+        }
       } catch (error) {
-        toast.error('Erreur lors de la suppression de la formation');
         console.error('Error deleting formation:', error);
+        toast.error(error.message || 'Erreur lors de la suppression de la formation');
       }
     }
   };
 
   if (loading) {
+    console.log('Rendering loading state');
     return <div>Chargement...</div>;
   }
 
   if (!formations || formations.length === 0) {
+    console.log('Rendering empty state');
     return (
       <div className="container mx-auto p-4">
         <div className="flex justify-between items-center mb-6">
@@ -66,6 +101,7 @@ const FormationList = () => {
     );
   }
 
+  console.log('Rendering formations table with:', formations);
   return (
     <div className="container mx-auto p-4">
       <div className="flex justify-between items-center mb-6">
@@ -116,4 +152,4 @@ const FormationList = () => {
   );
 };
 
-export default FormationList; 
+export default FormationTable; 

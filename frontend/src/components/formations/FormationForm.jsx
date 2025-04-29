@@ -23,6 +23,7 @@ const FormationForm = () => {
   });
 
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(isEditing);
 
   useEffect(() => {
     if (isEditing) {
@@ -32,12 +33,27 @@ const FormationForm = () => {
 
   const loadFormation = async () => {
     try {
+      setInitialLoading(true);
       const data = await formationService.getFormation(id);
-      setFormData(data);
+      console.log('Formation data received:', data);
+      
+      if (!data) {
+        throw new Error('Formation non trouvée');
+      }
+
+      // Formatage de la date pour l'input type="date"
+      const formattedData = {
+        ...data,
+        dateStart: data.dateStart ? new Date(data.dateStart).toISOString().split('T')[0] : ''
+      };
+
+      setFormData(formattedData);
     } catch (error) {
-      toast.error('Erreur lors du chargement de la formation');
       console.error('Error loading formation:', error);
+      toast.error('Erreur lors du chargement de la formation');
       navigate('/formations');
+    } finally {
+      setInitialLoading(false);
     }
   };
 
@@ -54,24 +70,34 @@ const FormationForm = () => {
     setLoading(true);
 
     try {
+      const formattedData = {
+        ...formData,
+        capacity: parseInt(formData.capacity),
+        duration: parseInt(formData.duration)
+      };
+
       if (isEditing) {
-        await formationService.updateFormation(id, formData);
+        await formationService.updateFormation(id, formattedData);
         toast.success('Formation mise à jour avec succès');
       } else {
-        await formationService.createFormation(formData);
+        await formationService.createFormation(formattedData);
         toast.success('Formation créée avec succès');
       }
       navigate('/formations');
     } catch (error) {
+      console.error('Error submitting formation:', error);
       toast.error(isEditing ? 
         'Erreur lors de la mise à jour de la formation' : 
         'Erreur lors de la création de la formation'
       );
-      console.error('Error submitting formation:', error);
     } finally {
       setLoading(false);
     }
   };
+
+  if (initialLoading) {
+    return <div className="container mx-auto p-4">Chargement...</div>;
+  }
 
   return (
     <div className="container mx-auto p-4">
@@ -85,7 +111,7 @@ const FormationForm = () => {
           <Input
             id="name"
             name="name"
-            value={formData.name}
+            value={formData.name || ''}
             onChange={handleChange}
             required
           />
@@ -96,7 +122,7 @@ const FormationForm = () => {
           <Input
             id="promotion"
             name="promotion"
-            value={formData.promotion}
+            value={formData.promotion || ''}
             onChange={handleChange}
             required
           />
@@ -107,7 +133,7 @@ const FormationForm = () => {
           <Textarea
             id="description"
             name="description"
-            value={formData.description}
+            value={formData.description || ''}
             onChange={handleChange}
             required
           />
@@ -119,7 +145,7 @@ const FormationForm = () => {
             id="capacity"
             name="capacity"
             type="number"
-            value={formData.capacity}
+            value={formData.capacity || ''}
             onChange={handleChange}
             required
           />
@@ -131,7 +157,7 @@ const FormationForm = () => {
             id="dateStart"
             name="dateStart"
             type="date"
-            value={formData.dateStart}
+            value={formData.dateStart || ''}
             onChange={handleChange}
             required
           />
@@ -142,7 +168,7 @@ const FormationForm = () => {
           <Input
             id="location"
             name="location"
-            value={formData.location}
+            value={formData.location || ''}
             onChange={handleChange}
             required
           />
@@ -154,7 +180,7 @@ const FormationForm = () => {
             id="duration"
             name="duration"
             type="number"
-            value={formData.duration}
+            value={formData.duration || ''}
             onChange={handleChange}
             required
           />
