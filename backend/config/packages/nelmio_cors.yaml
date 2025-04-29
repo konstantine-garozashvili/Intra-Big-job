@@ -4,8 +4,8 @@ nelmio_cors:
         # Permettre toutes les origines en développement
         allow_origin: ['*']
         allow_methods: ['GET', 'OPTIONS', 'POST', 'PUT', 'PATCH', 'DELETE']
-        allow_headers: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
-        expose_headers: ['Link', 'Location', 'X-Debug-Token', 'X-Debug-Token-Link']
+        allow_headers: ['Content-Type', 'Authorization']
+        expose_headers: ['Link']
         max_age: 3600
     paths:
         '^/api/':

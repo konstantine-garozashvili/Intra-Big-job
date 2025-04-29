@@ -224,7 +224,7 @@ const CareerSettings = () => {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
       
-      toast.success('Document téléchargé avec succès');
+      toast.success('Document importé avec succès');
     } catch (error) {
       toast.error('Erreur lors du téléchargement du document');
     }

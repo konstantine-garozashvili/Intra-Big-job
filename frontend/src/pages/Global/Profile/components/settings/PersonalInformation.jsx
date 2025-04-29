@@ -7,6 +7,7 @@ import { PersonalInfoSection } from './personal/PersonalInfoSection';
 import { ContactInfoSection } from './personal/ContactInfoSection';
 import { ProfessionalInfoSection } from './personal/ProfessionalInfoSection';
 import { usePersonalInformation } from './personal/usePersonalInformation';
+import { useAuth } from '@/contexts/AuthContext';
 
 const PersonalInformation = ({ 
   userData, 
@@ -20,6 +21,8 @@ const PersonalInformation = ({
   onUploadIdentity,
   isLoading = false
 }) => {
+  const { user: currentUser } = useAuth();
+  
   // If loading, show skeleton
   if (isLoading) {
     return <PersonalInformationSkeleton />;
@@ -39,7 +42,8 @@ const PersonalInformation = ({
     editMode,
     setEditMode,
     editedData,
-    setEditedData
+    setEditedData,
+    currentUser
   });
 
   // Update editedData when userData or studentProfile changes

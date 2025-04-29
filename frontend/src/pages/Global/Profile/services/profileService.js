@@ -48,26 +48,22 @@ class ProfileService {
     }
   }
 
-  async updateProfile(profileData) {
+  async updateProfile(profileData, onSuccess) {
     try {
       // If portfolioUrl is present, use the student profile endpoint
       if (profileData.portfolioUrl !== undefined) {
         const response = await apiService.put('/student/profile/portfolio-url', {
           portfolioUrl: profileData.portfolioUrl
         });
-        
-        // Invalider le cache après une mise à jour
         this.invalidateCache('profile_data');
-        
+        if (onSuccess) onSuccess();
         return response.data;
       }
       
       // Otherwise use the regular profile update endpoint
       const response = await apiService.put('/profile', profileData);
-      
-      // Invalider le cache après une mise à jour
       this.invalidateCache('profile_data');
-      
+      if (onSuccess) onSuccess();
       return response.data;
     } catch (error) {
       throw error;
@@ -92,11 +88,59 @@ class ProfileService {
     }
   }
 
-  async getStats() {
+  /**
+   * Get statistics for the profile
+   */
+  async getStats(options = {}) {
+    const { preventRecursion = true, forceRefresh = false } = options;
     try {
-      const response = await apiService.get('/profile/stats');
-      return response.data;
+      let endpoint = '/api/profile/stats';
+      if (forceRefresh) {
+        endpoint = `${endpoint}?_t=${Date.now()}`;
+      }
+      const response = await apiService.get(endpoint, {
+        ...apiService.withAuth(),
+        preventRecursion,
+        forceRefresh,
+        headers: forceRefresh ? {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        } : undefined
+      });
+      // Do not set localStorage for acknowledgment anymore
+      return {
+        stats: response.stats || { profile: { completionPercentage: 0 } }
+      };
     } catch (error) {
+      console.error('Error fetching profile stats:', error);
+      return {
+        stats: { profile: { completionPercentage: 0 } }
+      };
+    }
+  }
+
+  /**
+   * Acknowledge profile completion
+   * This will mark the profile completion message as seen
+   */
+  async acknowledgeProfileCompletion() {
+    try {
+      // Do not set localStorage for acknowledgment anymore
+      const response = await apiService.post('/api/profile/acknowledge-completion', {}, {
+        ...apiService.withAuth(),
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
+      await this.getStats({ forceRefresh: true });
+      this.invalidateCache('profile_data');
+      apiService.invalidateCache('/api/profile/stats');
+      return response;
+    } catch (error) {
+      console.error('Error acknowledging profile completion:', error);
       throw error;
     }
   }
@@ -416,7 +460,15 @@ class ProfileService {
   
   async updateAddress(addressData) {
     try {
-      const response = await apiService.put('/profile/address', addressData);
+      let response;
+      
+      if (addressData.id) {
+        // Update existing address
+        response = await apiService.put(`/profile/addresses/${addressData.id}`, addressData);
+      } else {
+        // Create new address
+        response = await apiService.post('/profile/addresses', addressData);
+      }
       
       // Invalider le cache après une mise à jour
       this.invalidateCache('address');

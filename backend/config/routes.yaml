@@ -9,12 +9,21 @@ profile_controllers:
         path: ../src/Controller/Profile/
         namespace: App\Controller\Profile
     type: attribute
+    prefix: /api/profile
 
-# Explicitly register profile test route
-profile_test:
-    path: /api/profile/test
-    controller: App\Controller\Profile\ProfileController::testProfile
+
+
+# Explicitly register profile stats route
+profile_stats:
+    path: /api/profile/stats
+    controller: App\Controller\Profile\ProfileDataController::getProfileStats
     methods: ['GET']
+
+# Explicitly register profile completion acknowledgment route
+profile_acknowledge_completion:
+    path: /api/profile/acknowledge-completion
+    controller: App\Controller\Profile\ProfileDataController::acknowledgeProfileCompletion
+    methods: ['POST']
 
 api_login_check:
     path: /api/login_check

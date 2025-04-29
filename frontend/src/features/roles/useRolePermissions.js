@@ -51,7 +51,7 @@ export const useRolePermissions = () => {
       return false;
     },
     
-    canEditAddress: () => hasRole(ROLES.ADMIN) || hasRole(ROLES.SUPERADMIN),
+    canEditAddress: () => hasRole(ROLES.ADMIN) || hasRole(ROLES.SUPERADMIN) || hasRole(ROLES.GUEST),
     
     showLinkedIn: () => {
       return permissions.isAdmin() || 

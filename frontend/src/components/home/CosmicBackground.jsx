@@ -154,7 +154,6 @@ const CosmicBackground = ({
         opacity: 0.05 + Math.random() * 0.1
       });
     }
-
     const dust = [];
     for (let i = 0; i < 100; i++) {
       dust.push({
@@ -250,14 +249,12 @@ const CosmicBackground = ({
         ctx.arc(nebula.x, nebula.y, nebula.radius, 0, Math.PI * 2);
         ctx.fill();
       });
-
       stars.forEach(star => {
         star.y -= star.speed;
         if (star.y < 0) {
           star.y = canvas.height;
           star.x = Math.random() * canvas.width;
         }
-
         ctx.beginPath();
         ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
         ctx.fillStyle = `${colors.star}${Math.round(star.opacity * 255).toString(16).padStart(2, '0')}`;
@@ -486,7 +483,6 @@ const CosmicBackground = ({
           particle.y = 0;
           particle.x = Math.random() * canvas.width;
         }
-
         ctx.beginPath();
         ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
         ctx.fillStyle = `${particle.color}${Math.round(particle.opacity * 255).toString(16).padStart(2, '0')}`;
@@ -510,7 +506,6 @@ const CosmicBackground = ({
       window.cancelAnimationFrame(animationFrameId);
     };
   }, [colorMode, animationMode]);
-
   return (
     <>
       {/* Static background */}

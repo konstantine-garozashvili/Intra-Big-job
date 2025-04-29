@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from '@/components/ui/label';
-import { Pencil, MapPin, Search, Loader2 } from 'lucide-react';
+import { Pencil, MapPin, Search, Loader2, Home, Mail, Landmark } from 'lucide-react';
 import { formatAddress } from './utils';
 import { adresseApi } from '@/lib/api';
 import { toast } from 'sonner';
@@ -14,8 +14,8 @@ export const AddressAutocompleteField = ({
   setEditMode, 
   setEditedData, 
   onSaveAddress,
-  isAdmin,
-  handleCancelAddress
+  handleCancelAddress,
+  isEditable = true
 }) => {
   const field = 'address';
   const isEditing = editMode[field];
@@ -30,6 +30,9 @@ export const AddressAutocompleteField = ({
   // Références pour gérer le clic en dehors des suggestions
   const suggestionsRef = useRef(null);
   const searchInputRef = useRef(null);
+  
+  // Track if a suggestion was just selected
+  const [selectedSuggestion, setSelectedSuggestion] = useState(null);
   
   // Toggle edit mode for this field
   const toggleFieldEdit = () => {
@@ -101,6 +104,15 @@ export const AddressAutocompleteField = ({
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery]);
   
+  // Only show suggestions if user is typing and not after a selection
+  useEffect(() => {
+    if (searchQuery.length >= 3 && !selectedSuggestion) {
+      setShowSuggestions(suggestions.length > 0);
+    } else {
+      setShowSuggestions(false);
+    }
+  }, [searchQuery, suggestions, selectedSuggestion]);
+  
   // Effet pour gérer les clics en dehors des suggestions
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -120,9 +132,14 @@ export const AddressAutocompleteField = ({
     };
   }, []);
   
+  // When user types, clear selected suggestion
+  const handleSearchInputChange = (e) => {
+    setSearchQuery(e.target.value);
+    setSelectedSuggestion(null);
+  };
+  
   // Sélection d'une adresse dans les suggestions
   const handleSelectAddress = (suggestion) => {
-    // Mettre à jour les données d'adresse
     setEditedData(prev => ({
       ...prev,
       address: {
@@ -132,170 +149,177 @@ export const AddressAutocompleteField = ({
         city: { name: suggestion.city }
       }
     }));
-    
-    // Réinitialiser la recherche
-    setSearchQuery('');
+    setSearchQuery(suggestion.label);
+    setSelectedSuggestion(suggestion.label);
     setSuggestions([]);
     setShowSuggestions(false);
   };
   
+  // Ajouter un état pour suivre si le champ est en cours d'édition
+  const [fieldIsFocused, setFieldIsFocused] = useState(false);
+  
   return (
-    <div className={`
-      rounded-lg transition-all duration-200 
-      ${isEditing ? 'bg-white border-2 border-blue-200 shadow-sm' : 'bg-gray-50'} 
-      ${!isEditing ? 'hover:bg-gray-100' : ''} 
-      p-4 sm:p-5
-    `}>
-      <Label className="text-sm font-medium text-gray-700 flex items-center justify-between">
-        <span>Adresse</span>
-        {isAdmin && !isEditing && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={toggleFieldEdit}
-            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-colors"
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-        )}
-      </Label>
+    <div className={`address-edit-card ${isEditing ? '' : 'bg-gray-50'} ${!isEditing ? 'hover:bg-gray-100' : ''} mb-2 relative`}
+      style={{ minHeight: isEditing ? 340 : undefined, paddingBottom: isEditing ? 0 : undefined }}
+    >
+      <label className="peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-sm font-semibold text-gray-700 p-0 m-0 leading-none flex items-center mb-1">
+        <MapPin className="h-4 w-4 mr-2 text-blue-500" />
+        Votre adresse
+      </label>
+      {isEditable && !isEditing && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={toggleFieldEdit}
+          className="absolute top-4 right-4 text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-colors"
+        >
+          <Pencil className="h-4 w-4" />
+        </Button>
+      )}
       <div className="mt-2">
         {isEditing ? (
-          <div className="space-y-3">
+          <div className="space-y-6">
             {/* Champ de recherche avec autocomplétion */}
-            <div className="space-y-2">
-              <Label htmlFor="address-search">Rechercher une adresse</Label>
+            <div className="mb-2">
               <div className="relative">
-                <Input
+                <input
                   id="address-search"
                   ref={searchInputRef}
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={handleSearchInputChange}
                   onFocus={() => {
-                    if (searchQuery.length >= 3 && suggestions.length > 0) {
-                      setShowSuggestions(true);
-                    }
+                    setFieldIsFocused(true);
                   }}
-                  placeholder="Commencez à taper une adresse..."
-                  className="pr-10"
+                  onBlur={() => {
+                    setTimeout(() => setFieldIsFocused(false), 200);
+                  }}
+                  placeholder="Rechercher une adresse..."
+                  className="address-input w-full pl-10"
+                  autoComplete="off"
                 />
-                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                  {isSearching ? (
-                    <Loader2 className="h-4 w-4 text-gray-400 animate-spin" />
-                  ) : (
-                    <Search className="h-4 w-4 text-gray-400" />
-                  )}
-                </div>
-                
-                {/* Liste des suggestions - Positionnement absolu */}
+                <Search className="address-input-icon h-5 w-5" style={{ top: '50%', transform: 'translateY(-50%)' }} />
+                {isSearching && (
+                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-blue-500 animate-spin" />
+                )}
+                {/* Liste des suggestions */}
                 {showSuggestions && (
-                  <div 
-                    ref={suggestionsRef}
-                    className="absolute z-50 left-0 right-0 mt-1 bg-white shadow-lg rounded-md border border-gray-200 max-h-60 overflow-auto"
-                  >
-                    <ul className="py-1">
+                  <div ref={suggestionsRef} className="address-suggestions">
+                    <ul>
                       {suggestions.map((suggestion, index) => (
                         <li
                           key={index}
-                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+                          className="address-suggestion-item"
+                          style={{ animationDelay: `${index * 40}ms` }}
                           onClick={() => handleSelectAddress(suggestion)}
                         >
-                          {suggestion.label}
+                          <MapPin className="h-4 w-4 mt-1 text-blue-500 flex-shrink-0" />
+                          <div>
+                            <div className="address-suggestion-label">{suggestion.label}</div>
+                            {suggestion.context && (
+                              <div className="address-suggestion-context">{suggestion.context}</div>
+                            )}
+                          </div>
                         </li>
                       ))}
                     </ul>
                   </div>
                 )}
               </div>
+              {searchQuery.length > 0 && searchQuery.length < 3 && (
+                <div className="address-help mt-1">Veuillez saisir au moins 3 caractères pour la recherche</div>
+              )}
             </div>
-            
             {/* Champs d'adresse */}
-            <div className="space-y-2">
-              <Label htmlFor="address-line">Ligne d'adresse *</Label>
-              <Input
-                id="address-line"
-                value={editedData.address?.name || ''}
-                onChange={(e) => setEditedData(prev => ({
-                  ...prev,
-                  address: { 
-                    ...prev.address,
-                    name: e.target.value
-                  }
-                }))}
-                placeholder="Ligne d'adresse"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="address-complement">Complément</Label>
-              <Input
-                id="address-complement"
-                value={editedData.address?.complement || ''}
-                onChange={(e) => setEditedData(prev => ({
-                  ...prev,
-                  address: { 
-                    ...prev.address,
-                    complement: e.target.value
-                  }
-                }))}
-                placeholder="Complément d'adresse"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-2">
-                <Label htmlFor="address-postal">Code postal *</Label>
-                <Input
+            <div className="address-fields-grid">
+              <div className="relative">
+                <input
+                  id="address-line"
+                  value={editedData.address?.name || ''}
+                  onChange={(e) => setEditedData(prev => ({
+                    ...prev,
+                    address: {
+                      ...prev.address,
+                      name: e.target.value
+                    }
+                  }))}
+                  placeholder="Ligne d'adresse"
+                  className="address-input w-full pl-10"
+                  required
+                />
+              </div>
+              <div className="relative">
+                <input
+                  id="address-complement"
+                  value={editedData.address?.complement || ''}
+                  onChange={(e) => setEditedData(prev => ({
+                    ...prev,
+                    address: {
+                      ...prev.address,
+                      complement: e.target.value
+                    }
+                  }))}
+                  placeholder="Complément"
+                  className="address-input w-full pl-10"
+                />
+                <Home className="address-input-icon h-5 w-5" />
+              </div>
+              <div className="relative">
+                <input
                   id="address-postal"
                   value={editedData.address?.postalCode?.code || ''}
                   onChange={(e) => setEditedData(prev => ({
                     ...prev,
-                    address: { 
+                    address: {
                       ...prev.address,
                       postalCode: { code: e.target.value }
                     }
                   }))}
                   placeholder="Code postal"
+                  className="address-input w-full pl-10"
                   required
                 />
+                <Mail className="address-input-icon h-5 w-5" />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="address-city">Ville *</Label>
-                <Input
+              <div className="relative">
+                <input
                   id="address-city"
                   value={editedData.address?.city?.name || ''}
                   onChange={(e) => setEditedData(prev => ({
                     ...prev,
-                    address: { 
+                    address: {
                       ...prev.address,
                       city: { name: e.target.value }
                     }
                   }))}
                   placeholder="Ville"
+                  className="address-input w-full pl-10"
                   required
                 />
+                <Landmark className="address-input-icon h-5 w-5" />
               </div>
             </div>
-            <div className="flex items-center space-x-2">
-              <Button
+            <div className="flex items-center space-x-3 mt-6 justify-end mb-0">
+              <button
+                type="button"
                 onClick={handleSaveAddressOptimistic}
-                size="sm"
-                className="bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 min-w-[100px]"
+                className="address-btn-primary"
               >
-                Enregistrer
-              </Button>
-              <Button
+                <span>Enregistrer</span>
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"/></svg>
+              </button>
+              <button
+                type="button"
                 onClick={handleCancelAddress}
-                variant="ghost"
-                size="sm"
-                className="text-gray-600 hover:text-gray-800 hover:bg-gray-100"
+                className="address-btn-secondary"
               >
-                Annuler
-              </Button>
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                <span>Annuler</span>
+              </button>
             </div>
           </div>
         ) : (
           <div className="flex items-center min-w-0">
-            <MapPin className="h-4 w-4 mr-2 text-blue-500 flex-shrink-0" />
+          
             <span className="text-sm truncate flex-1 text-gray-900">
               {address ? formatAddress(address) : <span className="text-gray-500 italic">Aucune adresse renseignée</span>}
             </span>

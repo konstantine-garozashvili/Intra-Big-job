@@ -104,7 +104,10 @@ class UserProfileController extends AbstractController
         }
         
         if (isset($data['linkedinUrl'])) {
-            $user->setLinkedinUrl($data['linkedinUrl']);
+            // Debug log for linkedinUrl value
+            error_log('Received linkedinUrl: ' . var_export($data['linkedinUrl'], true));
+            // Treat empty string as null for deletion
+            $user->setLinkedinUrl($data['linkedinUrl'] ?: null);
         }
         
         // Mettre à jour la date de modification

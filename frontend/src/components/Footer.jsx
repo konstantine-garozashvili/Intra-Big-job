@@ -195,11 +195,6 @@ const Footer = () => {
           </p>
           {/* Icônes Réseaux Sociaux et Thème */}
           <div className="flex items-center space-x-4 text-gray-400">
-            {/* Thème */}
-            <div className="mr-2 py-1 px-2 bg-gray-800 dark:bg-gray-700 rounded-md flex items-center">
-              <span className="text-xs text-gray-300 mr-2">Thème</span>
-              <ThemeToggle size="sm" variant="ghost" />
-            </div>
             
             {/* Réseaux sociaux */}
             <a href="#" className="hover:text-[#528eb2] transition-colors">
