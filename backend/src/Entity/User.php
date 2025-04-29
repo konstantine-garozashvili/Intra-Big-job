@@ -79,9 +79,6 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     #[Groups(['user:read', 'message:read'])]
     private Collection $userRoles;
 
-    #[ORM\ManyToMany(targetEntity: Formation::class, mappedBy: 'students')]
-    private Collection $formations;
-
     #[ORM\OneToOne(mappedBy: 'user', targetEntity: \App\Domains\Student\Entity\StudentProfile::class, cascade: ['persist', 'remove'])]
     private ?\App\Domains\Student\Entity\StudentProfile $studentProfile = null;
 
@@ -139,7 +136,6 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
         $this->createdGroups = new ArrayCollection();
         $this->groups = new ArrayCollection();
         $this->userDiplomas = new ArrayCollection();
-        $this->formations = new ArrayCollection();
         $this->tickets = new ArrayCollection();
         $this->assignedTickets = new ArrayCollection();
         $this->sentMessages = new ArrayCollection();
@@ -560,31 +556,6 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
             }
         }
 
-        return $this;
-    }
-
-    /**
-     * @return Collection<int, Formation>
-     */
-    public function getFormations(): Collection
-    {
-        return $this->formations;
-    }
-
-    public function addFormation(Formation $formation): self
-    {
-        if (!$this->formations->contains($formation)) {
-            $this->formations[] = $formation;
-            $formation->addStudent($this); 
-        }
-        return $this;
-    }
-
-    public function removeFormation(Formation $formation): self
-    {
-        if ($this->formations->removeElement($formation)) {
-            $formation->removeStudent($this);
-        }
         return $this;
     }
 
