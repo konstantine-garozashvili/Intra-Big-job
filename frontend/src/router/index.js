@@ -45,7 +45,7 @@ export const router = createBrowserRouter([
       {
         path: 'formations',
         element: (
-          <ProtectedRoute roles={['ROLE_TEACHER']}>
+          <ProtectedRoute roles={['ROLE_RECRUITER', 'ROLE_ADMIN', 'ROLE_TEACHER']}>
             <FormationList />
           </ProtectedRoute>
         ),

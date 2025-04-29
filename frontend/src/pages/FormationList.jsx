@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { formationService } from '../lib/services/formationService';
+import formationService from '../services/formationService';
 import authService from '../lib/services/authService';
 import { toast } from 'sonner';
 import {

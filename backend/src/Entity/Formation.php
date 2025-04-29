@@ -7,6 +7,8 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Validator\Constraints as Assert;
 use App\Entity\User;
 
 #[ORM\Entity(repositoryClass: FormationRepository::class)]
@@ -15,31 +17,47 @@ class Formation
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['formation:read'])]
     private ?int $id = null;
     
     #[ORM\Column(length: 255)]
+    #[Assert\NotBlank]
+    #[Groups(['formation:read'])]
     private ?string $name = null;
     
     #[ORM\Column(length: 255)]
+    #[Assert\NotBlank]
+    #[Groups(['formation:read'])]
     private ?string $promotion = null;
     
     #[ORM\Column(type: Types::TEXT, nullable: true)]
+    #[Groups(['formation:read'])]
     private ?string $description = null;
 
     #[ORM\Column]
+    #[Assert\NotBlank]
+    #[Assert\Positive]
+    #[Groups(['formation:read'])]
     private ?int $capacity = null;
 
     #[ORM\Column(type: Types::DATE_MUTABLE)]
+    #[Assert\NotBlank]
+    #[Groups(['formation:read'])]
     private ?\DateTimeInterface $dateStart = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
+    #[Groups(['formation:read'])]
     private ?string $location = null;
 
     #[ORM\Column]
+    #[Assert\NotBlank]
+    #[Assert\Positive]
+    #[Groups(['formation:read'])]
     private ?int $duration = null;
     
     #[ORM\ManyToMany(targetEntity: User::class, inversedBy: 'formations')]
     #[ORM\JoinTable(name: 'formation_student')]
+    #[Groups(['formation:read'])]
     private Collection $students;
 
     #[ORM\OneToMany(mappedBy: 'formation', targetEntity: FormationEnrollmentRequest::class)]
