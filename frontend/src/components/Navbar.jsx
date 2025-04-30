@@ -11,6 +11,7 @@ import {
   User,
   Search,
   ClipboardPenLine,
+  GraduationCap,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -686,6 +687,13 @@ const Navbar = memo(() => {
                     <span style={{ color: "#528eb2" }}>Project</span>
                   </Link>
                 </div>
+                <Link
+                  to="/formations"
+                  className="ml-6 flex items-center px-3 py-2 rounded-md text-sm font-medium text-white hover:bg-[#02284f]/80 transition-colors"
+                >
+                  <GraduationCap className="w-4 h-4 mr-2" />
+                  Formations
+                </Link>
               </div>
 
               {/* Partie centrale: Barre de recherche */}

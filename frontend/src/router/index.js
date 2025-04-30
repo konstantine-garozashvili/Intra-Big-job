@@ -5,6 +5,7 @@ import Register from '../pages/Register';
 import Home from '../pages/Home';
 import Profile from '../pages/Profile';
 import FormationList from '../pages/FormationList';
+import AllFormations from '../pages/AllFormations';
 import TranslationTest from '../components/Translation/TranslationTest';
 import { ProtectedRoute } from '../components/ProtectedRoute';
 import { PublicRoute } from '../components/PublicRoute';
@@ -44,6 +45,10 @@ export const router = createBrowserRouter([
       },
       {
         path: 'formations',
+        element: <AllFormations />,
+      },
+      {
+        path: 'manage-formations',
         element: (
           <ProtectedRoute roles={['ROLE_TEACHER']}>
             <FormationList />

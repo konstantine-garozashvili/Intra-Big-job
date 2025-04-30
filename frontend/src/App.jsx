@@ -261,9 +261,8 @@ const App = () => {
                         <Route path="/reset-password" element={<ResetPasswordRequest />} />
                         <Route path="/reset-password/confirmation" element={<ResetPasswordConfirmation />} />
                         <Route path="/reset-password/reset" element={<ResetPassword />} />
-                        <Route path="/formations" element={<FormationList />} />
+                        <Route path="/formations" element={<AllFormations />} />
                         <Route path="/formation-finder" element={<FormationFinder />} />
-                        <Route path="/all-formations" element={<AllFormations />} />
                         <Route path="/formations/web" element={<WebDevelopment />} />
                         <Route path="/formations/ai" element={<ArtificialIntelligence />} />
                         <Route path="/formations/cybersecurity" element={<Cybersecurity />} />
