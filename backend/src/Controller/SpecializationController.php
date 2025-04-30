@@ -7,20 +7,15 @@ use App\Domains\Global\Repository\SpecializationRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Component\Serializer\SerializerInterface;
 
-#[Route('/api/specializations')]
+#[Route('/api/specialization')]
 class SpecializationController extends AbstractController
 {
     private $specializationRepository;
-    private $serializer;
     
-    public function __construct(
-        SpecializationRepository $specializationRepository,
-        SerializerInterface $serializer
-    ) {
+    public function __construct(SpecializationRepository $specializationRepository)
+    {
         $this->specializationRepository = $specializationRepository;
-        $this->serializer = $serializer;
     }
     
     /**
