@@ -94,6 +94,7 @@ const TeacherSignatureHistory = lazy(() =>
 const HRDashboard = lazy(() => import("./pages/HR/Dashboard"));
 const SuperAdminDashboard = lazy(() => import("./pages/SuperAdmin/Dashboard"));
 const GuestDashboard = lazy(() => import("./pages/Guest/Dashboard"));
+const GuestFormations = lazy(() => import("./pages/Guest/GuestFormations"));
 const RecruiterDashboard = lazy(() => import("./pages/Recruiter/Dashboard"));
 
 // Nouvelles pages à importer
@@ -342,6 +343,7 @@ const App = () => {
 
                     {/* Routes Guest */}
                     <Route path="/guest/dashboard" element={<RoleGuard roles={ROLES.GUEST} fallback={<Navigate to="/dashboard" replace />}><GuestDashboard /></RoleGuard>} />
+                    <Route path="/guest/guest-formations" element={<RoleGuard roles={ROLES.GUEST} fallback={<Navigate to="/dashboard" replace />}><GuestFormations /></RoleGuard>} />
 
                     {/* Routes Recruiter */}
                     <Route path="/recruiter/dashboard" element={<RoleGuard roles={ROLES.RECRUITER} fallback={<Navigate to="/dashboard" replace />}><RecruiterDashboard /></RoleGuard>} />

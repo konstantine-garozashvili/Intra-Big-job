@@ -300,17 +300,17 @@ const MenuBurger = memo(() => {
       links: [
         { 
           name: 'Toutes les formations', 
-          to: '/formations', 
+          to: '/manage-formations', 
           roles: [ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.RECRUITER] 
         },
         { 
           name: 'Créer une formation', 
-          to: '/formations/new', 
+          to: '/manage-formations/new', 
           roles: [ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.RECRUITER] 
         },
         { 
           name: 'Demandes en attente', 
-          to: '/formations/pending', 
+          to: '/manage-formations/pending', 
           roles: [ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.RECRUITER] 
         },
       ],
@@ -499,7 +499,7 @@ const MenuBurger = memo(() => {
       label: 'Formations disponibles',
       icon: <GraduationCap className="w-5 h-5 mr-2 text-[#528eb2]" />,
       roles: [ROLES.GUEST],
-      to: '/guest-formations',
+      to: '/guest/formations',
     },
     {
       key: 'rh',

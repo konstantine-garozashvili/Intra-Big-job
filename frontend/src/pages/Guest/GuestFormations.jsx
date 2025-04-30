@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Typography, Spin, Alert } from 'antd';
-import formationService from '../services/formationService';
+import formationService from '../../services/formationService';
 import { useNavigate } from 'react-router-dom';
 import { useRoles } from '@/features/roles/roleContext';
 
 const { Title, Paragraph } = Typography;
 
-const Formations = () => {
+const GuestFormations = () => {
   const [formations, setFormations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -20,19 +20,14 @@ const Formations = () => {
         setFormations(response);
         setLoading(false);
       } catch (err) {
-        setError(err.message || 'Failed to fetch formations');
+        console.error('Error fetching formations:', err);
+        setError(err.message || 'Erreur lors du chargement des formations');
         setLoading(false);
       }
     };
 
-    // Only fetch if user is a guest
-    if (hasRole('ROLE_GUEST')) {
-      fetchFormations();
-    } else {
-      setLoading(false);
-      setError('Access denied');
-    }
-  }, [hasRole]);
+    fetchFormations();
+  }, []);
 
   if (loading) {
     return (
@@ -46,7 +41,7 @@ const Formations = () => {
     return (
       <div className="p-4">
         <Alert 
-          message="Error" 
+          message="Erreur" 
           description={error} 
           type="error" 
           showIcon 
@@ -58,9 +53,9 @@ const Formations = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <div className="mb-8">
-        <Title level={2}>Formations Disponibles</Title>
+        <Title level={2}>Nos Formations</Title>
         <Paragraph className="text-gray-600">
-          Découvrez nos formations et choisissez celle qui correspond le mieux à vos objectifs.
+          Découvrez nos formations et choisissez celle qui correspond le mieux à vos objectifs professionnels.
         </Paragraph>
       </div>
 
@@ -80,15 +75,27 @@ const Formations = () => {
                 <div className="flex-grow">
                   <Title level={4} className="mb-4">{formation.name}</Title>
                   <Paragraph ellipsis={{ rows: 3 }} className="text-gray-600">
-                    {formation.description}
+                    {formation.description || 'Aucune description disponible'}
                   </Paragraph>
                 </div>
                 
-                <div className="mt-4 pt-4 border-t border-gray-200">
+                <div className="mt-4 pt-4 border-t border-gray-200 space-y-2">
                   <div className="flex justify-between items-center">
                     <Typography.Text strong>Promotion:</Typography.Text>
                     <Typography.Text>{formation.promotion}</Typography.Text>
                   </div>
+                  {formation.duration && (
+                    <div className="flex justify-between items-center">
+                      <Typography.Text strong>Durée:</Typography.Text>
+                      <Typography.Text>{formation.duration} heures</Typography.Text>
+                    </div>
+                  )}
+                  {formation.location && (
+                    <div className="flex justify-between items-center">
+                      <Typography.Text strong>Lieu:</Typography.Text>
+                      <Typography.Text>{formation.location}</Typography.Text>
+                    </div>
+                  )}
                 </div>
               </div>
             </Card>
@@ -99,4 +106,4 @@ const Formations = () => {
   );
 };
 
-export default Formations;
+export default GuestFormations; 

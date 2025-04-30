@@ -6,7 +6,7 @@ import Home from '../pages/Home';
 import Profile from '../pages/Profile';
 import FormationList from '../pages/FormationList';
 import TranslationTest from '../components/Translation/TranslationTest';
-import { ProtectedRoute } from '../components/ProtectedRoute';
+import ProtectedRoute from '../components/ProtectedRoute';
 import { PublicRoute } from '../components/PublicRoute';
 import Formations from '../pages/Formations';
 import GuestDashboard from '../pages/GuestDashboard';
@@ -45,7 +45,7 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'formations',
+        path: 'manage-formations',
         element: (
           <ProtectedRoute roles={['ROLE_RECRUITER', 'ROLE_ADMIN', 'ROLE_TEACHER']}>
             <FormationList />
@@ -53,17 +53,17 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'guest-formations',
+        path: 'guest/formations',
         element: (
-          <PublicRoute>
+          <ProtectedRoute roles={['ROLE_GUEST']}>
             <Formations />
-          </PublicRoute>
+          </ProtectedRoute>
         ),
       },
       {
         path: 'guest/dashboard',
         element: (
-          <ProtectedRoute>
+          <ProtectedRoute roles={['ROLE_GUEST']}>
             <GuestDashboard />
           </ProtectedRoute>
         ),

@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useUserData } from '@/hooks/useDashboardQueries';
 import './Dashboard.css';
 
@@ -29,14 +30,14 @@ const GuestDashboard = () => {
           <h2>Actions Disponibles</h2>
           <div className="actions-grid">
             <div className="action-card">
-              <h3>Formations</h3>
+              <h3>Nos Formations</h3>
               <p>Consultez les formations disponibles</p>
-              <a href="/formations" className="action-link">Voir les Formations</a>
+              <Link to="/guest/guest-formations" className="action-link">Voir les Formations</Link>
             </div>
             <div className="action-card">
               <h3>Profil</h3>
               <p>Complétez votre profil</p>
-              <a href="/profile" className="action-link">Éditer Profil</a>
+              <Link to="/profile" className="action-link">Éditer Profil</Link>
             </div>
           </div>
         </section>
