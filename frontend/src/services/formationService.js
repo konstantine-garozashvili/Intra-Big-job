@@ -11,7 +11,8 @@ const formationService = {
       console.log('Calling getAllFormations API...');
       const response = await apiService.get(API_URL);
       console.log('API Response:', response);
-      return response;
+      // Extraire le tableau de formations depuis la structure de données
+      return response?.data?.formations || [];
     } catch (error) {
       console.error('Error in getAllFormations:', error);
       throw error;
@@ -25,13 +26,8 @@ const formationService = {
       const response = await apiService.get(`${API_URL}/${id}`);
       console.log('Formation response:', response);
       
-      // Si la réponse est une chaîne JSON, la parser
-      if (typeof response === 'string') {
-        return JSON.parse(response);
-      }
-      
-      // Si la réponse est déjà un objet, le retourner directement
-      return response;
+      // Retourner les données de la formation depuis la structure
+      return response.data?.formation || null;
     } catch (error) {
       console.error('Error in getFormation:', error);
       throw error;
@@ -42,7 +38,7 @@ const formationService = {
   getSpecializations: async () => {
     try {
       const response = await apiService.get(SPECIALIZATION_URL);
-      return response.data || [];
+      return response.data?.specializations || [];
     } catch (error) {
       console.error('Error in getSpecializations:', error);
       throw error;
@@ -53,7 +49,7 @@ const formationService = {
   createFormation: async (formationData) => {
     try {
       const response = await apiService.post(API_URL, formationData);
-      return response;
+      return response.data?.formation || null;
     } catch (error) {
       console.error('Error in createFormation:', error);
       throw error;
@@ -64,7 +60,7 @@ const formationService = {
   updateFormation: async (id, formationData) => {
     try {
       const response = await apiService.put(`${API_URL}/${id}`, formationData);
-      return response;
+      return response.data?.formation || null;
     } catch (error) {
       console.error('Error in updateFormation:', error);
       throw error;
@@ -103,6 +99,39 @@ const formationService = {
       const response = await apiService.post(`${API_URL}/${formationId}/students/${studentId}`);
       return response.data;
     } catch (error) {
+      throw error;
+    }
+  },
+
+  // Upload formation image
+  uploadFormationImage: async (formationId, imageFile) => {
+    try {
+      const formData = new FormData();
+      formData.append('image', imageFile);
+
+      const response = await apiService.post(
+        `${API_URL}/${formationId}/image`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+      return response;
+    } catch (error) {
+      console.error('Error in uploadFormationImage:', error);
+      throw error;
+    }
+  },
+
+  // Delete formation image
+  deleteFormationImage: async (formationId) => {
+    try {
+      const response = await apiService.delete(`${API_URL}/${formationId}/image`);
+      return response;
+    } catch (error) {
+      console.error('Error in deleteFormationImage:', error);
       throw error;
     }
   }

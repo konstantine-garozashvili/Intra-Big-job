@@ -15,200 +15,184 @@ use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[Route('/api/formations')]
+#[Route('/api')]
 class FormationController extends AbstractController
 {
     public function __construct(
-        private EntityManagerInterface $entityManager,
-        private SerializerInterface $serializer,
-        private ValidatorInterface $validator,
-        private FormationRepository $formationRepository,
-        private SpecializationRepository $specializationRepository
+        private readonly FormationRepository $formationRepository,
+        private readonly SpecializationRepository $specializationRepository,
+        private readonly EntityManagerInterface $entityManager,
+        private readonly SerializerInterface $serializer,
+        private readonly ValidatorInterface $validator
     ) {
     }
 
-    #[Route('', name: 'get_formations', methods: ['GET'])]
-    #[IsGranted('ROLE_GUEST')]
-    public function index(): JsonResponse
+    #[Route('/formations', name: 'api_formations_list', methods: ['GET'])]
+    public function getAllFormations(): JsonResponse
     {
-        try {
-            $formations = $this->formationRepository->findAll();
-            $data = $this->serializer->serialize($formations, 'json', ['groups' => 'formation:read']);
-            return new JsonResponse($data, Response::HTTP_OK, [], true);
-        } catch (\Exception $e) {
-            return new JsonResponse([
+        $formations = $this->formationRepository->findAll();
+        
+        $data = array_map(function(Formation $formation) {
+            return [
+                'id' => $formation->getId(),
+                'name' => $formation->getName(),
+                'promotion' => $formation->getPromotion(),
+                'description' => $formation->getDescription(),
+                'specialization' => $formation->getSpecialization() ? [
+                    'id' => $formation->getSpecialization()->getId(),
+                    'name' => $formation->getSpecialization()->getName()
+                ] : null
+            ];
+        }, $formations);
+
+        return $this->json([
+            'success' => true,
+            'data' => [
+                'formations' => $data
+            ]
+        ]);
+    }
+
+    #[Route('/formations/{id}', name: 'api_formations_get', methods: ['GET'])]
+    public function getFormation(int $id): JsonResponse
+    {
+        $formation = $this->formationRepository->find($id);
+
+        if (!$formation) {
+            return $this->json([
                 'success' => false,
-                'message' => $e->getMessage(),
-                'code' => 'SERVER_ERROR'
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+                'message' => 'Formation non trouvée'
+            ], 404);
         }
+
+        $data = [
+            'id' => $formation->getId(),
+            'name' => $formation->getName(),
+            'promotion' => $formation->getPromotion(),
+            'description' => $formation->getDescription(),
+            'specialization' => $formation->getSpecialization() ? [
+                'id' => $formation->getSpecialization()->getId(),
+                'name' => $formation->getSpecialization()->getName()
+            ] : null
+        ];
+
+        return $this->json([
+            'success' => true,
+            'data' => [
+                'formation' => $data
+            ]
+        ]);
     }
 
-    #[Route('/{id}', name: 'get_formation', methods: ['GET'])]
-    public function show(int $id): JsonResponse
+    #[Route('/formations', name: 'api_formations_create', methods: ['POST'])]
+    public function createFormation(Request $request): JsonResponse
     {
-        try {
-            $formation = $this->formationRepository->find($id);
-            
-            if (!$formation) {
-                return new JsonResponse(['message' => 'Formation not found'], Response::HTTP_NOT_FOUND);
-            }
+        $data = json_decode($request->getContent(), true);
 
-            return new JsonResponse(
-                $this->serializer->serialize($formation, 'json'),
-                Response::HTTP_OK,
-                [],
-                true
-            );
-        } catch (\Exception $e) {
-            return new JsonResponse([
-                'success' => false,
-                'message' => $e->getMessage(),
-                'code' => 'SERVER_ERROR'
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        $formation = new Formation();
+        $formation->setName($data['name']);
+        $formation->setPromotion($data['promotion']);
+        if (isset($data['description'])) {
+            $formation->setDescription($data['description']);
         }
-    }
 
-    #[Route('', name: 'create_formation', methods: ['POST'])]
-    #[IsGranted('ROLE_RECRUITER', message: 'Only recruiters can create formations')]
-    public function create(Request $request): JsonResponse
-    {
-        try {
-            $data = json_decode($request->getContent(), true);
-            
-            // Vérifier si la spécialisation existe
-            if (!isset($data['specialization_id'])) {
-                return new JsonResponse([
-                    'message' => 'Specialization ID is required'
-                ], Response::HTTP_BAD_REQUEST);
-            }
-
-            $specialization = $this->specializationRepository->find($data['specialization_id']);
-            if (!$specialization) {
-                return new JsonResponse([
-                    'message' => 'Specialization not found'
-                ], Response::HTTP_NOT_FOUND);
-            }
-            
-            $formation = new Formation();
-            $formation->setName($data['name']);
-            $formation->setPromotion($data['promotion']);
-            $formation->setDescription($data['description'] ?? null);
-            $formation->setCapacity($data['capacity']);
-            $formation->setDateStart(new \DateTime($data['dateStart']));
-            $formation->setLocation($data['location'] ?? null);
-            $formation->setDuration($data['duration']);
-            $formation->setSpecialization($specialization);
-
-            $errors = $this->validator->validate($formation);
-            if (count($errors) > 0) {
-                return new JsonResponse(['errors' => (string) $errors], Response::HTTP_BAD_REQUEST);
-            }
-
-            $this->entityManager->persist($formation);
-            $this->entityManager->flush();
-
-            return new JsonResponse(
-                $this->serializer->serialize($formation, 'json', ['groups' => 'formation:read']),
-                Response::HTTP_CREATED,
-                [],
-                true
-            );
-        } catch (\Exception $e) {
-            return new JsonResponse([
-                'message' => $e->getMessage(),
-                'code' => 'SERVER_ERROR'
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    #[Route('/{id}', name: 'update_formation', methods: ['PUT'])]
-    #[IsGranted('ROLE_RECRUITER', message: 'Only recruiters can update formations')]
-    public function update(Request $request, int $id): JsonResponse
-    {
-        try {
-            $formation = $this->formationRepository->find($id);
-            
-            if (!$formation) {
-                return new JsonResponse(['message' => 'Formation not found'], Response::HTTP_NOT_FOUND);
-            }
-
-            $data = json_decode($request->getContent(), true);
-
-            if (isset($data['specialization_id'])) {
-                $specialization = $this->specializationRepository->find($data['specialization_id']);
-                if (!$specialization) {
-                    return new JsonResponse([
-                        'message' => 'Specialization not found'
-                    ], Response::HTTP_NOT_FOUND);
-                }
+        // Gestion de la spécialisation
+        if (isset($data['specializationId'])) {
+            $specialization = $this->specializationRepository->find($data['specializationId']);
+            if ($specialization) {
                 $formation->setSpecialization($specialization);
             }
-
-            if (isset($data['name'])) {
-                $formation->setName($data['name']);
-            }
-            if (isset($data['promotion'])) {
-                $formation->setPromotion($data['promotion']);
-            }
-            if (array_key_exists('description', $data)) {
-                $formation->setDescription($data['description']);
-            }
-            if (isset($data['capacity'])) {
-                $formation->setCapacity($data['capacity']);
-            }
-            if (isset($data['dateStart'])) {
-                $formation->setDateStart(new \DateTime($data['dateStart']));
-            }
-            if (array_key_exists('location', $data)) {
-                $formation->setLocation($data['location']);
-            }
-            if (isset($data['duration'])) {
-                $formation->setDuration($data['duration']);
-            }
-
-            $errors = $this->validator->validate($formation);
-            if (count($errors) > 0) {
-                return new JsonResponse(['errors' => (string) $errors], Response::HTTP_BAD_REQUEST);
-            }
-
-            $this->entityManager->flush();
-
-            return new JsonResponse(
-                $this->serializer->serialize($formation, 'json', ['groups' => 'formation:read']),
-                Response::HTTP_OK,
-                [],
-                true
-            );
-        } catch (\Exception $e) {
-            return new JsonResponse([
-                'message' => $e->getMessage(),
-                'code' => 'SERVER_ERROR'
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
+
+        $this->entityManager->persist($formation);
+        $this->entityManager->flush();
+
+        return $this->json([
+            'success' => true,
+            'data' => [
+                'formation' => [
+                    'id' => $formation->getId(),
+                    'name' => $formation->getName(),
+                    'promotion' => $formation->getPromotion(),
+                    'description' => $formation->getDescription(),
+                    'specialization' => $formation->getSpecialization() ? [
+                        'id' => $formation->getSpecialization()->getId(),
+                        'name' => $formation->getSpecialization()->getName()
+                    ] : null
+                ]
+            ]
+        ], 201);
     }
 
-    #[Route('/{id}', name: 'delete_formation', methods: ['DELETE'])]
-    #[IsGranted('ROLE_RECRUITER', message: 'Only recruiters can delete formations')]
-    public function delete(int $id): JsonResponse
+    #[Route('/formations/{id}', name: 'api_formations_update', methods: ['PUT'])]
+    public function updateFormation(int $id, Request $request): JsonResponse
     {
-        try {
-            $formation = $this->formationRepository->find($id);
-            
-            if (!$formation) {
-                return new JsonResponse(['message' => 'Formation not found'], Response::HTTP_NOT_FOUND);
-            }
+        $formation = $this->formationRepository->find($id);
 
-            $this->entityManager->remove($formation);
-            $this->entityManager->flush();
-
-            return new JsonResponse(null, Response::HTTP_NO_CONTENT);
-        } catch (\Exception $e) {
-            return new JsonResponse([
+        if (!$formation) {
+            return $this->json([
                 'success' => false,
-                'message' => $e->getMessage(),
-                'code' => 'SERVER_ERROR'
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+                'message' => 'Formation non trouvée'
+            ], 404);
         }
+
+        $data = json_decode($request->getContent(), true);
+
+        if (isset($data['name'])) {
+            $formation->setName($data['name']);
+        }
+        if (isset($data['promotion'])) {
+            $formation->setPromotion($data['promotion']);
+        }
+        if (isset($data['description'])) {
+            $formation->setDescription($data['description']);
+        }
+
+        // Gestion de la spécialisation
+        if (isset($data['specializationId'])) {
+            $specialization = $this->specializationRepository->find($data['specializationId']);
+            if ($specialization) {
+                $formation->setSpecialization($specialization);
+            }
+        }
+
+        $this->entityManager->flush();
+
+        return $this->json([
+            'success' => true,
+            'data' => [
+                'formation' => [
+                    'id' => $formation->getId(),
+                    'name' => $formation->getName(),
+                    'promotion' => $formation->getPromotion(),
+                    'description' => $formation->getDescription(),
+                    'specialization' => $formation->getSpecialization() ? [
+                        'id' => $formation->getSpecialization()->getId(),
+                        'name' => $formation->getSpecialization()->getName()
+                    ] : null
+                ]
+            ]
+        ]);
+    }
+
+    #[Route('/formations/{id}', name: 'api_formations_delete', methods: ['DELETE'])]
+    public function deleteFormation(int $id): JsonResponse
+    {
+        $formation = $this->formationRepository->find($id);
+
+        if (!$formation) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Formation non trouvée'
+            ], 404);
+        }
+
+        $this->entityManager->remove($formation);
+        $this->entityManager->flush();
+
+        return $this->json([
+            'success' => true,
+            'message' => 'Formation supprimée avec succès'
+        ]);
     }
 } 

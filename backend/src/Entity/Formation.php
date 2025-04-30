@@ -66,8 +66,12 @@ class Formation
 
     #[ORM\ManyToOne(targetEntity: Specialization::class, inversedBy: 'formations')]
     #[ORM\JoinColumn(nullable: false)]
-    #[Groups(['formation:read'])]
+    #[Groups(['formation:read', 'specialization:item'])]
     private ?Specialization $specialization = null;
+    
+    #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['formation:read'])]
+    private ?string $imageUrl = null;
     
     public function __construct()
     {
@@ -215,6 +219,17 @@ class Formation
     public function setSpecialization(?Specialization $specialization): static
     {
         $this->specialization = $specialization;
+        return $this;
+    }
+
+    public function getImageUrl(): ?string
+    {
+        return $this->imageUrl;
+    }
+
+    public function setImageUrl(?string $imageUrl): static
+    {
+        $this->imageUrl = $imageUrl;
         return $this;
     }
 }

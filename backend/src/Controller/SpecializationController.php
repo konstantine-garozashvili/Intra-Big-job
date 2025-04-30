@@ -3,106 +3,75 @@
 namespace App\Controller;
 
 use App\Entity\Specialization;
-use App\Domains\Global\Repository\SpecializationRepository;
+use App\Repository\SpecializationRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Component\Serializer\SerializerInterface;
 
-#[Route('/api/specializations')]
+#[Route('/api')]
 class SpecializationController extends AbstractController
 {
-    private $specializationRepository;
-    private $serializer;
-    
     public function __construct(
-        SpecializationRepository $specializationRepository,
-        SerializerInterface $serializer
+        private readonly SpecializationRepository $specializationRepository
     ) {
-        $this->specializationRepository = $specializationRepository;
-        $this->serializer = $serializer;
     }
-    
+
     /**
-     * Get a specialization by ID with its domain
+     * Récupère toutes les spécialisations
      */
-    #[Route('/{id}', name: 'api_specialization_get', methods: ['GET'])]
-    public function getSpecialization(int $id): JsonResponse
-    {
-        $specialization = $this->specializationRepository->find($id);
-        
-        if (!$specialization) {
-            return $this->json([
-                'success' => false,
-                'message' => 'Specialization not found'
-            ], 404);
-        }
-        
-        // Build the response with specialization and domain data
-        $response = [
-            'success' => true,
-            'data' => [
-                'id' => $specialization->getId(),
-                'name' => $specialization->getName(),
-                'domain' => $specialization->getDomain() ? [
-                    'id' => $specialization->getDomain()->getId(),
-                    'name' => $specialization->getDomain()->getName(),
-                ] : null,
-            ]
-        ];
-        
-        return $this->json($response);
-    }
-    
-    /**
-     * Get all specializations
-     */
-    #[Route('', name: 'api_specialization_list', methods: ['GET'])]
+    #[Route('/specializations', name: 'api_specializations_list', methods: ['GET'])]
     public function getAllSpecializations(): JsonResponse
     {
         $specializations = $this->specializationRepository->findAll();
         
-        $data = [];
-        foreach ($specializations as $specialization) {
-            $data[] = [
+        $data = array_map(function(Specialization $specialization) {
+            return [
                 'id' => $specialization->getId(),
                 'name' => $specialization->getName(),
                 'domain' => $specialization->getDomain() ? [
                     'id' => $specialization->getDomain()->getId(),
-                    'name' => $specialization->getDomain()->getName(),
-                ] : null,
+                    'name' => $specialization->getDomain()->getName()
+                ] : null
             ];
-        }
-        
+        }, $specializations);
+
         return $this->json([
             'success' => true,
-            'data' => $data
+            'data' => [
+                'specializations' => $data
+            ]
         ]);
     }
-    
+
     /**
-     * Get specializations by domain ID
+     * Récupère une spécialisation par son ID
      */
-    #[Route('/by-domain/{domainId}', name: 'api_specialization_by_domain', methods: ['GET'])]
-    public function getSpecializationsByDomain(int $domainId): JsonResponse
+    #[Route('/specializations/{id}', name: 'api_specializations_get', methods: ['GET'])]
+    public function getSpecialization(int $id): JsonResponse
     {
-        $specializations = $this->specializationRepository->findByDomain($domainId);
-        
-        $data = [];
-        foreach ($specializations as $specialization) {
-            $data[] = [
-                'id' => $specialization->getId(),
-                'name' => $specialization->getName(),
-                'domain' => $specialization->getDomain() ? [
-                    'id' => $specialization->getDomain()->getId(),
-                    'name' => $specialization->getDomain()->getName(),
-                ] : null,
-            ];
+        $specialization = $this->specializationRepository->find($id);
+
+        if (!$specialization) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Spécialisation non trouvée'
+            ], 404);
         }
-        
+
+        $data = [
+            'id' => $specialization->getId(),
+            'name' => $specialization->getName(),
+            'domain' => $specialization->getDomain() ? [
+                'id' => $specialization->getDomain()->getId(),
+                'name' => $specialization->getDomain()->getName()
+            ] : null
+        ];
+
         return $this->json([
             'success' => true,
-            'data' => $data
+            'data' => [
+                'specialization' => $data
+            ]
         ]);
     }
-} 
+}
