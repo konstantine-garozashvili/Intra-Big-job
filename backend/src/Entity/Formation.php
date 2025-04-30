@@ -10,6 +10,7 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 use App\Entity\User;
+use App\Entity\Specialization;
 
 #[ORM\Entity(repositoryClass: FormationRepository::class)]
 class Formation
@@ -62,6 +63,11 @@ class Formation
 
     #[ORM\OneToMany(mappedBy: 'formation', targetEntity: FormationEnrollmentRequest::class)]
     private Collection $enrollmentRequests;
+
+    #[ORM\ManyToOne(targetEntity: Specialization::class, inversedBy: 'formations')]
+    #[ORM\JoinColumn(nullable: false)]
+    #[Groups(['formation:read'])]
+    private ?Specialization $specialization = null;
     
     public function __construct()
     {
@@ -198,6 +204,17 @@ class Formation
                 $enrollmentRequest->setFormation(null);
             }
         }
+        return $this;
+    }
+
+    public function getSpecialization(): ?Specialization
+    {
+        return $this->specialization;
+    }
+
+    public function setSpecialization(?Specialization $specialization): static
+    {
+        $this->specialization = $specialization;
         return $this;
     }
 }

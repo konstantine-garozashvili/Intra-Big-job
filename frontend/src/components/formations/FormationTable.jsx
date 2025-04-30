@@ -118,6 +118,7 @@ const FormationTable = () => {
             <TableHead>Promotion</TableHead>
             <TableHead>Description</TableHead>
             <TableHead>Capacité</TableHead>
+            <TableHead>Spécialisation</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -128,6 +129,7 @@ const FormationTable = () => {
               <TableCell>{formation.promotion}</TableCell>
               <TableCell>{formation.description}</TableCell>
               <TableCell>{formation.capacity}</TableCell>
+              <TableCell>{formation.specialization?.name || 'Non spécifiée'}</TableCell>
               <TableCell>
                 <div className="flex gap-2">
                   <Link to={`/formations/edit/${formation.id}`}>

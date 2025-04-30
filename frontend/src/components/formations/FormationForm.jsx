@@ -6,6 +6,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import { Label } from '../ui/label';
+import { Select } from '../ui/select';
 
 const FormationForm = () => {
   const navigate = useNavigate();
@@ -19,17 +20,30 @@ const FormationForm = () => {
     capacity: '',
     dateStart: '',
     location: '',
-    duration: ''
+    duration: '',
+    specialization_id: ''
   });
 
+  const [specializations, setSpecializations] = useState([]);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(isEditing);
 
   useEffect(() => {
+    loadSpecializations();
     if (isEditing) {
       loadFormation();
     }
   }, [id]);
+
+  const loadSpecializations = async () => {
+    try {
+      const data = await formationService.getSpecializations();
+      setSpecializations(data);
+    } catch (error) {
+      console.error('Error loading specializations:', error);
+      toast.error('Erreur lors du chargement des spécialisations');
+    }
+  };
 
   const loadFormation = async () => {
     try {
@@ -44,7 +58,8 @@ const FormationForm = () => {
       // Formatage de la date pour l'input type="date"
       const formattedData = {
         ...data,
-        dateStart: data.dateStart ? new Date(data.dateStart).toISOString().split('T')[0] : ''
+        dateStart: data.dateStart ? new Date(data.dateStart).toISOString().split('T')[0] : '',
+        specialization_id: data.specialization?.id || ''
       };
 
       setFormData(formattedData);
@@ -73,7 +88,8 @@ const FormationForm = () => {
       const formattedData = {
         ...formData,
         capacity: parseInt(formData.capacity),
-        duration: parseInt(formData.duration)
+        duration: parseInt(formData.duration),
+        specialization_id: parseInt(formData.specialization_id)
       };
 
       if (isEditing) {
@@ -184,6 +200,25 @@ const FormationForm = () => {
             onChange={handleChange}
             required
           />
+        </div>
+
+        <div>
+          <Label htmlFor="specialization_id">Spécialisation</Label>
+          <select
+            id="specialization_id"
+            name="specialization_id"
+            value={formData.specialization_id || ''}
+            onChange={handleChange}
+            required
+            className="w-full p-2 border rounded-md"
+          >
+            <option value="">Sélectionnez une spécialisation</option>
+            {specializations.map((spec) => (
+              <option key={spec.id} value={spec.id}>
+                {spec.name}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="flex gap-4">

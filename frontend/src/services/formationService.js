@@ -2,6 +2,7 @@ import axios from 'axios';
 import apiService from '../lib/services/apiService';
 
 const API_URL = '/api/formations';
+const SPECIALIZATION_URL = '/api/specializations';
 
 const formationService = {
   // Get all formations
@@ -33,6 +34,17 @@ const formationService = {
       return response;
     } catch (error) {
       console.error('Error in getFormation:', error);
+      throw error;
+    }
+  },
+
+  // Get all specializations
+  getSpecializations: async () => {
+    try {
+      const response = await apiService.get(SPECIALIZATION_URL);
+      return response.data || [];
+    } catch (error) {
+      console.error('Error in getSpecializations:', error);
       throw error;
     }
   },

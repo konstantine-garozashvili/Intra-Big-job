@@ -7,6 +7,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
+use App\Entity\Formation;
 
 #[ORM\Entity(repositoryClass: SpecializationRepository::class)]
 class Specialization
@@ -29,9 +30,14 @@ class Specialization
     #[ORM\OneToMany(mappedBy: 'specialization', targetEntity: User::class)]
     private Collection $users;
 
+    #[ORM\OneToMany(mappedBy: 'specialization', targetEntity: Formation::class)]
+    #[Groups(['specialization:read'])]
+    private Collection $formations;
+
     public function __construct()
     {
         $this->users = new ArrayCollection();
+        $this->formations = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -88,6 +94,34 @@ class Specialization
             }
         }
 
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Formation>
+     */
+    public function getFormations(): Collection
+    {
+        return $this->formations;
+    }
+
+    public function addFormation(Formation $formation): static
+    {
+        if (!$this->formations->contains($formation)) {
+            $this->formations->add($formation);
+            $formation->setSpecialization($this);
+        }
+        return $this;
+    }
+
+    public function removeFormation(Formation $formation): static
+    {
+        if ($this->formations->removeElement($formation)) {
+            // set the owning side to null (unless already changed)
+            if ($formation->getSpecialization() === $this) {
+                $formation->setSpecialization(null);
+            }
+        }
         return $this;
     }
 } 
