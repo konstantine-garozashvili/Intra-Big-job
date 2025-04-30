@@ -28,6 +28,7 @@ class FormationController extends AbstractController
     }
 
     #[Route('', name: 'get_formations', methods: ['GET'])]
+    #[IsGranted('ROLE_GUEST')]
     public function index(): JsonResponse
     {
         try {

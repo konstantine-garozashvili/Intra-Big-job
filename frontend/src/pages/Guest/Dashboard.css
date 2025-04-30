@@ -1,0 +1,67 @@
+.guest-dashboard {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: Arial, sans-serif;
+}
+
+.dashboard-header {
+  background-color: #f4f4f4;
+  padding: 15px;
+  border-radius: 5px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.dashboard-header h1 {
+  color: #333;
+  margin-bottom: 10px;
+}
+
+.dashboard-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.guest-info, .guest-actions {
+  background-color: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 5px;
+  padding: 20px;
+}
+
+.status-card, .action-card {
+  background-color: #f9f9f9;
+  border-radius: 5px;
+  padding: 15px;
+  margin-top: 10px;
+}
+
+.actions-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.action-link {
+  display: inline-block;
+  background-color: #007bff;
+  color: white;
+  text-decoration: none;
+  padding: 8px 15px;
+  border-radius: 4px;
+  margin-top: 10px;
+  transition: background-color 0.3s ease;
+}
+
+.action-link:hover {
+  background-color: #0056b3;
+}
+
+.guest-dashboard.loading,
+.guest-dashboard.error {
+  text-align: center;
+  color: #666;
+  padding: 50px;
+}

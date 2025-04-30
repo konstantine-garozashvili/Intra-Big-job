@@ -8,6 +8,8 @@ import FormationList from '../pages/FormationList';
 import TranslationTest from '../components/Translation/TranslationTest';
 import { ProtectedRoute } from '../components/ProtectedRoute';
 import { PublicRoute } from '../components/PublicRoute';
+import Formations from '../pages/Formations';
+import GuestDashboard from '../pages/GuestDashboard';
 
 export const router = createBrowserRouter([
   {
@@ -47,6 +49,22 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute roles={['ROLE_RECRUITER', 'ROLE_ADMIN', 'ROLE_TEACHER']}>
             <FormationList />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'guest-formations',
+        element: (
+          <PublicRoute>
+            <Formations />
+          </PublicRoute>
+        ),
+      },
+      {
+        path: 'guest/dashboard',
+        element: (
+          <ProtectedRoute>
+            <GuestDashboard />
           </ProtectedRoute>
         ),
       },

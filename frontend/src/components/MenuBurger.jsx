@@ -495,6 +495,13 @@ const MenuBurger = memo(() => {
       to: '/recruiter/guest-student-roles',
     },
     {
+      key: 'guest_formations',
+      label: 'Formations disponibles',
+      icon: <GraduationCap className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.GUEST],
+      to: '/guest-formations',
+    },
+    {
       key: 'rh',
       label: 'Ressources Humaines',
       icon: <Users className="w-5 h-5 mr-2 text-[#528eb2]" />,

@@ -1,41 +1,48 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import DashboardLayout from '@/components/DashboardLayout';
+import React, { useMemo } from 'react';
 import { useUserData } from '@/hooks/useDashboardQueries';
-import { motion } from 'framer-motion';
-import axios from 'axios';
+import './Dashboard.css';
 
-/**
- * Tableau de bord spécifique pour les invités
- */
 const GuestDashboard = () => {
   const { data: user, isLoading, error } = useUserData();
-  // État pour stocker les notifications reçues
-  const [notifications, setNotifications] = useState([]);
-  
-  // Utiliser useMemo pour éviter les re-rendus inutiles
-  const roleAlias = useMemo(() => {
-    if (!user?.roles?.length) return '';
-    const role = user.roles[0].replace('ROLE_', '');
-    
-    // Mapping des rôles vers des alias plus conviviaux
-    const roleAliases = {
-      'SUPER_ADMIN': 'Super Administrateur',
-      'ADMIN': 'Administrateur',
-      'TEACHER': 'Formateur',
-      'STUDENT': 'Étudiant',
-      'HR': 'Ressources Humaines',
-      'RECRUITER': 'Recruteur',
-      'GUEST': 'Invité'
-    };
-    
-    return roleAliases[role] || role;
-  }, [user]);
 
+  if (isLoading) return <div className="guest-dashboard loading">Chargement...</div>;
+  if (error) return <div className="guest-dashboard error">Erreur de chargement</div>;
+  if (!user) return <div className="guest-dashboard error">Utilisateur non connecté</div>;
 
+  return (
+    <div className="guest-dashboard">
+      <div className="dashboard-header">
+        <h1>Tableau de Bord Invité</h1>
+        <p>Bienvenue, {user.firstName} {user.lastName}</p>
+      </div>
 
+      <div className="dashboard-content">
+        <section className="guest-info">
+          <h2>Statut de Votre Compte</h2>
+          <div className="status-card">
+            <p>Votre compte est actuellement en attente de validation.</p>
+            <p>Vous recevrez un email dès que votre compte sera activé.</p>
+          </div>
+        </section>
 
-
-
+        <section className="guest-actions">
+          <h2>Actions Disponibles</h2>
+          <div className="actions-grid">
+            <div className="action-card">
+              <h3>Formations</h3>
+              <p>Consultez les formations disponibles</p>
+              <a href="/formations" className="action-link">Voir les Formations</a>
+            </div>
+            <div className="action-card">
+              <h3>Profil</h3>
+              <p>Complétez votre profil</p>
+              <a href="/profile" className="action-link">Éditer Profil</a>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  );
 };
 
-export default GuestDashboard; 
+export default GuestDashboard;
