@@ -14,38 +14,26 @@ import {
 import { Image as ImageIcon } from 'lucide-react';
 
 const FormationTable = () => {
-  console.log('FormationTable component rendering');
-  const [formations, setFormations] = useState(() => {
-    console.log('Initial state setup');
-    return [];
-  });
+  const [formations, setFormations] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log('FormationTable useEffect triggered');
     let isMounted = true;
 
     const loadFormations = async () => {
-      console.log('Starting loadFormations...');
       try {
-        console.log('Before API call');
         const data = await formationService.getAllFormations();
-        console.log('After API call, data:', data);
-        
         if (isMounted) {
-          console.log('Setting formations state with:', data);
-          setFormations(data || []);
-          console.log('State should be updated now');
+          setFormations(Array.isArray(data) ? data : []);
         }
       } catch (error) {
-        console.error('Detailed error:', error);
+        console.error('Error loading formations:', error);
         if (isMounted) {
           toast.error('Erreur lors du chargement des formations');
         }
       } finally {
         if (isMounted) {
           setLoading(false);
-          console.log('Loading complete');
         }
       }
     };
@@ -53,13 +41,9 @@ const FormationTable = () => {
     loadFormations();
     
     return () => {
-      console.log('Component cleanup');
       isMounted = false;
     };
   }, []);
-
-  console.log('Current formations state:', formations);
-  console.log('Current loading state:', loading);
 
   const handleDelete = async (id) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cette formation ?')) {
@@ -67,9 +51,7 @@ const FormationTable = () => {
         const response = await formationService.deleteFormation(id);
         if (response && response.success) {
           toast.success('Formation supprimée avec succès');
-          // Recharger la liste des formations
-          const updatedFormations = formations.filter(f => f.id !== id);
-          setFormations(updatedFormations);
+          setFormations(prev => prev.filter(f => f.id !== id));
         } else {
           throw new Error(response?.message || 'Erreur lors de la suppression');
         }
@@ -80,9 +62,17 @@ const FormationTable = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="container mx-auto p-4">
+        <div className="text-center py-8">
+          <p>Chargement...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!formations || formations.length === 0) {
-    console.log('Rendering empty state');
     return (
       <div className="container mx-auto p-4">
         <div className="flex justify-between items-center mb-6">
@@ -98,7 +88,6 @@ const FormationTable = () => {
     );
   }
 
-  console.log('Rendering formations table with:', formations);
   return (
     <div className="container mx-auto p-4">
       <div className="flex justify-between items-center mb-6">
@@ -111,11 +100,9 @@ const FormationTable = () => {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Image</TableHead>
             <TableHead>Nom</TableHead>
             <TableHead>Promotion</TableHead>
             <TableHead>Description</TableHead>
-            <TableHead>Capacité</TableHead>
             <TableHead>Spécialisation</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
@@ -123,23 +110,9 @@ const FormationTable = () => {
         <TableBody>
           {formations.map((formation) => (
             <TableRow key={formation.id}>
-              <TableCell>
-                {formation.imageUrl ? (
-                  <img
-                    src={formation.imageUrl}
-                    alt={formation.name}
-                    className="w-16 h-16 object-cover rounded"
-                  />
-                ) : (
-                  <div className="w-16 h-16 bg-gray-100 flex items-center justify-center rounded">
-                    <ImageIcon className="w-8 h-8 text-gray-400" />
-                  </div>
-                )}
-              </TableCell>
               <TableCell>{formation.name}</TableCell>
               <TableCell>{formation.promotion}</TableCell>
               <TableCell>{formation.description}</TableCell>
-              <TableCell>{formation.capacity}</TableCell>
               <TableCell>{formation.specialization?.name || 'Non spécifiée'}</TableCell>
               <TableCell>
                 <div className="flex gap-2">

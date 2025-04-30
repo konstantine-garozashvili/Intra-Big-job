@@ -18,12 +18,11 @@ const FormationForm = () => {
     name: '',
     promotion: '',
     description: '',
+    specializationId: '',
     capacity: '',
     dateStart: '',
     location: '',
     duration: '',
-    specialization_id: '',
-    imageUrl: ''
   });
 
   const [specializations, setSpecializations] = useState([]);
@@ -53,21 +52,22 @@ const FormationForm = () => {
     try {
       setInitialLoading(true);
       const data = await formationService.getFormation(id);
-      console.log('Formation data received:', data);
       
       if (!data) {
         throw new Error('Formation non trouvée');
       }
 
-      // Formatage de la date pour l'input type="date"
-      const formattedData = {
-        ...data,
+      setFormData({
+        name: data.name || '',
+        promotion: data.promotion || '',
+        description: data.description || '',
+        specializationId: data.specialization?.id || '',
+        capacity: data.capacity || '',
         dateStart: data.dateStart ? new Date(data.dateStart).toISOString().split('T')[0] : '',
-        specialization_id: data.specialization?.id || '',
-        imageUrl: data.imageUrl || ''
-      };
+        location: data.location || '',
+        duration: data.duration || '',
+      });
 
-      setFormData(formattedData);
       if (data.imageUrl) {
         setImagePreview(data.imageUrl);
       }
@@ -92,7 +92,6 @@ const FormationForm = () => {
     const file = e.target.files[0];
     if (file) {
       setImageFile(file);
-      // Créer une URL pour la prévisualisation
       const previewUrl = URL.createObjectURL(file);
       setImagePreview(previewUrl);
     }
@@ -121,24 +120,16 @@ const FormationForm = () => {
     setLoading(true);
 
     try {
-      const formattedData = {
+      const formDataToSubmit = {
         ...formData,
         capacity: parseInt(formData.capacity),
         duration: parseInt(formData.duration),
-        specialization_id: parseInt(formData.specialization_id)
       };
 
-      let response;
       if (isEditing) {
-        response = await formationService.updateFormation(id, formattedData);
+        await formationService.updateFormation(id, formDataToSubmit);
       } else {
-        response = await formationService.createFormation(formattedData);
-      }
-
-      // Upload de l'image si une nouvelle image est sélectionnée
-      if (imageFile) {
-        const formationId = isEditing ? id : response.id;
-        await formationService.uploadFormationImage(formationId, imageFile);
+        await formationService.createFormation(formDataToSubmit);
       }
 
       toast.success(isEditing ? 'Formation mise à jour avec succès' : 'Formation créée avec succès');
@@ -154,6 +145,10 @@ const FormationForm = () => {
     }
   };
 
+  if (initialLoading) {
+    return <div>Chargement...</div>;
+  }
+
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-6">
@@ -162,22 +157,22 @@ const FormationForm = () => {
 
       <form onSubmit={handleSubmit} className="space-y-4 max-w-2xl">
         <div>
-          <Label htmlFor="name">Nom</Label>
+          <Label htmlFor="name">Nom *</Label>
           <Input
             id="name"
             name="name"
-            value={formData.name || ''}
+            value={formData.name}
             onChange={handleChange}
             required
           />
         </div>
 
         <div>
-          <Label htmlFor="promotion">Promotion</Label>
+          <Label htmlFor="promotion">Promotion *</Label>
           <Input
             id="promotion"
             name="promotion"
-            value={formData.promotion || ''}
+            value={formData.promotion}
             onChange={handleChange}
             required
           />
@@ -188,31 +183,31 @@ const FormationForm = () => {
           <Textarea
             id="description"
             name="description"
-            value={formData.description || ''}
+            value={formData.description}
             onChange={handleChange}
-            required
           />
         </div>
 
         <div>
-          <Label htmlFor="capacity">Capacité</Label>
+          <Label htmlFor="capacity">Capacité *</Label>
           <Input
             id="capacity"
             name="capacity"
             type="number"
-            value={formData.capacity || ''}
+            min="1"
+            value={formData.capacity}
             onChange={handleChange}
             required
           />
         </div>
 
         <div>
-          <Label htmlFor="dateStart">Date de début</Label>
+          <Label htmlFor="dateStart">Date de début *</Label>
           <Input
             id="dateStart"
             name="dateStart"
             type="date"
-            value={formData.dateStart || ''}
+            value={formData.dateStart}
             onChange={handleChange}
             required
           />
@@ -223,30 +218,30 @@ const FormationForm = () => {
           <Input
             id="location"
             name="location"
-            value={formData.location || ''}
+            value={formData.location}
             onChange={handleChange}
-            required
           />
         </div>
 
         <div>
-          <Label htmlFor="duration">Durée (en mois)</Label>
+          <Label htmlFor="duration">Durée (en jours) *</Label>
           <Input
             id="duration"
             name="duration"
             type="number"
-            value={formData.duration || ''}
+            min="1"
+            value={formData.duration}
             onChange={handleChange}
             required
           />
         </div>
 
         <div>
-          <Label htmlFor="specialization_id">Spécialisation</Label>
+          <Label htmlFor="specializationId">Spécialisation *</Label>
           <select
-            id="specialization_id"
-            name="specialization_id"
-            value={formData.specialization_id || ''}
+            id="specializationId"
+            name="specializationId"
+            value={formData.specializationId}
             onChange={handleChange}
             required
             className="w-full p-2 border rounded-md"
@@ -260,7 +255,6 @@ const FormationForm = () => {
           </select>
         </div>
 
-        {/* Image upload section */}
         <div className="space-y-4">
           <Label>Image de la formation</Label>
           <div className="flex items-center space-x-4">

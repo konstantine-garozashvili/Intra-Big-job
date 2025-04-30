@@ -2,7 +2,7 @@
 
 namespace App\Entity;
 
-use App\Domains\Global\Repository\SpecializationRepository;
+use App\Repository\SpecializationRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
