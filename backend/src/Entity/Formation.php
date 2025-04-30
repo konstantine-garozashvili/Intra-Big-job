@@ -66,7 +66,7 @@ class Formation
 
     #[ORM\ManyToOne(targetEntity: Specialization::class, inversedBy: 'formations')]
     #[ORM\JoinColumn(nullable: false)]
-    #[Groups(['formation:read'])]
+    #[Groups(['formation:read', 'specialization:item'])]
     private ?Specialization $specialization = null;
     
     public function __construct()

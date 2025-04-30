@@ -7,7 +7,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
-use App\Entity\Formation;
+use Symfony\Component\Serializer\Annotation\MaxDepth;
 
 #[ORM\Entity(repositoryClass: SpecializationRepository::class)]
 class Specialization
@@ -15,28 +15,30 @@ class Specialization
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(['specialization:read', 'user:read'])]
+    #[Groups(['formation:read', 'specialization:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(['specialization:read', 'user:read'])]
+    #[Groups(['formation:read', 'specialization:read'])]
     private ?string $name = null;
 
-    #[ORM\ManyToOne(inversedBy: 'specializations')]
+    #[ORM\Column(type: 'text', nullable: true)]
+    #[Groups(['specialization:read'])]
+    private ?string $description = null;
+
+    #[ORM\ManyToOne(targetEntity: Domain::class, inversedBy: 'specializations')]
     #[ORM\JoinColumn(nullable: false)]
     #[Groups(['specialization:read'])]
+    #[MaxDepth(1)]
     private ?Domain $domain = null;
-
-    #[ORM\OneToMany(mappedBy: 'specialization', targetEntity: User::class)]
-    private Collection $users;
 
     #[ORM\OneToMany(mappedBy: 'specialization', targetEntity: Formation::class)]
     #[Groups(['specialization:read'])]
+    #[MaxDepth(1)]
     private Collection $formations;
 
     public function __construct()
     {
-        $this->users = new ArrayCollection();
         $this->formations = new ArrayCollection();
     }
 
@@ -50,9 +52,20 @@ class Specialization
         return $this->name;
     }
 
-    public function setName(string $name): static
+    public function setName(string $name): self
     {
         $this->name = $name;
+        return $this;
+    }
+
+    public function getDescription(): ?string
+    {
+        return $this->description;
+    }
+
+    public function setDescription(?string $description): self
+    {
+        $this->description = $description;
         return $this;
     }
 
@@ -61,39 +74,9 @@ class Specialization
         return $this->domain;
     }
 
-    public function setDomain(?Domain $domain): static
+    public function setDomain(?Domain $domain): self
     {
         $this->domain = $domain;
-        return $this;
-    }
-
-    /**
-     * @return Collection<int, User>
-     */
-    public function getUsers(): Collection
-    {
-        return $this->users;
-    }
-
-    public function addUser(User $user): static
-    {
-        if (!$this->users->contains($user)) {
-            $this->users->add($user);
-            $user->setSpecialization($this);
-        }
-
-        return $this;
-    }
-
-    public function removeUser(User $user): static
-    {
-        if ($this->users->removeElement($user)) {
-            // set the owning side to null (unless already changed)
-            if ($user->getSpecialization() === $this) {
-                $user->setSpecialization(null);
-            }
-        }
-
         return $this;
     }
 
@@ -105,7 +88,7 @@ class Specialization
         return $this->formations;
     }
 
-    public function addFormation(Formation $formation): static
+    public function addFormation(Formation $formation): self
     {
         if (!$this->formations->contains($formation)) {
             $this->formations->add($formation);
@@ -114,7 +97,7 @@ class Specialization
         return $this;
     }
 
-    public function removeFormation(Formation $formation): static
+    public function removeFormation(Formation $formation): self
     {
         if ($this->formations->removeElement($formation)) {
             // set the owning side to null (unless already changed)

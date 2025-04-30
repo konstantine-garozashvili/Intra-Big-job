@@ -32,7 +32,10 @@ class FormationController extends AbstractController
     {
         try {
             $formations = $this->formationRepository->findAll();
-            $data = $this->serializer->serialize($formations, 'json', ['groups' => 'formation:read']);
+            $data = $this->serializer->serialize($formations, 'json', [
+                'groups' => ['formation:read', 'specialization:item'],
+                'enable_max_depth' => true
+            ]);
             return new JsonResponse($data, Response::HTTP_OK, [], true);
         } catch (\Exception $e) {
             return new JsonResponse([
@@ -54,7 +57,10 @@ class FormationController extends AbstractController
             }
 
             return new JsonResponse(
-                $this->serializer->serialize($formation, 'json'),
+                $this->serializer->serialize($formation, 'json', [
+                    'groups' => ['formation:read', 'specialization:item'],
+                    'enable_max_depth' => true
+                ]),
                 Response::HTTP_OK,
                 [],
                 true
