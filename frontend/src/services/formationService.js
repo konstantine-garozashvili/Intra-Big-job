@@ -105,6 +105,39 @@ const formationService = {
     } catch (error) {
       throw error;
     }
+  },
+
+  // Upload formation image
+  uploadFormationImage: async (formationId, imageFile) => {
+    try {
+      const formData = new FormData();
+      formData.append('image', imageFile);
+
+      const response = await apiService.post(
+        `${API_URL}/${formationId}/image`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+      return response;
+    } catch (error) {
+      console.error('Error in uploadFormationImage:', error);
+      throw error;
+    }
+  },
+
+  // Delete formation image
+  deleteFormationImage: async (formationId) => {
+    try {
+      const response = await apiService.delete(`${API_URL}/${formationId}/image`);
+      return response;
+    } catch (error) {
+      console.error('Error in deleteFormationImage:', error);
+      throw error;
+    }
   }
 };
 

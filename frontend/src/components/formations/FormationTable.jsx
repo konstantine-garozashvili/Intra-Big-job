@@ -11,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from '../ui/table';
+import { Image as ImageIcon } from 'lucide-react';
 
 const FormationTable = () => {
   console.log('FormationTable component rendering');
@@ -79,10 +80,6 @@ const FormationTable = () => {
     }
   };
 
-  if (loading) {
-    console.log('Rendering loading state');
-    return <div>Chargement...</div>;
-  }
 
   if (!formations || formations.length === 0) {
     console.log('Rendering empty state');
@@ -114,6 +111,7 @@ const FormationTable = () => {
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead>Image</TableHead>
             <TableHead>Nom</TableHead>
             <TableHead>Promotion</TableHead>
             <TableHead>Description</TableHead>
@@ -125,6 +123,19 @@ const FormationTable = () => {
         <TableBody>
           {formations.map((formation) => (
             <TableRow key={formation.id}>
+              <TableCell>
+                {formation.imageUrl ? (
+                  <img
+                    src={formation.imageUrl}
+                    alt={formation.name}
+                    className="w-16 h-16 object-cover rounded"
+                  />
+                ) : (
+                  <div className="w-16 h-16 bg-gray-100 flex items-center justify-center rounded">
+                    <ImageIcon className="w-8 h-8 text-gray-400" />
+                  </div>
+                )}
+              </TableCell>
               <TableCell>{formation.name}</TableCell>
               <TableCell>{formation.promotion}</TableCell>
               <TableCell>{formation.description}</TableCell>
