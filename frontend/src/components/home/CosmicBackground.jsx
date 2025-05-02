@@ -84,7 +84,7 @@ const CosmicBackground = ({
 
         
         const maxDistance = shootingStarDirection === 'horizontal' ? canvas.width : Math.sqrt(canvas.width * canvas.width + canvas.height * canvas.height);
-        const lifespan = Math.random() < 0.6 ? // 60% de chance de disparaître en cours de route
+        const lifespan = Math.random() < 0.2 ? // 20% de chance de disparaître en cours de route
           (0.3 + Math.random() * 0.5) * maxDistance : // Disparaît entre 30% et 80% du chemin
           maxDistance * 1.2; // Traverse tout l'écran (120% pour s'assurer qu'elle sort complètement)
 
