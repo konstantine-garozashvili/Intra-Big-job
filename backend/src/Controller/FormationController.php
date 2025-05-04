@@ -89,39 +89,85 @@ class FormationController extends AbstractController
     {
         $data = json_decode($request->getContent(), true);
 
-        $formation = new Formation();
-        $formation->setName($data['name']);
-        $formation->setPromotion($data['promotion']);
-        if (isset($data['description'])) {
-            $formation->setDescription($data['description']);
+        // Vérification du JSON
+        if ($data === null) {
+            return $this->json([
+                'success' => false,
+                'message' => 'JSON invalide ou vide'
+            ], 400);
         }
 
-        // Gestion de la spécialisation
-        if (isset($data['specializationId'])) {
-            $specialization = $this->specializationRepository->find($data['specializationId']);
-            if ($specialization) {
-                $formation->setSpecialization($specialization);
+        // Vérification des champs obligatoires
+        $requiredFields = ['name', 'promotion', 'capacity', 'duration', 'dateStart'];
+        $missingFields = [];
+        foreach ($requiredFields as $field) {
+            if (!isset($data[$field])) {
+                $missingFields[] = $field;
             }
         }
+        if (!empty($missingFields)) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Champs obligatoires manquants : ' . implode(', ', $missingFields)
+            ], 400);
+        }
 
-        $this->entityManager->persist($formation);
-        $this->entityManager->flush();
+        try {
+            $formation = new Formation();
+            $formation->setName($data['name']);
+            $formation->setPromotion($data['promotion']);
+            $formation->setCapacity((int)$data['capacity']);
+            $formation->setDuration((int)$data['duration']);
+            $formation->setDateStart(new \DateTime($data['dateStart']));
+            
+            if (isset($data['description'])) {
+                $formation->setDescription($data['description']);
+            }
+            if (isset($data['location'])) {
+                $formation->setLocation($data['location']);
+            }
 
-        return $this->json([
-            'success' => true,
-            'data' => [
-                'formation' => [
-                    'id' => $formation->getId(),
-                    'name' => $formation->getName(),
-                    'promotion' => $formation->getPromotion(),
-                    'description' => $formation->getDescription(),
-                    'specialization' => $formation->getSpecialization() ? [
-                        'id' => $formation->getSpecialization()->getId(),
-                        'name' => $formation->getSpecialization()->getName()
-                    ] : null
+            // Gestion de la spécialisation
+            if (isset($data['specializationId'])) {
+                $specialization = $this->specializationRepository->find($data['specializationId']);
+                if ($specialization) {
+                    $formation->setSpecialization($specialization);
+                } else {
+                    return $this->json([
+                        'success' => false,
+                        'message' => 'Spécialisation non trouvée'
+                    ], 404);
+                }
+            }
+
+            $this->entityManager->persist($formation);
+            $this->entityManager->flush();
+
+            return $this->json([
+                'success' => true,
+                'data' => [
+                    'formation' => [
+                        'id' => $formation->getId(),
+                        'name' => $formation->getName(),
+                        'promotion' => $formation->getPromotion(),
+                        'description' => $formation->getDescription(),
+                        'capacity' => $formation->getCapacity(),
+                        'duration' => $formation->getDuration(),
+                        'dateStart' => $formation->getDateStart()->format('Y-m-d'),
+                        'location' => $formation->getLocation(),
+                        'specialization' => $formation->getSpecialization() ? [
+                            'id' => $formation->getSpecialization()->getId(),
+                            'name' => $formation->getSpecialization()->getName()
+                        ] : null
+                    ]
                 ]
-            ]
-        ], 201);
+            ], 201);
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Erreur lors de la création de la formation : ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     #[Route('/formations/{id}', name: 'api_formations_update', methods: ['PUT'])]

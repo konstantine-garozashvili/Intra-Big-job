@@ -14,6 +14,8 @@ alwaysApply: false
 
 ## Critical Rules
 
+Ignore linting issues in PHP imports.
+
 ### Read file first
 - **Severity: CRITICAL**
 - Always read the entire file contents before suggesting modifications
