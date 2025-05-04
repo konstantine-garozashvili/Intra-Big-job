@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import formationService from '../../services/formationService';
+import { formationService } from '../../services/formation.service';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -38,8 +38,10 @@ const EditFormationForm = () => {
         const specializationsData = await formationService.getSpecializations();
         console.log('[EditFormationForm] Received specializations:', specializationsData);
         
-        if (Array.isArray(specializationsData?.specializations)) {
-          setSpecializations(specializationsData.specializations);
+        if (Array.isArray(specializationsData)) {
+          setSpecializations(specializationsData);
+        } else {
+          console.error('[EditFormationForm] Invalid specializations data format');
         }
 
         // Charger les données de la formation
@@ -153,18 +155,33 @@ const EditFormationForm = () => {
     try {
       setLoading(true);
       const formDataToSubmit = {
-        ...formData,
+        name: formData.name,
+        promotion: formData.promotion,
+        description: formData.description,
+        image_url: formData.image_url,
+        specializationId: formData.specializationId,
         capacity: parseInt(formData.capacity),
         duration: parseInt(formData.duration),
-        dateStart: formData.dateStart
+        dateStart: formData.dateStart,
+        location: formData.location
       };
 
       // Mise à jour de la formation
       await formationService.updateFormation(id, formDataToSubmit);
 
       // Si une nouvelle image a été sélectionnée, la télécharger
-      if (formData.imageFile) {
-        await formationService.uploadFormationImage(id, formData.imageFile);
+      if (formData.imageFile instanceof File) {
+        const formDataImage = new FormData();
+        formDataImage.append('image', formData.imageFile);
+        
+        const imageResult = await formationService.uploadFormationImage(id, formDataImage);
+        if (imageResult.success && imageResult.image_url) {
+          setFormData(prev => ({
+            ...prev,
+            image_url: imageResult.image_url
+          }));
+          setImagePreview(imageResult.image_url);
+        }
       }
 
       toast.success('Formation mise à jour avec succès');

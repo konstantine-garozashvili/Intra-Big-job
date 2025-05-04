@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import formationService from '../../services/formationService';
+import { formationService } from '../../services/formation.service';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -34,8 +34,8 @@ const FormationForm = () => {
         const specializationsData = await formationService.getSpecializations();
         console.log('[FormationForm] Received specializations data:', specializationsData);
         
-        if (Array.isArray(specializationsData?.specializations)) {
-          setSpecializations(specializationsData.specializations);
+        if (Array.isArray(specializationsData)) {
+          setSpecializations(specializationsData);
         } else {
           console.error('[FormationForm] Unexpected specializations data structure:', specializationsData);
           toast.error('Structure de données de spécialisation inattendue');
