@@ -15,7 +15,7 @@ const AllFormations = () => {
       id: 'web',
       title: 'Développement Web',
       description: 'Maîtrisez HTML, CSS, JavaScript et les frameworks modernes pour créer des sites web et applications web interactifs et responsifs.',
-      image: '/assets/images/course-web.jpg',
+      image: '/assets/images/formations/web-dev.webp',
       color: 'from-blue-500 to-cyan-400',
       modules: ['HTML/CSS', 'JavaScript', 'React', 'Node.js', 'PHP/MySQL'],
       duration: '9 mois'
@@ -24,7 +24,7 @@ const AllFormations = () => {
       id: 'cybersecurity',
       title: 'Cybersécurité',
       description: 'Apprenez à protéger les systèmes informatiques contre les menaces et vulnérabilités avec des techniques avancées de sécurité.',
-      image: '/assets/images/course-security.jpg',
+      image: '/assets/images/formations/cybersecurity.webp',
       color: 'from-green-500 to-emerald-400',
       modules: ['Sécurité réseau', 'Cryptographie', 'Ethical Hacking', 'Forensics', 'Sécurité Cloud'],
       duration: '10 mois'
@@ -33,7 +33,7 @@ const AllFormations = () => {
       id: 'ai',
       title: 'Intelligence Artificielle',
       description: 'Découvrez le machine learning, le deep learning et leurs applications pratiques dans divers domaines industriels.',
-      image: '/assets/images/course-ai.jpg',
+      image: '/assets/images/formations/ia.webp',
       color: 'from-purple-500 to-pink-500',
       modules: ['Machine Learning', 'Deep Learning', 'NLP', 'Computer Vision', 'Éthique de l\'IA'],
       duration: '12 mois'
@@ -42,7 +42,7 @@ const AllFormations = () => {
       id: 'data-science',
       title: 'Science des Données',
       description: 'Analysez et visualisez des données complexes pour en extraire des insights précieux et prendre des décisions basées sur les données.',
-      image: '/assets/images/course-data.jpg',
+      image: '/assets/images/formations/data-science.webp',
       color: 'from-indigo-500 to-blue-600',
       modules: ['Python pour Data Science', 'Statistiques', 'Visualisation', 'Big Data', 'Business Intelligence'],
       duration: '10 mois'
@@ -51,7 +51,7 @@ const AllFormations = () => {
       id: 'mobile',
       title: 'Développement Mobile',
       description: 'Créez des applications mobiles pour iOS et Android avec des frameworks natifs et cross-platform comme React Native et Flutter.',
-      image: '/assets/images/course-mobile.jpg',
+      image: '/assets/images/formations/mobile-dev.webp',
       color: 'from-pink-500 to-red-500',
       modules: ['iOS (Swift)', 'Android (Kotlin)', 'React Native', 'Flutter', 'UX/UI Mobile'],
       duration: '8 mois'
@@ -60,7 +60,7 @@ const AllFormations = () => {
       id: 'game',
       title: 'Développement de Jeux',
       description: 'Concevez et créez des jeux vidéo captivants en utilisant des moteurs de jeu professionnels comme Unity et Unreal Engine.',
-      image: '/assets/images/course-game.jpg',
+      image: '/assets/images/formations/game-dev.webp',
       color: 'from-yellow-500 to-orange-500',
       modules: ['Game Design', 'Unity', 'Unreal Engine', '3D Modeling', 'Game Physics'],
       duration: '11 mois'
@@ -106,10 +106,14 @@ const AllFormations = () => {
               }}
             >
               <div 
-                className="h-48 bg-cover bg-center"
-                style={{ backgroundImage: `url(${formation.image})` }}
+                className="h-48 relative overflow-hidden flex items-center justify-center bg-gray-900"
               >
-                <div className={`h-full w-full bg-gradient-to-tr ${formation.color} opacity-80`}></div>
+                <img 
+                  src={formation.image} 
+                  alt={formation.title}
+                  className="w-full h-48 object-cover object-[center_30%] z-10 relative"
+                />
+                <div className="absolute inset-0 bg-black bg-opacity-40"></div>
               </div>
               
               <div className="p-6">

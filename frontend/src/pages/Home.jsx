@@ -132,8 +132,13 @@ const Home = () => {
                 transition={{ duration: 0.5, delay: 0.1 }}
                 whileHover={{ y: -10, transition: { duration: 0.3 } }}
               >
-                <div className="h-40 bg-gradient-to-r from-blue-500 to-cyan-400 flex items-center justify-center">
-                  <span className="text-4xl">💻</span>
+                <div className="h-40 bg-gray-900 flex items-center justify-center relative overflow-hidden">
+                  <img 
+                    src="/assets/images/formations/web-dev.webp" 
+                    alt="Développement Web"
+                    className="w-full h-40 object-cover object-[center_30%] z-10 relative"
+                  />
+                  <div className="absolute inset-0 bg-white bg-opacity-40"></div>
                 </div>
                 <div className="p-6">
                   <h3 className="text-xl font-bold mb-2">Développement Web</h3>
@@ -152,8 +157,13 @@ const Home = () => {
                 transition={{ duration: 0.5, delay: 0.2 }}
                 whileHover={{ y: -10, transition: { duration: 0.3 } }}
               >
-                <div className="h-40 bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
-                  <span className="text-4xl">🤖</span>
+                <div className="h-40 bg-gray-900 flex items-center justify-center relative overflow-hidden">
+                  <img 
+                    src="/assets/images/formations/ia.webp" 
+                    alt="Intelligence Artificielle"
+                    className="w-full h-40 object-cover object-[center_30%] z-10 relative"
+                  />
+                  <div className="absolute inset-0 bg-white bg-opacity-40"></div>
                 </div>
                 <div className="p-6">
                   <h3 className="text-xl font-bold mb-2">Intelligence Artificielle</h3>
@@ -172,8 +182,13 @@ const Home = () => {
                 transition={{ duration: 0.5, delay: 0.3 }}
                 whileHover={{ y: -10, transition: { duration: 0.3 } }}
               >
-                <div className="h-40 bg-gradient-to-r from-green-500 to-emerald-400 flex items-center justify-center">
-                  <span className="text-4xl">🔐</span>
+                <div className="h-40 bg-gray-900 flex items-center justify-center relative overflow-hidden">
+                  <img 
+                    src="/assets/images/formations/cybersecurity.webp" 
+                    alt="Cybersécurité"
+                    className="w-full h-40 object-cover object-[center_30%] z-10 relative"
+                  />
+                  <div className="absolute inset-0 bg-white bg-opacity-40"></div>
                 </div>
                 <div className="p-6">
                   <h3 className="text-xl font-bold mb-2">Cybersécurité</h3>
