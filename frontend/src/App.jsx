@@ -138,6 +138,7 @@ const TicketServiceList = lazy(() =>
 // Formation components
 const FormationForm = lazy(() => import("./components/formations/FormationForm"));
 const EditFormationForm = lazy(() => import("./components/formations/EditFormationForm"));
+const Act = lazy(() => import("./components/Formation/Act/index"));
 
 // Fonction optimisée pour le préchargement intelligent des pages
 // Ne charge que les pages pertinentes en fonction du contexte et du chemin actuel
@@ -383,6 +384,14 @@ const App = () => {
                           fallback={<Navigate to="/dashboard" replace />}
                         >
                           <EditFormationForm />
+                        </RoleGuard>
+                      } />
+                      <Route path="list" element={
+                        <RoleGuard 
+                          roles={[ROLES.STUDENT, ROLES.GUEST]} 
+                          fallback={<Navigate to="/dashboard" replace />}
+                        >
+                          <Act />
                         </RoleGuard>
                       } />
                     </Route>
