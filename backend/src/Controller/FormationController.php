@@ -14,6 +14,8 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
+use App\Service\FormationService;
 
 #[Route('/api')]
 class FormationController extends AbstractController
@@ -38,6 +40,7 @@ class FormationController extends AbstractController
                 'name' => $formation->getName(),
                 'promotion' => $formation->getPromotion(),
                 'description' => $formation->getDescription(),
+                'image_url' => $formation->getImageUrl(),
                 'specialization' => $formation->getSpecialization() ? [
                     'id' => $formation->getSpecialization()->getId(),
                     'name' => $formation->getSpecialization()->getName()
@@ -70,6 +73,7 @@ class FormationController extends AbstractController
             'name' => $formation->getName(),
             'promotion' => $formation->getPromotion(),
             'description' => $formation->getDescription(),
+            'image_url' => $formation->getImageUrl(),
             'specialization' => $formation->getSpecialization() ? [
                 'id' => $formation->getSpecialization()->getId(),
                 'name' => $formation->getSpecialization()->getName()
@@ -98,10 +102,10 @@ class FormationController extends AbstractController
         }
 
         // Vérification des champs obligatoires
-        $requiredFields = ['name', 'promotion', 'capacity', 'duration', 'dateStart'];
+        $requiredFields = ['name', 'promotion', 'capacity', 'duration', 'dateStart', 'image_url'];
         $missingFields = [];
         foreach ($requiredFields as $field) {
-            if (!isset($data[$field])) {
+            if (!isset($data[$field]) || empty($data[$field])) {
                 $missingFields[] = $field;
             }
         }
@@ -125,6 +129,9 @@ class FormationController extends AbstractController
             }
             if (isset($data['location'])) {
                 $formation->setLocation($data['location']);
+            }
+            if (isset($data['image_url'])) {
+                $formation->setImageUrl($data['image_url']);
             }
 
             // Gestion de la spécialisation
@@ -155,6 +162,7 @@ class FormationController extends AbstractController
                         'duration' => $formation->getDuration(),
                         'dateStart' => $formation->getDateStart()->format('Y-m-d'),
                         'location' => $formation->getLocation(),
+                        'image_url' => $formation->getImageUrl(),
                         'specialization' => $formation->getSpecialization() ? [
                             'id' => $formation->getSpecialization()->getId(),
                             'name' => $formation->getSpecialization()->getName()
@@ -193,6 +201,9 @@ class FormationController extends AbstractController
         if (isset($data['description'])) {
             $formation->setDescription($data['description']);
         }
+        if (isset($data['image_url'])) {
+            $formation->setImageUrl($data['image_url']);
+        }
 
         // Gestion de la spécialisation
         if (isset($data['specializationId'])) {
@@ -212,6 +223,7 @@ class FormationController extends AbstractController
                     'name' => $formation->getName(),
                     'promotion' => $formation->getPromotion(),
                     'description' => $formation->getDescription(),
+                    'image_url' => $formation->getImageUrl(),
                     'specialization' => $formation->getSpecialization() ? [
                         'id' => $formation->getSpecialization()->getId(),
                         'name' => $formation->getSpecialization()->getName()
@@ -239,6 +251,48 @@ class FormationController extends AbstractController
         return $this->json([
             'success' => true,
             'message' => 'Formation supprimée avec succès'
+        ]);
+    }
+
+    #[Route('/formations/{id}/image', name: 'api_formations_upload_image', methods: ['POST'])]
+    public function uploadFormationImage(
+        int $id,
+        Request $request,
+        FormationService $formationService
+    ): JsonResponse {
+        $formation = $this->formationRepository->find($id);
+
+        if (!$formation) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Formation non trouvée'
+            ], 404);
+        }
+
+        /** @var UploadedFile $file */
+        $file = $request->files->get('image');
+        if (!$file) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Aucun fichier image envoyé'
+            ], 400);
+        }
+
+        $result = $formationService->uploadFormationImage($formation, $file);
+
+        if (!$result['success']) {
+            return $this->json([
+                'success' => false,
+                'message' => $result['message']
+            ], 500);
+        }
+
+        return $this->json([
+            'success' => true,
+            'message' => $result['message'],
+            'data' => [
+                'image_url' => $result['data']['image_url']
+            ]
         ]);
     }
 } 

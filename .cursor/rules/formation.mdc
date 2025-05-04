@@ -1,0 +1,72 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+curl --request POST \
+--url http://localhost:8000/api/login_check \
+--header 'Content-Type: application/json' \
+--data '{
+"username": "{role}@bigproject.com",
+"password": "Password123@"
+}'
+
+You can replace {role} by : student/admin/superadmin/recruiter/guest/hr/teacher
+
+# Liste des formations
+curl --request GET \
+  --url http://localhost:8000/api/formations \
+  --header "Authorization: Bearer <TOKEN>"
+
+# Détail d'une formation
+curl --request GET \
+  --url http://localhost:8000/api/formations/{id} \
+  --header "Authorization: Bearer <TOKEN>"
+
+# Création d'une formation
+curl --request POST \
+  --url http://localhost:8000/api/formations \
+  --header "Authorization: Bearer <TOKEN>" \
+  --header "Content-Type: application/json" \
+  --data '{
+    "name": "Formation Test",
+    "promotion": "2025",
+    "description": "Description de la formation",
+    "specializationId": 12,
+    "capacity": 30,
+    "duration": 12,
+    "dateStart": "2025-09-01",
+    "location": "Paris"
+  }'
+
+# Modification d'une formation
+curl --request PUT \
+  --url http://localhost:8000/api/formations/{id} \
+  --header "Authorization: Bearer <TOKEN>" \
+  --header "Content-Type: application/json" \
+  --data '{
+    "name": "Formation Modifiée",
+    "promotion": "2026",
+    "description": "Nouvelle description",
+    "specializationId": 12,
+    "capacity": 40,
+    "duration": 18,
+    "dateStart": "2026-01-01",
+    "location": "Lyon"
+  }'
+
+# Suppression d'une formation
+curl --request DELETE \
+  --url http://localhost:8000/api/formations/{id} \
+  --header "Authorization: Bearer <TOKEN>"
+
+# Upload d'une image d'illustration pour une formation
+curl --request POST \
+  --url http://localhost:8000/api/formations/{id}/image \
+  --header "Authorization: Bearer <TOKEN>" \
+
+
+  -F "image=@/chemin/vers/ton/image.jpg"
+
+
+  
