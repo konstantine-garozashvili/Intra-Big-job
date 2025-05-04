@@ -21,6 +21,8 @@ class SpecializationFixtures extends Fixture implements DependentFixtureInterfac
     public const SPEC_BUSINESS_ANALYSIS = 'spec-business-analysis';
     public const SPEC_DATA_SCIENCE = 'spec-data-science';
     public const SPEC_MACHINE_LEARNING = 'spec-machine-learning';
+    public const SPEC_DEVOPS = 'spec-devops';
+    public const SPEC_CYBERSECURITY = 'spec-cybersecurity';
 
     public function load(ObjectManager $manager): void
     {
@@ -68,6 +70,14 @@ class SpecializationFixtures extends Fixture implements DependentFixtureInterfac
             self::SPEC_MACHINE_LEARNING => [
                 'name' => 'Machine Learning',
                 'domain' => DomainFixtures::DOMAIN_DATA
+            ],
+            self::SPEC_DEVOPS => [
+                'name' => 'DevOps & Cloud',
+                'domain' => DomainFixtures::DOMAIN_DEV
+            ],
+            self::SPEC_CYBERSECURITY => [
+                'name' => 'Cybersécurité',
+                'domain' => DomainFixtures::DOMAIN_DEV
             ],
         ];
 
