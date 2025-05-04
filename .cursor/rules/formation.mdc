@@ -7,7 +7,7 @@ curl --request POST \
 --url http://localhost:8000/api/login_check \
 --header 'Content-Type: application/json' \
 --data '{
-"username": "{role}@bigproject.com",
+"username": "recruiter@bigproject.com",
 "password": "Password123@"
 }'
 
@@ -67,6 +67,7 @@ curl --request POST \
 
 
   -F "image=@/chemin/vers/ton/image.jpg"
+
 
 
   

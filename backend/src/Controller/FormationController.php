@@ -5,6 +5,8 @@ namespace App\Controller;
 use App\Entity\Formation;
 use App\Repository\FormationRepository;
 use App\Domains\Global\Repository\SpecializationRepository;
+use App\Service\FormationService;
+use App\Service\S3StorageService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -15,7 +17,6 @@ use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
-use App\Service\FormationService;
 
 #[Route('/api')]
 class FormationController extends AbstractController
@@ -25,7 +26,8 @@ class FormationController extends AbstractController
         private readonly SpecializationRepository $specializationRepository,
         private readonly EntityManagerInterface $entityManager,
         private readonly SerializerInterface $serializer,
-        private readonly ValidatorInterface $validator
+        private readonly ValidatorInterface $validator,
+        private readonly S3StorageService $s3StorageService
     ) {
     }
 
@@ -35,12 +37,23 @@ class FormationController extends AbstractController
         $formations = $this->formationRepository->findAll();
         
         $data = array_map(function(Formation $formation) {
+            $imageUrl = null;
+            if ($formation->getImageUrl()) {
+                // Vérifier si l'URL contient déjà le domaine S3
+                $imageUrl = $formation->getImageUrl();
+                if (!str_contains($imageUrl, 'bigproject-storage.s3')) {
+                    $imageUrl = $this->s3StorageService->getPresignedUrl($imageUrl);
+                }
+                // Éviter le double encodage en décodant d'abord l'URL
+                $imageUrl = urldecode($imageUrl);
+            }
+
             return [
                 'id' => $formation->getId(),
                 'name' => $formation->getName(),
                 'promotion' => $formation->getPromotion(),
                 'description' => $formation->getDescription(),
-                'image_url' => $formation->getImageUrl(),
+                'image_url' => $imageUrl,
                 'specialization' => $formation->getSpecialization() ? [
                     'id' => $formation->getSpecialization()->getId(),
                     'name' => $formation->getSpecialization()->getName()
@@ -68,12 +81,23 @@ class FormationController extends AbstractController
             ], 404);
         }
 
+        $imageUrl = null;
+        if ($formation->getImageUrl()) {
+            // Vérifier si l'URL contient déjà le domaine S3
+            $imageUrl = $formation->getImageUrl();
+            if (!str_contains($imageUrl, 'bigproject-storage.s3')) {
+                $imageUrl = $this->s3StorageService->getPresignedUrl($imageUrl);
+            }
+            // Éviter le double encodage en décodant d'abord l'URL
+            $imageUrl = urldecode($imageUrl);
+        }
+
         $data = [
             'id' => $formation->getId(),
             'name' => $formation->getName(),
             'promotion' => $formation->getPromotion(),
             'description' => $formation->getDescription(),
-            'image_url' => $formation->getImageUrl(),
+            'image_url' => $imageUrl,
             'specialization' => $formation->getSpecialization() ? [
                 'id' => $formation->getSpecialization()->getId(),
                 'name' => $formation->getSpecialization()->getName()
@@ -89,23 +113,27 @@ class FormationController extends AbstractController
     }
 
     #[Route('/formations', name: 'api_formations_create', methods: ['POST'])]
-    public function createFormation(Request $request): JsonResponse
+    public function createFormation(Request $request, FormationService $formationService): JsonResponse
     {
-        $data = json_decode($request->getContent(), true);
-
-        // Vérification du JSON
-        if ($data === null) {
-            return $this->json([
-                'success' => false,
-                'message' => 'JSON invalide ou vide'
-            ], 400);
-        }
+        // Récupérer les champs texte depuis le formulaire multipart
+        $name = $request->request->get('name');
+        $promotion = $request->request->get('promotion');
+        $capacity = $request->request->get('capacity');
+        $duration = $request->request->get('duration');
+        $dateStart = $request->request->get('dateStart');
+        $description = $request->request->get('description');
+        $location = $request->request->get('location');
+        $specializationId = $request->request->get('specializationId');
+        /** @var UploadedFile|null $imageFile */
+        $imageFile = $request->files->get('image');
 
         // Vérification des champs obligatoires
-        $requiredFields = ['name', 'promotion', 'capacity', 'duration', 'dateStart', 'image_url'];
+        $requiredFields = ['name', 'promotion', 'capacity', 'duration', 'dateStart', 'image'];
         $missingFields = [];
         foreach ($requiredFields as $field) {
-            if (!isset($data[$field]) || empty($data[$field])) {
+            if ($field === 'image' && !$imageFile) {
+                $missingFields[] = $field;
+            } elseif ($field !== 'image' && empty($$field)) {
                 $missingFields[] = $field;
             }
         }
@@ -118,25 +146,20 @@ class FormationController extends AbstractController
 
         try {
             $formation = new Formation();
-            $formation->setName($data['name']);
-            $formation->setPromotion($data['promotion']);
-            $formation->setCapacity((int)$data['capacity']);
-            $formation->setDuration((int)$data['duration']);
-            $formation->setDateStart(new \DateTime($data['dateStart']));
-            
-            if (isset($data['description'])) {
-                $formation->setDescription($data['description']);
+            $formation->setName($name);
+            $formation->setPromotion($promotion);
+            $formation->setCapacity((int)$capacity);
+            $formation->setDuration((int)$duration);
+            $formation->setDateStart(new \DateTime($dateStart));
+            if ($description) {
+                $formation->setDescription($description);
             }
-            if (isset($data['location'])) {
-                $formation->setLocation($data['location']);
+            if ($location) {
+                $formation->setLocation($location);
             }
-            if (isset($data['image_url'])) {
-                $formation->setImageUrl($data['image_url']);
-            }
-
             // Gestion de la spécialisation
-            if (isset($data['specializationId'])) {
-                $specialization = $this->specializationRepository->find($data['specializationId']);
+            if ($specializationId) {
+                $specialization = $this->specializationRepository->find($specializationId);
                 if ($specialization) {
                     $formation->setSpecialization($specialization);
                 } else {
@@ -146,6 +169,16 @@ class FormationController extends AbstractController
                     ], 404);
                 }
             }
+
+            // Upload de l'image et association à la formation
+            $result = $formationService->uploadFormationImage($formation, $imageFile);
+            if (!$result['success']) {
+                return $this->json([
+                    'success' => false,
+                    'message' => $result['message']
+                ], 500);
+            }
+            $formation->setImageUrl($result['data']['image_url']);
 
             $this->entityManager->persist($formation);
             $this->entityManager->flush();

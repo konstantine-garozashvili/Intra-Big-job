@@ -137,6 +137,7 @@ const TicketServiceList = lazy(() =>
 
 // Formation components
 const FormationForm = lazy(() => import("./components/formations/FormationForm"));
+const EditFormationForm = lazy(() => import("./components/formations/EditFormationForm"));
 
 // Fonction optimisée pour le préchargement intelligent des pages
 // Ne charge que les pages pertinentes en fonction du contexte et du chemin actuel
@@ -381,7 +382,7 @@ const App = () => {
                           roles={[ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.RECRUITER]} 
                           fallback={<Navigate to="/dashboard" replace />}
                         >
-                          <FormationForm />
+                          <EditFormationForm />
                         </RoleGuard>
                       } />
                     </Route>

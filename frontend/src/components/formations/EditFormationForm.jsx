@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import formationService from '../../services/formationService';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -8,46 +8,81 @@ import { Textarea } from '../ui/textarea';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Upload } from 'lucide-react';
+import { Upload, Trash2 } from 'lucide-react';
 
-const FormationForm = () => {
+const EditFormationForm = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
+  const { id } = useParams();
+  const [loading, setLoading] = useState(true);
   const [specializations, setSpecializations] = useState([]);
   const [imagePreview, setImagePreview] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     promotion: '',
     description: '',
+    image_url: '',
+    specializationId: '',
     capacity: '',
     duration: '',
     dateStart: '',
-    location: '',
-    specializationId: '',
-    imageFile: null
+    location: ''
   });
 
   useEffect(() => {
-    const loadSpecializations = async () => {
+    const loadData = async () => {
       try {
-        console.log('[FormationForm] Loading specializations');
+        setLoading(true);
+        console.log('[EditFormationForm] Loading formation data for id:', id);
+        
+        // Charger les spécialisations d'abord
         const specializationsData = await formationService.getSpecializations();
-        console.log('[FormationForm] Received specializations data:', specializationsData);
+        console.log('[EditFormationForm] Received specializations:', specializationsData);
         
         if (Array.isArray(specializationsData?.specializations)) {
           setSpecializations(specializationsData.specializations);
-        } else {
-          console.error('[FormationForm] Unexpected specializations data structure:', specializationsData);
-          toast.error('Structure de données de spécialisation inattendue');
+        }
+
+        // Charger les données de la formation
+        const formationData = await formationService.getFormation(id);
+        console.log('[EditFormationForm] Received formation data:', formationData);
+        
+        if (!formationData) {
+          console.error('[EditFormationForm] No formation data received');
+          toast.error('Erreur lors du chargement de la formation');
+          return;
+        }
+
+        // Formater la date au format YYYY-MM-DD pour l'input date
+        const dateStart = formationData.dateStart ? new Date(formationData.dateStart).toISOString().split('T')[0] : '';
+
+        setFormData({
+          name: formationData.name || '',
+          promotion: formationData.promotion || '',
+          description: formationData.description || '',
+          image_url: formationData.image_url || '',
+          specializationId: formationData.specialization?.id?.toString() || '',
+          capacity: formationData.capacity?.toString() || '',
+          duration: formationData.duration?.toString() || '',
+          dateStart: dateStart,
+          location: formationData.location || ''
+        });
+
+        // Si une image existe, la prévisualiser
+        if (formationData.image_url) {
+          setImagePreview(formationData.image_url);
         }
       } catch (error) {
-        console.error('[FormationForm] Error loading specializations:', error);
-        toast.error('Erreur lors du chargement des spécialisations');
+        console.error('[EditFormationForm] Error loading data:', error);
+        toast.error('Erreur lors du chargement de la formation');
+      } finally {
+        setLoading(false);
       }
     };
 
-    loadSpecializations();
-  }, []);
+    if (id) {
+      loadData();
+    }
+  }, [id]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -83,6 +118,23 @@ const FormationForm = () => {
     }
   };
 
+  const handleImageDelete = async () => {
+    if (!id || !imagePreview) return;
+
+    try {
+      setLoading(true);
+      await formationService.deleteFormationImage(id);
+      setImagePreview(null);
+      setFormData(prev => ({ ...prev, imageFile: null }));
+      toast.success('Image supprimée avec succès');
+    } catch (error) {
+      console.error('Error deleting image:', error);
+      toast.error('Erreur lors de la suppression de l\'image');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const validateForm = () => {
     const requiredFields = ['name', 'promotion', 'capacity', 'duration', 'dateStart', 'specializationId'];
     const missingFields = requiredFields.filter(field => !formData[field]);
@@ -107,12 +159,19 @@ const FormationForm = () => {
         dateStart: formData.dateStart
       };
 
-      const response = await formationService.createFormation(formDataToSubmit);
-      toast.success('Formation créée avec succès');
+      // Mise à jour de la formation
+      await formationService.updateFormation(id, formDataToSubmit);
+
+      // Si une nouvelle image a été sélectionnée, la télécharger
+      if (formData.imageFile) {
+        await formationService.uploadFormationImage(id, formData.imageFile);
+      }
+
+      toast.success('Formation mise à jour avec succès');
       navigate('/formations');
     } catch (error) {
-      console.error('Error creating formation:', error);
-      toast.error(error.message || 'Erreur lors de la création de la formation');
+      console.error('Error updating formation:', error);
+      toast.error(error.message || 'Erreur lors de la mise à jour de la formation');
     } finally {
       setLoading(false);
     }
@@ -122,7 +181,7 @@ const FormationForm = () => {
     <div className="container mx-auto p-4">
       <Card>
         <CardHeader>
-          <CardTitle>Nouvelle Formation</CardTitle>
+          <CardTitle>Modifier la Formation</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -235,7 +294,21 @@ const FormationForm = () => {
                         src={imagePreview}
                         alt="Prévisualisation"
                         className="w-32 h-32 object-cover rounded-lg"
+                        onError={(e) => {
+                          console.error('[EditFormationForm] Image load error:', e);
+                          e.target.onerror = null;
+                        }}
                       />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-0 right-0 -mt-2 -mr-2"
+                        onClick={handleImageDelete}
+                        disabled={loading}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   ) : (
                     <div className="w-32 h-32 border-2 border-dashed rounded-lg flex items-center justify-center">
@@ -258,7 +331,7 @@ const FormationForm = () => {
 
             <div className="flex gap-4">
               <Button type="submit" disabled={loading}>
-                {loading ? 'Création...' : 'Créer'}
+                {loading ? 'Enregistrement...' : 'Mettre à jour'}
               </Button>
               <Button
                 type="button"
@@ -275,4 +348,4 @@ const FormationForm = () => {
   );
 };
 
-export default FormationForm; 
+export default EditFormationForm; 
