@@ -3,6 +3,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { useUserData } from '@/hooks/useDashboardQueries';
 import { motion } from 'framer-motion';
 import axios from 'axios';
+import DashboardHeader from '@/components/shared/DashboardHeader';
 
 /**
  * Tableau de bord spécifique pour les invités
@@ -31,11 +32,11 @@ const GuestDashboard = () => {
     return roleAliases[role] || role;
   }, [user]);
 
-
-
-
-
-
+  return (
+    <DashboardLayout>
+      <DashboardHeader user={user} roleTitle="Invité" />
+    </DashboardLayout>
+  );
 };
 
 export default GuestDashboard; 

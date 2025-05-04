@@ -44,13 +44,9 @@ export const formationApi = {
    * @param {number} id - ID de la formation
    * @param {FormData} formData - Données de l'image
    */
-  uploadImage: (id, imageFile) => {
-    const formData = new FormData();
-    formData.append('image', imageFile);
-    return apiService.post(`${API_URL}/${id}/image`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
-  },
+  uploadImage: (id, formData) => apiService.post(`${API_URL}/${id}/image`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
 
   /**
    * Supprime l'image d'une formation

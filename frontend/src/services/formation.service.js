@@ -116,22 +116,49 @@ export const formationService = {
         throw new Error('ID de formation ou fichier image manquant');
       }
 
-      const response = await formationApi.uploadImage(formationId, formData);
-      const data = normalizeResponse(response.data);
-
-      // Check if the response indicates success
-      if (!data.success) {
-        throw new Error(data.message || 'Erreur lors du téléchargement de l\'image');
+      // Validate that formData contains an image file
+      const imageFile = formData.get('image');
+      if (!imageFile || !(imageFile instanceof File)) {
+        throw new Error('Fichier image invalide');
       }
 
-      // Return the normalized data
+      // Log the FormData content for debugging
+      console.log('[FormationService] Uploading image:', {
+        formationId,
+        fileName: imageFile.name,
+        fileType: imageFile.type,
+        fileSize: imageFile.size
+      });
+
+      const response = await formationApi.uploadImage(formationId, formData);
+      
+      // Log the response for debugging
+      console.log('[FormationService] Upload response:', response);
+
+      // Check if the response has data
+      if (!response?.data) {
+        console.error('[FormationService] Invalid response:', response);
+        throw new Error('Réponse invalide du serveur');
+      }
+
+      // Get the image URL from the response
+      const imageUrl = response.data.data?.image_url || response.data.image_url;
+      if (!imageUrl) {
+        console.error('[FormationService] No image URL in response:', response.data);
+        throw new Error('URL de l\'image manquante dans la réponse');
+      }
+
+      // Clean and return the image URL
+      const cleanedUrl = cleanImageUrl(imageUrl);
+      console.log('[FormationService] Upload successful:', { originalUrl: imageUrl, cleanedUrl });
+
       return {
         success: true,
-        image_url: data.data?.image_url || data.image_url
+        image_url: cleanedUrl
       };
     } catch (error) {
       console.error('[FormationService] Error uploading image:', error);
-      throw new Error(error.message || 'Erreur lors du téléchargement de l\'image');
+      throw error instanceof Error ? error : new Error('Erreur lors du téléchargement de l\'image');
     }
   },
 

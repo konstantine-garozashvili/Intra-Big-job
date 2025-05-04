@@ -104,19 +104,31 @@ const EditFormationForm = () => {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) { // 2MB limit
+      // Validate file size (2MB)
+      if (file.size > 2 * 1024 * 1024) {
         toast.error('L\'image ne doit pas dépasser 2MB');
+        e.target.value = ''; // Reset input
         return;
       }
-      if (!file.type.startsWith('image/')) {
-        toast.error('Le fichier doit être une image');
+
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        toast.error('Format de fichier non supporté. Utilisez JPG, PNG, GIF ou WEBP');
+        e.target.value = ''; // Reset input
         return;
       }
-      setFormData(prev => ({
-        ...prev,
-        imageFile: file
-      }));
-      setImagePreview(URL.createObjectURL(file));
+
+      // Create a new FileReader
+      const reader = new FileReader();
+      reader.onload = () => {
+        setImagePreview(reader.result);
+        setFormData(prev => ({
+          ...prev,
+          imageFile: file
+        }));
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -172,22 +184,40 @@ const EditFormationForm = () => {
       // Si une nouvelle image a été sélectionnée, la télécharger
       if (formData.imageFile instanceof File) {
         const formDataImage = new FormData();
-        formDataImage.append('image', formData.imageFile);
-        
-        const imageResult = await formationService.uploadFormationImage(id, formDataImage);
-        if (imageResult.success && imageResult.image_url) {
-          setFormData(prev => ({
-            ...prev,
-            image_url: imageResult.image_url
-          }));
-          setImagePreview(imageResult.image_url);
+        formDataImage.append('image', formData.imageFile, formData.imageFile.name);
+
+        try {
+          console.log('[EditFormationForm] Uploading image...', {
+            fileName: formData.imageFile.name,
+            fileType: formData.imageFile.type,
+            fileSize: formData.imageFile.size
+          });
+
+          const imageResult = await formationService.uploadFormationImage(id, formDataImage);
+          console.log('[EditFormationForm] Image upload result:', imageResult);
+
+          if (imageResult.success && imageResult.image_url) {
+            setFormData(prev => ({
+              ...prev,
+              image_url: imageResult.image_url,
+              imageFile: null // Reset the imageFile after successful upload
+            }));
+            setImagePreview(imageResult.image_url);
+          } else {
+            console.error('[EditFormationForm] Invalid image upload result:', imageResult);
+            throw new Error('Résultat invalide du téléchargement de l\'image');
+          }
+        } catch (imageError) {
+          console.error('[EditFormationForm] Image upload error:', imageError);
+          toast.error(imageError.message || 'Erreur lors du téléchargement de l\'image');
+          return; // Stop here if image upload fails
         }
       }
 
       toast.success('Formation mise à jour avec succès');
       navigate('/formations');
     } catch (error) {
-      console.error('Error updating formation:', error);
+      console.error('[EditFormationForm] Form submission error:', error);
       toast.error(error.message || 'Erreur lors de la mise à jour de la formation');
     } finally {
       setLoading(false);
@@ -305,43 +335,37 @@ const EditFormationForm = () => {
               <div className="space-y-4">
                 <Label>Image de la formation</Label>
                 <div className="flex items-center space-x-4">
-                  {imagePreview ? (
-                    <div className="relative">
+                  <div className="relative">
+                    {imagePreview ? (
                       <img
                         src={imagePreview}
                         alt="Prévisualisation"
                         className="w-32 h-32 object-cover rounded-lg"
                         onError={(e) => {
                           console.error('[EditFormationForm] Image load error:', e);
-                          e.target.onerror = null;
+                          e.target.src = '/placeholder.png';
                         }}
                       />
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="icon"
-                        className="absolute top-0 right-0 -mt-2 -mr-2"
-                        onClick={handleImageDelete}
-                        disabled={loading}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="w-32 h-32 border-2 border-dashed rounded-lg flex items-center justify-center">
-                      <label className="cursor-pointer flex flex-col items-center">
+                    ) : (
+                      <div className="w-32 h-32 border-2 border-dashed rounded-lg flex items-center justify-center">
                         <Upload className="h-8 w-8 text-gray-400" />
-                        <span className="text-sm text-gray-500">Upload</span>
-                        <input
-                          type="file"
-                          className="hidden"
-                          accept="image/*"
-                          onChange={handleImageChange}
-                          disabled={loading}
-                        />
-                      </label>
-                    </div>
-                  )}
+                      </div>
+                    )}
+                    <label className="absolute inset-0 cursor-pointer flex items-center justify-center bg-black bg-opacity-0 hover:bg-opacity-50 transition-opacity rounded-lg group">
+                      <div className="hidden group-hover:flex flex-col items-center text-white">
+                        <Upload className="h-8 w-8" />
+                        <span className="text-sm">Changer l'image</span>
+                      </div>
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept="image/jpeg,image/png,image/gif,image/webp"
+                        onChange={handleImageChange}
+                        disabled={loading}
+                        key={formData.imageFile ? 'has-file' : 'no-file'}
+                      />
+                    </label>
+                  </div>
                 </div>
               </div>
             </div>
