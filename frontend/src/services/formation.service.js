@@ -14,7 +14,11 @@ export const formationService = {
       const data = normalizeResponse(response.data);
       return data?.formations?.map(formation => ({
         ...formation,
-        image_url: cleanImageUrl(formation.image_url)
+        image_url: cleanImageUrl(formation.image_url),
+        dateStart: formation.dateStart ? new Date(formation.dateStart) : null,
+        students: formation.students || [],
+        capacity: parseInt(formation.capacity) || 0,
+        duration: parseInt(formation.duration) || 0
       })) || [];
     } catch (error) {
       throw new Error(handleApiError(error));
@@ -36,7 +40,11 @@ export const formationService = {
 
       return {
         ...formation,
-        image_url: cleanImageUrl(formation.image_url)
+        image_url: cleanImageUrl(formation.image_url),
+        dateStart: formation.dateStart ? new Date(formation.dateStart) : null,
+        students: formation.students || [],
+        capacity: parseInt(formation.capacity) || 0,
+        duration: parseInt(formation.duration) || 0
       };
     } catch (error) {
       throw new Error(handleApiError(error));

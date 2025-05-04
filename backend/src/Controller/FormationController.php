@@ -53,7 +53,18 @@ class FormationController extends AbstractController
                 'name' => $formation->getName(),
                 'promotion' => $formation->getPromotion(),
                 'description' => $formation->getDescription(),
+                'capacity' => $formation->getCapacity(),
+                'dateStart' => $formation->getDateStart()->format('Y-m-d'),
+                'location' => $formation->getLocation(),
+                'duration' => $formation->getDuration(),
                 'image_url' => $imageUrl,
+                'students' => array_map(function($student) {
+                    return [
+                        'id' => $student->getId(),
+                        'firstName' => $student->getFirstName(),
+                        'lastName' => $student->getLastName()
+                    ];
+                }, $formation->getStudents()->toArray()),
                 'specialization' => $formation->getSpecialization() ? [
                     'id' => $formation->getSpecialization()->getId(),
                     'name' => $formation->getSpecialization()->getName()
