@@ -22,12 +22,12 @@
   --magic-button-text: #ffffff;
   --magic-button-border: #528eb2;
   --magic-button-shadow: #528eb280;
-  --star-color: #ffffff;
-  --star-shadow: #ffffff80;
+  --star-color: #528eb2;
+  --star-shadow: #528eb280;
 }
 
 /* Thème sombre */
-[data-theme="dark"] {
+.dark {
   --magic-button-bg: #78b9dd;
   --magic-button-text: #ffffff;
   --magic-button-border: #78b9dd;

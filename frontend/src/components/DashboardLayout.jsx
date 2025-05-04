@@ -62,15 +62,8 @@ const DashboardLayout = ({
   
   // Utiliser l'état de chargement passé en prop ou depuis le contexte
   const isLoadingState = isLoading || (context.isLoading && !context.hasMinimalData);
+
   
-  // Afficher le squelette pendant le chargement si demandé ET si l'utilisateur est authentifié
-  if (isLoadingState && showSkeleton && isAuthenticated) {
-    return (
-      <div className={`container mx-auto p-8 ${className}`}>
-        <DashboardSkeleton />
-      </div>
-    );
-  }
   
   // Afficher l'erreur si présente
   if (error) {
