@@ -178,6 +178,8 @@ class FormationEnrollmentRequestController extends AbstractController
                 ];
             }, $requests)
         ]);
+    }
+
     #[Route('/formation-requests/{id}', methods: ['DELETE'])]
     #[IsGranted('ROLE_RECRUITER')]
     public function deleteEnrollmentRequest(FormationEnrollmentRequest $request): Response
