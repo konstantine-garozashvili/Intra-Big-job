@@ -81,7 +81,6 @@ export const useNotifications = () => {
           lastLogin: new Date(),
           lastLoginTimestamp: Date.now()
         });
-        console.log('Mise à jour du timestamp de dernière connexion pour les préférences');
       }
     } catch (error) {
       console.warn('Erreur lors de la mise à jour du timestamp de dernière connexion:', error);
@@ -100,7 +99,6 @@ export const useNotifications = () => {
       const userId = getUserId();
       
       if (!userId) {
-        console.log('useNotifications - No user ID available');
         setNotifications([]);
         setLoading(false);
         return;
@@ -119,7 +117,6 @@ export const useNotifications = () => {
         }
       }
 
-      console.log('useNotifications - Setting up listener for user ID:', userId);
       
       const notificationsRef = collection(db, 'notifications');
       
@@ -130,7 +127,6 @@ export const useNotifications = () => {
         orderBy('timestamp', 'desc') // Ajouter un orderBy pour éviter de recharger toutes les notifs
       );
 
-      console.log('useNotifications - Query created with path:', q.path);
       
       const unsubscribe = onSnapshot(
         q,
@@ -138,7 +134,6 @@ export const useNotifications = () => {
           if (!isMounted) return;
           
           try {
-            console.log('useNotifications - Received snapshot with', snapshot.docs.length, 'notifications');
             
             // Créer un Map pour suivre les notifications déjà vues
             const seenNotifications = new Map();
@@ -195,7 +190,6 @@ export const useNotifications = () => {
   // Fonction pour initialiser les préférences de notification
   const initializeNotificationPreferences = async (userId) => {
     try {
-      console.log('Initialisation des préférences de notification pour:', userId);
       
       if (!userId) {
         console.error('Impossible d\'initialiser les préférences - userId manquant');
@@ -222,7 +216,6 @@ export const useNotifications = () => {
       
       // Vérifier d'abord si on trouve les préférences avec l'ID exact
       if (preferencesSnap.exists()) {
-        console.log('Préférences trouvées avec l\'ID exact:', preferencesSnap.data());
         
         // Mettre à jour l'email si nécessaire
         const currentPrefs = preferencesSnap.data();
@@ -231,7 +224,6 @@ export const useNotifications = () => {
             userEmail: userEmail,
             lastUpdated: new Date()
           });
-          console.log('Email utilisateur mis à jour dans les préférences');
         }
         
         // Mettre à jour la dernière connexion
@@ -253,7 +245,6 @@ export const useNotifications = () => {
       }
       
       // Si aucune préférence trouvée avec l'ID exact, chercher dans tous les documents
-      console.log('Aucune préférence trouvée avec l\'ID exact, recherche élargie...');
       const allPreferencesRef = collection(db, 'notificationPreferences');
       const allPreferencesSnap = await getDocs(allPreferencesRef);
       
@@ -268,7 +259,6 @@ export const useNotifications = () => {
         const emailMatches = userEmail && prefs.userEmail === userEmail;
         
         if (userIdMatches || emailMatches) {
-          console.log('Préférences trouvées par correspondance élargie:', prefs);
           foundPreferences = {
             docId: doc.id,
             ...prefs
@@ -279,7 +269,6 @@ export const useNotifications = () => {
       if (foundPreferences) {
         // Si on a trouvé des préférences mais avec un ID différent, les copier avec le bon ID
         if (foundPreferences.docId !== userId) {
-          console.log('Préférences trouvées avec un ID différent, migration...');
           // Copier vers le document avec l'ID correct
           await setDoc(preferencesRef, {
             ...foundPreferences,
@@ -290,7 +279,6 @@ export const useNotifications = () => {
             lastLogin: new Date()
           });
           
-          console.log('Préférences migrées avec succès');
         }
         
         // Sauvegarder en localStorage
@@ -318,7 +306,6 @@ export const useNotifications = () => {
           const emailMatches = userEmail && localPrefs.userEmail === userEmail;
           
           if (userIdMatches || emailMatches) {
-            console.log('Préférences trouvées dans localStorage');
             localPreferences = localPrefs;
           }
         }
@@ -344,7 +331,6 @@ export const useNotifications = () => {
         };
         
         await setDoc(preferencesRef, prefsToSave);
-        console.log('Préférences restaurées depuis localStorage et sauvegardées dans Firestore');
       } else {
         // Créer des préférences par défaut (tout activé)
         const defaultPreferences = {
@@ -360,7 +346,6 @@ export const useNotifications = () => {
         };
         
         await setDoc(preferencesRef, defaultPreferences);
-        console.log('Préférences par défaut créées avec succès:', defaultPreferences);
         
         // Sauvegarder également dans localStorage comme backup
         try {
@@ -381,12 +366,10 @@ export const useNotifications = () => {
   // Fonction pour marquer une notification comme lue
   const markAsRead = async (notificationId) => {
     try {
-      console.log('useNotifications - Marking notification as read:', notificationId);
       const notificationRef = doc(db, 'notifications', notificationId);
       await updateDoc(notificationRef, {
         read: true
       });
-      console.log('useNotifications - Successfully marked notification as read');
     } catch (error) {
       console.error('Error marking notification as read:', error);
       throw new Error('Failed to mark notification as read');
@@ -396,12 +379,10 @@ export const useNotifications = () => {
   // Fonction pour marquer toutes les notifications comme lues
   const markAllAsRead = async () => {
     try {
-      console.log('useNotifications - Marking all notifications as read');
       const promises = notifications
         .filter(n => !n.read)
         .map(n => markAsRead(n.id));
       await Promise.all(promises);
-      console.log('useNotifications - Successfully marked all notifications as read');
     } catch (error) {
       console.error('Erreur lors du marquage des notifications:', error);
     }
@@ -421,13 +402,11 @@ export const useNotifications = () => {
       const userIdStr = String(userId);
       const userEmail = getUserEmail();
       
-      console.log('Mise à jour des préférences pour:', { userId: userIdStr, type, enabled });
 
       // Créer la référence du document avec l'ID formaté
       const preferencesRef = doc(db, 'notificationPreferences', userIdStr);
       
       // Log de vérification
-      console.log('Référence du document:', preferencesRef.path);
 
       // Récupérer les préférences actuelles
       const preferencesSnap = await getDoc(preferencesRef);
@@ -435,7 +414,6 @@ export const useNotifications = () => {
       
       if (preferencesSnap.exists()) {
         currentPrefs = preferencesSnap.data();
-        console.log('Préférences actuelles pour utilisateur', userIdStr, ':', currentPrefs);
         
         // Vérifier que les préférences appartiennent bien à cet utilisateur
         if (currentPrefs.userId && currentPrefs.userId !== userIdStr) {
@@ -445,7 +423,6 @@ export const useNotifications = () => {
           });
           
           // Créer de nouvelles préférences pour cet utilisateur
-          console.log('Création de nouvelles préférences pour cet utilisateur');
           await initializeNotificationPreferences(userIdStr);
           
           // Récupérer les nouvelles préférences
@@ -461,7 +438,6 @@ export const useNotifications = () => {
           }
         }
       } else {
-        console.log('Aucune préférence existante pour utilisateur', userIdStr, ', création...');
         
         // Initialiser les préférences avant de continuer
         await initializeNotificationPreferences(userIdStr);
@@ -495,7 +471,6 @@ export const useNotifications = () => {
       const verifySnap = await getDoc(preferencesRef);
       if (verifySnap.exists()) {
         const verifyData = verifySnap.data();
-        console.log('Préférences après mise à jour pour utilisateur', userIdStr, ':', verifyData);
         
         if (verifyData[type] !== enabled) {
           console.error('Mise à jour des préférences échouée - valeur différente de celle attendue');
@@ -509,7 +484,6 @@ export const useNotifications = () => {
             ...verifyData,
             lastUpdated: new Date().toISOString()
           }));
-          console.log('Préférences sauvegardées dans localStorage après mise à jour');
         } catch (e) {
           console.warn('Impossible de sauvegarder les préférences dans localStorage:', e);
         }
@@ -559,7 +533,6 @@ export const useNotifications = () => {
               if (localPrefs.userId === formattedRecipientId) {
                 preferences = localPrefs;
                 preferencesSource = 'localStorage';
-                console.log('Utilisation des préférences depuis localStorage:', preferences);
               }
             }
           } catch (e) {
@@ -568,7 +541,6 @@ export const useNotifications = () => {
         }
         
         if (preferences) {
-          console.log(`Préférences récupérées depuis ${preferencesSource}:`, preferences);
           
           // Vérifier que les préférences appartiennent bien à cet utilisateur (couche de sécurité supplémentaire)
           if (preferences.userId && preferences.userId !== formattedRecipientId) {
@@ -581,12 +553,10 @@ export const useNotifications = () => {
           
           // Vérifier si l'utilisateur a désactivé ce type de notification
           if (preferences[type] === false) {
-            console.log(`Notification de type ${type} désactivée pour l'utilisateur ${formattedRecipientId}`);
             return;
           }
         } else {
           // Si les préférences n'existent pas, les initialiser
-          console.log('Aucune préférence trouvée, initialisation des préférences pour', formattedRecipientId);
           await initializeNotificationPreferences(formattedRecipientId);
         }
       }
@@ -612,11 +582,6 @@ export const useNotifications = () => {
       });
       
       if (hasSimilarRecentNotification) {
-        console.log('Notification similaire détectée dans les 5 dernières minutes, ignorée:', {
-          title,
-          type,
-          recipientId: formattedRecipientId
-        });
         return;
       }
 
@@ -634,10 +599,7 @@ export const useNotifications = () => {
         createdAt: new Date() // Horodatage explicite pour le déduplication
       });
       
-      console.log(`Notification créée avec succès pour l'utilisateur ${formattedRecipientId}`, {
-        type,
-        title
-      });
+
     } catch (error) {
       console.error('Erreur lors de la création de la notification:', error);
       throw error;
@@ -650,11 +612,9 @@ export const useNotifications = () => {
   const diagnoseNotifications = async () => {
     try {
       const userId = getUserId();
-      console.log('Diagnostic de notifications pour userId:', userId);
       
       // Récupérer toutes les notifications
       const allNotificationsSnap = await getDocs(collection(db, 'notifications'));
-      console.log(`Total notifications dans Firestore: ${allNotificationsSnap.size}`);
       
       // Compter les notifications par type et par destinataire
       let studentNotifs = 0;
@@ -674,12 +634,7 @@ export const useNotifications = () => {
       let stringMatchCount = 0;
       let templateMatchCount = 0;
       
-      console.log('Formats d\'ID à vérifier:', {
-        userIdStr,
-        userIdNum,
-        userIdInt,
-        userIdWithQuotes
-      });
+
       
       const notificationsDetails = [];
       
@@ -716,27 +671,11 @@ export const useNotifications = () => {
         if (user?.roles?.includes('ROLE_STUDENT')) studentNotifs++;
         if (user?.roles?.includes('ROLE_GUEST')) guestNotifs++;
       });
+
       
-      console.log('Détails des notifications par type:', {
-        document_uploaded: documentUploadedNotifs,
-        document_deleted: documentDeletedNotifs
-      });
+
+
       
-      console.log('Détails des notifications par destinataire:', {
-        total: allNotificationsSnap.size,
-        userSpecific: userSpecificNotifs,
-        exactMatch: exactMatchCount,
-        numericMatch: numericMatchCount,
-        stringMatch: stringMatchCount,
-        templateMatch: templateMatchCount
-      });
-      
-      console.log('Détails des notifications par rôle:', {
-        student: studentNotifs,
-        guest: guestNotifs
-      });
-      
-      console.log('Détails complets des notifications:', notificationsDetails);
       
     } catch (error) {
       console.error('Erreur lors du diagnostic des notifications:', error);
@@ -776,7 +715,6 @@ export const useNotifications = () => {
       };
       
       await setDoc(preferencesRef, defaultPreferences);
-      console.log('Notification preferences forcefully reset with correct mappings');
       
       // Save to localStorage as backup
       localStorage.setItem('notificationPreferences', JSON.stringify({
@@ -851,7 +789,6 @@ export const useNotifications = () => {
       const batchSize = 20;
       const notificationsToDeleteBatch = notificationsToDelete.slice(0, batchSize);
       
-      console.log(`Nettoyage de ${notificationsToDeleteBatch.length} anciennes notifications`);
       
       // Supprimer les notifications anciennes
       for (const notificationId of notificationsToDeleteBatch) {
@@ -876,9 +813,6 @@ export const useNotifications = () => {
       // Attendre 30 secondes après le chargement initial pour effectuer le nettoyage
       const cleanupTimeout = setTimeout(() => {
         cleanupOldNotifications().then(count => {
-          if (count > 0) {
-            console.log(`${count} anciennes notifications ont été supprimées`);
-          }
           localStorage.setItem('lastNotificationsCleanup', now.toString());
         });
       }, 30000);

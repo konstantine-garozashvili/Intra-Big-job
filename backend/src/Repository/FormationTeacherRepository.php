@@ -48,4 +48,47 @@ class FormationTeacherRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
+
+    public function countTotalTeachers(): int
+    {
+        return $this->createQueryBuilder('ft')
+            ->select('COUNT(DISTINCT ft.user)')
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    public function countTotalFormations(): int
+    {
+        return $this->createQueryBuilder('ft')
+            ->select('COUNT(DISTINCT ft.formation)')
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    public function countMainTeachers(): int
+    {
+        return $this->createQueryBuilder('ft')
+            ->select('COUNT(ft.id)')
+            ->andWhere('ft.isMainTeacher = true')
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    public function getTeachersPerFormationStats(): array
+    {
+        $results = $this->createQueryBuilder('ft')
+            ->select('f.id', 'f.name', 'COUNT(ft.id) as teacherCount')
+            ->leftJoin('ft.formation', 'f')
+            ->groupBy('f.id')
+            ->getQuery()
+            ->getResult();
+
+        return array_map(function($row) {
+            return [
+                'formation_id' => $row['id'],
+                'formation_name' => $row['name'],
+                'teacher_count' => $row['teacherCount']
+            ];
+        }, $results);
+    }
 } 

@@ -16,9 +16,10 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Serializer\SerializerInterface;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\Security;
 
 #[Route('/api/formation-teachers')]
-#[IsGranted('ROLE_ADMIN')]
+#[Security("is_granted('ROLE_ADMIN') or is_granted('ROLE_SUPERADMIN') or is_granted('ROLE_RECRUITER')")]
 class FormationTeacherController extends AbstractController
 {
     public function __construct(
@@ -30,7 +31,27 @@ class FormationTeacherController extends AbstractController
     ) {
     }
 
+    #[Route('/available-teachers', methods: ['GET'])]
+    #[Security("is_granted('ROLE_ADMIN') or is_granted('ROLE_SUPERADMIN') or is_granted('ROLE_RECRUITER')")]
+    public function getAvailableTeachers(): JsonResponse
+    {
+        $teachers = $this->userRepository->findByRoleWithRelations('TEACHER');
+        
+        $data = array_map(function(User $teacher) {
+            return [
+                'id' => $teacher->getId(),
+                'firstName' => $teacher->getFirstName(),
+                'lastName' => $teacher->getLastName(),
+                'email' => $teacher->getEmail(),
+                'profilePicturePath' => $teacher->getProfilePicturePath()
+            ];
+        }, $teachers);
+        
+        return $this->json(['success' => true, 'data' => $data]);
+    }
+
     #[Route('', methods: ['GET'])]
+    #[Security("is_granted('ROLE_ADMIN') or is_granted('ROLE_SUPERADMIN') or is_granted('ROLE_RECRUITER')")]
     public function index(): JsonResponse
     {
         $formationTeachers = $this->formationTeacherRepository->findAll();
@@ -55,6 +76,7 @@ class FormationTeacherController extends AbstractController
     }
 
     #[Route('/formation/{id}', methods: ['GET'])]
+    #[Security("is_granted('ROLE_ADMIN') or is_granted('ROLE_SUPERADMIN') or is_granted('ROLE_RECRUITER')")]
     public function getTeachersByFormation(int $id): JsonResponse
     {
         $teachers = $this->formationTeacherRepository->findTeachersByFormation($id);
@@ -75,6 +97,7 @@ class FormationTeacherController extends AbstractController
     }
 
     #[Route('/teacher/{id}', methods: ['GET'])]
+    #[Security("is_granted('ROLE_ADMIN') or is_granted('ROLE_SUPERADMIN') or is_granted('ROLE_RECRUITER')")]
     public function getFormationsByTeacher(int $id): JsonResponse
     {
         $formations = $this->formationTeacherRepository->findFormationsByTeacher($id);
@@ -83,6 +106,7 @@ class FormationTeacherController extends AbstractController
     }
 
     #[Route('/stats', methods: ['GET'])]
+    #[Security("is_granted('ROLE_ADMIN') or is_granted('ROLE_SUPERADMIN') or is_granted('ROLE_RECRUITER')")]
     public function getStats(): JsonResponse
     {
         $stats = [
@@ -96,6 +120,7 @@ class FormationTeacherController extends AbstractController
     }
 
     #[Route('/batch', methods: ['POST'])]
+    #[Security("is_granted('ROLE_ADMIN') or is_granted('ROLE_SUPERADMIN') or is_granted('ROLE_RECRUITER')")]
     public function batchUpdate(Request $request): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
@@ -128,6 +153,7 @@ class FormationTeacherController extends AbstractController
     }
 
     #[Route('', methods: ['POST'])]
+    #[Security("is_granted('ROLE_ADMIN') or is_granted('ROLE_SUPERADMIN') or is_granted('ROLE_RECRUITER')")]
     public function create(Request $request): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
@@ -165,6 +191,7 @@ class FormationTeacherController extends AbstractController
     }
 
     #[Route('/{id}', methods: ['PUT'])]
+    #[Security("is_granted('ROLE_ADMIN') or is_granted('ROLE_SUPERADMIN') or is_granted('ROLE_RECRUITER')")]
     public function update(int $id, Request $request): JsonResponse
     {
         $formationTeacher = $this->formationTeacherRepository->find($id);
@@ -185,6 +212,7 @@ class FormationTeacherController extends AbstractController
     }
 
     #[Route('/{id}', methods: ['DELETE'])]
+    #[Security("is_granted('ROLE_ADMIN') or is_granted('ROLE_SUPERADMIN') or is_granted('ROLE_RECRUITER')")]
     public function delete(int $id): JsonResponse
     {
         $formationTeacher = $this->formationTeacherRepository->find($id);

@@ -39,7 +39,7 @@ const formatTimestamp = (timestamp) => {
     }
     return 'Date inconnue';
   } catch (error) {
-    console.error('Erreur lors du formatage de la date:', error);
+    // console.error('Erreur lors du formatage de la date:', error);
     return 'Date incorrecte';
   }
 };
@@ -65,7 +65,7 @@ const getRelativeTime = (timestamp) => {
     
     return formatDistanceToNow(date, { addSuffix: true, locale: fr });
   } catch (error) {
-    console.error('Erreur lors du calcul du temps relatif:', error);
+    // console.error('Erreur lors du calcul du temps relatif:', error);
     return '';
   }
 };
@@ -155,30 +155,10 @@ export const NotificationBell = () => {
   }, [notifications]);
 
   // Console logs uniquement en développement
-  if (process.env.NODE_ENV === 'development') {
-    console.log('NotificationBell - User object from auth context:', user);
-    console.log('NotificationBell - userId from localStorage:', localStorage.getItem('userId'));
-    console.log('NotificationBell - Rendering with:', {
-      notificationsCount: displayedNotifications?.length,
-      unreadCount,
-      loading
-    });
-
-    // Journaliser les types de notifications reçus
-    if (displayedNotifications?.length > 0) {
-      console.log('NotificationBell - Notification types displayed:', displayedNotifications.map(n => n.type));
-      console.log('NotificationBell - First notification details:', displayedNotifications[0]);
-    } else {
-      console.log('NotificationBell - No notifications available');
-    }
-
-    if (loading) {
-      console.log('NotificationBell - Still loading');
-    }
-  }
+  // (Retiré selon la consigne)
 
   const handleNotificationClick = (notificationId) => {
-    console.log('NotificationBell - Notification clicked:', notificationId);
+    // console.log('NotificationBell - Notification clicked:', notificationId);
     markAsRead(notificationId);
     
     // Mettre à jour l'état local pour une UX plus réactive
@@ -249,7 +229,7 @@ export const NotificationBell = () => {
             {unreadCount > 0 && (
               <Button
                 onClick={() => {
-                  console.log('NotificationBell - Marking all as read');
+                  // console.log('NotificationBell - Marking all as read');
                   markAllAsRead();
                 }}
                 variant="ghost"
@@ -283,19 +263,18 @@ export const NotificationBell = () => {
             </div>
           ) : (
             displayedNotifications.slice(0, 5).map((notification) => {
-              console.log('NotificationBell - Rendering notification:', notification);
+              // console.log('NotificationBell - Rendering notification:', notification);
               const typeConfig = notificationTypeConfig[notification.type] || {
                 color: 'bg-gray-100 text-gray-600',
                 icon: <Bell className="h-4 w-4 text-gray-500" />
               };
               const relativeTime = getRelativeTime(notification.timestamp);
               
-              // Journaliser chaque notification rendue
-              console.log('NotificationBell - Notification type config:', {
-                type: notification.type,
-                hasConfig: !!notificationTypeConfig[notification.type],
-                usingConfig: typeConfig
-              });
+              // console.log('NotificationBell - Notification type config:', {
+              //   type: notification.type,
+              //   hasConfig: !!notificationTypeConfig[notification.type],
+              //   usingConfig: typeConfig
+              // });
               
               return (
                 <div
