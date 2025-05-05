@@ -206,55 +206,61 @@ export default function TrainingCarousel() {
                   </Card>
                 ) : (
                   <Card className="h-full flex flex-col bg-white dark:bg-slate-800 shadow-lg border-0 overflow-hidden rounded-lg transition-all duration-300 hover:shadow-xl hover:shadow-amber-200/30 dark:hover:shadow-amber-400/20 group">
-                    <div className="cursor-pointer relative overflow-hidden transform transition-transform duration-300 group-hover:scale-[1.02]" onClick={() => handleImageClick(item.id)}>
+                    <div className="relative aspect-[16/9] overflow-hidden">
                       <div className="absolute inset-0 bg-gradient-to-t from-[#02284f]/90 via-[#02284f]/50 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-4">
                         <span className="text-white font-medium">Voir la formation</span>
                       </div>
                       <img
                         src={item.image_url || "/placeholder.svg"}
                         alt={item.name}
-                        className="w-full h-[200px] object-cover transition-transform duration-500 group-hover:scale-105"
+                        className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
                       />
                     </div>
-                    <CardContent className="flex-grow p-6 transform transition-transform duration-300 group-hover:translate-y-[-4px]">
+                    <CardContent className="flex-grow p-4 sm:p-6 transform transition-transform duration-300 group-hover:translate-y-[-4px]">
                       <div className="flex flex-wrap gap-2 mb-3">
                         <Badge
-                          className={`${badgeVariants[item.specialization?.name || 'default']} transition-all duration-300`}
+                          className={`${badgeVariants[item.specialization?.name || 'default']} transition-all duration-300 text-xs sm:text-sm`}
                         >
                           {item.specialization?.name || 'Formation'}
                         </Badge>
-                        <Badge variant="outline" className="bg-gradient-to-r from-amber-50 to-white dark:from-amber-900/20 dark:to-slate-900 border-amber-200 dark:border-amber-700/50">{item.promotion}</Badge>
+                        <Badge variant="outline" className="bg-gradient-to-r from-amber-50 to-white dark:from-amber-900/20 dark:to-slate-900 border-amber-200 dark:border-amber-700/50 text-xs sm:text-sm">
+                          {item.promotion}
+                        </Badge>
                       </div>
-                      <h3 className="text-xl font-bold mb-2 text-slate-800 dark:text-slate-100 transition-transform duration-300 group-hover:translate-x-1">{item.name}</h3>
-                      <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm">{item.description || 'Aucune description disponible'}</p>
-                      <div className="flex flex-col gap-2 mt-4 text-sm">
+                      <h3 className="text-lg sm:text-xl font-bold mb-2 text-slate-800 dark:text-slate-100 transition-transform duration-300 group-hover:translate-x-1 line-clamp-2">
+                        {item.name}
+                      </h3>
+                      <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm line-clamp-3 min-h-[3em]">
+                        {item.description || 'Aucune description disponible'}
+                      </p>
+                      <div className="flex flex-col gap-2 mt-4 text-xs sm:text-sm">
                         <div className="flex items-center gap-2 text-amber-600 dark:text-amber-300">
-                          <Calendar className="h-4 w-4" />
-                          <span>Début le {new Date(item.date_start).toLocaleDateString()}</span>
+                          <Calendar className="h-4 w-4 flex-shrink-0" />
+                          <span className="truncate">Début le {new Date(item.date_start).toLocaleDateString()}</span>
                         </div>
                         <div className="flex items-center gap-2 text-[#528eb2] dark:text-[#78b9dd]">
-                          <Clock className="h-4 w-4" />
-                          <span>{item.duration} mois</span>
+                          <Clock className="h-4 w-4 flex-shrink-0" />
+                          <span className="truncate">{item.duration} mois</span>
                         </div>
                         <div className="flex items-center gap-2 text-amber-600 dark:text-amber-300">
-                          <Users className="h-4 w-4" />
-                          <span>Capacité: {item.capacity} étudiants</span>
+                          <Users className="h-4 w-4 flex-shrink-0" />
+                          <span className="truncate">Capacité: {item.capacity} étudiants</span>
                         </div>
                         {item.location && (
                           <div className="flex items-center gap-2 text-[#528eb2] dark:text-[#78b9dd]">
-                            <MapPin className="h-4 w-4" />
-                            <span>{item.location}</span>
+                            <MapPin className="h-4 w-4 flex-shrink-0" />
+                            <span className="truncate">{item.location}</span>
                           </div>
                         )}
                       </div>
                     </CardContent>
                     <CardFooter className="p-4 pt-0">
                       <MagicButton
-                        className="w-full text-base font-medium bg-gradient-to-r from-amber-400 via-[#528eb2] to-[#78b9dd] hover:from-transparent hover:to-transparent hover:text-amber-600 dark:hover:text-amber-300"
+                        className="w-full text-sm sm:text-base font-medium bg-gradient-to-r from-amber-400 via-[#528eb2] to-[#78b9dd] hover:from-transparent hover:to-transparent hover:text-amber-600 dark:hover:text-white"
                         onClick={() => handleSeeMore(item.id)}
                       >
-                        En savoir plus
-                        <ChevronRight className="ml-2 h-5 w-5" />
+                        Demander à rejoindre
+                        <ChevronRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
                       </MagicButton>
                     </CardFooter>
                   </Card>
