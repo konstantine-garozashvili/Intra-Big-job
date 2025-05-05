@@ -272,17 +272,16 @@ export default function TrainingCarousel() {
           <CarouselNext className="hidden md:flex" />
         </Carousel>
 
-        {showBottomButton && (
+        
           <div className="mt-10 flex justify-center">
             <Button
               onClick={handleSeeAllCourses}
-              className="bg-gradient-to-r from-amber-50 via-white to-slate-50 dark:from-amber-900/20 dark:via-slate-800 dark:to-slate-900 text-amber-600 dark:text-amber-300 border-2 border-amber-400 dark:border-amber-500/50 hover:from-amber-400 hover:via-[#528eb2] hover:to-[#78b9dd] hover:text-white dark:hover:from-amber-400 dark:hover:via-[#78b9dd] dark:hover:to-[#528eb2] dark:hover:text-white transition-all duration-300 px-8 py-6 text-lg font-medium rounded-md group shadow-lg hover:shadow-xl hover:shadow-amber-200/30 dark:hover:shadow-amber-400/20"
+              className="bg-gradient-to-r from-amber-100 to-amber-50 dark:from-amber-900/30 dark:to-amber-800/20 text-amber-600 dark:text-amber-300 border-2 border-amber-400 dark:border-amber-500/50 hover:from-amber-500 hover:to-amber-400 hover:text-white dark:hover:from-amber-400 dark:hover:to-amber-500 dark:hover:text-white transition-all duration-300 px-8 py-6 text-lg font-medium rounded-md group shadow-lg hover:shadow-xl hover:shadow-amber-200/30 dark:hover:shadow-amber-400/20"
             >
               Voir toutes les formations
               <ChevronRight className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
             </Button>
           </div>
-        )}
       </div>
     </div>
   );
