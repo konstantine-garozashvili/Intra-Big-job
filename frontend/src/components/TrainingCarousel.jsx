@@ -9,6 +9,7 @@ import { formationService } from "@/services/formation.service";
 import { MagicButton } from "@/components/ui/magic-button";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from 'sonner';
 
 // Configuration des badges avec des couleurs plus inspirantes
 const badgeVariants = {
@@ -164,6 +165,23 @@ export default function TrainingCarousel() {
     navigate('/formations/list');
   };
 
+  const handleRequestJoin = async (formationId) => {
+    try {
+      await formationService.requestEnrollment(formationId);
+      toast.success('Votre demande pour rejoindre la formation a été envoyée avec succès.');
+    } catch (error) {
+      // Check for duplicate request error (HTTP 409 or backend message)
+      if (
+        (error?.message && error.message.toLowerCase().includes('déjà en cours')) ||
+        (error?.response?.status === 409)
+      ) {
+        toast.error('Vous avez déjà fait une demande pour cette formation.');
+      } else {
+        toast.error(error.message || "Erreur lors de la demande d'inscription à la formation.");
+      }
+    }
+  };
+
   if (loading) return <LoadingSkeleton />;
   if (error) return <ErrorState error={error} />;
   if (formations.length === 0) return <EmptyState />;
@@ -257,7 +275,7 @@ export default function TrainingCarousel() {
                     <CardFooter className="p-4 pt-0">
                       <MagicButton
                         className="w-full text-sm sm:text-base font-medium bg-gradient-to-r from-amber-400 via-[#528eb2] to-[#78b9dd] hover:from-transparent hover:to-transparent hover:text-amber-600 dark:hover:text-white"
-                        onClick={() => handleSeeMore(item.id)}
+                        onClick={() => handleRequestJoin(item.id)}
                       >
                         Demander à rejoindre
                         <ChevronRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />

@@ -244,11 +244,10 @@ export const formationService = {
    * Soumet une demande d'inscription à une formation
    */
   requestEnrollment: async (formationId) => {
-    try {
-      const response = await formationApi.requestEnrollment(formationId);
-      return normalizeResponse(response.data);
-    } catch (error) {
-      throw new Error(handleApiError(error));
+    const response = await formationApi.requestEnrollment(formationId);
+    if (!response.success) {
+      throw new Error(response.message || "Erreur lors de la demande d'inscription à la formation.");
     }
+    return response.data;
   }
 }; 
