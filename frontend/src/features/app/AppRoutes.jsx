@@ -7,6 +7,7 @@ import ProtectedRoute from '../../components/ProtectedRoute';
 import PublicRoute from '../../components/PublicRoute';
 import StudentRoute from '../../components/StudentRoute';
 import NotificationsPage from '@/pages/Global/Notifications/NotificationsPage';
+import EnrollmentRequests from '@/pages/Recruiter/views/EnrollmentRequests';
 
 // Composant de chargement pour Suspense
 const LoadingFallback = () => (
@@ -138,6 +139,7 @@ const AppRoutes = ({ lazyComponents }) => {
             <Route path="recruiter" element={<RoleGuard roles={[ROLES.RECRUITER]} />}>
               <Route path="dashboard" element={<RecruiterDashboard />} />
               <Route path="guest-student-role-manager" element={<GuestStudentRoleManager />} />
+              <Route path="enrollment-requests" element={<EnrollmentRequests />} />
             </Route>
 
             {/* Invité */}

@@ -140,6 +140,9 @@ const FormationForm = lazy(() => import("./components/formations/FormationForm")
 const EditFormationForm = lazy(() => import("./components/formations/EditFormationForm"));
 const Act = lazy(() => import("./components/Formation/Act/index"));
 
+// Import the EnrollmentRequests component
+const EnrollmentRequests = lazy(() => import("./pages/Recruiter/views/EnrollmentRequests"));
+
 // Fonction optimisée pour le préchargement intelligent des pages
 // Ne charge que les pages pertinentes en fonction du contexte et du chemin actuel
 function useIntelligentPreload() {
@@ -348,6 +351,7 @@ const App = () => {
                     {/* Routes Recruiter */}
                     <Route path="/recruiter/dashboard" element={<RoleGuard roles={ROLES.RECRUITER} fallback={<Navigate to="/dashboard" replace />}><RecruiterDashboard /></RoleGuard>} />
                     <Route path="/recruiter/guest-student-roles" element={<RoleGuard roles={[ROLES.RECRUITER, ROLES.ADMIN, ROLES.SUPERADMIN]} fallback={<Navigate to="/dashboard" replace />}><GuestStudentRoleManager /></RoleGuard>} />
+                    <Route path="/recruiter/enrollment-requests" element={<RoleGuard roles={ROLES.RECRUITER} fallback={<Navigate to="/dashboard" replace />}><EnrollmentRequests /></RoleGuard>} />
 
                     {/* Trombinoscope route */}
                     <Route path="trombinoscope" element={<RoleGuard roles={[ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.STUDENT, ROLES.RECRUITER]} fallback={<Navigate to="/dashboard" replace />}><Trombinoscope /></RoleGuard>} />

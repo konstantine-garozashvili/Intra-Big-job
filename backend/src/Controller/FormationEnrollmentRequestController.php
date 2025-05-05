@@ -14,6 +14,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use App\Domains\Student\Service\StudentProfileService;
 
 #[Route('/api')]
 class FormationEnrollmentRequestController extends AbstractController
@@ -21,10 +22,12 @@ class FormationEnrollmentRequestController extends AbstractController
     public function __construct(
         private EntityManagerInterface $entityManager,
         private FormationRepository $formationRepository,
-        private RoleRepository $roleRepository
+        private RoleRepository $roleRepository,
+        private StudentProfileService $studentProfileService
     ) {}
 
     #[Route('/formations/{id}/enroll', methods: ['POST'])]
+    #[Route('/formations/{id}/enrollment-request', methods: ['POST'])]
     #[IsGranted('ROLE_GUEST')]
     public function createEnrollmentRequest(Formation $formation): Response
     {
@@ -136,6 +139,9 @@ class FormationEnrollmentRequestController extends AbstractController
 
             // Add user to formation
             $formation->addStudent($user);
+
+            // Create student profile if not exists
+            $this->studentProfileService->createProfileForUser($user);
         }
 
         $this->entityManager->flush();
@@ -172,5 +178,13 @@ class FormationEnrollmentRequestController extends AbstractController
                 ];
             }, $requests)
         ]);
+    #[Route('/formation-requests/{id}', methods: ['DELETE'])]
+    #[IsGranted('ROLE_RECRUITER')]
+    public function deleteEnrollmentRequest(FormationEnrollmentRequest $request): Response
+    {
+        $this->entityManager->remove($request);
+        $this->entityManager->flush();
+
+        return $this->json(['message' => 'Demande supprimée'], Response::HTTP_NO_CONTENT);
     }
 }

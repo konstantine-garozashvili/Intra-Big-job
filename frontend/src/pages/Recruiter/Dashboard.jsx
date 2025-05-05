@@ -4,6 +4,7 @@ import { useUserData } from '@/hooks/useDashboardQueries';
 import { UserCircle, Briefcase, Users, Calendar, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import EnrollmentRequests from './views/EnrollmentRequests';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -94,6 +95,14 @@ const RecruiterDashboard = () => {
       color: 'from-orange-500 to-orange-600',
       textColor: 'text-orange-50',
       link: '/formations',
+    },
+    {
+      title: "Demandes d'inscription",
+      description: 'Voir et traiter les demandes',
+      icon: Users,
+      color: 'from-pink-500 to-pink-600',
+      textColor: 'text-pink-50',
+      link: '/recruiter/enrollment-requests',
     },
     {
       title: 'Étudiants invités',

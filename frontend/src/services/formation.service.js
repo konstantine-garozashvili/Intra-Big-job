@@ -238,5 +238,16 @@ export const formationService = {
       console.error('[FormationService] Error loading specializations:', error);
       throw new Error(handleApiError(error));
     }
+  },
+
+  /**
+   * Soumet une demande d'inscription à une formation
+   */
+  requestEnrollment: async (formationId) => {
+    const response = await formationApi.requestEnrollment(formationId);
+    if (!response.success) {
+      throw new Error(response.message || "Erreur lors de la demande d'inscription à la formation.");
+    }
+    return response.data;
   }
 }; 

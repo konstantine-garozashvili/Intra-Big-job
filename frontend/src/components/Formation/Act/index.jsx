@@ -6,6 +6,7 @@ import { formationService } from '../../../services/formation.service';
 import FormationCard from './FormationCard';
 import FormationFilters from './FormationFilters';
 import ViewToggle from './ViewToggle';
+import { toast } from 'sonner';
 
 const Act = () => {
   const navigate = useNavigate();
@@ -82,9 +83,13 @@ const Act = () => {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
 
-  const handleRequestJoin = (formationId) => {
-    // Cette fonction sera implémentée plus tard pour gérer les demandes
-    console.log('Demande pour rejoindre la formation:', formationId);
+  const handleRequestJoin = async (formationId) => {
+    try {
+      await formationService.requestEnrollment(formationId);
+      toast.success('Votre demande pour rejoindre la formation a été envoyée avec succès.');
+    } catch (error) {
+      toast.error(error.message || 'Erreur lors de la demande d\'inscription à la formation.');
+    }
   };
 
   const filteredFormations = formations
