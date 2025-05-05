@@ -234,7 +234,7 @@ export default function TrainingCarousel() {
                         </div>
                         <div className="flex items-center gap-2 text-[#528eb2] dark:text-[#78b9dd]">
                           <Clock className="h-4 w-4" />
-                          <span>{item.duration} semaines</span>
+                          <span>{item.duration} mois</span>
                         </div>
                         <div className="flex items-center gap-2 text-amber-600 dark:text-amber-300">
                           <Users className="h-4 w-4" />
