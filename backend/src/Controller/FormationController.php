@@ -17,6 +17,7 @@ use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use App\Domains\Student\Repository\StudentProfileRepository;
 
 #[Route('/api')]
 class FormationController extends AbstractController
@@ -27,7 +28,8 @@ class FormationController extends AbstractController
         private readonly EntityManagerInterface $entityManager,
         private readonly SerializerInterface $serializer,
         private readonly ValidatorInterface $validator,
-        private readonly S3StorageService $s3StorageService
+        private readonly S3StorageService $s3StorageService,
+        private readonly StudentProfileRepository $studentProfileRepository
     ) {
     }
 
@@ -341,6 +343,69 @@ class FormationController extends AbstractController
             'data' => [
                 'image_url' => $result['data']['image_url']
             ]
+        ]);
+    }
+
+    #[Route('/formations/{formationId}/students/{userId}', name: 'api_formations_remove_student', methods: ['DELETE'])]
+    public function removeStudentFromFormation(int $formationId, int $userId): JsonResponse
+    {
+        $formation = $this->formationRepository->find($formationId);
+        if (!$formation) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Formation non trouvée'
+            ], 404);
+        }
+
+        $user = $this->entityManager->getRepository(\App\Entity\User::class)->find($userId);
+        if (!$user) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Utilisateur non trouvé'
+            ], 404);
+        }
+
+        // Remove the user from the formation
+        $formation->removeStudent($user);
+
+        // Remove STUDENT role
+        foreach ($user->getUserRoles() as $userRole) {
+            if (strtoupper($userRole->getRole()->getName()) === 'STUDENT') {
+                $user->removeUserRole($userRole);
+                $this->entityManager->remove($userRole);
+            }
+        }
+
+        // Add GUEST role if not present
+        $hasGuest = false;
+        foreach ($user->getUserRoles() as $userRole) {
+            if (strtoupper($userRole->getRole()->getName()) === 'GUEST') {
+                $hasGuest = true;
+                break;
+            }
+        }
+        if (!$hasGuest) {
+            $guestRole = $this->entityManager->getRepository(\App\Entity\Role::class)->findOneBy(['name' => 'GUEST']);
+            if ($guestRole) {
+                $userRole = new \App\Entity\UserRole();
+                $userRole->setUser($user);
+                $userRole->setRole($guestRole);
+                $user->addUserRole($userRole);
+                $this->entityManager->persist($userRole);
+            }
+        }
+
+        // Remove StudentProfile if exists
+        $studentProfile = $this->studentProfileRepository->findByUserWithRelations($user->getId());
+        if ($studentProfile) {
+            $this->entityManager->remove($studentProfile);
+        }
+
+        $this->entityManager->flush();
+
+        return $this->json([
+            'success' => true,
+            'message' => 'Étudiant retiré de la formation, profil supprimé et rôle mis à jour.'
         ]);
     }
 } 

@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Loader2, Users, Calendar, Clock, MapPin } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import apiService from '@/lib/services/apiService';
+import { toast } from 'sonner';
 
 export default function FormationDetails() {
   const { id } = useParams();
@@ -59,6 +60,19 @@ export default function FormationDetails() {
     fetchAcceptedStudents();
   }, [id]);
 
+  const handleKickStudent = async (studentId) => {
+    if (!window.confirm('Êtes-vous sûr de vouloir retirer cet étudiant de la formation ?')) return;
+    try {
+      await apiService.delete(`/api/formations/${id}/students/${studentId}`);
+      toast.success('Étudiant retiré de la formation.');
+      setAcceptedStudents((prev) => prev.filter((s) => s.id !== studentId));
+      setAcceptedCount((prev) => prev - 1);
+      setStudentCount((prev) => prev - 1);
+    } catch (err) {
+      toast.error('Erreur lors du retrait de l\'étudiant.');
+    }
+  };
+
   return (
     <div className="max-w-2xl mx-auto py-8">
       {loading ? (
@@ -105,9 +119,15 @@ export default function FormationDetails() {
                 ) : (
                   <ul className="divide-y divide-gray-200">
                     {acceptedStudents.map((student) => (
-                      <li key={student.id} className="py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                      <li key={student.id} className="py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                         <span className="font-medium">{student.firstName} {student.lastName}</span>
                         <span className="text-gray-500 text-sm">{student.email}</span>
+                        <button
+                          className="ml-4 px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition"
+                          onClick={() => handleKickStudent(student.id)}
+                        >
+                          Retirer
+                        </button>
                       </li>
                     ))}
                   </ul>

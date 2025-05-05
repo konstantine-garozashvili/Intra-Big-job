@@ -127,6 +127,14 @@ const SuperAdminDashboard = () => {
       color: 'from-purple-500 to-purple-600',
       textColor: 'text-purple-50',
       link: '/formations',
+    },
+    {
+      title: 'Toutes les formations',
+      description: 'Voir toutes les formations disponibles',
+      icon: Book,
+      color: 'from-orange-500 to-orange-600',
+      textColor: 'text-orange-50',
+      link: '/admin/formations',
     }
   ];
 
