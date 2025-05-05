@@ -32,7 +32,7 @@ class FormationFixtures extends Fixture implements DependentFixtureInterface
                 'date_start' => new \DateTime('2024-09-01'),
                 'duration' => 12,
                 'location' => 'Paris',
-                'image_url' => self::AWS_BASE_URL . 'web-dev.webp'
+                'image_url' => self::AWS_BASE_URL . 'ecoxqzcgiwobbxidlxhl.webp'
             ],
             [
                 'name' => 'Data Science & Intelligence Artificielle',
@@ -43,7 +43,7 @@ class FormationFixtures extends Fixture implements DependentFixtureInterface
                 'date_start' => new \DateTime('2024-09-15'),
                 'duration' => 15,
                 'location' => 'Lyon',
-                'image_url' => self::AWS_BASE_URL . 'data-science.webp'
+                'image_url' => self::AWS_BASE_URL . 'es41kuu8vogp6qhqzkfv.webp'
             ],
             [
                 'name' => 'DevOps & Cloud Computing',
@@ -54,7 +54,7 @@ class FormationFixtures extends Fixture implements DependentFixtureInterface
                 'date_start' => new \DateTime('2024-10-01'),
                 'duration' => 14,
                 'location' => 'Bordeaux',
-                'image_url' => self::AWS_BASE_URL . 'web-dev.webp'
+                'image_url' => self::AWS_BASE_URL . 'nmajfu6mzcqor4dmiwpz.webp'
             ],
             [
                 'name' => 'Cybersécurité Avancée',
@@ -65,7 +65,7 @@ class FormationFixtures extends Fixture implements DependentFixtureInterface
                 'date_start' => new \DateTime('2024-09-30'),
                 'duration' => 16,
                 'location' => 'Paris',
-                'image_url' => self::AWS_BASE_URL . 'cybersecurity.webp'
+                'image_url' => self::AWS_BASE_URL . 'nxguch0uavka6bzwnxsb.webp'
             ],
             [
                 'name' => 'Développement Mobile React Native',
@@ -76,7 +76,7 @@ class FormationFixtures extends Fixture implements DependentFixtureInterface
                 'date_start' => new \DateTime('2024-10-15'),
                 'duration' => 10,
                 'location' => 'Nantes',
-                'image_url' => self::AWS_BASE_URL . 'mobile-dev.webp'
+                'image_url' => self::AWS_BASE_URL . 'qp9jlgefiuczsjnrqhyt.webp'
             ],
             [
                 'name' => 'UX/UI Design & Développement Frontend',
@@ -87,7 +87,7 @@ class FormationFixtures extends Fixture implements DependentFixtureInterface
                 'date_start' => new \DateTime('2024-11-01'),
                 'duration' => 11,
                 'location' => 'Lille',
-                'image_url' => self::AWS_BASE_URL . 'web-dev.webp'
+                'image_url' => self::AWS_BASE_URL . 'rxoziltjybygtvsnv07k.webp'
             ],
             [
                 'name' => 'Machine Learning Avancé',
@@ -98,7 +98,7 @@ class FormationFixtures extends Fixture implements DependentFixtureInterface
                 'date_start' => new \DateTime('2024-09-20'),
                 'duration' => 18,
                 'location' => 'Toulouse',
-                'image_url' => self::AWS_BASE_URL . 'ia.webp'
+                'image_url' => self::AWS_BASE_URL . 'nxguch0uavka6bzwnxsb.webp'
             ],
             [
                 'name' => 'Développement Python Backend',
@@ -109,7 +109,7 @@ class FormationFixtures extends Fixture implements DependentFixtureInterface
                 'date_start' => new \DateTime('2024-10-10'),
                 'duration' => 13,
                 'location' => 'Marseille',
-                'image_url' => self::AWS_BASE_URL . 'web-dev.webp'
+                'image_url' => self::AWS_BASE_URL . 'rxoziltjybygtvsnv07k.webp'
             ],
             [
                 'name' => 'Architecture Cloud & Microservices',
@@ -120,7 +120,7 @@ class FormationFixtures extends Fixture implements DependentFixtureInterface
                 'date_start' => new \DateTime('2024-11-15'),
                 'duration' => 15,
                 'location' => 'Nice',
-                'image_url' => self::AWS_BASE_URL . 'web-dev.webp'
+                'image_url' => self::AWS_BASE_URL . 'nmajfu6mzcqor4dmiwpz.webp'
             ],
             [
                 'name' => 'Data Engineering & Big Data',
@@ -131,7 +131,7 @@ class FormationFixtures extends Fixture implements DependentFixtureInterface
                 'date_start' => new \DateTime('2024-12-01'),
                 'duration' => 16,
                 'location' => 'Strasbourg',
-                'image_url' => self::AWS_BASE_URL . 'data-science.webp'
+                'image_url' => self::AWS_BASE_URL . 'qp9jlgefiuczsjnrqhyt.webp'
             ]
         ];
 
