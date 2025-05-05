@@ -16,7 +16,7 @@ const Act = () => {
   const [viewMode, setViewMode] = useState('grid');
   const [filters, setFilters] = useState({
     search: '',
-    specialization: '',
+    specialization: 'all',
     sortBy: 'dateStart'
   });
 
@@ -44,7 +44,7 @@ const Act = () => {
     if (key === 'reset') {
       setFilters({
         search: '',
-        specialization: '',
+        specialization: 'all',
         sortBy: 'dateStart'
       });
       return;
@@ -59,13 +59,21 @@ const Act = () => {
 
   const filteredFormations = formations
     .filter(formation => {
+      // Log pour le débogage
+      console.log('Filtering formation:', {
+        formation: formation.name,
+        formationSpecId: formation.specializationId,
+        filterSpecId: filters.specialization,
+        specialization: formation.specialization
+      });
+
       const matchesSearch = formation.name.toLowerCase()
         .includes(filters.search.toLowerCase()) ||
         formation.description?.toLowerCase()
           .includes(filters.search.toLowerCase());
       
-      const matchesSpecialization = !filters.specialization ||
-        formation.specializationId === filters.specialization;
+      const matchesSpecialization = filters.specialization === 'all' ||
+        (formation.specializationId && formation.specializationId.toString() === filters.specialization);
 
       return matchesSearch && matchesSpecialization;
     })

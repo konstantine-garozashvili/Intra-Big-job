@@ -12,7 +12,7 @@ import { Search, Filter } from "lucide-react";
 
 const FormationFilters = ({ filters, onFilterChange, specializations }) => {
   return (
-    <div className="w-full p-4 bg-white rounded-lg shadow-sm space-y-4 md:space-y-0 md:flex md:gap-4 items-center">
+    <div className="w-full p-4 bg-white dark:bg-slate-800 rounded-lg shadow-sm space-y-4 md:space-y-0 md:flex md:gap-4 items-center">
       <div className="relative flex-1">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-4 h-4" />
         <Input
@@ -24,15 +24,20 @@ const FormationFilters = ({ filters, onFilterChange, specializations }) => {
       </div>
       
       <Select
-        value={filters.specialization}
+        value={filters.specialization || 'all'}
         onValueChange={(value) => onFilterChange('specialization', value)}
       >
         <SelectTrigger className="w-48">
           <SelectValue placeholder="Spécialisation" />
         </SelectTrigger>
         <SelectContent>
+          <SelectItem value="all">Toutes les spécialisations</SelectItem>
           {specializations.map(spec => (
-            <SelectItem key={spec.id} value={spec.id.toString()}>
+            <SelectItem 
+              key={spec.id} 
+              value={spec.id.toString()}
+              className="cursor-pointer hover:bg-amber-50 dark:hover:bg-amber-900/20"
+            >
               {spec.name}
             </SelectItem>
           ))}
@@ -56,7 +61,7 @@ const FormationFilters = ({ filters, onFilterChange, specializations }) => {
       <Button
         variant="outline"
         onClick={() => onFilterChange('reset')}
-        className="flex items-center gap-2"
+        className="flex items-center gap-2 hover:bg-amber-50 dark:hover:bg-amber-900/20"
       >
         <Filter className="w-4 h-4" />
         Réinitialiser
