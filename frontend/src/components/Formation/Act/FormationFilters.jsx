@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,6 +11,17 @@ import {
 import { Search, Filter } from "lucide-react";
 
 const FormationFilters = ({ filters, onFilterChange, specializations }) => {
+  // Log uniquement les changements de valeurs des filtres
+  useEffect(() => {
+    console.log('🎯 [DEBUG] FormationFilters State:', {
+      currentSpecialization: filters.specialization,
+      availableSpecializations: specializations.map(s => ({
+        id: s.id,
+        name: s.name
+      }))
+    });
+  }, [filters.specialization, specializations]);
+
   return (
     <div className="w-full p-4 bg-white dark:bg-slate-800 rounded-lg shadow-sm space-y-4 md:space-y-0 md:flex md:gap-4 items-center">
       <div className="relative flex-1">

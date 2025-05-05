@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
@@ -20,6 +20,19 @@ const Act = () => {
     sortBy: 'dateStart'
   });
 
+  // Calculer les spécialisations actives (celles qui ont des formations)
+  const activeSpecializations = useMemo(() => {
+    // Récupérer tous les IDs de spécialisation des formations
+    const activeSpecIds = new Set(
+      formations
+        .map(formation => formation.specialization?.id)
+        .filter(Boolean)
+    );
+
+    // Filtrer les spécialisations pour ne garder que celles qui ont des formations
+    return specializations.filter(spec => activeSpecIds.has(spec.id));
+  }, [formations, specializations]);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -28,6 +41,18 @@ const Act = () => {
           formationService.getAllFormations(),
           formationService.getSpecializations()
         ]);
+        console.log('🔍 [DEBUG] Initial Data:', {
+          formations: formationsData.map(f => ({
+            id: f.id,
+            name: f.name,
+            specId: f.specializationId,
+            specName: f.specialization?.name
+          })),
+          specializations: specializationsData.map(s => ({
+            id: s.id,
+            name: s.name
+          }))
+        });
         setFormations(formationsData);
         setSpecializations(specializationsData);
       } catch (err) {
@@ -41,6 +66,11 @@ const Act = () => {
   }, []);
 
   const handleFilterChange = (key, value) => {
+    console.log('🔄 [DEBUG] Filter Change:', {
+      key,
+      newValue: value,
+      oldValue: filters[key]
+    });
     if (key === 'reset') {
       setFilters({
         search: '',
@@ -59,21 +89,24 @@ const Act = () => {
 
   const filteredFormations = formations
     .filter(formation => {
-      // Log pour le débogage
-      console.log('Filtering formation:', {
-        formation: formation.name,
-        formationSpecId: formation.specializationId,
-        filterSpecId: filters.specialization,
-        specialization: formation.specialization
-      });
-
       const matchesSearch = formation.name.toLowerCase()
         .includes(filters.search.toLowerCase()) ||
         formation.description?.toLowerCase()
           .includes(filters.search.toLowerCase());
       
       const matchesSpecialization = filters.specialization === 'all' ||
-        (formation.specializationId && formation.specializationId.toString() === filters.specialization);
+        (formation.specialization && formation.specialization.id.toString() === filters.specialization);
+
+      // Log uniquement si le filtrage échoue
+      if (!matchesSpecialization && filters.specialization !== 'all') {
+        console.log('❌ [DEBUG] Formation filtered out:', {
+          name: formation.name,
+          formationSpecId: formation.specialization?.id,
+          filterSpecId: filters.specialization,
+          specialization: formation.specialization?.name,
+          reason: 'specialization mismatch'
+        });
+      }
 
       return matchesSearch && matchesSpecialization;
     })
@@ -88,6 +121,19 @@ const Act = () => {
           return new Date(a.dateStart) - new Date(b.dateStart);
       }
     });
+
+  // Log uniquement quand le nombre de résultats change
+  useEffect(() => {
+    console.log('📊 [DEBUG] Filtered Results:', {
+      total: formations.length,
+      filtered: filteredFormations.length,
+      filters: {
+        search: filters.search,
+        specialization: filters.specialization,
+        sortBy: filters.sortBy
+      }
+    });
+  }, [filteredFormations.length, formations.length, filters]);
 
   if (error) {
     return (
@@ -122,7 +168,7 @@ const Act = () => {
         <FormationFilters
           filters={filters}
           onFilterChange={handleFilterChange}
-          specializations={specializations}
+          specializations={activeSpecializations}
         />
 
         <div className="flex justify-end">

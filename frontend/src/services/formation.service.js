@@ -12,7 +12,7 @@ export const formationService = {
     try {
       const response = await formationApi.getAll();
       const data = normalizeResponse(response.data);
-      return data?.formations?.map(formation => ({
+      const formations = data?.formations?.map(formation => ({
         ...formation,
         image_url: cleanImageUrl(formation.image_url),
         dateStart: formation.dateStart ? new Date(formation.dateStart) : null,
@@ -20,6 +20,14 @@ export const formationService = {
         capacity: parseInt(formation.capacity) || 0,
         duration: parseInt(formation.duration) || 0
       })) || [];
+
+      console.log('[FormationService] Formations data:', {
+        count: formations.length,
+        sample: formations[0],
+        allSpecIds: formations.map(f => f.specializationId)
+      });
+
+      return formations;
     } catch (error) {
       throw new Error(handleApiError(error));
     }
@@ -216,9 +224,11 @@ export const formationService = {
   getSpecializations: async () => {
     try {
       const response = await formationApi.getSpecializations();
-      console.log('[FormationService] Raw specializations response:', response);
+      console.log('[FormationService] Specializations response:', {
+        raw: response,
+        specializations: response?.data?.specializations
+      });
       
-      // La réponse est au format { success: true, data: { specializations: [] } }
       if (response?.success && response?.data?.specializations) {
         return response.data.specializations;
       }
