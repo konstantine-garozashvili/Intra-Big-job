@@ -34,16 +34,44 @@ class FormationTeacherController extends AbstractController
     public function index(): JsonResponse
     {
         $formationTeachers = $this->formationTeacherRepository->findAll();
+        $data = array_map(function(FormationTeacher $teacher) {
+            return [
+                'id' => $teacher->getId(),
+                'isMainTeacher' => $teacher->isMainTeacher(),
+                'user' => [
+                    'id' => $teacher->getUser()->getId(),
+                    'firstName' => $teacher->getUser()->getFirstName(),
+                    'lastName' => $teacher->getUser()->getLastName(),
+                    'profilePicturePath' => $teacher->getUser()->getProfilePicturePath()
+                ],
+                'formation' => [
+                    'id' => $teacher->getFormation()->getId(),
+                    'name' => $teacher->getFormation()->getName()
+                ]
+            ];
+        }, $formationTeachers);
         
-        return $this->json($formationTeachers, Response::HTTP_OK, [], ['groups' => ['formation:read']]);
+        return $this->json(['success' => true, 'data' => $data]);
     }
 
     #[Route('/formation/{id}', methods: ['GET'])]
     public function getTeachersByFormation(int $id): JsonResponse
     {
         $teachers = $this->formationTeacherRepository->findTeachersByFormation($id);
+        $data = array_map(function(FormationTeacher $teacher) {
+            return [
+                'id' => $teacher->getId(),
+                'isMainTeacher' => $teacher->isMainTeacher(),
+                'user' => [
+                    'id' => $teacher->getUser()->getId(),
+                    'firstName' => $teacher->getUser()->getFirstName(),
+                    'lastName' => $teacher->getUser()->getLastName(),
+                    'profilePicturePath' => $teacher->getUser()->getProfilePicturePath()
+                ]
+            ];
+        }, $teachers);
         
-        return $this->json($teachers, Response::HTTP_OK, [], ['groups' => ['formation:read']]);
+        return $this->json(['success' => true, 'data' => $data]);
     }
 
     #[Route('/teacher/{id}', methods: ['GET'])]
@@ -52,6 +80,51 @@ class FormationTeacherController extends AbstractController
         $formations = $this->formationTeacherRepository->findFormationsByTeacher($id);
         
         return $this->json($formations, Response::HTTP_OK, [], ['groups' => ['formation:read']]);
+    }
+
+    #[Route('/stats', methods: ['GET'])]
+    public function getStats(): JsonResponse
+    {
+        $stats = [
+            'totalTeachers' => $this->formationTeacherRepository->countTotalTeachers(),
+            'totalFormations' => $this->formationTeacherRepository->countTotalFormations(),
+            'mainTeachers' => $this->formationTeacherRepository->countMainTeachers(),
+            'teachersPerFormation' => $this->formationTeacherRepository->getTeachersPerFormationStats()
+        ];
+        
+        return $this->json(['success' => true, 'data' => $stats]);
+    }
+
+    #[Route('/batch', methods: ['POST'])]
+    public function batchUpdate(Request $request): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+        
+        if (!isset($data['updates']) || !is_array($data['updates'])) {
+            return $this->json(['success' => false, 'error' => 'Invalid request format'], Response::HTTP_BAD_REQUEST);
+        }
+        
+        $results = [];
+        foreach ($data['updates'] as $update) {
+            try {
+                $formationTeacher = $this->formationTeacherRepository->find($update['id']);
+                if ($formationTeacher) {
+                    if (isset($update['isMainTeacher'])) {
+                        $formationTeacher->setIsMainTeacher($update['isMainTeacher']);
+                    }
+                    $this->entityManager->persist($formationTeacher);
+                    $results[] = ['id' => $update['id'], 'success' => true];
+                } else {
+                    $results[] = ['id' => $update['id'], 'success' => false, 'error' => 'Not found'];
+                }
+            } catch (\Exception $e) {
+                $results[] = ['id' => $update['id'], 'success' => false, 'error' => $e->getMessage()];
+            }
+        }
+        
+        $this->entityManager->flush();
+        
+        return $this->json(['success' => true, 'data' => $results]);
     }
 
     #[Route('', methods: ['POST'])]
