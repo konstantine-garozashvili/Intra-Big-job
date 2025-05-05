@@ -25,6 +25,7 @@ class FormationEnrollmentRequestController extends AbstractController
     ) {}
 
     #[Route('/formations/{id}/enroll', methods: ['POST'])]
+    #[Route('/formations/{id}/enrollment-request', methods: ['POST'])]
     #[IsGranted('ROLE_GUEST')]
     public function createEnrollmentRequest(Formation $formation): Response
     {

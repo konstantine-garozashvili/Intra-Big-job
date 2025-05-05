@@ -70,5 +70,11 @@ export const formationApi = {
   /**
    * Récupère toutes les spécialisations
    */
-  getSpecializations: () => apiService.get(SPECIALIZATION_URL)
+  getSpecializations: () => apiService.get(SPECIALIZATION_URL),
+
+  /**
+   * Soumet une demande d'inscription à une formation
+   * @param {number} formationId - ID de la formation
+   */
+  requestEnrollment: (formationId) => apiService.post(`${API_URL}/${formationId}/enrollment-request`)
 }; 
