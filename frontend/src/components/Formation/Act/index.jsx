@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
@@ -17,9 +17,22 @@ const Act = () => {
   const [viewMode, setViewMode] = useState('grid');
   const [filters, setFilters] = useState({
     search: '',
-    specialization: '',
+    specialization: 'all',
     sortBy: 'dateStart'
   });
+
+  // Calculer les spécialisations actives (celles qui ont des formations)
+  const activeSpecializations = useMemo(() => {
+    // Récupérer tous les IDs de spécialisation des formations
+    const activeSpecIds = new Set(
+      formations
+        .map(formation => formation.specialization?.id)
+        .filter(Boolean)
+    );
+
+    // Filtrer les spécialisations pour ne garder que celles qui ont des formations
+    return specializations.filter(spec => activeSpecIds.has(spec.id));
+  }, [formations, specializations]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -29,6 +42,18 @@ const Act = () => {
           formationService.getAllFormations(),
           formationService.getSpecializations()
         ]);
+        console.log('🔍 [DEBUG] Initial Data:', {
+          formations: formationsData.map(f => ({
+            id: f.id,
+            name: f.name,
+            specId: f.specializationId,
+            specName: f.specialization?.name
+          })),
+          specializations: specializationsData.map(s => ({
+            id: s.id,
+            name: s.name
+          }))
+        });
         setFormations(formationsData);
         setSpecializations(specializationsData);
       } catch (err) {
@@ -42,10 +67,15 @@ const Act = () => {
   }, []);
 
   const handleFilterChange = (key, value) => {
+    console.log('🔄 [DEBUG] Filter Change:', {
+      key,
+      newValue: value,
+      oldValue: filters[key]
+    });
     if (key === 'reset') {
       setFilters({
         search: '',
-        specialization: '',
+        specialization: 'all',
         sortBy: 'dateStart'
       });
       return;
@@ -69,8 +99,19 @@ const Act = () => {
         formation.description?.toLowerCase()
           .includes(filters.search.toLowerCase());
       
-      const matchesSpecialization = !filters.specialization ||
-        formation.specializationId === filters.specialization;
+      const matchesSpecialization = filters.specialization === 'all' ||
+        (formation.specialization && formation.specialization.id.toString() === filters.specialization);
+
+      // Log uniquement si le filtrage échoue
+      if (!matchesSpecialization && filters.specialization !== 'all') {
+        console.log('❌ [DEBUG] Formation filtered out:', {
+          name: formation.name,
+          formationSpecId: formation.specialization?.id,
+          filterSpecId: filters.specialization,
+          specialization: formation.specialization?.name,
+          reason: 'specialization mismatch'
+        });
+      }
 
       return matchesSearch && matchesSpecialization;
     })
@@ -85,6 +126,19 @@ const Act = () => {
           return new Date(a.dateStart) - new Date(b.dateStart);
       }
     });
+
+  // Log uniquement quand le nombre de résultats change
+  useEffect(() => {
+    console.log('📊 [DEBUG] Filtered Results:', {
+      total: formations.length,
+      filtered: filteredFormations.length,
+      filters: {
+        search: filters.search,
+        specialization: filters.specialization,
+        sortBy: filters.sortBy
+      }
+    });
+  }, [filteredFormations.length, formations.length, filters]);
 
   if (error) {
     return (
@@ -119,7 +173,7 @@ const Act = () => {
         <FormationFilters
           filters={filters}
           onFilterChange={handleFilterChange}
-          specializations={specializations}
+          specializations={activeSpecializations}
         />
 
         <div className="flex justify-end">
@@ -135,6 +189,7 @@ const Act = () => {
             ? 'grid-cols-1 sm:grid-cols-1 md:grid-cols-2' 
             : 'grid-cols-1'
           }
+          ${viewMode === 'list' ? 'max-w-[1200px] mx-auto' : ''}
         `}>
           {filteredFormations.map(formation => (
             <FormationCard
