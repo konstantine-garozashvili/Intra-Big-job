@@ -416,4 +416,96 @@ class FormationController extends AbstractController
             'message' => 'Étudiant retiré de la formation, profil supprimé et rôle mis à jour.'
         ]);
     }
+
+    #[Route('/formations/{id}/available-students', name: 'api_formations_available_students', methods: ['GET'])]
+    public function getAvailableStudents(int $id): JsonResponse
+    {
+        $formation = $this->formationRepository->find($id);
+        if (!$formation) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Formation non trouvée'
+            ], 404);
+        }
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('u')
+            ->from('App\\Entity\\User', 'u')
+            ->leftJoin('u.formations', 'f')
+            ->leftJoin('u.userRoles', 'ur')
+            ->leftJoin('ur.role', 'r')
+            ->where($qb->expr()->orX(
+                $qb->expr()->eq('r.name', ':guest'),
+                $qb->expr()->eq('r.name', ':student')
+            ))
+            ->andWhere($qb->expr()->orX(
+                $qb->expr()->isNull('f.id'),
+                $qb->expr()->neq('f.id', ':formationId')
+            ))
+            ->setParameter('guest', 'GUEST')
+            ->setParameter('student', 'STUDENT')
+            ->setParameter('formationId', $id);
+        $users = $qb->getQuery()->getResult();
+        // Filter out users already in the formation
+        $users = array_filter($users, function($u) use ($formation) {
+            return !$formation->getStudents()->contains($u);
+        });
+        $data = array_map(function($u) {
+            return [
+                'id' => $u->getId(),
+                'firstName' => $u->getFirstName(),
+                'lastName' => $u->getLastName(),
+                'email' => $u->getEmail(),
+            ];
+        }, $users);
+        return $this->json([
+            'success' => true,
+            'data' => $data
+        ]);
+    }
+
+    #[Route('/formations/{formationId}/students/{userId}', name: 'api_formations_add_student', methods: ['POST'])]
+    public function addStudentToFormation(int $formationId, int $userId): JsonResponse
+    {
+        $formation = $this->formationRepository->find($formationId);
+        if (!$formation) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Formation non trouvée'
+            ], 404);
+        }
+        $user = $this->entityManager->getRepository(\App\Entity\User::class)->find($userId);
+        if (!$user) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Utilisateur non trouvé'
+            ], 404);
+        }
+        // Add user to formation if not already present
+        if (!$formation->getStudents()->contains($user)) {
+            $formation->addStudent($user);
+        }
+        // Add STUDENT role if not present
+        $hasStudent = false;
+        foreach ($user->getUserRoles() as $userRole) {
+            if (strtoupper($userRole->getRole()->getName()) === 'STUDENT') {
+                $hasStudent = true;
+                break;
+            }
+        }
+        if (!$hasStudent) {
+            $studentRole = $this->entityManager->getRepository(\App\Entity\Role::class)->findOneBy(['name' => 'STUDENT']);
+            if ($studentRole) {
+                $userRole = new \App\Entity\UserRole();
+                $userRole->setUser($user);
+                $userRole->setRole($studentRole);
+                $user->addUserRole($userRole);
+                $this->entityManager->persist($userRole);
+            }
+        }
+        $this->entityManager->flush();
+        return $this->json([
+            'success' => true,
+            'message' => 'Utilisateur ajouté à la formation.'
+        ]);
+    }
 } 

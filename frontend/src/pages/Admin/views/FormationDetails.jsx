@@ -5,6 +5,8 @@ import { Loader2, Users, Calendar, Clock, MapPin } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import apiService from '@/lib/services/apiService';
 import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 export default function FormationDetails() {
   const { id } = useParams();
@@ -13,6 +15,11 @@ export default function FormationDetails() {
   const [studentCount, setStudentCount] = useState(0);
   const [acceptedCount, setAcceptedCount] = useState(0);
   const [acceptedStudents, setAcceptedStudents] = useState([]);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [availableUsers, setAvailableUsers] = useState([]);
+  const [loadingAvailable, setLoadingAvailable] = useState(false);
+  const [addingUserId, setAddingUserId] = useState(null);
+  const [enrolledStudents, setEnrolledStudents] = useState([]);
 
   useEffect(() => {
     const fetchFormation = async () => {
@@ -31,8 +38,10 @@ export default function FormationDetails() {
         }
         setFormation(f);
         setStudentCount(Array.isArray(f?.students) ? f.students.length : 0);
+        setEnrolledStudents(Array.isArray(f?.students) ? f.students : []);
       } catch (err) {
         setFormation(null);
+        setEnrolledStudents([]);
       } finally {
         setLoading(false);
       }
@@ -70,6 +79,53 @@ export default function FormationDetails() {
       setStudentCount((prev) => prev - 1);
     } catch (err) {
       toast.error('Erreur lors du retrait de l\'étudiant.');
+    }
+  };
+
+  const handleOpenAddModal = async () => {
+    setShowAddModal(true);
+    setLoadingAvailable(true);
+    try {
+      const res = await apiService.get(`/api/formations/${id}/available-students`);
+      let users = [];
+      if (res && res.success && Array.isArray(res.data)) {
+        users = res.data;
+      } else if (res && res.success && Array.isArray(res.data?.users)) {
+        users = res.data.users;
+      } else if (Array.isArray(res)) {
+        users = res;
+      }
+      setAvailableUsers(users);
+    } catch (err) {
+      setAvailableUsers([]);
+      toast.error("Erreur lors du chargement des utilisateurs disponibles.");
+    } finally {
+      setLoadingAvailable(false);
+    }
+  };
+
+  const handleAddUser = async (userId) => {
+    setAddingUserId(userId);
+    try {
+      await apiService.post(`/api/formations/${id}/students/${userId}`);
+      toast.success('Utilisateur ajouté à la formation.');
+      setShowAddModal(false);
+      // Refresh accepted students list
+      const res = await apiService.get(`/api/formations/${id}/enrollment-requests?status=accepted`);
+      let students = [];
+      if (res && res.success && Array.isArray(res.data)) {
+        students = res.data.map(r => r.user);
+      } else if (Array.isArray(res)) {
+        students = res.map(r => r.user);
+      }
+      setAcceptedStudents(students);
+      setAcceptedCount(students.length);
+      // Re-fetch formation to update studentCount and enrolledStudents
+      await fetchFormation();
+    } catch (err) {
+      toast.error("Erreur lors de l'ajout de l'utilisateur.");
+    } finally {
+      setAddingUserId(null);
     }
   };
 
@@ -113,7 +169,10 @@ export default function FormationDetails() {
                 </div>
               </div>
               <div className="w-full mt-8">
-                <h3 className="text-lg font-semibold mb-2 text-left">Étudiants acceptés</h3>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-lg font-semibold text-left">Étudiants acceptés</h3>
+                  <Button onClick={handleOpenAddModal} className="bg-blue-600 hover:bg-blue-700 text-white">Ajouter</Button>
+                </div>
                 {acceptedStudents.length === 0 ? (
                   <div className="text-gray-500 text-sm">Aucun étudiant accepté pour cette formation.</div>
                 ) : (
@@ -132,11 +191,64 @@ export default function FormationDetails() {
                     ))}
                   </ul>
                 )}
+                {/* Show directly enrolled students not in acceptedStudents */}
+                {enrolledStudents.filter(s => !acceptedStudents.some(a => a.id === s.id)).length > 0 && (
+                  <>
+                    <h4 className="mt-6 mb-2 text-md font-semibold text-left">Étudiants inscrits</h4>
+                    <ul className="divide-y divide-gray-200">
+                      {enrolledStudents.filter(s => !acceptedStudents.some(a => a.id === s.id)).map((student) => (
+                        <li key={student.id} className="py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                          <span className="font-medium">{student.firstName} {student.lastName}</span>
+                          <span className="text-gray-500 text-sm">{student.email}</span>
+                          <button
+                            className="ml-4 px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition"
+                            onClick={() => handleKickStudent(student.id)}
+                          >
+                            Retirer
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
               </div>
             </div>
           </CardContent>
         </Card>
       )}
+      <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ajouter un utilisateur à la formation</DialogTitle>
+            <DialogDescription>Choisissez un invité ou étudiant à ajouter à cette formation.</DialogDescription>
+          </DialogHeader>
+          {loadingAvailable ? (
+            <div className="py-6 text-center"><Loader2 className="animate-spin w-6 h-6 mx-auto" /></div>
+          ) : availableUsers.length === 0 ? (
+            <div className="py-6 text-center text-gray-500">Aucun utilisateur disponible à ajouter.</div>
+          ) : (
+            <ul className="divide-y divide-gray-200 max-h-64 overflow-y-auto">
+              {availableUsers.map(user => (
+                <li key={user.id} className="py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <span className="font-medium">{user.firstName} {user.lastName}</span>
+                  <span className="text-gray-500 text-sm">{user.email}</span>
+                  <Button
+                    size="sm"
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                    disabled={addingUserId === user.id}
+                    onClick={() => handleAddUser(user.id)}
+                  >
+                    {addingUserId === user.id ? <Loader2 className="animate-spin w-4 h-4" /> : 'Ajouter'}
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddModal(false)}>Fermer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 } 
