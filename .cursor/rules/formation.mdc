@@ -3,6 +3,8 @@ description:
 globs: 
 alwaysApply: false
 ---
+I would like you to help me set up a feature, I already have the database tables planned for it. I have a crud system for training and I have a role system. I would like guest roles to have the ability to request to join a training. They will only be able to request if in the user table their is_profile_completion_acknowledged field is set to 1. Following their request, the recruiter should be able to fetch training requests and see which training they are requesting. They will then be able to accept/reject and add a short comment. If they accept, the guest will change their role to student and they will receive a notification and will be linked to the training in question.
+
 curl --request POST \
 --url http://localhost:8000/api/login_check \
 --header 'Content-Type: application/json' \

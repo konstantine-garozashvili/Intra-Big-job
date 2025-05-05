@@ -20,7 +20,6 @@ Ignore linting issues in PHP imports.
 - **Severity: CRITICAL**
 - Always read the entire file contents before suggesting modifications
 - This ensures you understand the component's purpose and dependencies
-- Always use the backend commands in the backend container
 
 ### Controllers first
 - **Severity: CRITICAL**
@@ -42,9 +41,7 @@ Ignore linting issues in PHP imports.
   - Belongs to Nationality, Theme, Specialization
   - Many-to-many with Formation, Group
   - Role: Connected to User via UserRole junction table
-  - Document-related: document, document_category, document_type, document_history
-  - Ticket system: ticket, ticket_status, ticket_comment, ticket_service
-  - Formation system: formation, formation_student (junction), specialization
+  - Document-related: document, document_category, document_type,
 
 ## High Priority Rules
 
