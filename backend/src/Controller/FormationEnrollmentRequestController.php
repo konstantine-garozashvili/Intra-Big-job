@@ -97,30 +97,16 @@ class FormationEnrollmentRequestController extends AbstractController
         FormationEnrollmentRequest $request,
         Request $httpRequest
     ): Response {
-        $content = $httpRequest->getContent();
-        $data = json_decode($content, true);
+        $content = json_decode($httpRequest->getContent(), true);
         
-        // Debug
-        dump([
-            'raw_content' => $content,
-            'decoded_data' => $data,
-            'status_exists' => isset($data['status']),
-            'status_value' => $data['status'] ?? null,
-            'type_of_status' => gettype($data['status'] ?? null)
-        ]);
-
-        if (!isset($data['status'])) {
+        if (!isset($content['status'])) {
             return $this->json([
-                'message' => 'Le statut est requis',
-                'debug' => [
-                    'received_content' => $content,
-                    'parsed_data' => $data
-                ]
+                'message' => 'Le statut est requis'
             ], Response::HTTP_BAD_REQUEST);
         }
 
-        $status = $data['status'];
-        $comment = $data['comment'] ?? null;
+        $status = $content['status'];
+        $comment = $content['comment'] ?? null;
 
         $request->setStatus($status);
         $request->setComment($comment);
@@ -156,6 +142,35 @@ class FormationEnrollmentRequestController extends AbstractController
 
         return $this->json([
             'message' => $status ? 'Demande acceptée' : 'Demande refusée'
+        ]);
+    }
+
+    #[Route('/formation-requests/my', methods: ['GET'])]
+    #[IsGranted('ROLE_GUEST')]
+    public function getMyRequests(): Response
+    {
+        $user = $this->getUser();
+        $requests = $this->entityManager->getRepository(FormationEnrollmentRequest::class)
+            ->findBy(['user' => $user], ['createdAt' => 'DESC']);
+
+        return $this->json([
+            'requests' => array_map(function($request) {
+                return [
+                    'id' => $request->getId(),
+                    'formation' => [
+                        'id' => $request->getFormation()->getId(),
+                        'name' => $request->getFormation()->getName()
+                    ],
+                    'status' => $request->getStatus(),
+                    'comment' => $request->getComment(),
+                    'createdAt' => $request->getCreatedAt()->format('Y-m-d H:i:s'),
+                    'reviewedBy' => $request->getReviewedBy() ? [
+                        'id' => $request->getReviewedBy()->getId(),
+                        'firstName' => $request->getReviewedBy()->getFirstName(),
+                        'lastName' => $request->getReviewedBy()->getLastName()
+                    ] : null
+                ];
+            }, $requests)
         ]);
     }
 }
