@@ -112,7 +112,11 @@ class FormationController extends AbstractController
             'specialization' => $formation->getSpecialization() ? [
                 'id' => $formation->getSpecialization()->getId(),
                 'name' => $formation->getSpecialization()->getName()
-            ] : null
+            ] : null,
+            'capacity' => $formation->getCapacity(),
+            'duration' => $formation->getDuration(),
+            'dateStart' => $formation->getDateStart() ? $formation->getDateStart()->format('Y-m-d') : null,
+            'location' => $formation->getLocation(),
         ];
 
         return $this->json([

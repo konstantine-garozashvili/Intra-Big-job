@@ -105,7 +105,7 @@ const UserRoleManager = lazy(() =>
   import("./pages/Admin/components/UserRoleManager")
 );
 const FormationFinder = lazy(() => import("./pages/FormationFinder"));
-const AllFormations = lazy(() => import("./pages/AllFormations"));
+const AllFormations = lazy(() => import("./pages/Admin/views/AllFormations"));
 const WebDevelopment = lazy(() => import("./pages/formations/WebDevelopment"));
 const Cybersecurity = lazy(() => import("./pages/formations/Cybersecurity"));
 const ArtificialIntelligence = lazy(() =>
@@ -142,6 +142,9 @@ const Act = lazy(() => import("./components/Formation/Act/index"));
 
 // Import the EnrollmentRequests component
 const EnrollmentRequests = lazy(() => import("./pages/Recruiter/views/EnrollmentRequests"));
+
+// Formation details component
+const FormationDetails = lazy(() => import("./pages/Admin/views/FormationDetails"));
 
 // Fonction optimisée pour le préchargement intelligent des pages
 // Ne charge que les pages pertinentes en fonction du contexte et du chemin actuel
@@ -313,6 +316,8 @@ const App = () => {
                     <Route path="/admin/users" element={<RoleGuard roles={[ROLES.ADMIN, ROLES.HR, ROLES.TEACHER, ROLES.SUPERADMIN]}><UserRoleManager /></RoleGuard>} />
                     <Route path="/admin/ticket-services" element={<RoleGuard roles={[ROLES.ADMIN, ROLES.SUPERADMIN]} fallback={<Navigate to="/dashboard" replace />}><TicketServiceList /></RoleGuard>} />
                     <Route path="/admin/tickets" element={<RoleGuard roles={[ROLES.ADMIN, ROLES.SUPERADMIN]} fallback={<Navigate to="/dashboard" replace />}><AdminTicketList /></RoleGuard>} />
+                    <Route path="/admin/formations" element={<RoleGuard roles={[ROLES.ADMIN, ROLES.SUPERADMIN]} fallback={<Navigate to="/dashboard" replace />}><AllFormations /></RoleGuard>} />
+                    <Route path="/admin/formations/:id" element={<RoleGuard roles={[ROLES.ADMIN, ROLES.SUPERADMIN]} fallback={<Navigate to="/dashboard" replace />}><FormationDetails /></RoleGuard>} />
 
                     {/* Routes étudiantes */}
                     <Route path="/student">

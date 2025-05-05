@@ -101,6 +101,13 @@ const AdminDashboard = () => {
       description: 'Gérer les événements et les actualités',
       link: '/admin/events',
       color: 'bg-yellow-500'
+    },
+    {
+      id: 5,
+      title: 'Toutes les formations',
+      description: 'Voir toutes les formations disponibles',
+      link: '/admin/formations',
+      color: 'bg-orange-500'
     }
   ];
 

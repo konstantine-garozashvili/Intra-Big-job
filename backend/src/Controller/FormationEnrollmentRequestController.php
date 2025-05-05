@@ -189,4 +189,35 @@ class FormationEnrollmentRequestController extends AbstractController
 
         return $this->json(['message' => 'Demande supprimée'], Response::HTTP_NO_CONTENT);
     }
+
+    #[Route('/formations/{id}/enrollment-requests', methods: ['GET'])]
+    #[IsGranted('ROLE_ADMIN')]
+    public function getEnrollmentRequestsForFormation(Formation $formation, Request $request): Response
+    {
+        $statusParam = $request->query->get('status');
+        $repo = $this->entityManager->getRepository(FormationEnrollmentRequest::class);
+        $criteria = ['formation' => $formation];
+        if ($statusParam === 'accepted') {
+            $criteria['status'] = true;
+        } elseif ($statusParam === 'pending') {
+            $criteria['status'] = null;
+        } elseif ($statusParam === 'rejected') {
+            $criteria['status'] = false;
+        }
+        $requests = $repo->findBy($criteria);
+        return $this->json(array_map(function($request) {
+            return [
+                'id' => $request->getId(),
+                'user' => [
+                    'id' => $request->getUser()->getId(),
+                    'firstName' => $request->getUser()->getFirstName(),
+                    'lastName' => $request->getUser()->getLastName(),
+                    'email' => $request->getUser()->getEmail(),
+                ],
+                'status' => $request->getStatus(),
+                'createdAt' => $request->getCreatedAt()?->format('Y-m-d H:i:s'),
+                'comment' => $request->getComment(),
+            ];
+        }, $requests));
+    }
 }
