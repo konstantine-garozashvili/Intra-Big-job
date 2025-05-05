@@ -29,6 +29,96 @@ const FormationCard = ({ formation, onRequestJoin, viewMode }) => {
     specialization
   } = formation;
 
+  const InfoItem = ({ icon: Icon, text, colorClass }) => (
+    <div className={`flex items-center gap-2 ${colorClass}`}>
+      <Icon className="h-4 w-4 flex-shrink-0" />
+      <span className="truncate">{text}</span>
+    </div>
+  );
+
+  if (viewMode === 'list') {
+    return (
+      <Card className="flex flex-col sm:flex-row bg-white dark:bg-slate-800 shadow-lg border-0 overflow-hidden rounded-lg transition-all duration-300 hover:shadow-xl hover:shadow-amber-200/30 dark:hover:shadow-amber-400/20 group">
+        {/* Image Section */}
+        <div className="relative w-full sm:w-72 h-48 sm:h-auto">
+          <div className="absolute inset-0 bg-gradient-to-t from-[#02284f]/90 via-[#02284f]/50 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-4">
+            <span className="text-white font-medium">Voir la formation</span>
+          </div>
+          <img
+            src={image_url || "/placeholder.svg"}
+            alt={name}
+            className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+          />
+        </div>
+
+        {/* Content Section */}
+        <div className="flex-1 flex flex-col p-6 relative min-h-[220px]">
+          <div className="flex-grow pb-16">
+            {/* Badges */}
+            <div className="flex flex-wrap gap-2 mb-4">
+              <Badge
+                className={`${badgeVariants[specialization?.name || 'default']} transition-all duration-300 text-xs sm:text-sm`}
+              >
+                {specialization?.name || 'Formation'}
+              </Badge>
+              <Badge variant="outline" className="bg-gradient-to-r from-amber-50 to-white dark:from-amber-900/20 dark:to-slate-900 border-amber-200 dark:border-amber-700/50 text-xs sm:text-sm">
+                {promotion}
+              </Badge>
+            </div>
+
+            {/* Title and Description */}
+            <div className="mb-4">
+              <h3 className="text-xl font-bold mb-2 text-slate-800 dark:text-slate-100 transition-transform duration-300 group-hover:translate-x-1">
+                {name}
+              </h3>
+              <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-2">
+                {description || 'Aucune description disponible'}
+              </p>
+            </div>
+
+            {/* Info Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+              <InfoItem
+                icon={Calendar}
+                text={`Début le ${new Date(dateStart).toLocaleDateString()}`}
+                colorClass="text-amber-600 dark:text-amber-300"
+              />
+              <InfoItem
+                icon={Clock}
+                text={`${duration} mois`}
+                colorClass="text-[#528eb2] dark:text-[#78b9dd]"
+              />
+              <InfoItem
+                icon={Users}
+                text={`Capacité: ${capacity} étudiants`}
+                colorClass="text-amber-600 dark:text-amber-300"
+              />
+              {location && (
+                <InfoItem
+                  icon={MapPin}
+                  text={location}
+                  colorClass="text-[#528eb2] dark:text-[#78b9dd]"
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Action Button - bottom right */}
+          <div className="absolute bottom-6 right-6">
+            <MagicButton
+              className="text-sm sm:text-base font-medium bg-gradient-to-r from-amber-400 via-[#528eb2] to-[#78b9dd] hover:from-transparent hover:to-transparent hover:text-amber-600 dark:hover:text-white px-8 py-3"
+              onClick={() => onRequestJoin(id)}
+            >
+              Demander à rejoindre
+              <ChevronRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
+            </MagicButton>
+          </div>
+        </div>
+      </Card>
+    );
+  }
+
+  // Grid View
   return (
     <Card className="h-full flex flex-col bg-white dark:bg-slate-800 shadow-lg border-0 overflow-hidden rounded-lg transition-all duration-300 hover:shadow-xl hover:shadow-amber-200/30 dark:hover:shadow-amber-400/20 group">
       <div className="relative aspect-[16/9] overflow-hidden">
@@ -63,30 +153,34 @@ const FormationCard = ({ formation, onRequestJoin, viewMode }) => {
         </p>
 
         <div className="flex flex-col gap-2 mt-4 text-xs sm:text-sm">
-          <div className="flex items-center gap-2 text-amber-600 dark:text-amber-300">
-            <Calendar className="h-4 w-4 flex-shrink-0" />
-            <span className="truncate">Début le {new Date(dateStart).toLocaleDateString()}</span>
-          </div>
-          <div className="flex items-center gap-2 text-[#528eb2] dark:text-[#78b9dd]">
-            <Clock className="h-4 w-4 flex-shrink-0" />
-            <span className="truncate">{duration} mois</span>
-          </div>
-          <div className="flex items-center gap-2 text-amber-600 dark:text-amber-300">
-            <Users className="h-4 w-4 flex-shrink-0" />
-            <span className="truncate">Capacité: {capacity} étudiants</span>
-          </div>
+          <InfoItem
+            icon={Calendar}
+            text={`Début le ${new Date(dateStart).toLocaleDateString()}`}
+            colorClass="text-amber-600 dark:text-amber-300"
+          />
+          <InfoItem
+            icon={Clock}
+            text={`${duration} mois`}
+            colorClass="text-[#528eb2] dark:text-[#78b9dd]"
+          />
+          <InfoItem
+            icon={Users}
+            text={`Capacité: ${capacity} étudiants`}
+            colorClass="text-amber-600 dark:text-amber-300"
+          />
           {location && (
-            <div className="flex items-center gap-2 text-[#528eb2] dark:text-[#78b9dd]">
-              <MapPin className="h-4 w-4 flex-shrink-0" />
-              <span className="truncate">{location}</span>
-            </div>
+            <InfoItem
+              icon={MapPin}
+              text={location}
+              colorClass="text-[#528eb2] dark:text-[#78b9dd]"
+            />
           )}
         </div>
       </CardContent>
 
       <CardFooter className="p-4 pt-0">
         <MagicButton
-          className="w-full text-sm sm:text-base font-medium bg-gradient-to-r from-amber-400 via-[#528eb2] to-[#78b9dd] hover:from-transparent hover:to-transparent dark:hover:text-white"
+          className="w-full text-sm sm:text-base font-medium bg-gradient-to-r from-amber-400 via-[#528eb2] to-[#78b9dd] hover:from-transparent hover:to-transparent hover:text-amber-600 dark:hover:text-white"
           onClick={() => onRequestJoin(id)}
         >
           Demander à rejoindre
