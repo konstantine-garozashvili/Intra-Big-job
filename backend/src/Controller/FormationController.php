@@ -365,6 +365,13 @@ class FormationController extends AbstractController
             ], 404);
         }
 
+        // Remove all enrollment requests for this user and formation (by ID)
+        $enrollmentRequests = $this->entityManager->getRepository(\App\Entity\FormationEnrollmentRequest::class)
+            ->findBy(['user' => $user->getId(), 'formation' => $formation->getId()]);
+        foreach ($enrollmentRequests as $request) {
+            $this->entityManager->remove($request);
+        }
+
         // Remove the user from the formation
         $formation->removeStudent($user);
 
@@ -398,6 +405,7 @@ class FormationController extends AbstractController
         // Remove StudentProfile if exists
         $studentProfile = $this->studentProfileRepository->findByUserWithRelations($user->getId());
         if ($studentProfile) {
+            $user->setStudentProfile(null); // Dissociate profile from user
             $this->entityManager->remove($studentProfile);
         }
 
