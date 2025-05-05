@@ -57,6 +57,30 @@ export default function EnrollmentRequests() {
     }
   };
 
+  const handleReject = async (id) => {
+    setProcessingId(id);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/formation-requests/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        toast.success('Demande supprimée');
+        fetchRequests();
+      } else {
+        const data = await res.json();
+        toast.error(data.message || 'Erreur lors de la suppression');
+      }
+    } catch (err) {
+      toast.error('Erreur lors de la suppression');
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
   if (loading) {
     return <div className="flex justify-center items-center h-64"><Loader2 className="animate-spin w-8 h-8" /></div>;
   }
@@ -78,7 +102,7 @@ export default function EnrollmentRequests() {
                 <div className="text-xs text-gray-400">{req.user.email}</div>
                 <div className="mt-4 text-xs text-gray-400">Demandé le {req.createdAt}</div>
               </CardContent>
-              <CardFooter className="p-6 pt-0 flex justify-end">
+              <CardFooter className="p-6 pt-0 flex justify-end gap-2">
                 <Button
                   onClick={() => handleAccept(req.id)}
                   disabled={processingId === req.id}
@@ -86,6 +110,14 @@ export default function EnrollmentRequests() {
                 >
                   {processingId === req.id ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : null}
                   Accepter
+                </Button>
+                <Button
+                  onClick={() => handleReject(req.id)}
+                  disabled={processingId === req.id}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  {processingId === req.id ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : null}
+                  Refuser
                 </Button>
               </CardFooter>
             </Card>
