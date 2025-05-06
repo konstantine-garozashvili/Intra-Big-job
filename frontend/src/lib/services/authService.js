@@ -86,6 +86,9 @@ export const authService = {
       
       if (response.refresh_token) localStorage.setItem('refresh_token', response.refresh_token);
       
+      // Immediately fetch the latest user info and roles from the backend
+      await this.getCurrentUser(true, { requestSource: 'login' });
+      
       hideGlobalLoader();
       window.dispatchEvent(new Event('login-success'));
       window.dispatchEvent(new Event('auth-state-change'));

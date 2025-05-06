@@ -105,6 +105,14 @@ const RecruiterDashboard = () => {
       link: '/recruiter/enrollment-requests',
     },
     {
+      title: 'Gestion des étudiants formations',
+      description: 'Voir et gérer les étudiants inscrits',
+      icon: Users,
+      color: 'from-yellow-500 to-yellow-600',
+      textColor: 'text-yellow-50',
+      link: '/recruiter/formation-management',
+    },
+    {
       title: 'Étudiants invités',
       description: 'Gérer les étudiants invités',
       icon: Users,

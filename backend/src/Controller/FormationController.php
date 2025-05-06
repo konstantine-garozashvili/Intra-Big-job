@@ -472,6 +472,7 @@ class FormationController extends AbstractController
     }
 
     #[Route('/formations/{formationId}/students/{userId}', name: 'api_formations_add_student', methods: ['POST'])]
+    #[\Symfony\Bundle\SecurityBundle\Attribute\Security("is_granted('ROLE_ADMIN') or is_granted('ROLE_RECRUITER')")]
     public function addStudentToFormation(int $formationId, int $userId): JsonResponse
     {
         $formation = $this->formationRepository->find($formationId);
@@ -487,6 +488,13 @@ class FormationController extends AbstractController
                 'success' => false,
                 'message' => 'Utilisateur non trouvé'
             ], 404);
+        }
+        // Remove GUEST role if present
+        foreach ($user->getUserRoles() as $userRole) {
+            if (strtoupper($userRole->getRole()->getName()) === 'GUEST') {
+                $user->removeUserRole($userRole);
+                $this->entityManager->remove($userRole);
+            }
         }
         // Add user to formation if not already present
         if (!$formation->getStudents()->contains($user)) {

@@ -5,11 +5,13 @@ import apiService from '@/lib/services/apiService';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Users, Clock, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useRolePermissions } from '@/features/roles';
 
 export default function AllFormations() {
   const [formations, setFormations] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const permissions = useRolePermissions();
 
   useEffect(() => {
     const fetchFormations = async () => {
@@ -50,7 +52,13 @@ export default function AllFormations() {
               <Card
                 key={f.id}
                 className="hover:shadow-lg transition-shadow flex flex-col md:flex-row overflow-hidden cursor-pointer"
-                onClick={() => navigate(`/admin/formations/${f.id}`)}
+                onClick={() => {
+                  if (permissions.isRecruiter()) {
+                    navigate(`/recruiter/formation-management/${f.id}`);
+                  } else {
+                    navigate(`/admin/formations/${f.id}`);
+                  }
+                }}
               >
                 <div className="md:w-56 w-full h-40 md:h-auto flex-shrink-0 bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
                   <img

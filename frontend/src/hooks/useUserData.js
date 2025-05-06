@@ -4,6 +4,7 @@ import userDataManager, { USER_DATA_EVENTS } from '@/lib/services/userDataManage
 import { getSessionId } from '@/lib/services/authService';
 import { authService } from '@/lib/services/authService';
 import apiService from '@/lib/services/apiService';
+import { getPrimaryRole } from '@/lib/utils/roleUtils';
 
 /**
  * Hook pour accéder aux données utilisateur de manière centralisée
@@ -398,7 +399,7 @@ export function useUserData(options = {}) {
     // Déterminer le rôle principal
     let primaryRole = '';
     if (userToUse.roles && userToUse.roles.length > 0) {
-      primaryRole = Array.isArray(userToUse.roles) ? userToUse.roles[0] : '';
+      primaryRole = getPrimaryRole(userToUse.roles);
     }
     
     // Déterminer les rôles spécifiques

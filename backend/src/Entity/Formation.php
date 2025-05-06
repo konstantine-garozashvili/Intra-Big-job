@@ -178,6 +178,10 @@ class Formation
     {
         if (!$this->students->contains($student)) {
             $this->students->add($student);
+            // Ensure bidirectional relationship
+            if (method_exists($student, 'addFormation')) {
+                $student->addFormation($this);
+            }
         }
         return $this;
     }

@@ -108,6 +108,13 @@ const AdminDashboard = () => {
       description: 'Voir toutes les formations disponibles',
       link: '/admin/formations',
       color: 'bg-orange-500'
+    },
+    {
+      id: 6,
+      title: 'Gestion des étudiants formations',
+      description: 'Voir et gérer les étudiants inscrits',
+      link: '/admin/formations',
+      color: 'bg-yellow-600'
     }
   ];
 

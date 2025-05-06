@@ -31,6 +31,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import useUserData from '@/hooks/useUserData';
+import apiService from '@/lib/services/apiService';
 
 // Variants d'animation
 const containerVariants = {
@@ -66,9 +68,11 @@ const fadeInVariants = {
  */
 const StudentDashboard = () => {
   const { user, isLoading, isError, error } = useStudentDashboardData();
+  const { user: userProfile } = useUserData();
   const [showSkeleton, setShowSkeleton] = useState(false);
   const skeletonTimerRef = useRef(null);
   const hasDataLoadedRef = useRef(false);
+  const [myFormation, setMyFormation] = useState(null);
   
   // Effet pour gérer l'affichage du skeleton uniquement quand nécessaire
   useEffect(() => {
@@ -102,6 +106,18 @@ const StudentDashboard = () => {
     };
   }, [isLoading, user]);
   
+  useEffect(() => {
+    apiService.get('/api/profile/formations')
+      .then(res => {
+        if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+          setMyFormation(res.data[0]);
+        } else {
+          setMyFormation(null);
+        }
+      })
+      .catch(() => setMyFormation(null));
+  }, []);
+  
   // Format current date for display
   const formattedDate = useMemo(() => {
     const today = new Date();
@@ -118,6 +134,11 @@ const StudentDashboard = () => {
     if (!user?.firstName || !user?.lastName) return 'ET';
     return `${user.firstName[0]}${user.lastName[0]}`;
   }, [user]);
+
+  // Get the student's formation name (dynamic)
+  const formationName = userProfile && Array.isArray(userProfile.formations) && userProfile.formations.length > 0
+    ? userProfile.formations[0]?.name
+    : null;
 
   // Données du graphique radar des compétences
   const competencesData = [
@@ -150,6 +171,18 @@ const StudentDashboard = () => {
       link: '/student/schedule',
       stats: '3 cours aujourd\'hui',
       progress: 75
+    },
+    {
+      title: 'Ma formation',
+      description: myFormation
+        ? `Vous êtes inscrit à : ${myFormation.name}`
+        : 'Aucune formation trouvée',
+      icon: GraduationCap,
+      color: 'from-yellow-500 to-yellow-600',
+      textColor: 'text-yellow-50',
+      link: '/student/formation',
+      stats: myFormation ? myFormation.name : 'Non inscrit',
+      progress: myFormation ? 100 : 0
     },
     {
       title: 'Notes et résultats',

@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useEffect, useState, useMemo } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader2, Users, Calendar, Clock, MapPin } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -7,6 +7,7 @@ import apiService from '@/lib/services/apiService';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { authService } from '@/lib/services/authService';
 
 export default function FormationDetails() {
   const { id } = useParams();
@@ -20,6 +21,9 @@ export default function FormationDetails() {
   const [loadingAvailable, setLoadingAvailable] = useState(false);
   const [addingUserId, setAddingUserId] = useState(null);
   const [enrolledStudents, setEnrolledStudents] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const navigate = useNavigate();
 
   // Move fetchFormation outside useEffect so it can be reused
   const fetchFormation = async () => {
@@ -47,27 +51,29 @@ export default function FormationDetails() {
     }
   };
 
+  // Move fetchAcceptedStudents outside useEffect so it can be reused
+  const fetchAcceptedStudents = async () => {
+    try {
+      const res = await apiService.get(`/api/formations/${id}/enrollment-requests?status=accepted`);
+      let students = [];
+      if (res && res.success && Array.isArray(res.data)) {
+        students = res.data.map(r => r.user);
+      } else if (Array.isArray(res)) {
+        students = res.map(r => r.user);
+      }
+      setAcceptedStudents(students);
+      setAcceptedCount(students.length);
+    } catch (err) {
+      setAcceptedStudents([]);
+      setAcceptedCount(0);
+    }
+  };
+
   useEffect(() => {
     fetchFormation();
   }, [id]);
 
   useEffect(() => {
-    const fetchAcceptedStudents = async () => {
-      try {
-        const res = await apiService.get(`/api/formations/${id}/enrollment-requests?status=accepted`);
-        let students = [];
-        if (res && res.success && Array.isArray(res.data)) {
-          students = res.data.map(r => r.user);
-        } else if (Array.isArray(res)) {
-          students = res.map(r => r.user);
-        }
-        setAcceptedStudents(students);
-        setAcceptedCount(students.length);
-      } catch (err) {
-        setAcceptedStudents([]);
-        setAcceptedCount(0);
-      }
-    };
     fetchAcceptedStudents();
   }, [id]);
 
@@ -76,9 +82,10 @@ export default function FormationDetails() {
     try {
       await apiService.delete(`/api/formations/${id}/students/${studentId}`);
       toast.success('Étudiant retiré de la formation.');
+      setEnrolledStudents((prev) => prev.filter((s) => s.id !== studentId));
+      setStudentCount((prev) => Math.max(0, prev - 1));
       setAcceptedStudents((prev) => prev.filter((s) => s.id !== studentId));
-      setAcceptedCount((prev) => prev - 1);
-      setStudentCount((prev) => prev - 1);
+      setAcceptedCount((prev) => Math.max(0, prev - 1));
     } catch (err) {
       toast.error('Erreur lors du retrait de l\'étudiant.');
     }
@@ -97,6 +104,9 @@ export default function FormationDetails() {
       } else if (Array.isArray(res)) {
         users = res;
       }
+      // Filter out users already enrolled
+      const enrolledIds = new Set(enrolledStudents.map(s => s.id));
+      users = users.filter(u => !enrolledIds.has(u.id));
       setAvailableUsers(users);
     } catch (err) {
       setAvailableUsers([]);
@@ -105,6 +115,28 @@ export default function FormationDetails() {
       setLoadingAvailable(false);
     }
   };
+
+  // Debounce search input
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 200);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
+
+  // Filter users based on search
+  const filteredUsers = useMemo(() => {
+    if (!debouncedSearch) {
+      // No search: show only the first 5 users
+      return availableUsers.slice(0, 5);
+    }
+    const term = debouncedSearch.toLowerCase();
+    return availableUsers.filter(user =>
+      user.firstName?.toLowerCase().includes(term) ||
+      user.lastName?.toLowerCase().includes(term) ||
+      user.email?.toLowerCase().includes(term)
+    );
+  }, [availableUsers, debouncedSearch]);
 
   const handleAddUser = async (userId) => {
     setAddingUserId(userId);
@@ -118,25 +150,26 @@ export default function FormationDetails() {
       }
       toast.success('Utilisateur ajouté à la formation.');
       setShowAddModal(false);
-      // Refresh accepted students list
-      console.log('[handleAddUser] Fetching accepted students...');
-      const res2 = await apiService.get(`/api/formations/${id}/enrollment-requests?status=accepted`);
-      console.log('[handleAddUser] Response from accepted students fetch:', res2);
-      let students = [];
-      if (res2 && res2.success && Array.isArray(res2.data)) {
-        students = res2.data.map(r => r.user);
-      } else if (Array.isArray(res2)) {
-        students = res2.map(r => r.user);
+      // Dynamically update enrolled students and counts
+      const addedUser = availableUsers.find(u => u.id === userId);
+      if (addedUser) {
+        setEnrolledStudents((prev) => [...prev, addedUser]);
+        setStudentCount((prev) => prev + 1);
+        setAcceptedStudents((prev) => [...prev, addedUser]);
+        setAcceptedCount((prev) => prev + 1);
+        setAvailableUsers((prev) => prev.filter(u => u.id !== userId));
       }
-      setAcceptedStudents(students);
-      setAcceptedCount(students.length);
-      // Re-fetch formation to update studentCount and enrolledStudents
-      console.log('[handleAddUser] Re-fetching formation...');
-      await fetchFormation();
-      console.log('[handleAddUser] Done.');
-    } catch (err) {
-      console.error('[handleAddUser] Error:', err);
-      toast.error(err.message || "Erreur lors de l'ajout de l'utilisateur.");
+      // If the added user is the current user, refresh user info and redirect
+      const currentUser = authService.getUser();
+      if (currentUser && String(currentUser.id) === String(userId)) {
+        const updatedUser = await authService.getCurrentUser(true);
+        if (authService.hasRole('STUDENT')) {
+          navigate('/student/dashboard');
+        }
+      }
+    } catch (error) {
+      console.error('[handleAddUser] Error:', error);
+      toast.error(error.message || "Erreur lors de l'ajout de l'utilisateur.");
     } finally {
       setAddingUserId(null);
     }
@@ -191,7 +224,7 @@ export default function FormationDetails() {
                 ) : (
                   <ul className="divide-y divide-gray-200">
                     {enrolledStudents.map((student) => (
-                      <li key={student.id} className="py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      <li key={`${student.id}-${student.email}`} className="py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                         <span className="font-medium">{student.firstName} {student.lastName}</span>
                         <span className="text-gray-500 text-sm">{student.email}</span>
                         <button
@@ -220,22 +253,36 @@ export default function FormationDetails() {
           ) : availableUsers.length === 0 ? (
             <div className="py-6 text-center text-gray-500">Aucun utilisateur disponible à ajouter.</div>
           ) : (
-            <ul className="divide-y divide-gray-200 max-h-64 overflow-y-auto">
-              {availableUsers.map(user => (
-                <li key={user.id} className="py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <span className="font-medium">{user.firstName} {user.lastName}</span>
-                  <span className="text-gray-500 text-sm">{user.email}</span>
-                  <Button
-                    size="sm"
-                    className="bg-green-600 hover:bg-green-700 text-white"
-                    disabled={addingUserId === user.id}
-                    onClick={() => handleAddUser(user.id)}
-                  >
-                    {addingUserId === user.id ? <Loader2 className="animate-spin w-4 h-4" /> : 'Ajouter'}
-                  </Button>
-                </li>
-              ))}
-            </ul>
+            <>
+              <input
+                type="text"
+                className="w-full mb-3 px-3 py-2 border rounded focus:outline-none focus:ring focus:border-blue-300"
+                placeholder="Rechercher par nom, prénom ou email..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                autoFocus
+              />
+              <ul className="divide-y divide-gray-200 max-h-64 overflow-y-auto">
+                {filteredUsers.length === 0 ? (
+                  <li className="py-2 text-center text-gray-400">Aucun résultat.</li>
+                ) : (
+                  filteredUsers.map(user => (
+                    <li key={user.id} className="py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      <span className="font-medium">{user.firstName} {user.lastName}</span>
+                      <span className="text-gray-500 text-sm">{user.email}</span>
+                      <Button
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                        disabled={addingUserId === user.id}
+                        onClick={() => handleAddUser(user.id)}
+                      >
+                        {addingUserId === user.id ? <Loader2 className="animate-spin w-4 h-4" /> : 'Ajouter'}
+                      </Button>
+                    </li>
+                  ))
+                )}
+              </ul>
+            </>
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAddModal(false)}>Fermer</Button>

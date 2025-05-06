@@ -191,7 +191,7 @@ class FormationEnrollmentRequestController extends AbstractController
     }
 
     #[Route('/formations/{id}/enrollment-requests', methods: ['GET'])]
-    #[IsGranted('ROLE_ADMIN')]
+    #[\Symfony\Bundle\SecurityBundle\Attribute\Security("is_granted('ROLE_ADMIN') or is_granted('ROLE_RECRUITER')")]
     public function getEnrollmentRequestsForFormation(Formation $formation, Request $request): Response
     {
         $statusParam = $request->query->get('status');
