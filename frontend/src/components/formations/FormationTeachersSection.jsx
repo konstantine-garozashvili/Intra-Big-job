@@ -54,6 +54,8 @@ const FormationTeachersSection = ({ formationId }) => {
       });
       setSelectedTeacherId('');
       setIsMainTeacher(false);
+      // Rafraîchir la page après l'ajout
+      window.location.reload();
     } catch (error) {
       console.error('Error adding teacher:', error);
     }
@@ -63,6 +65,8 @@ const FormationTeachersSection = ({ formationId }) => {
   const handleUpdateStatus = async (id, newStatus) => {
     try {
       await updateTeacher({ id, isMainTeacher: newStatus });
+      // Rafraîchir la page après la mise à jour
+      window.location.reload();
     } catch (error) {
       console.error('Error updating teacher status:', error);
     }
@@ -72,6 +76,8 @@ const FormationTeachersSection = ({ formationId }) => {
   const handleDeleteTeacher = async (id) => {
     try {
       await deleteTeacher(id);
+      // Rafraîchir la page après la suppression
+      window.location.reload();
     } catch (error) {
       console.error('Error deleting teacher:', error);
     }
