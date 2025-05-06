@@ -35,6 +35,8 @@ import PublicProfileView from "@/pages/Global/Profile/views/PublicProfileView";
 import TranslationTest from "./components/Translation/TranslationTest";
 import { notificationService } from './lib/services/notificationService';
 import React from 'react';
+import AbsenceFormation from './components/signature/AbsenceFormation';
+import AbsenceUser from './components/signature/AbsenceUser';
 
 // Export queryClient to be used elsewhere
 export { queryClient };
@@ -424,6 +426,10 @@ const App = () => {
                         <FormationDetails />
                       </RoleGuard>
                     } />
+
+                    {/* Absences par formation et par utilisateur */}
+                    <Route path="/absences/formation/:formationId" element={<RoleGuard roles={[ROLES.TEACHER, ROLES.ADMIN, ROLES.SUPERADMIN]} fallback={<Navigate to="/dashboard" replace />}><AbsenceFormation /></RoleGuard>} />
+                    <Route path="/absences/user/:userId" element={<RoleGuard roles={[ROLES.TEACHER, ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.STUDENT]} fallback={<Navigate to="/dashboard" replace />}><AbsenceUser /></RoleGuard>} />
                   </Route>
                 </Route>
 

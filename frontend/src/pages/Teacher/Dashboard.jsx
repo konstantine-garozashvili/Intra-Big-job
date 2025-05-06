@@ -243,6 +243,13 @@ const TeacherDashboard = () => {
             <Users className="h-5 w-5" />
             <span>Gestion des présences</span>
           </Link>
+          <Link 
+            to="/teacher/formations" 
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-500 text-white rounded-md hover:bg-indigo-600 transition-colors"
+          >
+            <School className="h-5 w-5" />
+            <span>Mes formations</span>
+          </Link>
         </div>
 
         {/* Contenu principal */}

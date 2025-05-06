@@ -1,6 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { formationTeacherService } from '@/services/formationTeacher.service';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -51,9 +51,17 @@ const TeacherFormationDetails = () => {
           <h1 className="text-3xl font-bold">{formation.name}</h1>
           <p className="text-muted-foreground">{formation.promotion}</p>
         </div>
-        <Badge variant={formation.isMainTeacher ? "default" : "secondary"}>
-          {formation.isMainTeacher ? "Professeur Principal" : "Professeur"}
-        </Badge>
+        <div className="flex flex-col items-end gap-2">
+          <Badge variant={formation.isMainTeacher ? "default" : "secondary"}>
+            {formation.isMainTeacher ? "Professeur Principal" : "Professeur"}
+          </Badge>
+          <Link
+            to={`/absences/formation/${formationId}`}
+            className="mt-2 px-4 py-1 rounded bg-primary text-white hover:bg-primary/90 text-sm font-medium transition-colors"
+          >
+            Voir les absences
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

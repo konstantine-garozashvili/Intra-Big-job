@@ -50,7 +50,7 @@ export function ThemeToggle({ className = '' }) {
           transition={{ duration: 0.4, ease: 'easeInOut' }}
           className="absolute inset-0 flex items-center justify-center"
         >
-          <Moon className="w-6 h-6 text-white" strokeWidth={2} />
+          <Moon className="w-6 h-6 text-white" strokeWidth={1.5} />
         </motion.div>
       </div>
     </motion.button>
