@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useFormationTeachers } from '../../hooks/useFormationTeachers';
+import apiService from '../../lib/services/apiService';
 import { Button } from '../ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Label } from '../ui/label';
@@ -9,29 +9,50 @@ import { Loader2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const FormationTeachersSection = ({ formationId }) => {
+  // États locaux
+  const [selectedTeacherId, setSelectedTeacherId] = useState('');
+  const [isMainTeacher, setIsMainTeacher] = useState(false);
+  const [availableTeachers, setAvailableTeachers] = useState([]);
+  const [formationTeachers, setFormationTeachers] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   // Convertir formationId en nombre et valider
   const validFormationId = useMemo(() => {
     const id = parseInt(formationId);
     return !isNaN(id) ? id : null;
   }, [formationId]);
 
-  // États locaux
-  const [selectedTeacherId, setSelectedTeacherId] = useState('');
-  const [isMainTeacher, setIsMainTeacher] = useState(false);
+  // Charger les données initiales
+  const loadData = async () => {
+    if (!validFormationId) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const [availableResponse, formationResponse] = await Promise.all([
+        apiService.get('/api/formation-teachers/available-teachers'),
+        apiService.get(`/api/formation-teachers/formation/${validFormationId}`)
+      ]);
+      
+      setAvailableTeachers(availableResponse.data || []);
+      setFormationTeachers(formationResponse.data || []);
+    } catch (err) {
+      setError(err.message || 'Une erreur est survenue lors du chargement des données');
+      toast.error('Erreur de chargement des données');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  // Utiliser le hook avec l'ID de formation validé
-  const {
-    availableTeachers,
-    formationTeachers,
-    isLoading,
-    error,
-    createTeacher,
-    updateTeacher,
-    deleteTeacher,
-    isCreating,
-    isUpdating,
-    isDeleting
-  } = useFormationTeachers(validFormationId);
+  // Charger les données au montage et quand formationId change
+  useEffect(() => {
+    loadData();
+  }, [validFormationId]);
 
   // Réinitialiser les états quand formationId change
   useEffect(() => {
@@ -39,47 +60,112 @@ const FormationTeachersSection = ({ formationId }) => {
     setIsMainTeacher(false);
   }, [formationId]);
 
-  // Gérer l'ajout d'un enseignant
+  // Gérer l'ajout d'un enseignant (mise à jour optimiste)
   const handleAddTeacher = async () => {
     if (!selectedTeacherId || !validFormationId) {
       toast.error('Veuillez sélectionner un enseignant');
       return;
     }
 
+    setIsCreating(true);
+    
+    // Trouver l'enseignant sélectionné dans la liste des disponibles
+    const selectedTeacher = availableTeachers.find(t => t.id === parseInt(selectedTeacherId));
+    if (!selectedTeacher) {
+      toast.error('Enseignant non trouvé');
+      return;
+    }
+
+    // Créer un objet optimiste pour l'affichage immédiat
+    const optimisticTeacher = {
+      id: `temp_${Date.now()}`, // ID temporaire
+      isMainTeacher,
+      user: selectedTeacher,
+      formation: { id: validFormationId }
+    };
+
+    // Mise à jour optimiste de l'UI
+    setFormationTeachers(prev => [...prev, optimisticTeacher]);
+    setAvailableTeachers(prev => prev.filter(t => t.id !== selectedTeacher.id));
+    setSelectedTeacherId('');
+    setIsMainTeacher(false);
+
     try {
-      await createTeacher({
-        formationId: validFormationId,
-        userId: parseInt(selectedTeacherId),
-        isMainTeacher
+      const response = await apiService.post('/api/formation-teachers', {
+        formation_id: validFormationId,
+        user_id: parseInt(selectedTeacherId),
+        is_main_teacher: isMainTeacher
       });
-      setSelectedTeacherId('');
-      setIsMainTeacher(false);
-      // Rafraîchir la page après l'ajout
-      window.location.reload();
+      
+      // Mettre à jour l'ID temporaire avec l'ID réel
+      if (response.data?.id) {
+        setFormationTeachers(prev => 
+          prev.map(ft => 
+            ft.id === optimisticTeacher.id 
+              ? { ...ft, id: response.data.id }
+              : ft
+          )
+        );
+      }
+      
+      toast.success('Enseignant ajouté avec succès');
     } catch (error) {
       console.error('Error adding teacher:', error);
+      toast.error(error.message || 'Erreur lors de l\'ajout de l\'enseignant');
+      // On pourrait faire un rollback ici si nécessaire
+    } finally {
+      setIsCreating(false);
     }
   };
 
-  // Gérer la mise à jour du statut d'un enseignant
+  // Gérer la mise à jour du statut d'un enseignant (mise à jour optimiste)
   const handleUpdateStatus = async (id, newStatus) => {
+    setIsUpdating(true);
+
+    // Mise à jour optimiste de l'UI
+    setFormationTeachers(prev =>
+      prev.map(ft =>
+        ft.id === id ? { ...ft, isMainTeacher: newStatus } : ft
+      )
+    );
+
     try {
-      await updateTeacher({ id, isMainTeacher: newStatus });
-      // Rafraîchir la page après la mise à jour
-      window.location.reload();
+      await apiService.put(`/api/formation-teachers/${id}`, {
+        is_main_teacher: newStatus
+      });
+      
+      toast.success('Statut mis à jour avec succès');
     } catch (error) {
       console.error('Error updating teacher status:', error);
+      toast.error(error.message || 'Erreur lors de la mise à jour du statut');
+      // On pourrait faire un rollback ici si nécessaire
+    } finally {
+      setIsUpdating(false);
     }
   };
 
-  // Gérer la suppression d'un enseignant
+  // Gérer la suppression d'un enseignant (mise à jour optimiste)
   const handleDeleteTeacher = async (id) => {
+    setIsDeleting(true);
+
+    // Trouver l'enseignant à supprimer pour la mise à jour optimiste
+    const teacherToRemove = formationTeachers.find(ft => ft.id === id);
+    
+    // Mise à jour optimiste de l'UI
+    setFormationTeachers(prev => prev.filter(ft => ft.id !== id));
+    if (teacherToRemove?.user) {
+      setAvailableTeachers(prev => [...prev, teacherToRemove.user]);
+    }
+
     try {
-      await deleteTeacher(id);
-      // Rafraîchir la page après la suppression
-      window.location.reload();
+      await apiService.delete(`/api/formation-teachers/${id}`);
+      toast.success('Enseignant supprimé avec succès');
     } catch (error) {
       console.error('Error deleting teacher:', error);
+      toast.error(error.message || 'Erreur lors de la suppression');
+      // On pourrait faire un rollback ici si nécessaire
+    } finally {
+      setIsDeleting(false);
     }
   };
 
