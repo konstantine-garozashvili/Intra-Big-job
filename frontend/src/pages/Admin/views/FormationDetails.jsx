@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader2, Users, Calendar, Clock, MapPin } from 'lucide-react';
@@ -21,6 +21,8 @@ export default function FormationDetails() {
   const [loadingAvailable, setLoadingAvailable] = useState(false);
   const [addingUserId, setAddingUserId] = useState(null);
   const [enrolledStudents, setEnrolledStudents] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const navigate = useNavigate();
 
   // Move fetchFormation outside useEffect so it can be reused
@@ -109,6 +111,28 @@ export default function FormationDetails() {
       setLoadingAvailable(false);
     }
   };
+
+  // Debounce search input
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 200);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
+
+  // Filter users based on search
+  const filteredUsers = useMemo(() => {
+    if (!debouncedSearch) {
+      // No search: show only the first 5 users
+      return availableUsers.slice(0, 5);
+    }
+    const term = debouncedSearch.toLowerCase();
+    return availableUsers.filter(user =>
+      user.firstName?.toLowerCase().includes(term) ||
+      user.lastName?.toLowerCase().includes(term) ||
+      user.email?.toLowerCase().includes(term)
+    );
+  }, [availableUsers, debouncedSearch]);
 
   const handleAddUser = async (userId) => {
     setAddingUserId(userId);
@@ -222,22 +246,36 @@ export default function FormationDetails() {
           ) : availableUsers.length === 0 ? (
             <div className="py-6 text-center text-gray-500">Aucun utilisateur disponible à ajouter.</div>
           ) : (
-            <ul className="divide-y divide-gray-200 max-h-64 overflow-y-auto">
-              {availableUsers.map(user => (
-                <li key={user.id} className="py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <span className="font-medium">{user.firstName} {user.lastName}</span>
-                  <span className="text-gray-500 text-sm">{user.email}</span>
-                  <Button
-                    size="sm"
-                    className="bg-green-600 hover:bg-green-700 text-white"
-                    disabled={addingUserId === user.id}
-                    onClick={() => handleAddUser(user.id)}
-                  >
-                    {addingUserId === user.id ? <Loader2 className="animate-spin w-4 h-4" /> : 'Ajouter'}
-                  </Button>
-                </li>
-              ))}
-            </ul>
+            <>
+              <input
+                type="text"
+                className="w-full mb-3 px-3 py-2 border rounded focus:outline-none focus:ring focus:border-blue-300"
+                placeholder="Rechercher par nom, prénom ou email..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                autoFocus
+              />
+              <ul className="divide-y divide-gray-200 max-h-64 overflow-y-auto">
+                {filteredUsers.length === 0 ? (
+                  <li className="py-2 text-center text-gray-400">Aucun résultat.</li>
+                ) : (
+                  filteredUsers.map(user => (
+                    <li key={user.id} className="py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      <span className="font-medium">{user.firstName} {user.lastName}</span>
+                      <span className="text-gray-500 text-sm">{user.email}</span>
+                      <Button
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                        disabled={addingUserId === user.id}
+                        onClick={() => handleAddUser(user.id)}
+                      >
+                        {addingUserId === user.id ? <Loader2 className="animate-spin w-4 h-4" /> : 'Ajouter'}
+                      </Button>
+                    </li>
+                  ))
+                )}
+              </ul>
+            </>
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAddModal(false)}>Fermer</Button>
