@@ -187,7 +187,12 @@ class FormationTeacherController extends AbstractController
         $this->entityManager->persist($formationTeacher);
         $this->entityManager->flush();
 
-        return $this->json($formationTeacher, Response::HTTP_CREATED, [], ['groups' => ['formation:read']]);
+        return $this->json(
+            ['success' => true, 'data' => $formationTeacher],
+            Response::HTTP_CREATED,
+            [],
+            ['groups' => ['formation_teacher:read']]
+        );
     }
 
     #[Route('/{id}', methods: ['PUT'])]

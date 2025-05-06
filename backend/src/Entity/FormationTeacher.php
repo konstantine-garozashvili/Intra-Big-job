@@ -13,29 +13,29 @@ class FormationTeacher
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(['formation:read'])]
+    #[Groups(['formation_teacher:read'])]
     private ?int $id = null;
 
     #[ORM\ManyToOne(targetEntity: Formation::class, inversedBy: 'formationTeachers')]
     #[ORM\JoinColumn(nullable: false)]
-    #[Groups(['formation:read'])]
+    #[Groups(['formation_teacher:read'])]
     private ?Formation $formation = null;
 
     #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'teacherFormations')]
     #[ORM\JoinColumn(nullable: false)]
-    #[Groups(['formation:read'])]
+    #[Groups(['formation_teacher:read'])]
     private ?User $user = null;
 
     #[ORM\Column]
-    #[Groups(['formation:read'])]
+    #[Groups(['formation_teacher:read'])]
     private bool $isMainTeacher = false;
 
     #[ORM\Column]
-    #[Groups(['formation:read'])]
+    #[Groups(['formation_teacher:read'])]
     private \DateTimeImmutable $createdAt;
 
     #[ORM\Column(nullable: true)]
-    #[Groups(['formation:read'])]
+    #[Groups(['formation_teacher:read'])]
     private ?\DateTimeImmutable $updatedAt = null;
 
     public function __construct()
