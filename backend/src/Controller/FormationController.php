@@ -42,9 +42,10 @@ class FormationController extends AbstractController
         $page = $request->query->getInt('page', 1);
         $limit = $request->query->getInt('limit', 10);
         $offset = ($page - 1) * $limit;
+        $search = $request->query->get('search', '');
 
-        $formations = $this->formationRepository->findBy([], ['id' => 'DESC'], $limit, $offset);
-        $totalFormations = $this->formationRepository->count([]);
+        $formations = $this->formationRepository->searchByName($search, $limit, $offset);
+        $totalFormations = $this->formationRepository->countByName($search);
         $totalPages = ceil($totalFormations / $limit);
         
         $data = array_map(function(Formation $formation) {

@@ -13,6 +13,7 @@ export const formationApi = {
    * @param {Object} options.params - Paramètres de pagination
    * @param {number} options.params.page - Numéro de page
    * @param {number} options.params.limit - Nombre d'éléments par page
+   * @param {string} options.params.search - Terme de recherche
    */
   getAll: (options = {}) => apiService.get(API_URL, options),
 

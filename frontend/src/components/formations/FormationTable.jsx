@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { formationService } from '../../services/formation.service';
 import { Button } from '../ui/button';
@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '../ui/table';
-import { Image as ImageIcon, Pencil, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Image as ImageIcon, Pencil, Trash2, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 
 const FormationTableSkeleton = () => {
   return (
@@ -60,22 +60,38 @@ const FormationTable = () => {
   const [formations, setFormations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const [pagination, setPagination] = useState({
     currentPage: 1,
     totalPages: 1,
     limit: 10,
     total: 0
   });
+  const tableRef = useRef(null);
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      loadFormations(1);
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm]);
 
   useEffect(() => {
     loadFormations(pagination.currentPage);
+  }, [pagination.currentPage]);
+
+  useEffect(() => {
+    if (tableRef.current) {
+      tableRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   }, [pagination.currentPage]);
 
   const loadFormations = async (page) => {
     try {
       setLoading(true);
       setError(null);
-      const data = await formationService.getAllFormations(page, pagination.limit);
+      const data = await formationService.getAllFormations(page, pagination.limit, searchTerm);
       setFormations(data.formations);
       setPagination(data.pagination);
     } catch (error) {
@@ -84,6 +100,11 @@ const FormationTable = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSearch = (e) => {
+    setSearchTerm(e.target.value);
+    setPagination(prev => ({ ...prev, currentPage: 1 }));
   };
 
   const handlePageChange = (newPage) => {
@@ -108,8 +129,10 @@ const FormationTable = () => {
     return (
       <div className="container mx-auto p-4">
         <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-          <Skeleton className="h-8 w-[250px]" />
-          <Skeleton className="h-10 w-[180px]" />
+          <div className="flex items-center gap-4 w-full sm:w-auto">
+            <Skeleton className="h-10 w-[300px]" />
+            <Skeleton className="h-10 w-[180px]" />
+          </div>
         </div>
         <FormationTableSkeleton />
       </div>
@@ -127,11 +150,25 @@ const FormationTable = () => {
 
   return (
     <div className="container mx-auto p-4">
-      <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-        <h2 className="text-2xl font-bold tracking-tight text-primary drop-shadow">Liste des Formations</h2>
-        <Link to="/formations/new">
-          <Button className="bg-gradient-to-r from-blue-600 to-cyan-400 text-white shadow-lg hover:from-blue-700 hover:to-cyan-500 transition">Nouvelle Formation</Button>
-        </Link>
+      <div ref={tableRef} className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+      <h2 className="text-2xl font-bold tracking-tight text-primary drop-shadow">Liste des Formations</h2>
+        <div className="flex items-center gap-4 w-full sm:w-auto">
+          <div className="relative flex-1 sm:flex-initial">
+            <input
+              type="text"
+              placeholder="Rechercher une formation..."
+              value={searchTerm}
+              onChange={handleSearch}
+              className="pl-10 pr-4 py-2 w-full sm:w-[300px] rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+            />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          </div>
+          <Link to="/formations/new">
+            <Button className="bg-gradient-to-r from-blue-600 to-cyan-400 text-white shadow-lg hover:from-blue-700 hover:to-cyan-500 transition">
+              Nouvelle Formation
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-xl shadow-lg bg-white dark:bg-gray-900">

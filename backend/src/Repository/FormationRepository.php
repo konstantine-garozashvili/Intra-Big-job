@@ -20,4 +20,32 @@ class FormationRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, Formation::class);
     }
+
+    public function searchByName(?string $search, int $limit, int $offset): array
+    {
+        $qb = $this->createQueryBuilder('f')
+            ->orderBy('f.id', 'DESC')
+            ->setFirstResult($offset)
+            ->setMaxResults($limit);
+
+        if ($search) {
+            $qb->andWhere('LOWER(f.name) LIKE :search')
+               ->setParameter('search', '%' . strtolower($search) . '%');
+        }
+
+        return $qb->getQuery()->getResult();
+    }
+
+    public function countByName(?string $search): int
+    {
+        $qb = $this->createQueryBuilder('f')
+            ->select('COUNT(f.id)');
+
+        if ($search) {
+            $qb->andWhere('LOWER(f.name) LIKE :search')
+               ->setParameter('search', '%' . strtolower($search) . '%');
+        }
+
+        return (int) $qb->getQuery()->getSingleScalarResult();
+    }
 } 

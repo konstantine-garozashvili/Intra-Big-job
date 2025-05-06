@@ -8,9 +8,15 @@ export const formationService = {
   /**
    * Get all formations with normalized data and pagination
    */
-  getAllFormations: async (page = 1, limit = 10) => {
+  getAllFormations: async (page = 1, limit = 10, search = '') => {
     try {
-      const response = await formationApi.getAll({ params: { page, limit } });
+      const response = await formationApi.getAll({ 
+        params: { 
+          page, 
+          limit,
+          search: search.trim()
+        } 
+      });
       const data = normalizeResponse(response.data);
       const formations = data?.formations?.map(formation => ({
         ...formation,
@@ -25,7 +31,8 @@ export const formationService = {
         count: formations.length,
         sample: formations[0],
         allSpecIds: formations.map(f => f.specializationId),
-        pagination: data?.pagination
+        pagination: data?.pagination,
+        searchTerm: search
       });
 
       return {
