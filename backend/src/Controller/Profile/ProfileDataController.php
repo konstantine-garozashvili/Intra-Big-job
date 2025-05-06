@@ -14,7 +14,6 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Serializer\SerializerInterface;
 
-#[Route('/api/profile')]
 class ProfileDataController extends AbstractController
 {
     private $security;
@@ -427,5 +426,39 @@ class ProfileDataController extends AbstractController
         return array_map(function($role) {
             return is_string($role) ? $role : $role->getName();
         }, $user->getRoles());
+    }
+
+    /**
+     * Récupère toutes les formations du user connecté
+     */
+    #[Route('/formations', name: 'api_profile_formations', methods: ['GET'])]
+    public function getUserFormations(): JsonResponse
+    {
+        /** @var User $user */
+        $user = $this->security->getUser();
+        if (!$user) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Utilisateur non authentifié'
+            ], 401);
+        }
+        // Use direct query to fetch formations
+        $formations = $this->userRepository->findFormationsForUser($user->getId());
+        $data = [];
+        foreach ($formations as $formation) {
+            $data[] = [
+                'id' => $formation->getId(),
+                'name' => $formation->getName(),
+                'promotion' => $formation->getPromotion(),
+                'description' => $formation->getDescription(),
+                'dateStart' => $formation->getDateStart() ? $formation->getDateStart()->format('Y-m-d') : null,
+                'location' => $formation->getLocation(),
+                'duration' => $formation->getDuration(),
+            ];
+        }
+        return $this->json([
+            'success' => true,
+            'data' => $data
+        ]);
     }
 }

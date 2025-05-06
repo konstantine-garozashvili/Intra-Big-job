@@ -773,4 +773,12 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
         }
         return $this;
     }
+
+    public function addFormation(Formation $formation): self
+    {
+        if (!$this->formations->contains($formation)) {
+            $this->formations->add($formation);
+        }
+        return $this;
+    }
 }
