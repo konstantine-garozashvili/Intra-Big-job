@@ -1,7 +1,7 @@
 ---
 description: 
 globs: 
-alwaysApply: true
+alwaysApply: false
 ---
 ---
 description: 
@@ -19,7 +19,6 @@ alwaysApply: true
 - Always use Docker for development, never run commands directly on the host
 - Never execute `npm install` directly; all dependencies are managed in containers
 - Use the Docker Compose configuration in the `infra` folder
-- Example: Instead of running `npm install`, use `docker-compose up` which handles installation
 
 ### Never modify package.json
 - **Severity: CRITICAL**
@@ -38,25 +37,11 @@ alwaysApply: true
 
 ## High Priority Rules
 
-### Docker Compose workflow
-- **Severity: HIGH**
-- Use docker-compose commands for all development tasks:
-  - Starting environment: `docker-compose up`
-  - Rebuilding: `docker-compose up --build`
-  - Stopping: `docker-compose down`
-  - Viewing logs: `docker-compose logs [service]`
-
 ### Respect service dependencies
 - **Severity: HIGH**
 - Respect the dependencies between services defined in docker-compose.yml
 - The dependency chain is: frontend → backend → database/redis
 - Wait for dependent services to be ready before attempting operations
-
-### Nginx configuration awareness
-- **Severity: HIGH**
-- Be aware of the Nginx configuration in `infra/nginx/default.conf`
-- The configuration sets file upload limits to 10MB
-- Backend API is accessible through Nginx, not directly from PHP-FPM
 
 ## Medium Priority Rules
 
@@ -67,6 +52,5 @@ alwaysApply: true
 
 ### Database interactions
 - **Severity: MEDIUM**
-- Use PHPMyAdmin at port 8080 or MySQL client in the database container
 - Database credentials are defined in docker-compose.yml
 - Database data is persisted in Docker volumes

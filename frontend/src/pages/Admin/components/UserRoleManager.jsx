@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/card";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
+import { useProtectedTheme } from "@/contexts/ProtectedThemeContext";
 import { useUserManagement } from "@/lib/hooks/useUserManagement";
 import { UserFilters } from "./UserFilters";
 import { UserTable } from "./UserTable";
@@ -191,6 +192,9 @@ export default function UserRoleManager() {
         }
     };
     
+    const { theme } = useProtectedTheme();
+    const isDark = theme === 'dark';
+    
     return (
         <DashboardLayout 
             headerTitle={currentRoleConfig.title}
@@ -202,18 +206,18 @@ export default function UserRoleManager() {
                     animate={{ opacity: animateCard ? 1 : 0, y: animateCard ? 0 : 20 }}
                     transition={{ duration: 0.5, delay: 0.1 }}
                 >
-                    <Card className="border-0 bg-white shadow-md hover:shadow-lg transition-shadow duration-300">
-                        <CardHeader className="bg-gradient-to-r from-slate-50 to-gray-50 border-b rounded-t-lg">
+                    <Card className={`border-0 ${isDark ? 'bg-gray-800/50' : 'bg-white'} shadow-md hover:shadow-lg transition-shadow duration-300`}>
+                        <CardHeader className={`${isDark ? 'bg-gradient-to-r from-gray-800/50 to-gray-700/50 border-gray-700' : 'bg-gradient-to-r from-slate-50 to-gray-50 border-gray-200'} border-b rounded-t-lg`}>
                             <div className="flex justify-between items-center">
                                 <div>
-                                    <CardTitle className="text-gradient bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
+                                    <CardTitle className={`text-gradient bg-clip-text text-transparent ${isDark ? 'bg-gradient-to-r from-blue-400 to-indigo-400' : 'bg-gradient-to-r from-blue-600 to-indigo-600'}`}>
                                         {currentRoleConfig.title}
                                     </CardTitle>
-                                    <div className="text-sm text-muted-foreground max-w-2xl mt-2">
+                                    <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-muted-foreground'} max-w-2xl mt-2`}>
                                         {currentRoleConfig.description}
                                     </div>
                                 </div>
-                                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 px-3 py-1">
+                                <Badge variant="outline" className={`${isDark ? 'bg-blue-900/20 text-blue-400 border-blue-800' : 'bg-blue-50 text-blue-700 border-blue-200'} px-3 py-1`}>
                                     {filteredUsers.length} utilisateur{filteredUsers.length !== 1 ? 's' : ''}
                                 </Badge>
                             </div>
@@ -237,8 +241,8 @@ export default function UserRoleManager() {
                                     animate={{ opacity: 1 }}
                                     transition={{ duration: 0.3 }}
                                 >
-                                    <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
-                                    <span className="text-sm text-muted-foreground">
+                                    <Loader2 className={`h-10 w-10 animate-spin ${isDark ? 'text-blue-400' : 'text-primary'} mb-4`} />
+                                    <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-muted-foreground'}`}>
                                         Chargement des utilisateurs...
                                     </span>
                                 </motion.div>
@@ -259,6 +263,7 @@ export default function UserRoleManager() {
                                             openEditDialog={openEditDialog}
                                             userHasSuperAdminRole={userHasSuperAdminRole}
                                             isSuperAdmin={isSuperAdmin}
+                                            isDark={isDark}
                                         />
                                     </div>
                                     
@@ -268,6 +273,7 @@ export default function UserRoleManager() {
                                             filteredUsers={filteredUsers}
                                             pagination={pagination}
                                             handlePageChange={handlePageChange}
+                                            isDark={isDark}
                                         />
                                     </div>
                                 </motion.div>
@@ -280,14 +286,14 @@ export default function UserRoleManager() {
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ duration: 0.3 }}
                                 >
-                                    <Search className="h-12 w-12 text-gray-300 mb-4" />
-                                    <h3 className="text-lg font-medium text-gray-700">Aucun résultat trouvé</h3>
-                                    <p className="text-sm text-gray-500 mt-1 max-w-sm">
+                                    <Search className={`h-12 w-12 ${isDark ? 'text-gray-600' : 'text-gray-300'} mb-4`} />
+                                    <h3 className={`text-lg font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>Aucun résultat trouvé</h3>
+                                    <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'} mt-1 max-w-sm`}>
                                         Aucun utilisateur ne correspond à votre recherche "{searchTerm}".
                                     </p>
                                     <button 
                                         onClick={() => setSearchTerm('')}
-                                        className="mt-4 text-sm text-blue-600 hover:text-blue-800 font-medium"
+                                        className={`mt-4 text-sm ${isDark ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-800'} font-medium`}
                                     >
                                         Effacer la recherche
                                     </button>
@@ -310,6 +316,7 @@ export default function UserRoleManager() {
                     isProcessing={isProcessing}
                     changeUserRole={changeUserRole}
                     onSuccess={handleSuccessfulRoleChange}
+                    isDark={isDark}
                 />
                 
                 {/* Boîte de dialogue pour supprimer un utilisateur */}
@@ -321,6 +328,7 @@ export default function UserRoleManager() {
                     isSuperAdmin={isSuperAdmin}
                     isProcessing={isProcessing}
                     deleteUser={deleteUser}
+                    isDark={isDark}
                 />
                 
                 {/* Boîte de dialogue pour éditer un utilisateur */}
@@ -331,6 +339,7 @@ export default function UserRoleManager() {
                     onUpdateUser={(userId, userData) => updateUser(userId, userData, closeEditDialog)}
                     isProcessing={isProcessing}
                     currentUserIsSuperAdmin={isSuperAdmin}
+                    isDark={isDark}
                 />
             </div>
         </DashboardLayout>

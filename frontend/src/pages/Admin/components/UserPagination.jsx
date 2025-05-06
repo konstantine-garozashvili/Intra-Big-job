@@ -3,7 +3,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { motion } from "framer-motion";
 
-export function UserPagination({ filteredUsers, pagination, handlePageChange }) {
+export function UserPagination({ filteredUsers, pagination, handlePageChange, isDark }) {
     const totalPages = Math.ceil(filteredUsers.length / pagination.itemsPerPage);
     if (totalPages <= 1) return null;
     
@@ -30,8 +30,12 @@ export function UserPagination({ filteredUsers, pagination, handlePageChange }) 
                 onClick={() => handlePageChange(i)}
                 className={`w-9 h-9 transition-all duration-200 ${
                     i === currentPage 
-                        ? "bg-blue-600 hover:bg-blue-700 text-white shadow-sm" 
-                        : "hover:bg-gray-100"
+                        ? isDark
+                            ? "bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+                            : "bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+                        : isDark
+                            ? "hover:bg-gray-800 bg-gray-900 border-gray-700"
+                            : "hover:bg-gray-100"
                 }`}
             >
                 {i}
@@ -46,29 +50,29 @@ export function UserPagination({ filteredUsers, pagination, handlePageChange }) 
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
         >
-            <p className="text-sm text-gray-500">
-                Affichage de <span className="font-semibold text-gray-700">{startItem}-{endItem}</span> sur <span className="font-semibold text-gray-700">{totalItems}</span> utilisateurs
+            <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                Affichage de <span className="font-medium">{startItem}</span> à{" "}
+                <span className="font-medium">{endItem}</span> sur{" "}
+                <span className="font-medium">{totalItems}</span> utilisateurs
             </p>
             
             <Pagination className="flex justify-center items-center gap-1 p-1 bg-gray-50 rounded-lg border border-gray-200">
                 <Button
-                    variant="ghost"
+                    variant="outline"
                     size="icon"
                     onClick={() => handlePageChange(1)}
                     disabled={currentPage === 1}
-                    className="hidden sm:flex hover:bg-gray-200 text-gray-600"
-                    title="Première page"
+                    className={`${isDark ? 'bg-gray-900 border-gray-700 hover:bg-gray-800' : 'hover:bg-gray-100'}`}
                 >
                     <ChevronsLeft className="h-4 w-4" />
                 </Button>
                 
                 <Button
-                    variant="ghost"
+                    variant="outline"
                     size="icon"
-                    onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                    onClick={() => handlePageChange(currentPage - 1)}
                     disabled={currentPage === 1}
-                    className="hover:bg-gray-200 text-gray-600"
-                    title="Page précédente"
+                    className={`${isDark ? 'bg-gray-900 border-gray-700 hover:bg-gray-800' : 'hover:bg-gray-100'}`}
                 >
                     <ChevronLeft className="h-4 w-4" />
                 </Button>
@@ -79,7 +83,7 @@ export function UserPagination({ filteredUsers, pagination, handlePageChange }) 
                             variant="outline"
                             size="icon"
                             onClick={() => handlePageChange(1)}
-                            className="w-9 h-9 hover:bg-gray-100 hidden sm:flex"
+                            className={`${isDark ? 'bg-gray-900 border-gray-700 hover:bg-gray-800' : 'hover:bg-gray-100'}`}
                         >
                             1
                         </Button>
@@ -91,7 +95,7 @@ export function UserPagination({ filteredUsers, pagination, handlePageChange }) 
                     </>
                 )}
                 
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-2">
                     {pageButtons}
                 </div>
                 
@@ -106,7 +110,7 @@ export function UserPagination({ filteredUsers, pagination, handlePageChange }) 
                             variant="outline"
                             size="icon"
                             onClick={() => handlePageChange(totalPages)}
-                            className="w-9 h-9 hover:bg-gray-100 hidden sm:flex"
+                            className={`${isDark ? 'bg-gray-900 border-gray-700 hover:bg-gray-800' : 'hover:bg-gray-100'}`}
                         >
                             {totalPages}
                         </Button>
@@ -114,23 +118,21 @@ export function UserPagination({ filteredUsers, pagination, handlePageChange }) 
                 )}
                 
                 <Button
-                    variant="ghost"
+                    variant="outline"
                     size="icon"
-                    onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                    onClick={() => handlePageChange(currentPage + 1)}
                     disabled={currentPage === totalPages}
-                    className="hover:bg-gray-200 text-gray-600"
-                    title="Page suivante"
+                    className={`${isDark ? 'bg-gray-900 border-gray-700 hover:bg-gray-800' : 'hover:bg-gray-100'}`}
                 >
                     <ChevronRight className="h-4 w-4" />
                 </Button>
                 
                 <Button
-                    variant="ghost"
+                    variant="outline"
                     size="icon"
                     onClick={() => handlePageChange(totalPages)}
                     disabled={currentPage === totalPages}
-                    className="hidden sm:flex hover:bg-gray-200 text-gray-600"
-                    title="Dernière page"
+                    className={`${isDark ? 'bg-gray-900 border-gray-700 hover:bg-gray-800' : 'hover:bg-gray-100'}`}
                 >
                     <ChevronsRight className="h-4 w-4" />
                 </Button>
