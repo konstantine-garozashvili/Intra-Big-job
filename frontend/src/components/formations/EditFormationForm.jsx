@@ -6,10 +6,15 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { toast } from 'sonner';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Card, CardHeader, CardTitle } from '../ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Upload, Trash2 } from 'lucide-react';
+import { Upload, Trash2, Info, Calendar, Users, Image as ImageIcon, BookOpen, MapPin } from 'lucide-react';
 import FormationTeachersSection from './FormationTeachersSection';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
+import { Separator } from '../ui/separator';
+import { cn } from '../../lib/utils';
+import { Badge } from '../ui/badge';
+import { motion } from 'framer-motion';
 
 const EditFormationForm = () => {
   const navigate = useNavigate();
@@ -234,173 +239,328 @@ const EditFormationForm = () => {
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Modifier la Formation</CardTitle>
+    <div className="container mx-auto py-10 px-4 max-w-4xl">
+      <Card className="border-none shadow-xl overflow-hidden">
+        <CardHeader className="bg-primary text-white">
+          <div className="flex items-center gap-2">
+            <Info className="h-6 w-6" />
+            <CardTitle className="text-2xl">Modifier la Formation</CardTitle>
+          </div>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <div>
-                <Label htmlFor="name">Nom *</Label>
-                <Input
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
 
-              <div>
-                <Label htmlFor="promotion">Promotion *</Label>
-                <Input
-                  id="promotion"
-                  name="promotion"
-                  value={formData.promotion}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
+        <Tabs defaultValue="informations" className="w-full">
+          <div className="bg-white/5 backdrop-blur-sm border-b border-white/10 rounded-t-xl p-1.5 mb-0">
+            <TabsList className="grid w-full grid-cols-2 bg-transparent h-auto p-1 gap-4">
+              <TabsTrigger 
+                value="informations"
+                className="relative overflow-hidden 
+                  data-[state=active]:bg-transparent
+                  data-[state=active]:text-primary
+                  py-2.5 transition-all duration-200 
+                  text-slate-400
+                  font-medium
+                  rounded-md
+                  before:absolute before:inset-x-0 before:h-[2px] before:bg-primary
+                  before:bottom-0 before:scale-x-0 hover:before:scale-x-100
+                  before:transition-transform before:duration-300
+                  before:origin-left"
+              >
+                <span className="relative z-10 font-medium">Informations</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="teachers"
+                className="relative overflow-hidden 
+                  data-[state=active]:bg-transparent
+                  data-[state=active]:text-primary
+                  py-2.5 transition-all duration-200 
+                  text-slate-400
+                  font-medium
+                  rounded-md
+                  before:absolute before:inset-x-0 before:h-[2px] before:bg-primary
+                  before:bottom-0 before:scale-x-0 hover:before:scale-x-100
+                  before:transition-transform before:duration-300
+                  before:origin-left"
+              >
+                <span className="relative z-10 font-medium">Enseignants</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                />
-              </div>
+          <TabsContent value="informations" className="p-0 mt-0">
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="relative bg-white/5 rounded-b-xl p-6"
+            >
+              <div className="space-y-8">
+                {/* General Information Section */}
+                <div className="space-y-4 p-5 rounded-lg bg-card bg-primary border">
+                  <div className="flex items-center gap-2">
+                    <div className="bg-white p-2 rounded-full dark:bg-white">
+                      <Info className="h-5 w-5 text-primary" />
+                    </div>
+                    <h3 className="text-lg font-medium text-white">Informations générales</h3>
+                    <Badge variant="outline" className="ml-auto text-white border-white">
+                      Essentiel
+                    </Badge>
+                  </div>
+                  <Separator className="bg-white" />
 
-              <div>
-                <Label htmlFor="capacity">Capacité *</Label>
-                <Input
-                  id="capacity"
-                  name="capacity"
-                  type="number"
-                  min="1"
-                  value={formData.capacity}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="duration">Durée (en mois) *</Label>
-                <Input
-                  type="number"
-                  id="duration"
-                  name="duration"
-                  value={formData.duration}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="dateStart">Date de début *</Label>
-                <Input
-                  type="date"
-                  id="dateStart"
-                  name="dateStart"
-                  value={formData.dateStart}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="location">Lieu</Label>
-                <Input
-                  id="location"
-                  name="location"
-                  value={formData.location}
-                  onChange={handleInputChange}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="specializationId">Spécialisation *</Label>
-                <Select
-                  value={formData.specializationId}
-                  onValueChange={handleSpecializationChange}
-                  required
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionnez une spécialisation" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {specializations.map((spec) => (
-                      <SelectItem key={spec.id} value={spec.id.toString()}>
-                        {spec.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-4">
-                <Label>Image de la formation</Label>
-                <div className="flex items-center space-x-4">
-                  <div className="relative">
-                    {imagePreview ? (
-                      <img
-                        src={imagePreview}
-                        alt="Prévisualisation"
-                        className="w-32 h-32 object-cover rounded-lg"
-                        onError={(e) => {
-                          console.error('[EditFormationForm] Image load error:', e);
-                          e.target.src = '/placeholder.png';
-                        }}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="name" className="text-white">
+                        Nom <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id="name"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleInputChange}
+                        required
+                        className="text-white placeholder-white bg-primary border-white focus:ring-white"
                       />
-                    ) : (
-                      <div className="w-32 h-32 border-2 border-dashed rounded-lg flex items-center justify-center">
-                        <Upload className="h-8 w-8 text-gray-400" />
-                      </div>
-                    )}
-                    <label className="absolute inset-0 cursor-pointer flex items-center justify-center bg-black bg-opacity-0 hover:bg-opacity-50 transition-opacity rounded-lg group">
-                      <div className="hidden group-hover:flex flex-col items-center text-white">
-                        <Upload className="h-8 w-8" />
-                        <span className="text-sm">Changer l'image</span>
-                      </div>
-                      <input
-                        type="file"
-                        className="hidden"
-                        accept="image/jpeg,image/png,image/gif,image/webp"
-                        onChange={handleImageChange}
-                        disabled={loading}
-                        key={formData.imageFile ? 'has-file' : 'no-file'}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="promotion" className="text-white">
+                        Promotion <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id="promotion"
+                        name="promotion"
+                        value={formData.promotion}
+                        onChange={handleInputChange}
+                        required
+                        className="text-white placeholder-white bg-primary border-white focus:ring-white"
                       />
-                    </label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Training Details Section */}
+                <div className="space-y-4 p-5 rounded-lg bg-card bg-primary border">
+                  <div className="flex items-center gap-2">
+                    <div className="bg-white p-2 rounded-full dark:bg-white">
+                      <BookOpen className="h-5 w-5 text-primary" />
+                    </div>
+                    <h3 className="text-lg font-medium text-white">Détails de la formation</h3>
+                    <Badge variant="outline" className="ml-auto text-white border-white">
+                      Contenu
+                    </Badge>
+                  </div>
+                  <Separator className="bg-white" />
+
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="description" className="text-white">Description</Label>
+                      <Textarea
+                        id="description"
+                        name="description"
+                        value={formData.description}
+                        onChange={handleInputChange}
+                        className="min-h-[120px] text-white placeholder-white bg-primary border-white focus:ring-white"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="capacity" className="text-white">
+                          Capacité <span className="text-destructive">*</span>
+                        </Label>
+                        <div className="relative">
+                          <Input
+                            id="capacity"
+                            name="capacity"
+                            type="number"
+                            value={formData.capacity}
+                            onChange={handleInputChange}
+                            required
+                            className="text-white placeholder-white bg-primary border-white focus:ring-white"
+                          />
+                          <Users className="absolute right-3 top-2.5 h-5 w-5 text-white" />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="duration" className="text-white">
+                          Durée (en mois) <span className="text-destructive">*</span>
+                        </Label>
+                        <div className="relative">
+                          <Input
+                            id="duration"
+                            name="duration"
+                            type="number"
+                            value={formData.duration}
+                            onChange={handleInputChange}
+                            required
+                            className="text-white placeholder-white bg-primary border-white focus:ring-white"
+                          />
+                          <Calendar className="absolute right-3 top-2.5 h-5 w-5 text-white" />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="dateStart" className="text-white">
+                          Date de début <span className="text-destructive">*</span>
+                        </Label>
+                        <Input
+                          type="date"
+                          id="dateStart"
+                          name="dateStart"
+                          value={formData.dateStart}
+                          onChange={handleInputChange}
+                          required
+                          className="text-white placeholder-white bg-primary border-white focus:ring-white"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Organization Section */}
+                <div className="space-y-4 p-5 rounded-lg bg-card bg-primary border">
+                  <div className="flex items-center gap-2">
+                    <div className="bg-white p-2 rounded-full dark:bg-white">
+                      <MapPin className="h-5 w-5 text-primary" />
+                    </div>
+                    <h3 className="text-lg font-medium text-white">Organisation</h3>
+                    <Badge variant="outline" className="ml-auto text-white border-white">
+                      Logistique
+                    </Badge>
+                  </div>
+                  <Separator className="bg-white" />
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="location" className="text-white">Lieu</Label>
+                      <Input
+                        id="location"
+                        name="location"
+                        value={formData.location}
+                        onChange={handleInputChange}
+                        className="text-white placeholder-white bg-primary border-white focus:ring-white"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="specializationId" className="text-white">
+                        Spécialisation <span className="text-destructive">*</span>
+                      </Label>
+                      <Select
+                        value={formData.specializationId}
+                        onValueChange={handleSpecializationChange}
+                        required
+                      >
+                        <SelectTrigger className="text-white bg-primary border-white focus:ring-white">
+                          <SelectValue placeholder="Sélectionnez une spécialisation" className="text-white placeholder-white" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {specializations.map((spec) => (
+                            <SelectItem key={`specialization-${spec.id}`} value={spec.id.toString()}>
+                              {spec.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Image Section */}
+                <div className="space-y-4 p-5 rounded-lg bg-card bg-primary border">
+                  <div className="flex items-center gap-2">
+                    <div className="bg-white p-2 rounded-full dark:bg-white">
+                      <ImageIcon className="h-5 w-5 text-primary" />
+                    </div>
+                    <h3 className="text-lg font-medium text-white">Image de la formation</h3>
+                    <Badge variant="outline" className="ml-auto text-white border-white">
+                      Média
+                    </Badge>
+                  </div>
+                  <Separator className="bg-white" />
+
+                  <div className="flex flex-col md:flex-row gap-6 items-start">
+                    <div className="w-full md:w-1/3">
+                      {imagePreview ? (
+                        <div className="relative group">
+                          <img
+                            src={imagePreview}
+                            alt="Prévisualisation"
+                            className="w-full aspect-video object-cover rounded-lg border border-white"
+                            onError={(e) => {
+                              e.target.src = '/placeholder.png';
+                            }}
+                          />
+                          <label className="absolute inset-0 cursor-pointer flex items-center justify-center bg-black/0 hover:bg-black/50 transition-opacity rounded-lg group">
+                            <div className="hidden group-hover:flex flex-col items-center text-white">
+                              <Upload className="h-8 w-8" />
+                              <span className="text-sm">Changer l'image</span>
+                            </div>
+                            <input
+                              type="file"
+                              className="hidden"
+                              accept="image/jpeg,image/png,image/gif,image/webp"
+                              onChange={handleImageChange}
+                              key={formData.imageFile ? 'has-file' : 'no-file'}
+                            />
+                          </label>
+                        </div>
+                      ) : (
+                        <div className="w-full aspect-video border-2 border-dashed border-white rounded-lg flex items-center justify-center bg-primary/50">
+                          <Upload className="h-8 w-8 text-white" />
+                          <label className="absolute inset-0 cursor-pointer">
+                            <input
+                              type="file"
+                              className="hidden"
+                              accept="image/jpeg,image/png,image/gif,image/webp"
+                              onChange={handleImageChange}
+                              key={formData.imageFile ? 'has-file' : 'no-file'}
+                            />
+                          </label>
+                        </div>
+                      )}
+                    </div>
+                    <div className="w-full md:w-2/3 space-y-4">
+                      <div className="text-sm text-white">
+                        <p>Formats acceptés: <span className="font-semibold">JPG, PNG, GIF, WEBP</span></p>
+                        <p>Taille maximum: <span className="font-semibold">2MB</span></p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div className="flex gap-4">
-              <Button type="submit" disabled={loading}>
-                {loading ? 'Enregistrement...' : 'Mettre à jour'}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => navigate('/formations')}
-              >
-                Annuler
-              </Button>
-            </div>
-          </form>
-        </CardContent>
+              <div className="flex justify-between mt-6">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => navigate('/formations')}
+                  disabled={loading}
+                >
+                  Annuler
+                </Button>
+                <Button
+                  type="submit"
+                  onClick={handleSubmit}
+                  disabled={loading}
+                >
+                  {loading ? 'Enregistrement...' : 'Mettre à jour'}
+                </Button>
+              </div>
+            </motion.div>
+          </TabsContent>
+
+          <TabsContent value="teachers" className="p-0 mt-0">
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="relative bg-white/5 rounded-b-xl p-6"
+            >
+              {formationId && <FormationTeachersSection formationId={formationId} />}
+            </motion.div>
+          </TabsContent>
+        </Tabs>
       </Card>
-
-      {/* Ajouter la section des formateurs après le formulaire principal */}
-      {formationId && (
-        <div className="mt-6">
-          <FormationTeachersSection formationId={formationId} />
-        </div>
-      )}
     </div>
   );
 };

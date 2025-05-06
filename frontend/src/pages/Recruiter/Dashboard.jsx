@@ -111,31 +111,7 @@ const RecruiterDashboard = () => {
       color: 'from-yellow-500 to-yellow-600',
       textColor: 'text-yellow-50',
       link: '/recruiter/formation-management',
-    },
-    {
-      title: 'Étudiants invités',
-      description: 'Gérer les étudiants invités',
-      icon: Users,
-      color: 'from-blue-500 to-blue-600',
-      textColor: 'text-blue-50',
-      link: '/recruiter/guest-students',
-    },
-    {
-      title: 'Événements',
-      description: 'Gérer les événements',
-      icon: Calendar,
-      color: 'from-green-500 to-green-600',
-      textColor: 'text-green-50',
-      link: '/recruiter/events',
-    },
-    {
-      title: 'Offres',
-      description: "Gérer les offres d'emploi",
-      icon: Briefcase,
-      color: 'from-purple-500 to-purple-600',
-      textColor: 'text-purple-50',
-      link: '/recruiter/offers',
-    },
+    }
   ];
 
   return (
