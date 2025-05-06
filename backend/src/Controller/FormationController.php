@@ -472,6 +472,7 @@ class FormationController extends AbstractController
     }
 
     #[Route('/formations/{formationId}/students/{userId}', name: 'api_formations_add_student', methods: ['POST'])]
+    #[\Symfony\Bundle\SecurityBundle\Attribute\Security("is_granted('ROLE_ADMIN') or is_granted('ROLE_RECRUITER')")]
     public function addStudentToFormation(int $formationId, int $userId): JsonResponse
     {
         $formation = $this->formationRepository->find($formationId);

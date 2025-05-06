@@ -404,6 +404,18 @@ const App = () => {
                         </RoleGuard>
                       } />
                     </Route>
+
+                    {/* Recruiter Formation Management Routes (reuse admin components) */}
+                    <Route path="/recruiter/formation-management" element={
+                      <RoleGuard roles={[ROLES.RECRUITER, ROLES.ADMIN, ROLES.SUPERADMIN]} fallback={<Navigate to="/dashboard" replace />}>
+                        <AllFormations />
+                      </RoleGuard>
+                    } />
+                    <Route path="/recruiter/formation-management/:id" element={
+                      <RoleGuard roles={[ROLES.RECRUITER, ROLES.ADMIN, ROLES.SUPERADMIN]} fallback={<Navigate to="/dashboard" replace />}>
+                        <FormationDetails />
+                      </RoleGuard>
+                    } />
                   </Route>
                 </Route>
 
