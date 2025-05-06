@@ -14,7 +14,7 @@ import { Button } from './button';
 import { useAuth } from '@/contexts/AuthContext';
 import { Link } from 'react-router-dom';
 import { Badge } from './badge';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import { addDoc, collection } from 'firebase/firestore';
 import { db } from '@/lib/services/firebase';
 
@@ -126,6 +126,25 @@ export const NotificationBell = () => {
   const [displayedNotifications, setDisplayedNotifications] = useState([]);
   const lastNotificationRef = useRef(null);
   const hasRenderedRef = useRef(false);
+  const controls = useAnimation();
+
+  // Animation sequence for the bell
+  const swingSequence = async () => {
+    await controls.start({ rotate: -10, transition: { duration: 0.08 } });
+    await controls.start({ rotate: 10, transition: { duration: 0.12 } });
+    await controls.start({ rotate: -10, transition: { duration: 0.12 } });
+    await controls.start({ rotate: 10, transition: { duration: 0.12 } });
+    await controls.start({ rotate: 0, transition: { duration: 0.16 } });
+  };
+
+  useEffect(() => {
+    if (isHovering) {
+      swingSequence();
+    } else {
+      controls.start({ rotate: 0, transition: { duration: 0.2 } });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isHovering]);
 
   // Utiliser useEffect pour éviter l'affichage multiple des notifications
   useEffect(() => {
@@ -190,8 +209,9 @@ export const NotificationBell = () => {
           onMouseLeave={() => setIsHovering(false)}
         >
           <motion.div
-            animate={isHovering ? { rotate: [0, -10, 10, -10, 10, 0] } : {}}
-            transition={{ duration: 0.5, ease: "easeInOut" }}
+            animate={controls}
+            initial={{ rotate: 0 }}
+            style={{ display: 'inline-block' }}
           >
             <Bell className="h-5 w-5 text-gray-200 group-hover:text-white transition-colors" />
           </motion.div>
