@@ -136,7 +136,7 @@ const RecruiterDashboard = () => {
               <Link to={card.link} className="block h-full">
                 <div className="relative h-full overflow-hidden rounded-xl shadow-sm hover:shadow-md transition-all duration-300 group">
                   <div className={`absolute inset-0 bg-gradient-to-br ${card.color} opacity-90 group-hover:opacity-100 transition-opacity`}></div>
-                  <div className="relative p-5 h-full flex flex-col">
+                  <div className="relative p-5 h-full flex flex-col justify-between">
                     <div className="flex items-center justify-between mb-4">
                       <div className="p-2.5 rounded-lg bg-white/20 backdrop-blur-sm">
                         <card.icon className="w-5 h-5 text-white" />
@@ -149,7 +149,7 @@ const RecruiterDashboard = () => {
                     <h2 className="text-xl font-semibold text-white mb-1">
                       {card.title}
                     </h2>
-                    <p className="text-white/80 text-sm mb-4">
+                    <p className="text-white/80 text-sm">
                       {card.description}
                     </p>
                   </div>

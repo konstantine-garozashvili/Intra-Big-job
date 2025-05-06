@@ -239,327 +239,116 @@ const EditFormationForm = () => {
   };
 
   return (
-    <div className="container mx-auto py-10 px-4 max-w-4xl">
-      <Card className="border-none shadow-xl overflow-hidden">
-        <CardHeader className="bg-primary text-white">
-          <div className="flex items-center gap-2">
-            <Info className="h-6 w-6" />
-            <CardTitle className="text-2xl">Modifier la Formation</CardTitle>
+    <div className="w-full max-w-5xl mx-auto px-2 sm:px-6 lg:px-8 py-10 min-h-[90vh]">
+      <Card className="overflow-hidden w-full shadow-2xl">
+        <CardHeader className="px-6 py-6 bg-gradient-to-r from-blue-700 to-cyan-500 text-white border-b-0">
+          <div className="flex items-center gap-3">
+            <Info className="h-7 w-7 text-white/90" />
+            <CardTitle className="text-2xl font-bold drop-shadow">Modifier la Formation</CardTitle>
+            <span className="ml-auto text-base font-medium text-white/80">Edition avancée</span>
           </div>
         </CardHeader>
-
-        <Tabs defaultValue="informations" className="w-full">
-          <div className="bg-white/5 backdrop-blur-sm border-b border-white/10 rounded-t-xl p-1.5 mb-0">
-            <TabsList className="grid w-full grid-cols-2 bg-transparent h-auto p-1 gap-4">
-              <TabsTrigger 
-                value="informations"
-                className="relative overflow-hidden 
-                  data-[state=active]:bg-transparent
-                  data-[state=active]:text-primary
-                  py-2.5 transition-all duration-200 
-                  text-slate-400
-                  font-medium
-                  rounded-md
-                  before:absolute before:inset-x-0 before:h-[2px] before:bg-primary
-                  before:bottom-0 before:scale-x-0 hover:before:scale-x-100
-                  before:transition-transform before:duration-300
-                  before:origin-left"
-              >
-                <span className="relative z-10 font-medium">Informations</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="teachers"
-                className="relative overflow-hidden 
-                  data-[state=active]:bg-transparent
-                  data-[state=active]:text-primary
-                  py-2.5 transition-all duration-200 
-                  text-slate-400
-                  font-medium
-                  rounded-md
-                  before:absolute before:inset-x-0 before:h-[2px] before:bg-primary
-                  before:bottom-0 before:scale-x-0 hover:before:scale-x-100
-                  before:transition-transform before:duration-300
-                  before:origin-left"
-              >
-                <span className="relative z-10 font-medium">Enseignants</span>
-              </TabsTrigger>
+        <div className="px-6 py-8">
+          <Tabs defaultValue="informations" className="w-full bg-transparent">
+            <TabsList className="flex gap-4 mb-8 bg-transparent">
+              <TabsTrigger value="informations" className="text-lg font-semibold px-6 py-2 rounded-md bg-white/80 dark:bg-gray-800/80 shadow hover:bg-blue-100 dark:hover:bg-gray-700 transition-colors data-[state=active]:bg-blue-600 data-[state=active]:text-white">Informations</TabsTrigger>
+              <TabsTrigger value="teachers" className="text-lg font-semibold px-6 py-2 rounded-md bg-white/80 dark:bg-gray-800/80 shadow hover:bg-blue-100 dark:hover:bg-gray-700 transition-colors data-[state=active]:bg-blue-600 data-[state=active]:text-white">Enseignants</TabsTrigger>
             </TabsList>
-          </div>
-
-          <TabsContent value="informations" className="p-0 mt-0">
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-              className="relative bg-white/5 rounded-b-xl p-6"
-            >
-              <div className="space-y-8">
-                {/* General Information Section */}
-                <div className="space-y-4 p-5 rounded-lg bg-card bg-primary border">
-                  <div className="flex items-center gap-2">
-                    <div className="bg-white p-2 rounded-full dark:bg-white">
-                      <Info className="h-5 w-5 text-primary" />
-                    </div>
-                    <h3 className="text-lg font-medium text-white">Informations générales</h3>
-                    <Badge variant="outline" className="ml-auto text-white border-white">
-                      Essentiel
-                    </Badge>
-                  </div>
-                  <Separator className="bg-white" />
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="name" className="text-white">
-                        Nom <span className="text-destructive">*</span>
-                      </Label>
-                      <Input
-                        id="name"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleInputChange}
-                        required
-                        className="text-white placeholder-white bg-primary border-white focus:ring-white"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="promotion" className="text-white">
-                        Promotion <span className="text-destructive">*</span>
-                      </Label>
-                      <Input
-                        id="promotion"
-                        name="promotion"
-                        value={formData.promotion}
-                        onChange={handleInputChange}
-                        required
-                        className="text-white placeholder-white bg-primary border-white focus:ring-white"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Training Details Section */}
-                <div className="space-y-4 p-5 rounded-lg bg-card bg-primary border">
-                  <div className="flex items-center gap-2">
-                    <div className="bg-white p-2 rounded-full dark:bg-white">
-                      <BookOpen className="h-5 w-5 text-primary" />
-                    </div>
-                    <h3 className="text-lg font-medium text-white">Détails de la formation</h3>
-                    <Badge variant="outline" className="ml-auto text-white border-white">
-                      Contenu
-                    </Badge>
-                  </div>
-                  <Separator className="bg-white" />
-
-                  <div className="space-y-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="description" className="text-white">Description</Label>
-                      <Textarea
-                        id="description"
-                        name="description"
-                        value={formData.description}
-                        onChange={handleInputChange}
-                        className="min-h-[120px] text-white placeholder-white bg-primary border-white focus:ring-white"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label htmlFor="capacity" className="text-white">
-                          Capacité <span className="text-destructive">*</span>
-                        </Label>
-                        <div className="relative">
-                          <Input
-                            id="capacity"
-                            name="capacity"
-                            type="number"
-                            value={formData.capacity}
-                            onChange={handleInputChange}
-                            required
-                            className="text-white placeholder-white bg-primary border-white focus:ring-white"
-                          />
-                          <Users className="absolute right-3 top-2.5 h-5 w-5 text-white" />
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="duration" className="text-white">
-                          Durée (en mois) <span className="text-destructive">*</span>
-                        </Label>
-                        <div className="relative">
-                          <Input
-                            id="duration"
-                            name="duration"
-                            type="number"
-                            value={formData.duration}
-                            onChange={handleInputChange}
-                            required
-                            className="text-white placeholder-white bg-primary border-white focus:ring-white"
-                          />
-                          <Calendar className="absolute right-3 top-2.5 h-5 w-5 text-white" />
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="dateStart" className="text-white">
-                          Date de début <span className="text-destructive">*</span>
-                        </Label>
-                        <Input
-                          type="date"
-                          id="dateStart"
-                          name="dateStart"
-                          value={formData.dateStart}
-                          onChange={handleInputChange}
-                          required
-                          className="text-white placeholder-white bg-primary border-white focus:ring-white"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Organization Section */}
-                <div className="space-y-4 p-5 rounded-lg bg-card bg-primary border">
-                  <div className="flex items-center gap-2">
-                    <div className="bg-white p-2 rounded-full dark:bg-white">
-                      <MapPin className="h-5 w-5 text-primary" />
-                    </div>
-                    <h3 className="text-lg font-medium text-white">Organisation</h3>
-                    <Badge variant="outline" className="ml-auto text-white border-white">
-                      Logistique
-                    </Badge>
-                  </div>
-                  <Separator className="bg-white" />
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="location" className="text-white">Lieu</Label>
-                      <Input
-                        id="location"
-                        name="location"
-                        value={formData.location}
-                        onChange={handleInputChange}
-                        className="text-white placeholder-white bg-primary border-white focus:ring-white"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="specializationId" className="text-white">
-                        Spécialisation <span className="text-destructive">*</span>
-                      </Label>
-                      <Select
-                        value={formData.specializationId}
-                        onValueChange={handleSpecializationChange}
-                        required
-                      >
-                        <SelectTrigger className="text-white bg-primary border-white focus:ring-white">
-                          <SelectValue placeholder="Sélectionnez une spécialisation" className="text-white placeholder-white" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {specializations.map((spec) => (
-                            <SelectItem key={`specialization-${spec.id}`} value={spec.id.toString()}>
-                              {spec.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Image Section */}
-                <div className="space-y-4 p-5 rounded-lg bg-card bg-primary border">
-                  <div className="flex items-center gap-2">
-                    <div className="bg-white p-2 rounded-full dark:bg-white">
-                      <ImageIcon className="h-5 w-5 text-primary" />
-                    </div>
-                    <h3 className="text-lg font-medium text-white">Image de la formation</h3>
-                    <Badge variant="outline" className="ml-auto text-white border-white">
-                      Média
-                    </Badge>
-                  </div>
-                  <Separator className="bg-white" />
-
-                  <div className="flex flex-col md:flex-row gap-6 items-start">
-                    <div className="w-full md:w-1/3">
-                      {imagePreview ? (
-                        <div className="relative group">
-                          <img
-                            src={imagePreview}
-                            alt="Prévisualisation"
-                            className="w-full aspect-video object-cover rounded-lg border border-white"
-                            onError={(e) => {
-                              e.target.src = '/placeholder.png';
-                            }}
-                          />
-                          <label className="absolute inset-0 cursor-pointer flex items-center justify-center bg-black/0 hover:bg-black/50 transition-opacity rounded-lg group">
-                            <div className="hidden group-hover:flex flex-col items-center text-white">
-                              <Upload className="h-8 w-8" />
-                              <span className="text-sm">Changer l'image</span>
+            <TabsContent value="informations" className="p-0 mt-0">
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="space-y-10">
+                {/* Ligne 1 : image + description */}
+                <div className="flex flex-col md:flex-row gap-10 items-stretch md:items-start">
+                  {/* Image de la formation */}
+                  <div className="flex flex-col items-center w-full md:w-1/4 min-w-[180px] justify-center">
+                    <div className="relative group mb-4 w-40 h-40">
+                      <label htmlFor="formation-image-upload" className="block w-full h-full rounded-xl bg-gray-100 dark:bg-gray-800 border-2 border-blue-200 dark:border-gray-700 shadow-lg cursor-pointer transition-all duration-200 group-hover:ring-4 group-hover:ring-blue-400 group-hover:shadow-xl outline-none select-none">
+                        <div className="w-full h-full rounded-xl overflow-hidden flex items-center justify-center">
+                          {imagePreview ? (
+                            <img src={imagePreview} alt="Prévisualisation" className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105 pointer-events-none" draggable="false" />
+                          ) : (
+                            <div className="flex flex-col items-center justify-center w-full h-full pointer-events-none select-none">
+                              <Upload className="h-12 w-12 text-gray-400 mb-2" />
+                              <span className="text-xs text-gray-400">Image</span>
                             </div>
-                            <input
-                              type="file"
-                              className="hidden"
-                              accept="image/jpeg,image/png,image/gif,image/webp"
-                              onChange={handleImageChange}
-                              key={formData.imageFile ? 'has-file' : 'no-file'}
-                            />
-                          </label>
+                          )}
+                          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-xl pointer-events-none">
+                            <span className="text-white text-sm font-semibold px-2 text-center select-none">Changer l'image</span>
+                          </div>
                         </div>
-                      ) : (
-                        <div className="w-full aspect-video border-2 border-dashed border-white rounded-lg flex items-center justify-center bg-primary/50">
-                          <Upload className="h-8 w-8 text-white" />
-                          <label className="absolute inset-0 cursor-pointer">
-                            <input
-                              type="file"
-                              className="hidden"
-                              accept="image/jpeg,image/png,image/gif,image/webp"
-                              onChange={handleImageChange}
-                              key={formData.imageFile ? 'has-file' : 'no-file'}
-                            />
-                          </label>
-                        </div>
+                      </label>
+                      <input id="formation-image-upload" type="file" className="hidden" accept="image/*" onChange={handleImageChange} disabled={loading} />
+                      {imagePreview && (
+                        <Button type="button" variant="ghost" size="sm" className="mt-4 text-red-500 hover:bg-red-50 transition-colors" onClick={() => { setImagePreview(null); setFormData(prev => ({ ...prev, imageFile: null })); }} disabled={loading}>
+                          Supprimer l'image
+                        </Button>
                       )}
                     </div>
-                    <div className="w-full md:w-2/3 space-y-4">
-                      <div className="text-sm text-white">
-                        <p>Formats acceptés: <span className="font-semibold">JPG, PNG, GIF, WEBP</span></p>
-                        <p>Taille maximum: <span className="font-semibold">2MB</span></p>
-                      </div>
-                    </div>
+                  </div>
+                  {/* Description */}
+                  <div className="flex-1 flex flex-col justify-center">
+                    <Label htmlFor="description" className="font-semibold">Description</Label>
+                    <Textarea id="description" name="description" value={formData.description} onChange={handleInputChange} rows={5} className="mt-2 resize-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none" />
                   </div>
                 </div>
-              </div>
-
-              <div className="flex justify-between mt-6">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => navigate('/formations')}
-                  disabled={loading}
-                >
-                  Annuler
-                </Button>
-                <Button
-                  type="submit"
-                  onClick={handleSubmit}
-                  disabled={loading}
-                >
-                  {loading ? 'Enregistrement...' : 'Mettre à jour'}
-                </Button>
-              </div>
-            </motion.div>
-          </TabsContent>
-
-          <TabsContent value="teachers" className="p-0 mt-0">
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-              className="relative bg-white/5 rounded-b-xl p-6"
-            >
-              {formationId && <FormationTeachersSection formationId={formationId} />}
-            </motion.div>
-          </TabsContent>
-        </Tabs>
+                {/* Ligne 2 : tous les champs principaux sur une seule ligne en grille responsive */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="name" className="font-semibold">Nom *</Label>
+                    <Input id="name" name="name" value={formData.name} onChange={handleInputChange} required className="focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="promotion" className="font-semibold">Promotion *</Label>
+                    <Input id="promotion" name="promotion" value={formData.promotion} onChange={handleInputChange} required className="focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="capacity" className="font-semibold">Capacité *</Label>
+                    <Input id="capacity" name="capacity" type="number" min="1" value={formData.capacity} onChange={handleInputChange} required className="focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="duration" className="font-semibold">Durée (en mois) *</Label>
+                    <Input type="number" id="duration" name="duration" value={formData.duration} onChange={handleInputChange} required className="focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="dateStart" className="font-semibold">Date de début *</Label>
+                    <Input type="date" id="dateStart" name="dateStart" value={formData.dateStart} onChange={handleInputChange} required className="focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="location" className="font-semibold">Lieu</Label>
+                    <Input id="location" name="location" value={formData.location} onChange={handleInputChange} className="focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
+                  </div>
+                  <div className="flex flex-col gap-2 lg:col-span-1">
+                    <Label htmlFor="specializationId" className="font-semibold">Spécialisation *</Label>
+                    <Select value={formData.specializationId} onValueChange={handleSpecializationChange} required>
+                      <SelectTrigger className="focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
+                        <SelectValue placeholder="Sélectionnez une spécialisation" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {specializations.map((spec) => (
+                          <SelectItem key={spec.id} value={spec.id.toString()}>
+                            {spec.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="flex gap-4 justify-end mt-8">
+                  <Button type="submit" disabled={loading} className="bg-gradient-to-r from-blue-600 to-cyan-400 text-white shadow hover:from-blue-700 hover:to-cyan-500 transition">
+                    {loading ? 'Enregistrement...' : 'Mettre à jour'}
+                  </Button>
+                  <Button type="button" variant="outline" onClick={() => navigate('/formations')} disabled={loading}>
+                    Annuler
+                  </Button>
+                </div>
+              </motion.div>
+            </TabsContent>
+            <TabsContent value="teachers" className="p-0 mt-0">
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="relative bg-white/5 rounded-b-xl p-6">
+                {formationId && <FormationTeachersSection formationId={formationId} />}
+              </motion.div>
+            </TabsContent>
+          </Tabs>
+        </div>
       </Card>
     </div>
   );
