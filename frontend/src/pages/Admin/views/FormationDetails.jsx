@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader2, Users, Calendar, Clock, MapPin } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -7,6 +7,7 @@ import apiService from '@/lib/services/apiService';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { authService } from '@/lib/services/authService';
 
 export default function FormationDetails() {
   const { id } = useParams();
@@ -20,6 +21,7 @@ export default function FormationDetails() {
   const [loadingAvailable, setLoadingAvailable] = useState(false);
   const [addingUserId, setAddingUserId] = useState(null);
   const [enrolledStudents, setEnrolledStudents] = useState([]);
+  const navigate = useNavigate();
 
   // Move fetchFormation outside useEffect so it can be reused
   const fetchFormation = async () => {
@@ -47,27 +49,29 @@ export default function FormationDetails() {
     }
   };
 
+  // Move fetchAcceptedStudents outside useEffect so it can be reused
+  const fetchAcceptedStudents = async () => {
+    try {
+      const res = await apiService.get(`/api/formations/${id}/enrollment-requests?status=accepted`);
+      let students = [];
+      if (res && res.success && Array.isArray(res.data)) {
+        students = res.data.map(r => r.user);
+      } else if (Array.isArray(res)) {
+        students = res.map(r => r.user);
+      }
+      setAcceptedStudents(students);
+      setAcceptedCount(students.length);
+    } catch (err) {
+      setAcceptedStudents([]);
+      setAcceptedCount(0);
+    }
+  };
+
   useEffect(() => {
     fetchFormation();
   }, [id]);
 
   useEffect(() => {
-    const fetchAcceptedStudents = async () => {
-      try {
-        const res = await apiService.get(`/api/formations/${id}/enrollment-requests?status=accepted`);
-        let students = [];
-        if (res && res.success && Array.isArray(res.data)) {
-          students = res.data.map(r => r.user);
-        } else if (Array.isArray(res)) {
-          students = res.map(r => r.user);
-        }
-        setAcceptedStudents(students);
-        setAcceptedCount(students.length);
-      } catch (err) {
-        setAcceptedStudents([]);
-        setAcceptedCount(0);
-      }
-    };
     fetchAcceptedStudents();
   }, [id]);
 
@@ -120,23 +124,21 @@ export default function FormationDetails() {
       setShowAddModal(false);
       // Refresh accepted students list
       console.log('[handleAddUser] Fetching accepted students...');
-      const res2 = await apiService.get(`/api/formations/${id}/enrollment-requests?status=accepted`);
-      console.log('[handleAddUser] Response from accepted students fetch:', res2);
-      let students = [];
-      if (res2 && res2.success && Array.isArray(res2.data)) {
-        students = res2.data.map(r => r.user);
-      } else if (Array.isArray(res2)) {
-        students = res2.map(r => r.user);
-      }
-      setAcceptedStudents(students);
-      setAcceptedCount(students.length);
-      // Re-fetch formation to update studentCount and enrolledStudents
+      await fetchAcceptedStudents();
+      // Re-fetch formation details
       console.log('[handleAddUser] Re-fetching formation...');
       await fetchFormation();
-      console.log('[handleAddUser] Done.');
-    } catch (err) {
-      console.error('[handleAddUser] Error:', err);
-      toast.error(err.message || "Erreur lors de l'ajout de l'utilisateur.");
+      // If the added user is the current user, refresh user info and redirect
+      const currentUser = authService.getUser();
+      if (currentUser && String(currentUser.id) === String(userId)) {
+        const updatedUser = await authService.getCurrentUser(true);
+        if (authService.hasRole('STUDENT')) {
+          navigate('/student/dashboard');
+        }
+      }
+    } catch (error) {
+      console.error('[handleAddUser] Error:', error);
+      toast.error(error.message || "Erreur lors de l'ajout de l'utilisateur.");
     } finally {
       setAddingUserId(null);
     }

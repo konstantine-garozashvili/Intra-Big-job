@@ -489,6 +489,13 @@ class FormationController extends AbstractController
                 'message' => 'Utilisateur non trouvé'
             ], 404);
         }
+        // Remove GUEST role if present
+        foreach ($user->getUserRoles() as $userRole) {
+            if (strtoupper($userRole->getRole()->getName()) === 'GUEST') {
+                $user->removeUserRole($userRole);
+                $this->entityManager->remove($userRole);
+            }
+        }
         // Add user to formation if not already present
         if (!$formation->getStudents()->contains($user)) {
             $formation->addStudent($user);
