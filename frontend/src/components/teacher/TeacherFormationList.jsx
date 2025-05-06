@@ -96,7 +96,7 @@ const TeacherFormationList = () => {
           {filteredFormations.length === 0 && (
             <TableRow>
               <TableCell colSpan={4} className="text-center">
-                Aucune formation trouvée
+                Vous n'avez pas de formations
               </TableCell>
             </TableRow>
           )}
