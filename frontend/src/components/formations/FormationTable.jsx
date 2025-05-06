@@ -11,23 +11,30 @@ import {
   TableHeader,
   TableRow,
 } from '../ui/table';
-import { Image as ImageIcon, Pencil, Trash2 } from 'lucide-react';
+import { Image as ImageIcon, Pencil, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const FormationTable = () => {
   const [formations, setFormations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    limit: 10,
+    total: 0
+  });
 
   useEffect(() => {
-    loadFormations();
-  }, []);
+    loadFormations(pagination.currentPage);
+  }, [pagination.currentPage]);
 
-  const loadFormations = async () => {
+  const loadFormations = async (page) => {
     try {
       setLoading(true);
       setError(null);
-      const data = await formationService.getAllFormations();
-      setFormations(data);
+      const data = await formationService.getAllFormations(page, pagination.limit);
+      setFormations(data.formations);
+      setPagination(data.pagination);
     } catch (error) {
       setError(error.message);
       toast.error(error.message);
@@ -36,12 +43,18 @@ const FormationTable = () => {
     }
   };
 
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= pagination.totalPages) {
+      setPagination(prev => ({ ...prev, currentPage: newPage }));
+    }
+  };
+
   const handleDelete = async (id) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cette formation ?')) {
       try {
         await formationService.deleteFormation(id);
         toast.success('Formation supprimée avec succès');
-        setFormations(prev => prev.filter(f => f.id !== id));
+        loadFormations(pagination.currentPage);
       } catch (error) {
         toast.error(error.message);
       }
@@ -56,7 +69,7 @@ const FormationTable = () => {
     return (
       <div className="text-center p-4 text-red-500">
         Erreur: {error}
-        <Button onClick={loadFormations} className="ml-2">Réessayer</Button>
+        <Button onClick={() => loadFormations(pagination.currentPage)} className="ml-2">Réessayer</Button>
       </div>
     );
   }
@@ -133,6 +146,37 @@ const FormationTable = () => {
             )}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Pagination Controls */}
+      <div className="mt-4 flex items-center justify-between px-4">
+        <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+          <span>
+            Page {pagination.currentPage} sur {pagination.totalPages} ({pagination.total} formations)
+          </span>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handlePageChange(pagination.currentPage - 1)}
+            disabled={pagination.currentPage === 1}
+            className="flex items-center gap-1"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            Précédent
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handlePageChange(pagination.currentPage + 1)}
+            disabled={pagination.currentPage >= pagination.totalPages}
+            className="flex items-center gap-1"
+          >
+            Suivant
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
     </div>
   );

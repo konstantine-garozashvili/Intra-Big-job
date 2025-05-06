@@ -8,9 +8,13 @@ const SPECIALIZATION_URL = '/api/specializations';
  */
 export const formationApi = {
   /**
-   * Récupère toutes les formations
+   * Récupère toutes les formations avec pagination
+   * @param {Object} options - Options de requête
+   * @param {Object} options.params - Paramètres de pagination
+   * @param {number} options.params.page - Numéro de page
+   * @param {number} options.params.limit - Nombre d'éléments par page
    */
-  getAll: () => apiService.get(API_URL),
+  getAll: (options = {}) => apiService.get(API_URL, options),
 
   /**
    * Récupère une formation par son ID

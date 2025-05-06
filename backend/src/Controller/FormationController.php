@@ -37,9 +37,15 @@ class FormationController extends AbstractController
     }
 
     #[Route('/formations', name: 'api_formations_list', methods: ['GET'])]
-    public function getAllFormations(): JsonResponse
+    public function getAllFormations(Request $request): JsonResponse
     {
-        $formations = $this->formationRepository->findAll();
+        $page = $request->query->getInt('page', 1);
+        $limit = $request->query->getInt('limit', 10);
+        $offset = ($page - 1) * $limit;
+
+        $formations = $this->formationRepository->findBy([], ['id' => 'DESC'], $limit, $offset);
+        $totalFormations = $this->formationRepository->count([]);
+        $totalPages = ceil($totalFormations / $limit);
         
         $data = array_map(function(Formation $formation) {
             $imageUrl = null;
@@ -80,7 +86,13 @@ class FormationController extends AbstractController
         return $this->json([
             'success' => true,
             'data' => [
-                'formations' => $data
+                'formations' => $data,
+                'pagination' => [
+                    'currentPage' => $page,
+                    'totalPages' => $totalPages,
+                    'limit' => $limit,
+                    'total' => $totalFormations
+                ]
             ]
         ]);
     }

@@ -6,11 +6,11 @@ import { normalizeResponse, cleanImageUrl, handleApiError } from '../utils/api.u
  */
 export const formationService = {
   /**
-   * Get all formations with normalized data
+   * Get all formations with normalized data and pagination
    */
-  getAllFormations: async () => {
+  getAllFormations: async (page = 1, limit = 10) => {
     try {
-      const response = await formationApi.getAll();
+      const response = await formationApi.getAll({ params: { page, limit } });
       const data = normalizeResponse(response.data);
       const formations = data?.formations?.map(formation => ({
         ...formation,
@@ -24,10 +24,19 @@ export const formationService = {
       console.log('[FormationService] Formations data:', {
         count: formations.length,
         sample: formations[0],
-        allSpecIds: formations.map(f => f.specializationId)
+        allSpecIds: formations.map(f => f.specializationId),
+        pagination: data?.pagination
       });
 
-      return formations;
+      return {
+        formations,
+        pagination: data?.pagination || {
+          currentPage: 1,
+          totalPages: 1,
+          limit: 10,
+          total: formations.length
+        }
+      };
     } catch (error) {
       throw new Error(handleApiError(error));
     }
