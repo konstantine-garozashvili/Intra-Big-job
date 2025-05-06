@@ -200,20 +200,16 @@ const LayoutConfetti = ({ isActive }) => {
 const CongratulationsModal = ({ isOpen, onClose }) => {
   // Debug: log when modal state changes
   React.useEffect(() => {
-    console.log(`CongratulationsModal isOpen changed to: ${isOpen}`);
   }, [isOpen]);
 
   // Return null early if not open - but log it
   if (!isOpen) {
-    console.log('CongratulationsModal not rendering because isOpen is false');
     return null;
   }
   
-  console.log('CongratulationsModal is rendering with isOpen=true');
   
   const handleClose = () => {
     // Call the onClose function which will handle acknowledgment
-    console.log('Modal close button clicked');
     onClose();
   };
   
@@ -422,7 +418,6 @@ const MainLayout = () => {
                 setProfileData(initialProfileData);
                 // Refresh différé (9s) toujours en parallèle
                 setTimeout(async () => {
-                  console.log('Executing delayed refresh of profile data (9s)');
                   const [refreshedProfileData, refreshedStats] = await Promise.all([
                     profileService.getAllProfileData({ forceRefresh: true }),
                     profileService.getStats({ forceRefresh: true })

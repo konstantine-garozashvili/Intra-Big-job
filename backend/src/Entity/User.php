@@ -136,6 +136,10 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     #[ORM\OneToMany(mappedBy: 'reviewedBy', targetEntity: FormationEnrollmentRequest::class)]
     private Collection $reviewedEnrollmentRequests;
 
+    #[ORM\OneToMany(mappedBy: 'user', targetEntity: FormationTeacher::class, orphanRemoval: true)]
+    #[Groups(['user:read'])]
+    private Collection $teacherFormations;
+
     public function __construct()
     {
         $this->createdAt = new \DateTimeImmutable();
@@ -151,6 +155,7 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
         $this->formations = new ArrayCollection();
         $this->enrollmentRequests = new ArrayCollection();
         $this->reviewedEnrollmentRequests = new ArrayCollection();
+        $this->teacherFormations = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -769,6 +774,34 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
             // set the owning side to null (unless already changed)
             if ($enrollmentRequest->getReviewedBy() === $this) {
                 $enrollmentRequest->setReviewedBy(null);
+            }
+        }
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, FormationTeacher>
+     */
+    public function getTeacherFormations(): Collection
+    {
+        return $this->teacherFormations;
+    }
+
+    public function addTeacherFormation(FormationTeacher $teacherFormation): self
+    {
+        if (!$this->teacherFormations->contains($teacherFormation)) {
+            $this->teacherFormations->add($teacherFormation);
+            $teacherFormation->setUser($this);
+        }
+        return $this;
+    }
+
+    public function removeTeacherFormation(FormationTeacher $teacherFormation): self
+    {
+        if ($this->teacherFormations->removeElement($teacherFormation)) {
+            // set the owning side to null (unless already changed)
+            if ($teacherFormation->getUser() === $this) {
+                $teacherFormation->setUser(null);
             }
         }
         return $this;

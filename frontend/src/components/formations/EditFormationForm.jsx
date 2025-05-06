@@ -9,11 +9,13 @@ import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Upload, Trash2 } from 'lucide-react';
+import FormationTeachersSection from './FormationTeachersSection';
 
 const EditFormationForm = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const [loading, setLoading] = useState(true);
+  const [formationId, setFormationId] = useState(null);
   const [specializations, setSpecializations] = useState([]);
   const [imagePreview, setImagePreview] = useState(null);
   const [formData, setFormData] = useState({
@@ -29,10 +31,19 @@ const EditFormationForm = () => {
   });
 
   useEffect(() => {
+    const parsedId = parseInt(id);
+    if (!isNaN(parsedId)) {
+      setFormationId(parsedId);
+    }
+  }, [id]);
+
+  useEffect(() => {
     const loadData = async () => {
+      if (!formationId) return;
+
       try {
         setLoading(true);
-        console.log('[EditFormationForm] Loading formation data for id:', id);
+        console.log('[EditFormationForm] Loading formation data for id:', formationId);
         
         // Charger les spécialisations d'abord
         const specializationsData = await formationService.getSpecializations();
@@ -45,7 +56,7 @@ const EditFormationForm = () => {
         }
 
         // Charger les données de la formation
-        const formationData = await formationService.getFormation(id);
+        const formationData = await formationService.getFormation(formationId);
         console.log('[EditFormationForm] Received formation data:', formationData);
         
         if (!formationData) {
@@ -81,10 +92,8 @@ const EditFormationForm = () => {
       }
     };
 
-    if (id) {
-      loadData();
-    }
-  }, [id]);
+    loadData();
+  }, [formationId]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -133,11 +142,11 @@ const EditFormationForm = () => {
   };
 
   const handleImageDelete = async () => {
-    if (!id || !imagePreview) return;
+    if (!formationId || !imagePreview) return;
 
     try {
       setLoading(true);
-      await formationService.deleteFormationImage(id);
+      await formationService.deleteFormationImage(formationId);
       setImagePreview(null);
       setFormData(prev => ({ ...prev, imageFile: null }));
       toast.success('Image supprimée avec succès');
@@ -179,7 +188,7 @@ const EditFormationForm = () => {
       };
 
       // Mise à jour de la formation
-      await formationService.updateFormation(id, formDataToSubmit);
+      await formationService.updateFormation(formationId, formDataToSubmit);
 
       // Si une nouvelle image a été sélectionnée, la télécharger
       if (formData.imageFile instanceof File) {
@@ -193,7 +202,7 @@ const EditFormationForm = () => {
             fileSize: formData.imageFile.size
           });
 
-          const imageResult = await formationService.uploadFormationImage(id, formDataImage);
+          const imageResult = await formationService.uploadFormationImage(formationId, formDataImage);
           console.log('[EditFormationForm] Image upload result:', imageResult);
 
           if (imageResult.success && imageResult.image_url) {
@@ -385,6 +394,13 @@ const EditFormationForm = () => {
           </form>
         </CardContent>
       </Card>
+
+      {/* Ajouter la section des formateurs après le formulaire principal */}
+      {formationId && (
+        <div className="mt-6">
+          <FormationTeachersSection formationId={formationId} />
+        </div>
+      )}
     </div>
   );
 };

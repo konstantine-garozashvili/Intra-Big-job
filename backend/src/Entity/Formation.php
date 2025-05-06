@@ -73,10 +73,15 @@ class Formation
     #[Groups(['formation:read'])]
     private ?string $imageUrl = null;
     
+    #[ORM\OneToMany(mappedBy: 'formation', targetEntity: FormationTeacher::class, orphanRemoval: true)]
+    #[Groups(['formation:read'])]
+    private Collection $formationTeachers;
+    
     public function __construct()
     {
         $this->students = new ArrayCollection();
         $this->enrollmentRequests = new ArrayCollection();
+        $this->formationTeachers = new ArrayCollection();
     }
     
     public function getId(): ?int
@@ -230,6 +235,34 @@ class Formation
     public function setImageUrl(?string $imageUrl): static
     {
         $this->imageUrl = $imageUrl;
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, FormationTeacher>
+     */
+    public function getFormationTeachers(): Collection
+    {
+        return $this->formationTeachers;
+    }
+
+    public function addFormationTeacher(FormationTeacher $formationTeacher): self
+    {
+        if (!$this->formationTeachers->contains($formationTeacher)) {
+            $this->formationTeachers->add($formationTeacher);
+            $formationTeacher->setFormation($this);
+        }
+        return $this;
+    }
+
+    public function removeFormationTeacher(FormationTeacher $formationTeacher): self
+    {
+        if ($this->formationTeachers->removeElement($formationTeacher)) {
+            // set the owning side to null (unless already changed)
+            if ($formationTeacher->getFormation() === $this) {
+                $formationTeacher->setFormation(null);
+            }
+        }
         return $this;
     }
 }
