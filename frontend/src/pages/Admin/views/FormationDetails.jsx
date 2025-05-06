@@ -21,31 +21,33 @@ export default function FormationDetails() {
   const [addingUserId, setAddingUserId] = useState(null);
   const [enrolledStudents, setEnrolledStudents] = useState([]);
 
-  useEffect(() => {
-    const fetchFormation = async () => {
-      setLoading(true);
-      try {
-        const res = await apiService.get(`/api/formations/${id}`);
-        let f = null;
-        if (res && res.success && res.data && res.data.formation) {
-          f = res.data.formation;
-        } else if (res && res.success && res.data && res.data.data && res.data.data.formation) {
-          f = res.data.data.formation;
-        } else if (res && res.formation) {
-          f = res.formation;
-        } else if (res && res.data) {
-          f = res.data;
-        }
-        setFormation(f);
-        setStudentCount(Array.isArray(f?.students) ? f.students.length : 0);
-        setEnrolledStudents(Array.isArray(f?.students) ? f.students : []);
-      } catch (err) {
-        setFormation(null);
-        setEnrolledStudents([]);
-      } finally {
-        setLoading(false);
+  // Move fetchFormation outside useEffect so it can be reused
+  const fetchFormation = async () => {
+    setLoading(true);
+    try {
+      const res = await apiService.get(`/api/formations/${id}`);
+      let f = null;
+      if (res && res.success && res.data && res.data.formation) {
+        f = res.data.formation;
+      } else if (res && res.success && res.data && res.data.data && res.data.data.formation) {
+        f = res.data.data.formation;
+      } else if (res && res.formation) {
+        f = res.formation;
+      } else if (res && res.data) {
+        f = res.data;
       }
-    };
+      setFormation(f);
+      setStudentCount(Array.isArray(f?.students) ? f.students.length : 0);
+      setEnrolledStudents(Array.isArray(f?.students) ? f.students : []);
+    } catch (err) {
+      setFormation(null);
+      setEnrolledStudents([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchFormation();
   }, [id]);
 
@@ -107,23 +109,34 @@ export default function FormationDetails() {
   const handleAddUser = async (userId) => {
     setAddingUserId(userId);
     try {
-      await apiService.post(`/api/formations/${id}/students/${userId}`);
+      console.log('[handleAddUser] Adding user to formation:', { formationId: id, userId });
+      const res = await apiService.post(`/api/formations/${id}/students/${userId}`);
+      console.log('[handleAddUser] Response from add student:', res);
+      if (!res.success) {
+        console.error('[handleAddUser] Add student failed:', res);
+        throw new Error(res.message || "Erreur lors de l'ajout de l'utilisateur.");
+      }
       toast.success('Utilisateur ajouté à la formation.');
       setShowAddModal(false);
       // Refresh accepted students list
-      const res = await apiService.get(`/api/formations/${id}/enrollment-requests?status=accepted`);
+      console.log('[handleAddUser] Fetching accepted students...');
+      const res2 = await apiService.get(`/api/formations/${id}/enrollment-requests?status=accepted`);
+      console.log('[handleAddUser] Response from accepted students fetch:', res2);
       let students = [];
-      if (res && res.success && Array.isArray(res.data)) {
-        students = res.data.map(r => r.user);
-      } else if (Array.isArray(res)) {
-        students = res.map(r => r.user);
+      if (res2 && res2.success && Array.isArray(res2.data)) {
+        students = res2.data.map(r => r.user);
+      } else if (Array.isArray(res2)) {
+        students = res2.map(r => r.user);
       }
       setAcceptedStudents(students);
       setAcceptedCount(students.length);
       // Re-fetch formation to update studentCount and enrolledStudents
+      console.log('[handleAddUser] Re-fetching formation...');
       await fetchFormation();
+      console.log('[handleAddUser] Done.');
     } catch (err) {
-      toast.error("Erreur lors de l'ajout de l'utilisateur.");
+      console.error('[handleAddUser] Error:', err);
+      toast.error(err.message || "Erreur lors de l'ajout de l'utilisateur.");
     } finally {
       setAddingUserId(null);
     }
@@ -170,14 +183,14 @@ export default function FormationDetails() {
               </div>
               <div className="w-full mt-8">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-lg font-semibold text-left">Étudiants acceptés</h3>
+                  <h3 className="text-lg font-semibold text-left">Étudiants inscrits</h3>
                   <Button onClick={handleOpenAddModal} className="bg-blue-600 hover:bg-blue-700 text-white">Ajouter</Button>
                 </div>
-                {acceptedStudents.length === 0 ? (
-                  <div className="text-gray-500 text-sm">Aucun étudiant accepté pour cette formation.</div>
+                {enrolledStudents.length === 0 ? (
+                  <div className="text-gray-500 text-sm">Aucun étudiant inscrit pour cette formation.</div>
                 ) : (
                   <ul className="divide-y divide-gray-200">
-                    {acceptedStudents.map((student) => (
+                    {enrolledStudents.map((student) => (
                       <li key={student.id} className="py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                         <span className="font-medium">{student.firstName} {student.lastName}</span>
                         <span className="text-gray-500 text-sm">{student.email}</span>
@@ -190,26 +203,6 @@ export default function FormationDetails() {
                       </li>
                     ))}
                   </ul>
-                )}
-                {/* Show directly enrolled students not in acceptedStudents */}
-                {enrolledStudents.filter(s => !acceptedStudents.some(a => a.id === s.id)).length > 0 && (
-                  <>
-                    <h4 className="mt-6 mb-2 text-md font-semibold text-left">Étudiants inscrits</h4>
-                    <ul className="divide-y divide-gray-200">
-                      {enrolledStudents.filter(s => !acceptedStudents.some(a => a.id === s.id)).map((student) => (
-                        <li key={student.id} className="py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                          <span className="font-medium">{student.firstName} {student.lastName}</span>
-                          <span className="text-gray-500 text-sm">{student.email}</span>
-                          <button
-                            className="ml-4 px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition"
-                            onClick={() => handleKickStudent(student.id)}
-                          >
-                            Retirer
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </>
                 )}
               </div>
             </div>

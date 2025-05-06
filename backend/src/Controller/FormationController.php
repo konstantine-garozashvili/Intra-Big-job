@@ -119,6 +119,14 @@ class FormationController extends AbstractController
             'duration' => $formation->getDuration(),
             'dateStart' => $formation->getDateStart() ? $formation->getDateStart()->format('Y-m-d') : null,
             'location' => $formation->getLocation(),
+            'students' => array_map(function($student) {
+                return [
+                    'id' => $student->getId(),
+                    'firstName' => $student->getFirstName(),
+                    'lastName' => $student->getLastName(),
+                    'email' => $student->getEmail(),
+                ];
+            }, $formation->getStudents()->toArray()),
         ];
 
         return $this->json([
