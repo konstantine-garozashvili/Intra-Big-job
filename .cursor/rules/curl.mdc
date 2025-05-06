@@ -1,6 +1,6 @@
 ---
 description: 
-globs: 
+globs: .php
 alwaysApply: false
 ---
 curl --request POST \
@@ -12,8 +12,6 @@ curl --request POST \
 }'
 
 You can replace {role} by : student/admin/superadmin/recruiter/guest/hr/teacher
-
-
 
 
 Then you can use the bearer token to execute the other curl commands

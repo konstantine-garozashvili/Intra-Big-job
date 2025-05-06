@@ -27,7 +27,8 @@ export function UserFilters({
     searchTerm, 
     setSearchTerm, 
     fetchUsers, 
-    isLoading 
+    isLoading,
+    isDark 
 }) {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
@@ -123,19 +124,19 @@ export function UserFilters({
 
     return (
         <motion.div 
-            className="mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200 relative"
+            className={`mb-6 ${isDark ? 'bg-gray-800/50' : 'bg-gray-50'} p-4 rounded-lg border ${isDark ? 'border-gray-700' : 'border-gray-200'} relative`}
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
         >
             <div className="flex items-center gap-2 mb-3">
-                <Filter className="h-4 w-4 text-blue-600" />
-                <h3 className="text-sm font-medium text-gray-700">Filtres et recherche</h3>
+                <Filter className={`h-4 w-4 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
+                <h3 className={`text-sm font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>Filtres et recherche</h3>
                 {filterRole !== "ALL" && (
-                    <Badge variant="outline" className="ml-auto bg-blue-50 text-blue-700 border-blue-200 flex items-center gap-1">
+                    <Badge variant="outline" className={`ml-auto ${isDark ? 'bg-blue-900/20 text-blue-400 border-blue-800' : 'bg-blue-50 text-blue-700 border-blue-200'} flex items-center gap-1`}>
                         Filtre actif: {getFrenchRoleDisplayName(filterRole)}
                         <button 
-                            className="ml-1 hover:bg-blue-100 p-1 rounded-full" 
+                            className={`ml-1 ${isDark ? 'hover:bg-blue-800/50' : 'hover:bg-blue-100'} p-1 rounded-full`}
                             onClick={() => setFilterRole("ALL")}
                         >
                             <X className="h-3 w-3" />
@@ -150,30 +151,26 @@ export function UserFilters({
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <div className="min-w-[200px]">
-                                    {/* Restaurer le composant Select de Radix UI */}
                                     <Select
                                         value={localFilterValue}
                                         onValueChange={handleSelectChange}
                                     >
-                                        <SelectTrigger className="w-full bg-white shadow-sm border-gray-200 hover:border-gray-300 transition-colors">
+                                        <SelectTrigger className={`w-full ${isDark ? 'bg-gray-800 border-gray-700 hover:border-gray-600' : 'bg-white border-gray-200 hover:border-gray-300'} shadow-sm transition-colors`}>
                                             <SelectValue placeholder="Filtrer par rôle" />
                                         </SelectTrigger>
-                                        <SelectContent className="max-h-[400px]">
-                                            <SelectItem value="ALL" className="flex items-center gap-2">
-                                                <span className="bg-gray-100 w-2 h-2 rounded-full"></span>
+                                        <SelectContent className={`max-h-[400px] ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+                                            <SelectItem value="ALL" className={`flex items-center gap-2 ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>
+                                                <span className={`${isDark ? 'bg-gray-600' : 'bg-gray-100'} w-2 h-2 rounded-full`}></span>
                                                 Tous les rôles
                                             </SelectItem>
                                             {roles.map(role => (
-                                                <SelectItem key={role.id} value={role.name} className="flex items-center gap-2">
+                                                <SelectItem key={role.id} value={role.name} className={`flex items-center gap-2 ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>
                                                     <span className={`w-2 h-2 rounded-full ${getRoleColor(role.name)}`}></span>
                                                     {getFrenchRoleDisplayName(role.name)}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
-                                    
-                                    {/* Commenter le select HTML standard */}
-                                    {/* {renderStandardSelect()} */}
                                 </div>
                             </TooltipTrigger>
                             <TooltipContent>
@@ -189,7 +186,7 @@ export function UserFilters({
                                     variant="outline" 
                                     onClick={() => fetchUsers(filterRole)}
                                     disabled={isLoading}
-                                    className="bg-white hover:bg-gray-50 transition-colors shadow-sm"
+                                    className={`${isDark ? 'bg-gray-800 hover:bg-gray-700 border-gray-700' : 'bg-white hover:bg-gray-50 border-gray-200'} transition-colors shadow-sm`}
                                 >
                                     {isLoading ? (
                                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -214,12 +211,12 @@ export function UserFilters({
                             placeholder="Rechercher un utilisateur..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full bg-white shadow-sm border-gray-200 hover:border-gray-300 transition-colors pl-10"
+                            className={`w-full ${isDark ? 'bg-gray-800 border-gray-700 hover:border-gray-600' : 'bg-white border-gray-200 hover:border-gray-300'} transition-colors shadow-sm pl-10`}
                         />
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
                         {searchTerm && (
                             <button 
-                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-500"
+                                className={`absolute right-3 top-1/2 transform -translate-y-1/2 ${isDark ? 'text-gray-500 hover:text-gray-400' : 'text-gray-400 hover:text-gray-500'}`}
                                 onClick={() => setSearchTerm('')}
                             >
                                 <X className="h-4 w-4" />

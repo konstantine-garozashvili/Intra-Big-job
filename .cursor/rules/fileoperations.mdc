@@ -1,7 +1,7 @@
 ---
 description: 
 globs: 
-alwaysApply: true
+alwaysApply: false
 ---
 ---
 description: 
@@ -13,11 +13,6 @@ alwaysApply: true
 > **Rules for safely modifying files in the project**
 
 ## Critical Rules
-
-### Read full content
-- **Severity: CRITICAL**
-- Always read the full content of a file before suggesting any modifications
-- This is crucial to understand the context and dependencies
 
 ### Verify before edit
 - **Severity: CRITICAL**
@@ -31,7 +26,7 @@ alwaysApply: true
 
 ### Frontend JSX caution
 - **Severity: CRITICAL**
-- Never modify imports in JSX/TSX files without first examining related controllers, entities, and services
+- Never modify imports in JSX files without first examining related controllers, entities, and services
 - Frontend components often depend on specific backend structures
 - Example workflow before modifying a component that fetches data:
   1. Read the component to understand data usage
