@@ -82,9 +82,10 @@ export default function FormationDetails() {
     try {
       await apiService.delete(`/api/formations/${id}/students/${studentId}`);
       toast.success('Étudiant retiré de la formation.');
+      setEnrolledStudents((prev) => prev.filter((s) => s.id !== studentId));
+      setStudentCount((prev) => Math.max(0, prev - 1));
       setAcceptedStudents((prev) => prev.filter((s) => s.id !== studentId));
-      setAcceptedCount((prev) => prev - 1);
-      setStudentCount((prev) => prev - 1);
+      setAcceptedCount((prev) => Math.max(0, prev - 1));
     } catch (err) {
       toast.error('Erreur lors du retrait de l\'étudiant.');
     }
@@ -103,6 +104,9 @@ export default function FormationDetails() {
       } else if (Array.isArray(res)) {
         users = res;
       }
+      // Filter out users already enrolled
+      const enrolledIds = new Set(enrolledStudents.map(s => s.id));
+      users = users.filter(u => !enrolledIds.has(u.id));
       setAvailableUsers(users);
     } catch (err) {
       setAvailableUsers([]);
@@ -146,12 +150,15 @@ export default function FormationDetails() {
       }
       toast.success('Utilisateur ajouté à la formation.');
       setShowAddModal(false);
-      // Refresh accepted students list
-      console.log('[handleAddUser] Fetching accepted students...');
-      await fetchAcceptedStudents();
-      // Re-fetch formation details
-      console.log('[handleAddUser] Re-fetching formation...');
-      await fetchFormation();
+      // Dynamically update enrolled students and counts
+      const addedUser = availableUsers.find(u => u.id === userId);
+      if (addedUser) {
+        setEnrolledStudents((prev) => [...prev, addedUser]);
+        setStudentCount((prev) => prev + 1);
+        setAcceptedStudents((prev) => [...prev, addedUser]);
+        setAcceptedCount((prev) => prev + 1);
+        setAvailableUsers((prev) => prev.filter(u => u.id !== userId));
+      }
       // If the added user is the current user, refresh user info and redirect
       const currentUser = authService.getUser();
       if (currentUser && String(currentUser.id) === String(userId)) {
@@ -217,7 +224,7 @@ export default function FormationDetails() {
                 ) : (
                   <ul className="divide-y divide-gray-200">
                     {enrolledStudents.map((student) => (
-                      <li key={student.id} className="py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      <li key={`${student.id}-${student.email}`} className="py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                         <span className="font-medium">{student.firstName} {student.lastName}</span>
                         <span className="text-gray-500 text-sm">{student.email}</span>
                         <button
