@@ -184,28 +184,32 @@ export default function FormationDetails() {
       ) : !formation ? (
         <div className="text-center text-gray-500">Formation non trouvée.</div>
       ) : (
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex flex-col items-center gap-4">
-              <img
-                src={formation.image_url || '/placeholder.svg'}
-                alt={formation.name}
-                className="w-48 h-32 object-cover rounded-lg border"
-              />
-              <div className="font-bold text-2xl mb-1">{formation.name}</div>
-              <div className="flex flex-wrap gap-2 mb-2">
-                <Badge>{formation.specialization?.name || 'Formation'}</Badge>
-                <Badge variant="outline">{formation.promotion || 'N/A'}</Badge>
+        <Card className="relative rounded-3xl shadow-xl bg-white border border-gray-200 overflow-visible">
+          <CardContent className="p-0">
+            <div className="flex flex-col items-center gap-4 pt-12 pb-8 px-8">
+              <div className="-mt-20 mb-2 z-10">
+                <div className="w-32 h-32 rounded-full shadow-lg border-4 border-white bg-gray-100 flex items-center justify-center overflow-hidden">
+                  <img
+                    src={formation.image_url || '/placeholder.svg'}
+                    alt={formation.name}
+                    className="object-cover w-full h-full"
+                  />
+                </div>
               </div>
-              <div className="text-gray-700 mb-2 text-center">{formation.description}</div>
-              <div className="grid grid-cols-2 gap-4 text-xs text-gray-600 dark:text-gray-300 mb-2 w-full max-w-md">
-                <div className="flex items-center gap-1"><Calendar className="w-4 h-4" />{formation.dateStart ? new Date(formation.dateStart).toLocaleDateString() : 'N/A'}</div>
-                <div className="flex items-center gap-1"><Clock className="w-4 h-4" />{formation.duration ? `${formation.duration} mois` : 'N/A'}</div>
-                <div className="flex items-center gap-1"><Users className="w-4 h-4" />Capacité: {formation.capacity || 'N/A'}</div>
-                {formation.location && <div className="flex items-center gap-1"><MapPin className="w-4 h-4" />{formation.location}</div>}
+              <div className="font-extrabold text-3xl mb-1 text-gray-900 dark:text-white text-center drop-shadow tracking-tight animate-fade-in">{formation.name}</div>
+              <div className="flex flex-wrap gap-2 mb-2 animate-fade-in">
+                <Badge className="bg-[#2563eb] text-white font-semibold shadow-sm animate-bounceIn">{formation.specialization?.name || 'Formation'}</Badge>
+                <Badge variant="outline" className="border-[#2563eb] text-[#2563eb] bg-white font-semibold animate-bounceIn delay-100">{formation.promotion || 'N/A'}</Badge>
               </div>
-              <div className="flex gap-6 mt-4">
-                <div className="flex items-center gap-2 text-blue-700 font-semibold">
+              <div className="text-gray-700 dark:text-gray-100 mb-2 text-center max-w-xl animate-fade-in-slow">{formation.description}</div>
+              <div className="grid grid-cols-2 gap-4 text-sm text-[#60a5fa] mb-2 w-full max-w-md animate-fade-in-slow">
+                <div className="flex items-center gap-1"><Calendar className="w-4 h-4 text-[#60a5fa]" />{formation.dateStart ? new Date(formation.dateStart).toLocaleDateString() : 'N/A'}</div>
+                <div className="flex items-center gap-1"><Clock className="w-4 h-4 text-[#60a5fa]" />{formation.duration ? `${formation.duration} mois` : 'N/A'}</div>
+                <div className="flex items-center gap-1"><Users className="w-4 h-4 text-[#60a5fa]" />Capacité: {formation.capacity || 'N/A'}</div>
+                {formation.location && <div className="flex items-center gap-1"><MapPin className="w-4 h-4 text-[#60a5fa]" />{formation.location}</div>}
+              </div>
+              <div className="flex gap-6 mt-4 animate-fade-in-slow">
+                <div className="flex items-center gap-2 text-[#60a5fa] font-semibold">
                   <Users className="w-5 h-5" />
                   <span>{studentCount} étudiants inscrits</span>
                 </div>
@@ -214,27 +218,35 @@ export default function FormationDetails() {
                   <span>{acceptedCount} demandes acceptées</span>
                 </div>
               </div>
-              <div className="w-full mt-8">
+              <div className="w-full mt-10 animate-fade-in-slow">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-lg font-semibold text-left">Étudiants inscrits</h3>
-                  <Button onClick={handleOpenAddModal} className="bg-blue-600 hover:bg-blue-700 text-white">Ajouter</Button>
+                  <h3 className="text-lg font-bold text-[#60a5fa]">Étudiants inscrits</h3>
+                  <Button onClick={handleOpenAddModal} className="border border-[#2563eb] text-[#2563eb] bg-white hover:bg-[#2563eb] hover:text-white font-semibold px-5 py-2 rounded-full shadow-sm transition-all">Ajouter</Button>
                 </div>
                 {enrolledStudents.length === 0 ? (
                   <div className="text-gray-500 text-sm">Aucun étudiant inscrit pour cette formation.</div>
                 ) : (
                   <ul className="divide-y divide-gray-200">
-                    {enrolledStudents.map((student) => (
-                      <li key={`${student.id}-${student.email}`} className="py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                        <span className="font-medium">{student.firstName} {student.lastName}</span>
-                        <span className="text-gray-500 text-sm">{student.email}</span>
-                        <button
-                          className="ml-4 px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition"
-                          onClick={() => handleKickStudent(student.id)}
-                        >
-                          Retirer
-                        </button>
-                      </li>
-                    ))}
+                    {enrolledStudents.map((student) => {
+                      const initials = `${student.firstName?.[0] || ''}${student.lastName?.[0] || ''}`.toUpperCase();
+                      return (
+                        <li key={`${student.id}-${student.email}`} className="py-3 flex items-center gap-4 group hover:bg-gray-100 rounded-xl transition">
+                          <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center font-bold text-[#2563eb] text-lg border-2 border-gray-300">
+                            {initials}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-[#60a5fa] truncate">{student.firstName} {student.lastName}</div>
+                            <div className="text-[#60a5fa] text-xs truncate">{student.email}</div>
+                          </div>
+                          <button
+                            className="ml-4 px-4 py-1 border border-red-300 text-red-600 rounded-full hover:bg-red-50 hover:text-red-700 transition text-sm font-semibold opacity-0 group-hover:opacity-100 focus:opacity-100"
+                            onClick={() => handleKickStudent(student.id)}
+                          >
+                            Retirer
+                          </button>
+                        </li>
+                      );
+                    })}
                   </ul>
                 )}
               </div>
@@ -243,49 +255,62 @@ export default function FormationDetails() {
         </Card>
       )}
       <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
-        <DialogContent>
+        <DialogContent className="rounded-2xl shadow-2xl border border-gray-200 bg-white">
           <DialogHeader>
-            <DialogTitle>Ajouter un utilisateur à la formation</DialogTitle>
-            <DialogDescription>Choisissez un invité ou étudiant à ajouter à cette formation.</DialogDescription>
+            <DialogTitle className="text-gray-800 font-bold">Ajouter un utilisateur à la formation</DialogTitle>
+            <DialogDescription className="text-gray-600">Choisissez un invité ou étudiant à ajouter à cette formation.</DialogDescription>
           </DialogHeader>
           {loadingAvailable ? (
-            <div className="py-6 text-center"><Loader2 className="animate-spin w-6 h-6 mx-auto" /></div>
+            <div className="py-6 text-center"><Loader2 className="animate-spin w-6 h-6 mx-auto text-[#2563eb]" /></div>
           ) : availableUsers.length === 0 ? (
             <div className="py-6 text-center text-gray-500">Aucun utilisateur disponible à ajouter.</div>
           ) : (
             <>
-              <input
-                type="text"
-                className="w-full mb-3 px-3 py-2 border rounded focus:outline-none focus:ring focus:border-blue-300"
-                placeholder="Rechercher par nom, prénom ou email..."
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                autoFocus
-              />
+              <div className="relative mb-3">
+                <input
+                  type="text"
+                  className="w-full px-4 py-2 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:border-[#2563eb] text-gray-900 bg-white pr-10"
+                  placeholder="Rechercher par nom, prénom ou email..."
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  autoFocus
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
+                  <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /><path d="M21 21l-2-2" /></svg>
+                </span>
+              </div>
               <ul className="divide-y divide-gray-200 max-h-64 overflow-y-auto">
                 {filteredUsers.length === 0 ? (
                   <li className="py-2 text-center text-gray-400">Aucun résultat.</li>
                 ) : (
-                  filteredUsers.map(user => (
-                    <li key={user.id} className="py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                      <span className="font-medium">{user.firstName} {user.lastName}</span>
-                      <span className="text-gray-500 text-sm">{user.email}</span>
-                      <Button
-                        size="sm"
-                        className="bg-green-600 hover:bg-green-700 text-white"
-                        disabled={addingUserId === user.id}
-                        onClick={() => handleAddUser(user.id)}
-                      >
-                        {addingUserId === user.id ? <Loader2 className="animate-spin w-4 h-4" /> : 'Ajouter'}
-                      </Button>
-                    </li>
-                  ))
+                  filteredUsers.map(user => {
+                    const initials = `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase();
+                    return (
+                      <li key={user.id} className="py-2 flex items-center gap-4 group hover:bg-gray-100 rounded-xl transition">
+                        <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center font-bold text-[#2563eb] text-base border-2 border-gray-300">
+                          {initials}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-[#60a5fa] truncate">{user.firstName} {user.lastName}</div>
+                          <div className="text-[#60a5fa] text-xs truncate">{user.email}</div>
+                        </div>
+                        <Button
+                          size="sm"
+                          className="border border-green-200 text-green-700 bg-white hover:bg-green-50 hover:text-green-800 font-semibold rounded-full px-4 py-1 shadow-sm"
+                          disabled={addingUserId === user.id}
+                          onClick={() => handleAddUser(user.id)}
+                        >
+                          {addingUserId === user.id ? <Loader2 className="animate-spin w-4 h-4" /> : 'Ajouter'}
+                        </Button>
+                      </li>
+                    );
+                  })
                 )}
               </ul>
             </>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddModal(false)}>Fermer</Button>
+            <Button variant="outline" onClick={() => setShowAddModal(false)} className="border border-gray-300 text-gray-700 bg-white hover:bg-gray-100 rounded-full">Fermer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
