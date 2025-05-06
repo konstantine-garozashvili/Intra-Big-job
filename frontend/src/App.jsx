@@ -152,6 +152,9 @@ const EnrollmentRequests = lazy(() => import("./pages/Recruiter/views/Enrollment
 // Formation details component
 const FormationDetails = lazy(() => import("./pages/Admin/views/FormationDetails"));
 
+// Lazy loading for the MyFormation page
+const MyFormation = lazy(() => import("./pages/Student/MyFormation"));
+
 // Fonction optimisée pour le préchargement intelligent des pages
 // Ne charge que les pages pertinentes en fonction du contexte et du chemin actuel
 function useIntelligentPreload() {
@@ -332,6 +335,7 @@ const App = () => {
                       <Route path="grades" element={<RoleGuard roles={ROLES.STUDENT} fallback={<Navigate to="/dashboard" replace />}><StudentGrades /></RoleGuard>} />
                       <Route path="absences" element={<RoleGuard roles={ROLES.STUDENT} fallback={<Navigate to="/dashboard" replace />}><StudentAbsences /></RoleGuard>} />
                       <Route path="projects" element={<RoleGuard roles={ROLES.STUDENT} fallback={<Navigate to="/dashboard" replace />}><StudentProjects /></RoleGuard>} />
+                      <Route path="formation" element={<RoleGuard roles={ROLES.STUDENT} fallback={<Navigate to="/dashboard" replace />}><MyFormation /></RoleGuard>} />
                       <Route element={<StudentRoute />}>
                         <Route path="attendance" element={<StudentAttendance />} />
                       </Route>

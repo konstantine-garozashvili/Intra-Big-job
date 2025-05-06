@@ -3,7 +3,19 @@ import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
+import { Loader2, UserCircle } from 'lucide-react';
+import { motion } from 'framer-motion';
+
+function getInitials(user) {
+  if (!user) return '';
+  return `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase();
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });
+}
 
 export default function EnrollmentRequests() {
   const [requests, setRequests] = useState([]);
@@ -91,36 +103,58 @@ export default function EnrollmentRequests() {
       {requests.length === 0 ? (
         <div className="text-center text-gray-500">Aucune demande en attente.</div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {requests.map((req) => (
-            <Card key={req.id} className="flex flex-col justify-between">
-              <CardContent className="p-6">
-                <div className="mb-2 text-sm text-gray-500">Formation</div>
-                <div className="font-semibold text-lg mb-2">{req.formation.name}</div>
-                <div className="mb-2 text-sm text-gray-500">Candidat</div>
-                <div className="font-medium">{req.user.firstName} {req.user.lastName}</div>
-                <div className="text-xs text-gray-400">{req.user.email}</div>
-                <div className="mt-4 text-xs text-gray-400">Demandé le {req.createdAt}</div>
-              </CardContent>
-              <CardFooter className="p-6 pt-0 flex justify-end gap-2">
-                <Button
-                  onClick={() => handleAccept(req.id)}
-                  disabled={processingId === req.id}
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                >
-                  {processingId === req.id ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : null}
-                  Accepter
-                </Button>
-                <Button
-                  onClick={() => handleReject(req.id)}
-                  disabled={processingId === req.id}
-                  className="bg-red-600 hover:bg-red-700 text-white"
-                >
-                  {processingId === req.id ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : null}
-                  Refuser
-                </Button>
-              </CardFooter>
-            </Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {requests.map((req, idx) => (
+            <motion.div
+              key={req.id}
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.07, duration: 0.5, type: 'spring', stiffness: 120 }}
+            >
+              <Card className="flex flex-col justify-between shadow-xl border-0 bg-gradient-to-br from-yellow-50/80 to-yellow-100/60 dark:from-yellow-900/30 dark:to-yellow-800/20 hover:scale-[1.025] transition-transform">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    {/* Avatar */}
+                    {req.user.profilePictureUrl ? (
+                      <img src={req.user.profilePictureUrl} alt={req.user.firstName} className="w-12 h-12 rounded-full object-cover border-2 border-yellow-300" />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-yellow-300 dark:bg-yellow-800 flex items-center justify-center text-yellow-900 dark:text-yellow-100 font-bold text-xl">
+                        {getInitials(req.user)}
+                      </div>
+                    )}
+                    <div>
+                      <div className="font-semibold text-lg text-yellow-900 dark:text-yellow-100">{req.user.firstName} {req.user.lastName}</div>
+                      <div className="text-xs text-yellow-700 dark:text-yellow-300">{req.user.email}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs text-gray-500">Formation</span>
+                    <span className="px-2 py-0.5 rounded-full bg-yellow-200 dark:bg-yellow-700 text-yellow-900 dark:text-yellow-100 text-xs font-semibold ml-2">
+                      {req.formation.name}
+                    </span>
+                  </div>
+                  <div className="mt-2 text-xs text-gray-400">Demandé le {formatDate(req.createdAt)}</div>
+                </CardContent>
+                <CardFooter className="p-6 pt-0 flex justify-end gap-2">
+                  <Button
+                    onClick={() => handleAccept(req.id)}
+                    disabled={processingId === req.id}
+                    className="bg-gradient-to-r from-yellow-300 to-yellow-500 text-yellow-900 font-bold rounded-full shadow-lg hover:from-yellow-400 hover:to-yellow-600 hover:scale-105 focus:ring-2 focus:ring-yellow-300 transition-all px-5 py-2"
+                  >
+                    {processingId === req.id ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : null}
+                    Accepter
+                  </Button>
+                  <Button
+                    onClick={() => handleReject(req.id)}
+                    disabled={processingId === req.id}
+                    className="bg-gradient-to-r from-orange-300 to-orange-500 text-orange-900 font-bold rounded-full shadow-lg hover:from-orange-400 hover:to-orange-600 hover:scale-105 focus:ring-2 focus:ring-orange-300 transition-all px-5 py-2"
+                  >
+                    {processingId === req.id ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : null}
+                    Refuser
+                  </Button>
+                </CardFooter>
+              </Card>
+            </motion.div>
           ))}
         </div>
       )}
