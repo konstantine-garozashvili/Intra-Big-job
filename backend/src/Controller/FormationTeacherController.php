@@ -231,4 +231,30 @@ class FormationTeacherController extends AbstractController
 
         return $this->json(null, Response::HTTP_NO_CONTENT);
     }
+
+    #[Route('/my-formations', methods: ['GET'])]
+    #[Security("is_granted('ROLE_TEACHER')")]
+    public function getMyFormations(): JsonResponse
+    {
+        $user = $this->getUser();
+        if (!$user) {
+            return $this->json(['error' => 'User not authenticated'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        $formationTeachers = $this->formationTeacherRepository->findBy(['user' => $user]);
+        
+        $data = array_map(function(FormationTeacher $teacher) {
+            $formation = $teacher->getFormation();
+            return [
+                'id' => $formation->getId(),
+                'name' => $formation->getName(),
+                'promotion' => $formation->getPromotion(),
+                'description' => $formation->getDescription(),
+                'isMainTeacher' => $teacher->isMainTeacher(),
+                'formationTeacherId' => $teacher->getId()
+            ];
+        }, $formationTeachers);
+        
+        return $this->json(['success' => true, 'data' => $data]);
+    }
 } 

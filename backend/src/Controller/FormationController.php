@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Formation;
+use App\Entity\FormationTeacher;
 use App\Repository\FormationRepository;
 use App\Domains\Global\Repository\SpecializationRepository;
 use App\Service\FormationService;
@@ -17,6 +18,7 @@ use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Bundle\SecurityBundle\Security;
 
 #[Route('/api')]
 class FormationController extends AbstractController
@@ -27,7 +29,8 @@ class FormationController extends AbstractController
         private readonly EntityManagerInterface $entityManager,
         private readonly SerializerInterface $serializer,
         private readonly ValidatorInterface $validator,
-        private readonly S3StorageService $s3StorageService
+        private readonly S3StorageService $s3StorageService,
+        private readonly Security $security
     ) {
     }
 
@@ -337,6 +340,77 @@ class FormationController extends AbstractController
             'data' => [
                 'image_url' => $result['data']['image_url']
             ]
+        ]);
+    }
+
+    #[Route('/formations/{id}/teacher-view', name: 'api_formations_teacher_view', methods: ['GET'])]
+    #[IsGranted('ROLE_TEACHER')]
+    public function getFormationForTeacher(int $id): JsonResponse
+    {
+        $user = $this->getUser();
+        if (!$user) {
+            return $this->json([
+                'success' => false,
+                'message' => 'User not authenticated'
+            ], Response::HTTP_UNAUTHORIZED);
+        }
+
+        $formation = $this->formationRepository->find($id);
+        if (!$formation) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Formation non trouvée'
+            ], Response::HTTP_NOT_FOUND);
+        }
+
+        // Vérifier si le professeur est associé à cette formation
+        $formationTeacher = $this->entityManager->getRepository(FormationTeacher::class)
+            ->findOneBy(['formation' => $formation, 'user' => $user]);
+
+        if (!$formationTeacher) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Vous n\'êtes pas autorisé à voir cette formation'
+            ], Response::HTTP_FORBIDDEN);
+        }
+
+        $imageUrl = null;
+        if ($formation->getImageUrl()) {
+            $imageUrl = $formation->getImageUrl();
+            if (!str_contains($imageUrl, 'bigproject-storage.s3')) {
+                $imageUrl = $this->s3StorageService->getPresignedUrl($imageUrl);
+            }
+            $imageUrl = urldecode($imageUrl);
+        }
+
+        $data = [
+            'id' => $formation->getId(),
+            'name' => $formation->getName(),
+            'promotion' => $formation->getPromotion(),
+            'description' => $formation->getDescription(),
+            'capacity' => $formation->getCapacity(),
+            'dateStart' => $formation->getDateStart()->format('Y-m-d'),
+            'location' => $formation->getLocation(),
+            'duration' => $formation->getDuration(),
+            'image_url' => $imageUrl,
+            'isMainTeacher' => $formationTeacher->isMainTeacher(),
+            'specialization' => $formation->getSpecialization() ? [
+                'id' => $formation->getSpecialization()->getId(),
+                'name' => $formation->getSpecialization()->getName()
+            ] : null,
+            'students' => array_map(function($student) {
+                return [
+                    'id' => $student->getId(),
+                    'firstName' => $student->getFirstName(),
+                    'lastName' => $student->getLastName(),
+                    'email' => $student->getEmail()
+                ];
+            }, $formation->getStudents()->toArray())
+        ];
+
+        return $this->json([
+            'success' => true,
+            'data' => $data
         ]);
     }
 } 

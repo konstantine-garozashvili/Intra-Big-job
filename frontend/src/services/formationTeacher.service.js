@@ -21,6 +21,13 @@ import apiService from '../lib/services/apiService';
  * @typedef {Object} Formation
  * @property {number} id
  * @property {string} name
+ * @property {string} promotion
+ * @property {string} description
+ * @property {number} capacity
+ * @property {string} dateStart
+ * @property {string} location
+ * @property {number} duration
+ * @property {Object} specialization
  */
 
 /**
@@ -80,9 +87,8 @@ class FormationTeacherService {
   async getAllFormationTeachers() {
     try {
       const response = await apiService.get('/api/formation-teachers');
-      // Vérifier et nettoyer les données
-      const data = response?.data || [];
-      return Array.isArray(data) ? data.filter(item => item && item.formation && item.user) : [];
+      const data = response?.data;
+      return data || [];
     } catch (error) {
       throw new FormationTeacherError(
         'Failed to fetch all formation teachers',
@@ -98,10 +104,9 @@ class FormationTeacherService {
    * @throws {FormationTeacherError}
    */
   async getTeachersByFormation(formationId) {
-    // Validate formationId
-    if (!formationId || typeof formationId !== 'number' || isNaN(formationId)) {
+    if (!formationId || typeof formationId !== 'number') {
       throw new FormationTeacherError(
-        'Formation ID is required and must be a valid number',
+        'Formation ID is required and must be a number',
         'INVALID_FORMATION_ID'
       );
     }
@@ -184,25 +189,23 @@ class FormationTeacherService {
 
   /**
    * Create a new formation teacher relation
-   * @param {Object} params
-   * @param {number} params.formationId
-   * @param {number} params.userId
-   * @param {boolean} params.isMainTeacher
+   * @param {number} formationId
+   * @param {number} userId
+   * @param {boolean} isMainTeacher
    * @returns {Promise<FormationTeacher>}
    * @throws {FormationTeacherError}
    */
-  async create({ formationId, userId, isMainTeacher }) {
-    // Validate parameters
-    if (!formationId || typeof formationId !== 'number' || isNaN(formationId)) {
+  async create(formationId, userId, isMainTeacher) {
+    if (!formationId || typeof formationId !== 'number') {
       throw new FormationTeacherError(
-        'Formation ID is required and must be a valid number',
+        'Formation ID is required and must be a number',
         'INVALID_FORMATION_ID'
       );
     }
 
-    if (!userId || typeof userId !== 'number' || isNaN(userId)) {
+    if (!userId || typeof userId !== 'number') {
       throw new FormationTeacherError(
-        'User ID is required and must be a valid number',
+        'User ID is required and must be a number',
         'INVALID_USER_ID'
       );
     }
@@ -278,7 +281,6 @@ class FormationTeacherService {
 
     try {
       const response = await apiService.delete(`/api/formation-teachers/${id}`);
-      // Handle 204 No Content response
       return response.status === 204;
     } catch (error) {
       if (error.response?.status === 404) {
@@ -290,6 +292,48 @@ class FormationTeacherService {
       throw new FormationTeacherError(
         'Failed to delete formation teacher relation',
         'DELETE_ERROR'
+      );
+    }
+  }
+
+  /**
+   * Get formations for the currently authenticated teacher
+   * @returns {Promise<Formation[]>}
+   * @throws {FormationTeacherError}
+   */
+  async getMyFormations() {
+    try {
+      const response = await apiService.get('/api/formation-teachers/my-formations');
+      return response.data || [];
+    } catch (error) {
+      throw new FormationTeacherError(
+        'Failed to fetch teacher formations',
+        'GET_MY_FORMATIONS_ERROR'
+      );
+    }
+  }
+
+  /**
+   * Get detailed formation information including students for a teacher
+   * @param {number} formationId
+   * @returns {Promise<Formation>}
+   * @throws {FormationTeacherError}
+   */
+  async getFormationDetails(formationId) {
+    if (!formationId || typeof formationId !== 'number') {
+      throw new FormationTeacherError(
+        'Formation ID is required and must be a number',
+        'INVALID_FORMATION_ID'
+      );
+    }
+
+    try {
+      const response = await apiService.get(`/api/formations/${formationId}/teacher-view`);
+      return response.data || null;
+    } catch (error) {
+      throw new FormationTeacherError(
+        'Failed to fetch formation details',
+        'GET_FORMATION_DETAILS_ERROR'
       );
     }
   }

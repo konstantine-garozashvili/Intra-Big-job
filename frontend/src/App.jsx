@@ -91,6 +91,12 @@ const TeacherAttendance = lazy(() => import("./pages/Teacher/Attendance"));
 const TeacherSignatureHistory = lazy(() =>
   import("./pages/Teacher/SignatureHistory")
 );
+const TeacherFormationList = lazy(() =>
+  import("./components/teacher/TeacherFormationList")
+);
+const TeacherFormationDetails = lazy(() =>
+  import("./components/teacher/TeacherFormationDetails")
+);
 const HRDashboard = lazy(() => import("./pages/HR/Dashboard"));
 const SuperAdminDashboard = lazy(() => import("./pages/SuperAdmin/Dashboard"));
 const GuestDashboard = lazy(() => import("./pages/Guest/Dashboard"));
@@ -332,6 +338,8 @@ const App = () => {
                       <Route path="attendance" element={<RoleGuard roles={ROLES.TEACHER} fallback={<Navigate to="/dashboard" replace />}><TeacherAttendance /></RoleGuard>} />
                       <Route path="signature-monitoring" element={<RoleGuard roles={ROLES.TEACHER} fallback={<Navigate to="/dashboard" replace />}><TeacherSignatureMonitoring /></RoleGuard>} />
                       <Route path="signature-history" element={<RoleGuard roles={ROLES.TEACHER} fallback={<Navigate to="/dashboard" replace />}><TeacherSignatureHistory /></RoleGuard>} />
+                      <Route path="formations" element={<RoleGuard roles={ROLES.TEACHER} fallback={<Navigate to="/dashboard" replace />}><TeacherFormationList /></RoleGuard>} />
+                      <Route path="formations/:id" element={<RoleGuard roles={ROLES.TEACHER} fallback={<Navigate to="/dashboard" replace />}><TeacherFormationDetails /></RoleGuard>} />
                     </Route>
 
                     {/* Routes HR */}

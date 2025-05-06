@@ -271,4 +271,96 @@ describe('FormationTeacherService', () => {
       await expect(formationTeacherService.delete(37)).rejects.toThrow('Formation teacher relation not found');
     });
   });
+
+  describe('getMyFormations', () => {
+    it('should return teacher formations when API call is successful', async () => {
+      // Arrange
+      const mockFormations = [
+        {
+          id: 11,
+          name: 'Développement Web Full Stack',
+          promotion: '2024-A',
+          description: 'Formation complète en développement web',
+          isMainTeacher: true,
+          formationTeacherId: 33
+        },
+        {
+          id: 13,
+          name: 'DevOps & Cloud Computing',
+          promotion: '2024-A',
+          description: 'Formation DevOps',
+          isMainTeacher: false,
+          formationTeacherId: 17
+        }
+      ];
+      vi.mocked(apiService.get).mockResolvedValue({ data: mockFormations });
+
+      // Act
+      const result = await formationTeacherService.getMyFormations();
+
+      // Assert
+      expect(apiService.get).toHaveBeenCalledWith('/api/formation-teachers/my-formations');
+      expect(result).toEqual(mockFormations);
+    });
+
+    it('should throw FormationTeacherError when API call fails', async () => {
+      // Arrange
+      vi.mocked(apiService.get).mockRejectedValue(new Error('API Error'));
+
+      // Act & Assert
+      await expect(formationTeacherService.getMyFormations()).rejects.toThrow('Failed to fetch teacher formations');
+    });
+  });
+
+  describe('getFormationDetails', () => {
+    it('should return formation details with students when API call is successful', async () => {
+      // Arrange
+      const formationId = 11;
+      const mockFormationDetails = {
+        id: formationId,
+        name: 'Développement Web Full Stack',
+        promotion: '2024-A',
+        description: 'Formation complète en développement web',
+        capacity: 25,
+        dateStart: '2024-09-01',
+        location: 'Paris',
+        duration: 12,
+        isMainTeacher: true,
+        specialization: {
+          id: 14,
+          name: 'Développement PHP'
+        },
+        students: [
+          {
+            id: 1,
+            firstName: 'John',
+            lastName: 'Doe',
+            email: 'john.doe@example.com'
+          }
+        ]
+      };
+      vi.mocked(apiService.get).mockResolvedValue({ data: mockFormationDetails });
+
+      // Act
+      const result = await formationTeacherService.getFormationDetails(formationId);
+
+      // Assert
+      expect(apiService.get).toHaveBeenCalledWith(`/api/formations/${formationId}/teacher-view`);
+      expect(result).toEqual(mockFormationDetails);
+    });
+
+    it('should throw FormationTeacherError when formationId is not provided', async () => {
+      // Act & Assert
+      await expect(formationTeacherService.getFormationDetails()).rejects.toThrow('Formation ID is required and must be a number');
+    });
+
+    it('should throw FormationTeacherError when API call fails', async () => {
+      // Arrange
+      const formationId = 11;
+      vi.mocked(apiService.get).mockRejectedValue(new Error('API Error'));
+
+      // Act & Assert
+      await expect(formationTeacherService.getFormationDetails(formationId)).rejects.toThrow('Failed to fetch formation details');
+    });
+  });
 }); 
