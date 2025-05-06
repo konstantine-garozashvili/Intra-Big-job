@@ -256,11 +256,11 @@ const EditFormationForm = () => {
             </TabsList>
             <TabsContent value="informations" className="p-0 mt-0">
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="space-y-10">
-                {/* Ligne 1 : image + description */}
-                <div className="flex flex-col md:flex-row gap-10 items-stretch md:items-start">
-                  {/* Image de la formation */}
-                  <div className="flex flex-col items-center w-full md:w-1/4 min-w-[180px] justify-center">
-                    <div className="relative group mb-4 w-40 h-40">
+                {/* Nouvelle grille : image seule à gauche, tout le reste à droite */}
+                <div className="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-10 items-start">
+                  {/* Colonne 1 : Image */}
+                  <div className="flex flex-col items-center w-full h-full justify-start">
+                    <div className="relative group w-40 h-40">
                       <label htmlFor="formation-image-upload" className="block w-full h-full rounded-xl bg-gray-100 dark:bg-gray-800 border-2 border-blue-200 dark:border-gray-700 shadow-lg cursor-pointer transition-all duration-200 group-hover:ring-4 group-hover:ring-blue-400 group-hover:shadow-xl outline-none select-none">
                         <div className="w-full h-full rounded-xl overflow-hidden flex items-center justify-center">
                           {imagePreview ? (
@@ -277,73 +277,79 @@ const EditFormationForm = () => {
                         </div>
                       </label>
                       <input id="formation-image-upload" type="file" className="hidden" accept="image/*" onChange={handleImageChange} disabled={loading} />
-                      {imagePreview && (
-                        <Button type="button" variant="ghost" size="sm" className="mt-4 text-red-500 hover:bg-red-50 transition-colors" onClick={() => { setImagePreview(null); setFormData(prev => ({ ...prev, imageFile: null })); }} disabled={loading}>
-                          Supprimer l'image
-                        </Button>
-                      )}
+                    </div>
+                    {imagePreview && (
+                      <Button type="button" variant="ghost" size="sm" className="text-red-500 hover:bg-red-50 transition-colors mt-2" onClick={() => { setImagePreview(null); setFormData(prev => ({ ...prev, imageFile: null })); }} disabled={loading}>
+                        Supprimer l'image
+                      </Button>
+                    )}
+                  </div>
+                  {/* Colonne 2 : Tous les champs du formulaire */}
+                  <div className="flex flex-col gap-4 w-full">
+                    {/* Ligne 1 : Nom et Capacité côte à côte */}
+                    <div className="flex flex-col md:flex-row gap-4">
+                      <div className="flex-1 flex flex-col gap-2">
+                        <Label htmlFor="name" className="font-semibold">Nom *</Label>
+                        <Input id="name" name="name" value={formData.name} onChange={handleInputChange} required className="focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
+                      </div>
+                      <div className="flex-1 flex flex-col gap-2">
+                        <Label htmlFor="capacity" className="font-semibold">Capacité *</Label>
+                        <Input id="capacity" name="capacity" type="number" min="1" value={formData.capacity} onChange={handleInputChange} required className="focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
+                      </div>
+                    </div>
+                    {/* Ligne 2 : Description sur toute la largeur */}
+                    <div className="flex flex-col gap-2">
+                      <Label htmlFor="description" className="font-semibold">Description</Label>
+                      <Textarea id="description" name="description" value={formData.description} onChange={handleInputChange} rows={4} className="mt-2 resize-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none min-h-[120px]" />
+                    </div>
+                    {/* Ligne 3 : autres champs principaux */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
+                      <div className="flex flex-col gap-2">
+                        <Label htmlFor="promotion" className="font-semibold">Promotion *</Label>
+                        <Input id="promotion" name="promotion" value={formData.promotion} onChange={handleInputChange} required className="focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
+                      </div>
+                      <div className="flex flex-col gap-2 lg:col-span-1">
+                        <Label htmlFor="specializationId" className="font-semibold">Spécialisation *</Label>
+                        <Select value={formData.specializationId} onValueChange={handleSpecializationChange} required>
+                          <SelectTrigger className="focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
+                            <SelectValue placeholder="Sélectionnez une spécialisation" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {specializations.map((spec) => (
+                              <SelectItem key={spec.id} value={spec.id.toString()}>
+                                {spec.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <Label htmlFor="duration" className="font-semibold">Durée (en mois) *</Label>
+                        <Input type="number" id="duration" name="duration" value={formData.duration} onChange={handleInputChange} required className="focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <Label htmlFor="dateStart" className="font-semibold">Date de début *</Label>
+                        <Input type="date" id="dateStart" name="dateStart" value={formData.dateStart} onChange={handleInputChange} required className="focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <Label htmlFor="location" className="font-semibold">Lieu</Label>
+                        <Input id="location" name="location" value={formData.location} onChange={handleInputChange} className="focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
+                      </div>
+                    </div>
+                    <div className="flex gap-4 justify-end mt-8">
+                      <Button type="submit" disabled={loading} className="bg-gradient-to-r from-blue-600 to-cyan-400 text-white shadow hover:from-blue-700 hover:to-cyan-500 transition">
+                        {loading ? 'Enregistrement...' : 'Mettre à jour'}
+                      </Button>
+                      <Button type="button" variant="outline" onClick={() => navigate('/formations')} disabled={loading}>
+                        Annuler
+                      </Button>
                     </div>
                   </div>
-                  {/* Description */}
-                  <div className="flex-1 flex flex-col justify-center">
-                    <Label htmlFor="description" className="font-semibold">Description</Label>
-                    <Textarea id="description" name="description" value={formData.description} onChange={handleInputChange} rows={5} className="mt-2 resize-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none" />
-                  </div>
-                </div>
-                {/* Ligne 2 : tous les champs principaux sur une seule ligne en grille responsive */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="name" className="font-semibold">Nom *</Label>
-                    <Input id="name" name="name" value={formData.name} onChange={handleInputChange} required className="focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="promotion" className="font-semibold">Promotion *</Label>
-                    <Input id="promotion" name="promotion" value={formData.promotion} onChange={handleInputChange} required className="focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="capacity" className="font-semibold">Capacité *</Label>
-                    <Input id="capacity" name="capacity" type="number" min="1" value={formData.capacity} onChange={handleInputChange} required className="focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="duration" className="font-semibold">Durée (en mois) *</Label>
-                    <Input type="number" id="duration" name="duration" value={formData.duration} onChange={handleInputChange} required className="focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="dateStart" className="font-semibold">Date de début *</Label>
-                    <Input type="date" id="dateStart" name="dateStart" value={formData.dateStart} onChange={handleInputChange} required className="focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="location" className="font-semibold">Lieu</Label>
-                    <Input id="location" name="location" value={formData.location} onChange={handleInputChange} className="focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
-                  </div>
-                  <div className="flex flex-col gap-2 lg:col-span-1">
-                    <Label htmlFor="specializationId" className="font-semibold">Spécialisation *</Label>
-                    <Select value={formData.specializationId} onValueChange={handleSpecializationChange} required>
-                      <SelectTrigger className="focus:ring-2 focus:ring-blue-400 focus:border-blue-400">
-                        <SelectValue placeholder="Sélectionnez une spécialisation" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {specializations.map((spec) => (
-                          <SelectItem key={spec.id} value={spec.id.toString()}>
-                            {spec.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="flex gap-4 justify-end mt-8">
-                  <Button type="submit" disabled={loading} className="bg-gradient-to-r from-blue-600 to-cyan-400 text-white shadow hover:from-blue-700 hover:to-cyan-500 transition">
-                    {loading ? 'Enregistrement...' : 'Mettre à jour'}
-                  </Button>
-                  <Button type="button" variant="outline" onClick={() => navigate('/formations')} disabled={loading}>
-                    Annuler
-                  </Button>
                 </div>
               </motion.div>
             </TabsContent>
             <TabsContent value="teachers" className="p-0 mt-0">
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="relative bg-white/5 rounded-b-xl p-6">
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="relative rounded-b-xl p-6">
                 {formationId && <FormationTeachersSection formationId={formationId} />}
               </motion.div>
             </TabsContent>
