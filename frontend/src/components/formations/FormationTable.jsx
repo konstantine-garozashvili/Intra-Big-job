@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { formationService } from '../../services/formation.service';
 import { Button } from '../ui/button';
 import { toast } from 'sonner';
+import { Skeleton } from '../ui/skeleton';
 import {
   Table,
   TableBody,
@@ -12,6 +13,48 @@ import {
   TableRow,
 } from '../ui/table';
 import { Image as ImageIcon, Pencil, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+
+const FormationTableSkeleton = () => {
+  return (
+    <div className="overflow-x-auto rounded-xl shadow-lg bg-white dark:bg-gray-900">
+      <Table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
+        <TableHeader className="sticky top-0 z-10 bg-gray-100 dark:bg-gray-800">
+          <TableRow>
+            <TableHead className="py-3 px-4 text-left font-semibold text-gray-700 dark:text-gray-200">Image</TableHead>
+            <TableHead className="py-3 px-4 text-left font-semibold text-gray-700 dark:text-gray-200">Nom</TableHead>
+            <TableHead className="py-3 px-4 text-left font-semibold text-gray-700 dark:text-gray-200">Promotion</TableHead>
+            <TableHead className="py-3 px-4 text-left font-semibold text-gray-700 dark:text-gray-200">Spécialisation</TableHead>
+            <TableHead className="py-3 px-4 text-center font-semibold text-gray-700 dark:text-gray-200">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {[...Array(5)].map((_, idx) => (
+            <TableRow key={idx} className={`${idx % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-800'}`}>
+              <TableCell className="py-3 px-4">
+                <Skeleton className="w-12 h-12 rounded-full" />
+              </TableCell>
+              <TableCell className="py-3 px-4">
+                <Skeleton className="h-4 w-[200px]" />
+              </TableCell>
+              <TableCell className="py-3 px-4">
+                <Skeleton className="h-4 w-[100px]" />
+              </TableCell>
+              <TableCell className="py-3 px-4">
+                <Skeleton className="h-4 w-[150px]" />
+              </TableCell>
+              <TableCell className="py-3 px-4">
+                <div className="flex gap-2 justify-center">
+                  <Skeleton className="h-8 w-8 rounded" />
+                  <Skeleton className="h-8 w-8 rounded" />
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+};
 
 const FormationTable = () => {
   const [formations, setFormations] = useState([]);
@@ -62,7 +105,15 @@ const FormationTable = () => {
   };
 
   if (loading) {
-    return <div className="text-center p-4">Chargement...</div>;
+    return (
+      <div className="container mx-auto p-4">
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+          <Skeleton className="h-8 w-[250px]" />
+          <Skeleton className="h-10 w-[180px]" />
+        </div>
+        <FormationTableSkeleton />
+      </div>
+    );
   }
 
   if (error) {
