@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader2, Users, Calendar, Clock, MapPin } from 'lucide-react';
@@ -23,6 +23,9 @@ export default function FormationDetails() {
   const [enrolledStudents, setEnrolledStudents] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [showKickDialog, setShowKickDialog] = useState(false);
+  const [kickStudentId, setKickStudentId] = useState(null);
+  const kickStudentResolveRef = useRef(null);
   const navigate = useNavigate();
 
   // Move fetchFormation outside useEffect so it can be reused
@@ -77,8 +80,18 @@ export default function FormationDetails() {
     fetchAcceptedStudents();
   }, [id]);
 
+  // Custom confirm dialog for kicking a student
+  const confirmKickStudent = (studentId) => {
+    setKickStudentId(studentId);
+    setShowKickDialog(true);
+    return new Promise((resolve) => {
+      kickStudentResolveRef.current = resolve;
+    });
+  };
+
   const handleKickStudent = async (studentId) => {
-    if (!window.confirm('Êtes-vous sûr de vouloir retirer cet étudiant de la formation ?')) return;
+    const confirmed = await confirmKickStudent(studentId);
+    if (!confirmed) return;
     try {
       await apiService.delete(`/api/formations/${id}/students/${studentId}`);
       toast.success('Étudiant retiré de la formation.');
@@ -89,6 +102,15 @@ export default function FormationDetails() {
     } catch (err) {
       toast.error('Erreur lors du retrait de l\'étudiant.');
     }
+  };
+
+  const handleKickDialogClose = (confirmed) => {
+    setShowKickDialog(false);
+    if (kickStudentResolveRef.current) {
+      kickStudentResolveRef.current(confirmed);
+      kickStudentResolveRef.current = null;
+    }
+    setKickStudentId(null);
   };
 
   const handleOpenAddModal = async () => {
@@ -202,26 +224,22 @@ export default function FormationDetails() {
                 <Badge variant="outline" className="border-[#2563eb] text-[#2563eb] bg-white font-semibold animate-bounceIn delay-100">{formation.promotion || 'N/A'}</Badge>
               </div>
               <div className="text-gray-700 dark:text-gray-100 mb-2 text-center max-w-xl animate-fade-in-slow">{formation.description}</div>
-              <div className="grid grid-cols-2 gap-4 text-sm text-[#60a5fa] mb-2 w-full max-w-md animate-fade-in-slow">
-                <div className="flex items-center gap-1"><Calendar className="w-4 h-4 text-[#60a5fa]" />{formation.dateStart ? new Date(formation.dateStart).toLocaleDateString() : 'N/A'}</div>
-                <div className="flex items-center gap-1"><Clock className="w-4 h-4 text-[#60a5fa]" />{formation.duration ? `${formation.duration} mois` : 'N/A'}</div>
-                <div className="flex items-center gap-1"><Users className="w-4 h-4 text-[#60a5fa]" />Capacité: {formation.capacity || 'N/A'}</div>
-                {formation.location && <div className="flex items-center gap-1"><MapPin className="w-4 h-4 text-[#60a5fa]" />{formation.location}</div>}
+              <div className="grid grid-cols-2 gap-4 text-sm mb-2 w-full max-w-md animate-fade-in-slow place-items-center mx-auto">
+                <div className="flex items-center gap-1 text-center justify-center"><Calendar className="w-4 h-4 text-[#2563eb] dark:text-blue-400" /><span className="font-semibold text-[#2563eb] dark:text-blue-400">{formation.dateStart ? new Date(formation.dateStart).toLocaleDateString() : 'N/A'}</span></div>
+                <div className="flex items-center gap-1 text-center justify-center"><Clock className="w-4 h-4 text-[#2563eb] dark:text-blue-400" /><span className="font-semibold text-[#2563eb] dark:text-blue-400">{formation.duration ? `${formation.duration} mois` : 'N/A'}</span></div>
+                <div className="flex items-center gap-1 text-center justify-center"><Users className="w-4 h-4 text-[#2563eb] dark:text-blue-400" /><span className="font-semibold text-[#2563eb] dark:text-blue-400">Capacité: {formation.capacity || 'N/A'}</span></div>
+                {formation.location && <div className="flex items-center gap-1 text-center justify-center"><MapPin className="w-4 h-4 text-[#2563eb] dark:text-blue-400" /><span className="font-semibold text-[#2563eb] dark:text-blue-400">{formation.location}</span></div>}
               </div>
               <div className="flex gap-6 mt-4 animate-fade-in-slow">
                 <div className="flex items-center gap-2 text-[#60a5fa] font-semibold">
                   <Users className="w-5 h-5" />
                   <span>{studentCount} étudiants inscrits</span>
                 </div>
-                <div className="flex items-center gap-2 text-green-700 font-semibold">
-                  <Users className="w-5 h-5" />
-                  <span>{acceptedCount} demandes acceptées</span>
-                </div>
               </div>
               <div className="w-full mt-10 animate-fade-in-slow">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-lg font-bold text-[#60a5fa]">Étudiants inscrits</h3>
-                  <Button onClick={handleOpenAddModal} className="border border-[#2563eb] text-[#2563eb] bg-white hover:bg-[#2563eb] hover:text-white font-semibold px-5 py-2 rounded-full shadow-sm transition-all">Ajouter</Button>
+                  <Button onClick={handleOpenAddModal} className="bg-[#2563eb] text-white font-semibold px-6 py-2 rounded-full shadow-sm hover:bg-blue-800 transition-all border-0">Ajouter</Button>
                 </div>
                 {enrolledStudents.length === 0 ? (
                   <div className="text-gray-500 text-sm">Aucun étudiant inscrit pour cette formation.</div>
@@ -239,7 +257,7 @@ export default function FormationDetails() {
                             <div className="text-[#60a5fa] text-xs truncate">{student.email}</div>
                           </div>
                           <button
-                            className="ml-4 px-4 py-1 border border-red-300 text-red-600 rounded-full hover:bg-red-50 hover:text-red-700 transition text-sm font-semibold opacity-0 group-hover:opacity-100 focus:opacity-100"
+                            className="mr-4 px-6 py-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition text-sm font-semibold opacity-0 group-hover:opacity-100 focus:opacity-100 shadow-sm"
                             onClick={() => handleKickStudent(student.id)}
                           >
                             Retirer
@@ -311,6 +329,18 @@ export default function FormationDetails() {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAddModal(false)} className="border border-gray-300 text-gray-700 bg-white hover:bg-gray-100 rounded-full">Fermer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={showKickDialog} onOpenChange={() => handleKickDialogClose(false)}>
+        <DialogContent className="rounded-2xl shadow-2xl border border-gray-200 bg-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-red-600 font-bold">Retirer l'étudiant ?</DialogTitle>
+            <DialogDescription className="text-gray-700">Êtes-vous sûr de vouloir retirer cet étudiant de la formation ? Cette action est irréversible.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex flex-row gap-4 justify-end mt-4">
+            <Button variant="outline" onClick={() => handleKickDialogClose(false)} className="border border-gray-300 text-gray-700 bg-white hover:bg-gray-100 rounded-full">Annuler</Button>
+            <Button onClick={() => handleKickDialogClose(true)} className="bg-red-600 hover:bg-red-700 text-white font-semibold rounded-full px-6 py-2 shadow">Retirer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

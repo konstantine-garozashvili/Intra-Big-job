@@ -74,10 +74,10 @@ export default function AllFormations() {
   return (
     <div className="max-w-7xl mx-auto py-10 px-2 md:px-0">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-10 gap-4">
-        <h1 className="text-4xl font-extrabold text-white drop-shadow-lg tracking-tight">Toutes les formations</h1>
+        <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white drop-shadow-lg tracking-tight">Toutes les formations</h1>
         <div className="relative inline-block">
           <select
-            className="appearance-none bg-white/10 text-white px-5 py-2 rounded-xl border border-white/20 shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+            className="appearance-none bg-white dark:bg-blue-900 text-gray-900 dark:text-white px-6 py-2 rounded-xl border border-[#2563eb] shadow focus:outline-none focus:ring-2 focus:ring-blue-400 transition font-semibold"
             value={sortBy}
             onChange={e => setSortBy(e.target.value)}
           >
@@ -85,7 +85,7 @@ export default function AllFormations() {
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-white pointer-events-none" size={20} />
+          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-[#2563eb] dark:text-white pointer-events-none" size={22} />
         </div>
       </div>
       {loading ? (
