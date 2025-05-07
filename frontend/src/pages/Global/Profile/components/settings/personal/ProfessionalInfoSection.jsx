@@ -212,21 +212,6 @@ export const ProfessionalInfoSection = ({
           onCancel={() => handleCancelField('linkedinUrl')}
           onChange={handleLinkedinInputChange}
         />
-        {editMode.linkedinUrl && (
-          <button
-            type="button"
-            className="mt-2 text-xs text-red-600 hover:underline ml-2"
-            onClick={() => {
-              handleInputChange('linkedinUrl', null);
-              setTimeout(() => {
-                onSave('linkedinUrl', null);
-                toggleFieldEdit('linkedinUrl');
-              }, 0);
-            }}
-          >
-            Supprimer le lien LinkedIn
-          </button>
-        )}
       </div>
       {isStudent && (
         <div className="address-edit-card w-full">

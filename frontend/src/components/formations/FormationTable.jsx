@@ -217,28 +217,27 @@ const FormationTable = () => {
                     className={`transition hover:bg-blue-50 dark:hover:bg-gray-800/60 ${idx % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-800'}`}
                   >
                     <TableCell className="py-3 px-4">
-                      {formation.image_url ? (
-                        <img
-                          src={formation.image_url}
-                          alt={formation.name}
-                          className="w-12 h-12 object-cover rounded-full shadow border-2 border-blue-200 dark:border-gray-700 bg-white"
-                        />
-                      ) : (
-                        <div className="w-12 h-12 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700 shadow">
-                          <ImageIcon className="w-6 h-6 text-gray-400" />
-                        </div>
-                      )}
+                      <Link to={`/formations/edit/${formation.id}`} tabIndex={0} aria-label={`Éditer la formation ${formation.name}`}>
+                        {formation.image_url ? (
+                          <img
+                            src={formation.image_url}
+                            alt={formation.name}
+                            className="w-12 h-12 object-cover rounded-full shadow border-2 border-blue-200 dark:border-gray-700 bg-white hover:opacity-80 transition cursor-pointer"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700 shadow hover:opacity-80 transition cursor-pointer">
+                            <ImageIcon className="w-6 h-6 text-gray-400" />
+                          </div>
+                        )}
+                      </Link>
                     </TableCell>
-                    <TableCell className="py-3 px-4 font-medium text-gray-900 dark:text-gray-100">{formation.name}</TableCell>
+                    <TableCell className="py-3 px-4 font-medium text-gray-900 dark:text-gray-100">
+                      <Link to={`/formations/edit/${formation.id}`} className="hover:underline text-blue-600 dark:text-blue-400 transition" tabIndex={0} aria-label={`Éditer la formation ${formation.name}`}>{formation.name}</Link>
+                    </TableCell>
                     <TableCell className="py-3 px-4 text-gray-700 dark:text-gray-300">{formation.promotion}</TableCell>
                     <TableCell className="py-3 px-4 text-gray-700 dark:text-gray-300">{formation.specialization?.name || 'Non spécifiée'}</TableCell>
                     <TableCell className="py-3 px-4 text-center">
                       <div className="flex gap-2 justify-center">
-                        <Link to={`/formations/edit/${formation.id}`}>
-                          <Button variant="outline" size="icon" className="hover:border-blue-500 hover:text-blue-600 transition">
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                        </Link>
                         <Button
                           variant="destructive"
                           size="icon"

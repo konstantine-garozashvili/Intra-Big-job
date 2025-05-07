@@ -5,7 +5,6 @@ import { toast } from 'sonner';
 import { useNavigate, Link } from 'react-router-dom';
 import { Loader2, UserCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from '@/components/ui/skeleton';
 import { formationService } from '@/services/formation.service';
 import { Input } from '@/components/ui/input';

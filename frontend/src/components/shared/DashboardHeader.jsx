@@ -327,11 +327,14 @@ const DashboardHeader = ({ user, icon: Icon, roleTitle }) => {
               <span className="hidden sm:inline">{translatedProfile}</span>
             </Button>
           </Link>
-          <Link to="/guest/enrollment-requests">
-            <Button size="sm" variant="outline" className="gap-2 ml-2">
-              <span className="hidden sm:inline">Mes demandes</span>
-            </Button>
-          </Link>
+          {/* Only show for guest role */}
+          {user?.role === 'guest' && (
+            <Link to="/guest/enrollment-requests">
+              <Button size="sm" variant="outline" className="gap-2 ml-2">
+                <span className="hidden sm:inline">Mes demandes</span>
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
       <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-indigo-600"></div>
@@ -356,4 +359,4 @@ export default memo(DashboardHeader, (prevProps, nextProps) => {
   
   // Dans tous les autres cas, ne pas re-rendre
   return true;
-}); 
+});
