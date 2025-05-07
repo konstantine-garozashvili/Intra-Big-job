@@ -10,21 +10,25 @@ use App\Repository\UserRepository;
 use Symfony\Bundle\SecurityBundle\Security;
 use Psr\Log\LoggerInterface;
 use App\Entity\User;
+use App\Service\DocumentStorageFactory;
 
 class SearchController extends AbstractController
 {
     private $security;
     private $userRepository;
     private $logger;
+    private $documentStorageFactory;
     
     public function __construct(
         Security $security,
         UserRepository $userRepository,
-        LoggerInterface $logger
+        LoggerInterface $logger,
+        DocumentStorageFactory $documentStorageFactory
     ) {
         $this->security = $security;
         $this->userRepository = $userRepository;
         $this->logger = $logger;
+        $this->documentStorageFactory = $documentStorageFactory;
     }
 
     #[Route('/api/user-autocomplete', name: 'user_autocomplete', methods: ['GET'])]
@@ -64,12 +68,23 @@ class SearchController extends AbstractController
             if (empty($roles)) {
                 $roles[] = 'ROLE_USER';
             }
-            
+
+            // Generate profile picture URL
+            $profilePictureUrl = null;
+            if ($user->getProfilePicturePath()) {
+                try {
+                    $profilePictureUrl = $this->documentStorageFactory->getDocumentUrl($user->getProfilePicturePath());
+                } catch (\Exception $e) {
+                    $profilePictureUrl = null;
+                }
+            }
+
             $data[] = [
                 'id'        => $user->getId(),
                 'lastName'  => $user->getLastName(),
                 'firstName' => $user->getFirstName(),
-                'roles'     => $roles
+                'roles'     => $roles,
+                'profilePictureUrl' => $profilePictureUrl,
             ];
         }
 

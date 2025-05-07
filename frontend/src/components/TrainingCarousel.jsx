@@ -10,6 +10,7 @@ import { MagicButton } from "@/components/ui/magic-button";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from 'sonner';
+import { Progress } from '@/components/ui/progress';
 
 // Configuration des badges avec des couleurs plus inspirantes
 const badgeVariants = {
@@ -93,6 +94,14 @@ const EmptyState = () => (
     </Button>
   </div>
 );
+
+const getCapacityStatus = (enrolled, capacity) => {
+  const percentage = (enrolled / capacity) * 100;
+  if (percentage >= 100) return { text: 'Complet', color: 'text-red-500', bgColor: 'bg-red-100 dark:bg-red-900/20' };
+  if (percentage >= 80) return { text: 'Presque complet', color: 'text-orange-500', bgColor: 'bg-orange-100 dark:bg-orange-900/20' };
+  if (percentage >= 50) return { text: 'Places limitées', color: 'text-yellow-500', bgColor: 'bg-yellow-100 dark:bg-yellow-900/20' };
+  return { text: 'Places disponibles', color: 'text-green-500', bgColor: 'bg-green-100 dark:bg-green-900/20' };
+};
 
 export default function TrainingCarousel() {
   const [formations, setFormations] = useState([]);
@@ -270,6 +279,25 @@ export default function TrainingCarousel() {
                           </div>
                         )}
                       </div>
+                      {/* Capacity Section (replace old static capacity) */}
+                      {(() => {
+                        const enrolledCount = Array.isArray(item.students) ? item.students.length : 0;
+                        const capacity = item.capacity || 0;
+                        const capacityStatus = getCapacityStatus(enrolledCount, capacity);
+                        const progressPercentage = capacity > 0 ? Math.min((enrolledCount / capacity) * 100, 100) : 0;
+                        return (
+                          <div className="mb-2">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="flex items-center gap-2 text-xs font-medium">
+                                <Users className="h-4 w-4 text-blue-500" />
+                                {enrolledCount} / {capacity} étudiants
+                              </span>
+                              <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-semibold ${capacityStatus.bgColor} ${capacityStatus.color}`}>{capacityStatus.text}</span>
+                            </div>
+                            <Progress value={progressPercentage} className="h-2" />
+                          </div>
+                        );
+                      })()}
                     </CardContent>
                     <CardFooter className="p-4 pt-0">
                       <MagicButton

@@ -20,6 +20,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use App\Domains\Student\Repository\StudentProfileRepository;
 use Symfony\Bundle\SecurityBundle\Security;
+use App\Service\DocumentStorageFactory;
 
 #[Route('/api')]
 class FormationController extends AbstractController
@@ -32,7 +33,8 @@ class FormationController extends AbstractController
         private readonly ValidatorInterface $validator,
         private readonly S3StorageService $s3StorageService,
         private readonly StudentProfileRepository $studentProfileRepository,
-        private readonly Security $security
+        private readonly Security $security,
+        private readonly DocumentStorageFactory $documentStorageFactory
     ) {
     }
 
@@ -71,10 +73,19 @@ class FormationController extends AbstractController
                 'duration' => $formation->getDuration(),
                 'image_url' => $imageUrl,
                 'students' => array_map(function($student) {
+                    $profilePictureUrl = null;
+                    if ($student->getProfilePicturePath()) {
+                        try {
+                            $profilePictureUrl = $this->documentStorageFactory->getDocumentUrl($student->getProfilePicturePath());
+                        } catch (\Exception $e) {
+                            $profilePictureUrl = null;
+                        }
+                    }
                     return [
                         'id' => $student->getId(),
                         'firstName' => $student->getFirstName(),
-                        'lastName' => $student->getLastName()
+                        'lastName' => $student->getLastName(),
+                        'profilePictureUrl' => $profilePictureUrl
                     ];
                 }, $formation->getStudents()->toArray()),
                 'specialization' => $formation->getSpecialization() ? [
@@ -136,11 +147,20 @@ class FormationController extends AbstractController
             'dateStart' => $formation->getDateStart() ? $formation->getDateStart()->format('Y-m-d') : null,
             'location' => $formation->getLocation(),
             'students' => array_map(function($student) {
+                $profilePictureUrl = null;
+                if ($student->getProfilePicturePath()) {
+                    try {
+                        $profilePictureUrl = $this->documentStorageFactory->getDocumentUrl($student->getProfilePicturePath());
+                    } catch (\Exception $e) {
+                        $profilePictureUrl = null;
+                    }
+                }
                 return [
                     'id' => $student->getId(),
                     'firstName' => $student->getFirstName(),
                     'lastName' => $student->getLastName(),
                     'email' => $student->getEmail(),
+                    'profilePictureUrl' => $profilePictureUrl
                 ];
             }, $formation->getStudents()->toArray()),
         ];
@@ -278,7 +298,23 @@ class FormationController extends AbstractController
         if (isset($data['image_url'])) {
             $formation->setImageUrl($data['image_url']);
         }
-
+        // Add missing fields
+        if (isset($data['capacity'])) {
+            $formation->setCapacity((int)$data['capacity']);
+        }
+        if (isset($data['duration'])) {
+            $formation->setDuration((int)$data['duration']);
+        }
+        if (isset($data['dateStart'])) {
+            try {
+                $formation->setDateStart(new \DateTime($data['dateStart']));
+            } catch (\Exception $e) {
+                // Ignore invalid date
+            }
+        }
+        if (isset($data['location'])) {
+            $formation->setLocation($data['location']);
+        }
         // Gestion de la spécialisation
         if (isset($data['specializationId'])) {
             $specialization = $this->specializationRepository->find($data['specializationId']);
@@ -301,7 +337,11 @@ class FormationController extends AbstractController
                     'specialization' => $formation->getSpecialization() ? [
                         'id' => $formation->getSpecialization()->getId(),
                         'name' => $formation->getSpecialization()->getName()
-                    ] : null
+                    ] : null,
+                    'capacity' => $formation->getCapacity(),
+                    'duration' => $formation->getDuration(),
+                    'dateStart' => $formation->getDateStart() ? $formation->getDateStart()->format('Y-m-d') : null,
+                    'location' => $formation->getLocation(),
                 ]
             ]
         ]);
@@ -543,11 +583,20 @@ class FormationController extends AbstractController
                 'name' => $formation->getSpecialization()->getName()
             ] : null,
             'students' => array_map(function($student) {
+                $profilePictureUrl = null;
+                if ($student->getProfilePicturePath()) {
+                    try {
+                        $profilePictureUrl = $this->documentStorageFactory->getDocumentUrl($student->getProfilePicturePath());
+                    } catch (\Exception $e) {
+                        $profilePictureUrl = null;
+                    }
+                }
                 return [
                     'id' => $student->getId(),
                     'firstName' => $student->getFirstName(),
                     'lastName' => $student->getLastName(),
-                    'email' => $student->getEmail()
+                    'email' => $student->getEmail(),
+                    'profilePictureUrl' => $profilePictureUrl
                 ];
             }, $formation->getStudents()->toArray())
         ];

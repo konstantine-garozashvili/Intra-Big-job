@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { authService } from '@/lib/services/authService';
+import { Progress } from '@/components/ui/progress';
 
 export default function FormationDetails() {
   const { id } = useParams();
@@ -197,6 +198,14 @@ export default function FormationDetails() {
     }
   };
 
+  const getCapacityStatus = (enrolled, capacity) => {
+    const percentage = (enrolled / capacity) * 100;
+    if (percentage >= 100) return { text: 'Complet', color: 'text-red-500', bgColor: 'bg-red-100 dark:bg-red-900/20' };
+    if (percentage >= 80) return { text: 'Presque complet', color: 'text-orange-500', bgColor: 'bg-orange-100 dark:bg-orange-900/20' };
+    if (percentage >= 50) return { text: 'Places limitées', color: 'text-yellow-500', bgColor: 'bg-yellow-100 dark:bg-yellow-900/20' };
+    return { text: 'Places disponibles', color: 'text-green-500', bgColor: 'bg-green-100 dark:bg-green-900/20' };
+  };
+
   return (
     <div className="max-w-2xl mx-auto py-8">
       {loading ? (
@@ -227,7 +236,24 @@ export default function FormationDetails() {
               <div className="grid grid-cols-2 gap-4 text-sm mb-2 w-full max-w-md animate-fade-in-slow place-items-center mx-auto">
                 <div className="flex items-center gap-1 text-center justify-center"><Calendar className="w-4 h-4 text-[#2563eb] dark:text-blue-400" /><span className="font-semibold text-[#2563eb] dark:text-blue-400">{formation.dateStart ? new Date(formation.dateStart).toLocaleDateString() : 'N/A'}</span></div>
                 <div className="flex items-center gap-1 text-center justify-center"><Clock className="w-4 h-4 text-[#2563eb] dark:text-blue-400" /><span className="font-semibold text-[#2563eb] dark:text-blue-400">{formation.duration ? `${formation.duration} mois` : 'N/A'}</span></div>
-                <div className="flex items-center gap-1 text-center justify-center"><Users className="w-4 h-4 text-[#2563eb] dark:text-blue-400" /><span className="font-semibold text-[#2563eb] dark:text-blue-400">Capacité: {formation.capacity || 'N/A'}</span></div>
+                <div className="flex flex-col items-center gap-1 text-center justify-center col-span-2">
+                  {(() => {
+                    const enrolledCount = Array.isArray(formation.students) ? formation.students.length : 0;
+                    const capacity = formation.capacity || 0;
+                    const capacityStatus = getCapacityStatus(enrolledCount, capacity);
+                    const progressPercentage = capacity > 0 ? Math.min((enrolledCount / capacity) * 100, 100) : 0;
+                    return (
+                      <>
+                        <div className="flex items-center gap-2 mb-1">
+                          <Users className="w-4 h-4 text-[#2563eb] dark:text-blue-400" />
+                          <span className="font-semibold text-[#2563eb] dark:text-blue-400">{enrolledCount} / {capacity} étudiants</span>
+                          <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-semibold ${capacityStatus.bgColor} ${capacityStatus.color}`}>{capacityStatus.text}</span>
+                        </div>
+                        <Progress value={progressPercentage} className="h-2 w-40" />
+                      </>
+                    );
+                  })()}
+                </div>
                 {formation.location && <div className="flex items-center gap-1 text-center justify-center"><MapPin className="w-4 h-4 text-[#2563eb] dark:text-blue-400" /><span className="font-semibold text-[#2563eb] dark:text-blue-400">{formation.location}</span></div>}
               </div>
               <div className="flex gap-6 mt-4 animate-fade-in-slow">
@@ -249,8 +275,12 @@ export default function FormationDetails() {
                       const initials = `${student.firstName?.[0] || ''}${student.lastName?.[0] || ''}`.toUpperCase();
                       return (
                         <li key={`${student.id}-${student.email}`} className="py-3 flex items-center gap-4 group hover:bg-gray-100 rounded-xl transition">
-                          <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center font-bold text-[#2563eb] text-lg border-2 border-gray-300">
-                            {initials}
+                          <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center font-bold text-[#2563eb] text-lg border-2 border-gray-300 overflow-hidden">
+                            {student.profilePictureUrl ? (
+                              <img src={student.profilePictureUrl} alt={student.firstName} className="w-full h-full object-cover rounded-full" />
+                            ) : (
+                              initials
+                            )}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="font-medium text-[#60a5fa] truncate">{student.firstName} {student.lastName}</div>
@@ -305,8 +335,12 @@ export default function FormationDetails() {
                     const initials = `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase();
                     return (
                       <li key={user.id} className="py-2 flex items-center gap-4 group hover:bg-gray-100 rounded-xl transition">
-                        <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center font-bold text-[#2563eb] text-base border-2 border-gray-300">
-                          {initials}
+                        <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center font-bold text-[#2563eb] text-base border-2 border-gray-300 overflow-hidden">
+                          {user.profilePictureUrl ? (
+                            <img src={user.profilePictureUrl} alt={user.firstName} className="w-full h-full object-cover rounded-full" />
+                          ) : (
+                            initials
+                          )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="font-medium text-[#60a5fa] truncate">{user.firstName} {user.lastName}</div>

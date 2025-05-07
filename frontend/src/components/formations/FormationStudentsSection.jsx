@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { authService } from '@/lib/services/authService';
+import { Link } from 'react-router-dom';
 
 export default function FormationStudentsSection({ formationId }) {
   const [formation, setFormation] = useState(null);
@@ -215,11 +216,17 @@ export default function FormationStudentsSection({ formationId }) {
                   const initials = `${student.firstName?.[0] || ''}${student.lastName?.[0] || ''}`.toUpperCase();
                   return (
                     <li key={`${student.id}-${student.email}`} className="py-3 flex items-center gap-4 group hover:bg-gray-100 rounded-xl transition">
-                      <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center font-bold text-[#2563eb] text-lg border-2 border-gray-300">
-                        {initials}
-                      </div>
+                      <Link to={`/profile/${student.id}`} className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center font-bold text-[#2563eb] text-xl border-2 border-gray-300 overflow-hidden" tabIndex={-1} onClick={e => e.stopPropagation()}>
+                        {student.profilePictureUrl ? (
+                          <img src={student.profilePictureUrl} alt={`${student.firstName} ${student.lastName}`} className="w-full h-full object-cover rounded-full" />
+                        ) : (
+                          initials
+                        )}
+                      </Link>
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium text-[#60a5fa] truncate">{student.firstName} {student.lastName}</div>
+                        <Link to={`/profile/${student.id}`} className="font-medium text-[#60a5fa] truncate block hover:underline" onClick={e => e.stopPropagation()} tabIndex={-1}>
+                          {student.firstName} {student.lastName}
+                        </Link>
                         <div className="text-[#60a5fa] text-xs truncate">{student.email}</div>
                       </div>
                       <button
@@ -269,11 +276,17 @@ export default function FormationStudentsSection({ formationId }) {
                     const initials = `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase();
                     return (
                       <li key={user.id} className="py-2 flex items-center gap-4 group hover:bg-gray-100 rounded-xl transition">
-                        <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center font-bold text-[#2563eb] text-base border-2 border-gray-300">
-                          {initials}
-                        </div>
+                        <Link to={`/profile/${user.id}`} className="w-11 h-11 rounded-full bg-gray-200 flex items-center justify-center font-bold text-[#2563eb] text-lg border-2 border-gray-300 overflow-hidden" tabIndex={-1} onClick={e => e.stopPropagation()}>
+                          {user.profilePictureUrl ? (
+                            <img src={user.profilePictureUrl} alt={`${user.firstName} ${user.lastName}`} className="w-full h-full object-cover rounded-full" />
+                          ) : (
+                            initials
+                          )}
+                        </Link>
                         <div className="flex-1 min-w-0">
-                          <div className="font-medium text-[#60a5fa] truncate">{user.firstName} {user.lastName}</div>
+                          <Link to={`/profile/${user.id}`} className="font-medium text-[#60a5fa] truncate block hover:underline" onClick={e => e.stopPropagation()} tabIndex={-1}>
+                            {user.firstName} {user.lastName}
+                          </Link>
                           <div className="text-[#60a5fa] text-xs truncate">{user.email}</div>
                         </div>
                         <Button

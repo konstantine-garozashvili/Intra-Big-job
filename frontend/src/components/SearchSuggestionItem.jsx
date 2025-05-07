@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { User, Search } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { getRoleIcon, getRoleColor, getFrenchRoleDisplayName } from '../lib/utils/roleDisplay.jsx';
+import { Link } from 'react-router-dom';
 
 export const SearchSuggestionItem = ({ user, index, activeSuggestion, handleSuggestionClick, setActiveSuggestion }) => {
   return (
@@ -34,13 +35,21 @@ export const SearchSuggestionItem = ({ user, index, activeSuggestion, handleSugg
         }
       }}
     >
-      <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-[#02284f] to-[#528eb2] flex items-center justify-center mr-3 shadow-sm">
-        <User className="w-5 h-5 text-white" />
-      </div>
+      <Link to={`/profile/${user.id}`} className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-[#02284f] to-[#528eb2] flex items-center justify-center mr-3 shadow-sm overflow-hidden" onClick={e => e.stopPropagation()} tabIndex={-1}>
+        {user.profilePictureUrl ? (
+          <img
+            src={user.profilePictureUrl}
+            alt={`${user.firstName} ${user.lastName}`}
+            className="w-full h-full object-cover rounded-full"
+          />
+        ) : (
+          <User className="w-5 h-5 text-white" />
+        )}
+      </Link>
       <div className="flex-1 min-w-0">
-        <div className="font-medium text-gray-800 truncate dark:text-white">
+        <Link to={`/profile/${user.id}`} className="font-medium text-gray-800 truncate dark:text-white block hover:underline" onClick={e => e.stopPropagation()} tabIndex={-1}>
           {user.firstName} {user.lastName}
-        </div>
+        </Link>
         <div className="flex items-center mt-1">
           {user.roles && user.roles.length > 0 ? (
             <span className={cn(

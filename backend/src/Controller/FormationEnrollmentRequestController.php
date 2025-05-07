@@ -15,16 +15,30 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use App\Domains\Student\Service\StudentProfileService;
+use App\Service\DocumentStorageFactory;
 
 #[Route('/api')]
 class FormationEnrollmentRequestController extends AbstractController
 {
+    private EntityManagerInterface $entityManager;
+    private FormationRepository $formationRepository;
+    private RoleRepository $roleRepository;
+    private StudentProfileService $studentProfileService;
+    private DocumentStorageFactory $documentStorageFactory;
+
     public function __construct(
-        private EntityManagerInterface $entityManager,
-        private FormationRepository $formationRepository,
-        private RoleRepository $roleRepository,
-        private StudentProfileService $studentProfileService
-    ) {}
+        EntityManagerInterface $entityManager,
+        FormationRepository $formationRepository,
+        RoleRepository $roleRepository,
+        StudentProfileService $studentProfileService,
+        DocumentStorageFactory $documentStorageFactory
+    ) {
+        $this->entityManager = $entityManager;
+        $this->formationRepository = $formationRepository;
+        $this->roleRepository = $roleRepository;
+        $this->studentProfileService = $studentProfileService;
+        $this->documentStorageFactory = $documentStorageFactory;
+    }
 
     #[Route('/formations/{id}/enroll', methods: ['POST'])]
     #[Route('/formations/{id}/enrollment-request', methods: ['POST'])]
@@ -76,6 +90,15 @@ class FormationEnrollmentRequestController extends AbstractController
 
         return $this->json([
             'requests' => array_map(function($request) {
+                $profilePictureUrl = null;
+                $profilePicturePath = $request->getUser()->getProfilePicturePath();
+                if ($profilePicturePath) {
+                    try {
+                        $profilePictureUrl = $this->documentStorageFactory->getDocumentUrl($profilePicturePath);
+                    } catch (\Exception $e) {
+                        $profilePictureUrl = null;
+                    }
+                }
                 return [
                     'id' => $request->getId(),
                     'formation' => [
@@ -86,7 +109,8 @@ class FormationEnrollmentRequestController extends AbstractController
                         'id' => $request->getUser()->getId(),
                         'email' => $request->getUser()->getEmail(),
                         'firstName' => $request->getUser()->getFirstName(),
-                        'lastName' => $request->getUser()->getLastName()
+                        'lastName' => $request->getUser()->getLastName(),
+                        'profilePictureUrl' => $profilePictureUrl
                     ],
                     'createdAt' => $request->getCreatedAt()->format('Y-m-d H:i:s')
                 ];
@@ -188,6 +212,32 @@ class FormationEnrollmentRequestController extends AbstractController
         $this->entityManager->flush();
 
         return $this->json(['message' => 'Demande supprimée'], Response::HTTP_NO_CONTENT);
+    }
+
+    #[Route('/formation-requests/{id}/cancel', methods: ['DELETE'])]
+    #[IsGranted('ROLE_GUEST')]
+    public function cancelEnrollmentRequest(FormationEnrollmentRequest $request): Response
+    {
+        $user = $this->getUser();
+        
+        // Check if the request belongs to the current user
+        if ($request->getUser()->getId() !== $user->getId()) {
+            return $this->json([
+                'message' => 'Vous n\'êtes pas autorisé à annuler cette demande'
+            ], Response::HTTP_FORBIDDEN);
+        }
+
+        // Only allow cancellation of pending requests
+        if ($request->getStatus() !== null) {
+            return $this->json([
+                'message' => 'Seules les demandes en attente peuvent être annulées'
+            ], Response::HTTP_BAD_REQUEST);
+        }
+
+        $this->entityManager->remove($request);
+        $this->entityManager->flush();
+
+        return $this->json(['message' => 'Demande annulée avec succès'], Response::HTTP_OK);
     }
 
     #[Route('/formations/{id}/enrollment-requests', methods: ['GET'])]

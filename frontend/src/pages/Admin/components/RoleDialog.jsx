@@ -26,7 +26,7 @@ import { Loader2, ShieldAlert, UserCog, AlertTriangle } from "lucide-react";
 import { motion } from "framer-motion";
 import { getRoleDisplayName } from "@/lib/constants/roles";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Toaster } from "@/components/ui/sonner";
+import { toast } from "sonner";
 import RoleBadge from "@/components/ui/RoleBadge";
 
 export function RoleDialog({
@@ -97,8 +97,8 @@ export function RoleDialog({
                 });
 
                 if (hasRole) {
-                    // Utiliser le Toaster pour notifier l'utilisateur
-                    Toaster.warning("L'utilisateur possède déjà ce rôle");
+                    // Utiliser le toast pour notifier l'utilisateur
+                    toast.warning("L'utilisateur possède déjà ce rôle");
                     return;
                 }
 
@@ -225,7 +225,7 @@ export function RoleDialog({
                         Annuler
                     </Button>
                     <Button
-                        onClick={() => changeUserRole(selectedUser.id, selectedRoleId)}
+                        onClick={handleRoleChange}
                         disabled={isProcessing || !selectedRoleId || (userHasSuperAdminRole(selectedUser) && !isSuperAdmin)}
                         className={isDark ? 'bg-blue-600 hover:bg-blue-700' : ''}
                     >
