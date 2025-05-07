@@ -156,7 +156,7 @@ export default function AllFormations() {
                       <div className="flex flex-wrap gap-4 text-gray-500 text-xs mb-3">
                         <div className="flex items-center gap-1"><Calendar className="w-4 h-4 text-[#528eb2]" />{f.dateStart ? new Date(f.dateStart).toLocaleDateString() : 'N/A'}</div>
                         <div className="flex items-center gap-1"><Clock className="w-4 h-4 text-[#528eb2]" />{f.duration ? `${f.duration} mois` : 'N/A'}</div>
-                        <div className="flex items-center gap-1"><Users className="w-4 h-4 text-[#528eb2]" />Capacité: {f.capacity || 'N/A'}</div>
+                        <div className="flex items-center gap-1"><Users className="w-4 h-4 text-[#528eb2]" />Places: {Array.isArray(f.students) ? `${f.students.length}/${f.capacity}` : `0/${f.capacity}`}</div>
                         {f.location && <div className="flex items-center gap-1"><MapPin className="w-4 h-4 text-[#528eb2]" />{f.location}</div>}
                       </div>
                       {f.createdAt && (

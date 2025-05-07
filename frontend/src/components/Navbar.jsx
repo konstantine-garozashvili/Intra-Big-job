@@ -440,6 +440,7 @@ const Navbar = memo(() => {
   const location = useLocation();
   const [isLoading, setIsLoading] = useState(true);
   const needsSignature = useSignatureReminder();
+  const [hoverLogo, setHoverLogo] = useState(false);
 
   // Vérifier l'état d'authentification
   const checkAuthStatus = async () => {
@@ -638,17 +639,37 @@ const Navbar = memo(() => {
                   <MenuBurger />
                 </div>
                 <div className="flex-shrink-0">
-                  <Link
-                    to={
-                      isAuthenticated
-                        ? permissions.getRoleDashboardPath()
-                        : "/login"
-                    }
-                    className="navbar-brand text-2xl font-black tracking-tight text-white dark:text-white whitespace-nowrap"
+                  <motion.div
+                    onMouseEnter={() => setHoverLogo(true)}
+                    onMouseLeave={() => setHoverLogo(false)}
+                    style={{ display: 'inline-block' }}
                   >
-                    <span style={{ color: "white" }}>Big</span>
-                    <span style={{ color: "#528eb2" }}>Project</span>
-                  </Link>
+                    <Link
+                      to={
+                        isAuthenticated
+                          ? permissions.getRoleDashboardPath()
+                          : "/login"
+                      }
+                      className="navbar-brand text-2xl font-black tracking-tight text-white dark:text-white whitespace-nowrap"
+                      tabIndex={0}
+                    >
+                      <motion.span
+                        animate={{ color: hoverLogo ? "#528eb2" : "white" }}
+                        transition={{ duration: 0.4, ease: "easeInOut" }}
+                        className="transition-colors"
+                        style={{ marginRight: 2 }}
+                      >
+                        Big
+                      </motion.span>
+                      <motion.span
+                        animate={{ color: hoverLogo ? "white" : "#528eb2" }}
+                        transition={{ duration: 0.4, ease: "easeInOut" }}
+                        className="transition-colors"
+                      >
+                        Project
+                      </motion.span>
+                    </Link>
+                  </motion.div>
                 </div>
               </div>
 
