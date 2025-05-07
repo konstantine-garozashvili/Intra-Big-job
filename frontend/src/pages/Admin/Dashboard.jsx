@@ -82,25 +82,11 @@ const AdminDashboard = () => {
       color: 'bg-blue-500'
     },
     {
-      id: 5,
-      title: 'Toutes les formations',
-      description: 'Voir toutes les formations disponibles',
-      link: '/formations',
-      color: 'bg-orange-500'
-    },
-    {
       id: 6,
-      title: 'Gestion des étudiants formations',
+      title: 'Gestion des formations',
       description: 'Voir et gérer les étudiants inscrits',
       link: '/admin/formations',
       color: 'bg-yellow-600'
-    },
-    {
-      id: 4,
-      title: 'Gestion des événements',
-      description: 'Gérer les événements et les actualités',
-      link: '/admin/events',
-      color: 'bg-yellow-500'
     }
   ];
 

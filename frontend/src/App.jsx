@@ -113,7 +113,7 @@ const UserRoleManager = lazy(() =>
   import("./pages/Admin/components/UserRoleManager")
 );
 const FormationFinder = lazy(() => import("./pages/FormationFinder"));
-const AllFormations = lazy(() => import("./pages/Admin/views/AllFormations"));
+const AdminFormationsView = lazy(() => import("./pages/Admin/views/AdminFormationsView"));
 const WebDevelopment = lazy(() => import("./pages/formations/WebDevelopment"));
 const Cybersecurity = lazy(() => import("./pages/formations/Cybersecurity"));
 const ArtificialIntelligence = lazy(() =>
@@ -284,7 +284,7 @@ const App = () => {
                     <Route path="/reset-password/reset" element={<ResetPassword />} />
                     <Route path="/formations" element={<FormationList />} />
                     <Route path="/formation-finder" element={<FormationFinder />} />
-                    <Route path="/all-formations" element={<AllFormations />} />
+                    <Route path="/all-formations" element={<AdminFormationsView />} />
                     <Route path="/formations/web" element={<WebDevelopment />} />
                     <Route path="/formations/ai" element={<ArtificialIntelligence />} />
                     <Route path="/formations/cybersecurity" element={<Cybersecurity />} />
@@ -327,8 +327,16 @@ const App = () => {
                     <Route path="/admin/users" element={<RoleGuard roles={[ROLES.ADMIN, ROLES.HR, ROLES.TEACHER, ROLES.SUPERADMIN]}><UserRoleManager /></RoleGuard>} />
                     <Route path="/admin/ticket-services" element={<RoleGuard roles={[ROLES.ADMIN, ROLES.SUPERADMIN]} fallback={<Navigate to="/dashboard" replace />}><TicketServiceList /></RoleGuard>} />
                     <Route path="/admin/tickets" element={<RoleGuard roles={[ROLES.ADMIN, ROLES.SUPERADMIN]} fallback={<Navigate to="/dashboard" replace />}><AdminTicketList /></RoleGuard>} />
-                    <Route path="/admin/formations" element={<RoleGuard roles={[ROLES.ADMIN, ROLES.SUPERADMIN]} fallback={<Navigate to="/dashboard" replace />}><AllFormations /></RoleGuard>} />
+                    <Route path="/admin/formations" element={<RoleGuard roles={[ROLES.ADMIN, ROLES.SUPERADMIN]} fallback={<Navigate to="/dashboard" replace />}><AdminFormationsView /></RoleGuard>} />
                     <Route path="/admin/formations/:id" element={<RoleGuard roles={[ROLES.ADMIN, ROLES.SUPERADMIN]} fallback={<Navigate to="/dashboard" replace />}><FormationDetails /></RoleGuard>} />
+                    <Route path="/admin/formations/new" element={<RoleGuard roles={[ROLES.ADMIN, ROLES.SUPERADMIN]} fallback={<Navigate to="/dashboard" replace />}><FormationForm /></RoleGuard>} />
+                    <Route path="/admin/formations/edit/:id" element={<RoleGuard roles={[ROLES.ADMIN, ROLES.SUPERADMIN]} fallback={<Navigate to="/dashboard" replace />}><EditFormationForm /></RoleGuard>} />
+
+                    {/* Routes Formation Management accessibles à recruiter, admin, superadmin */}
+                    <Route path="/formation-management" element={<RoleGuard roles={[ROLES.RECRUITER, ROLES.ADMIN, ROLES.SUPERADMIN]} fallback={<Navigate to="/dashboard" replace />}><AdminFormationsView /></RoleGuard>} />
+                    <Route path="/formation-management/:id" element={<RoleGuard roles={[ROLES.RECRUITER, ROLES.ADMIN, ROLES.SUPERADMIN]} fallback={<Navigate to="/dashboard" replace />}><FormationDetails /></RoleGuard>} />
+                    <Route path="/formation-management/new" element={<RoleGuard roles={[ROLES.RECRUITER, ROLES.ADMIN, ROLES.SUPERADMIN]} fallback={<Navigate to="/dashboard" replace />}><FormationForm /></RoleGuard>} />
+                    <Route path="/formation-management/edit/:id" element={<RoleGuard roles={[ROLES.RECRUITER, ROLES.ADMIN, ROLES.SUPERADMIN]} fallback={<Navigate to="/dashboard" replace />}><EditFormationForm /></RoleGuard>} />
 
                     {/* Routes étudiantes */}
                     <Route path="/student">
@@ -422,7 +430,7 @@ const App = () => {
                     {/* Recruiter Formation Management Routes (reuse admin components) */}
                     <Route path="/recruiter/formation-management" element={
                       <RoleGuard roles={[ROLES.RECRUITER, ROLES.ADMIN, ROLES.SUPERADMIN]} fallback={<Navigate to="/dashboard" replace />}>
-                        <AllFormations />
+                        <AdminFormationsView />
                       </RoleGuard>
                     } />
                     <Route path="/recruiter/formation-management/:id" element={
