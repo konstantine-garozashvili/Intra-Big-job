@@ -13,6 +13,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Psr\Log\LoggerInterface;
+use App\Repository\FormationRepository;
 
 #[Route('/api')]
 class SpecializationController extends AbstractController
@@ -21,7 +22,8 @@ class SpecializationController extends AbstractController
         private readonly SpecializationRepository $specializationRepository,
         private readonly DomainRepository $domainRepository,
         private readonly EntityManagerInterface $entityManager,
-        private readonly LoggerInterface $logger
+        private readonly LoggerInterface $logger,
+        private readonly FormationRepository $formationRepository
     ) {
     }
 
@@ -159,5 +161,59 @@ class SpecializationController extends AbstractController
                 ]
             ]
         ], 201);
+    }
+
+    /**
+     * Supprime une spécialisation
+     */
+    #[Route('/specializations/{id}', name: 'api_specializations_delete', methods: ['DELETE'])]
+    #[IsGranted('ROLE_RECRUITER')]
+    public function deleteSpecialization(int $id): JsonResponse
+    {
+        try {
+            $this->logger->info('Attempting to delete specialization', ['id' => $id]);
+            
+            $specialization = $this->specializationRepository->find($id);
+            if (!$specialization) {
+                $this->logger->error('Specialization not found', ['id' => $id]);
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Spécialisation non trouvée'
+                ], 404);
+            }
+
+            // Check if any formations are using this specialization
+            $formations = $this->formationRepository->findBy(['specialization' => $specialization]);
+            if (count($formations) > 0) {
+                $this->logger->warning('Cannot delete specialization in use', [
+                    'id' => $id,
+                    'formationCount' => count($formations)
+                ]);
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Impossible de supprimer cette spécialisation car elle est utilisée par ' . count($formations) . ' formation(s)',
+                    'formationsCount' => count($formations)
+                ], 400);
+            }
+
+            $this->entityManager->remove($specialization);
+            $this->entityManager->flush();
+
+            $this->logger->info('Specialization deleted successfully', ['id' => $id]);
+            return $this->json([
+                'success' => true,
+                'message' => 'Spécialisation supprimée avec succès'
+            ]);
+        } catch (\Exception $e) {
+            $this->logger->error('Error deleting specialization: ' . $e->getMessage(), [
+                'id' => $id,
+                'error' => $e->getMessage()
+            ]);
+            return $this->json([
+                'success' => false,
+                'message' => 'Erreur lors de la suppression de la spécialisation',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

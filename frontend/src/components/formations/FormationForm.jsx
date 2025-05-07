@@ -8,8 +8,8 @@ import { Textarea } from '../ui/textarea';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Upload } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
+import { Upload, Trash2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '../ui/dialog';
 import { useRolePermissions } from '@/features/roles';
 
 const FormationForm = () => {
@@ -33,6 +33,9 @@ const FormationForm = () => {
   const [domains, setDomains] = useState([]);
   const [newSpec, setNewSpec] = useState({ name: '', domainId: '' });
   const [addingSpec, setAddingSpec] = useState(false);
+  const [deletingSpec, setDeletingSpec] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [specToDelete, setSpecToDelete] = useState(null);
 
   useEffect(() => {
     const loadSpecializations = async () => {
@@ -221,6 +224,57 @@ const FormationForm = () => {
     }
   };
 
+  const handleDeleteSpecialization = async (specId, specName) => {
+    setSpecToDelete({ id: specId, name: specName });
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDeleteSpecialization = async () => {
+    if (!specToDelete) return;
+    
+    setDeletingSpec(true);
+    try {
+      console.log('[FormationForm] Deleting specialization:', specToDelete);
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('[FormationForm] No token found');
+        toast.error('Session expirée. Veuillez vous reconnecter.');
+        return;
+      }
+
+      const res = await fetch(`/api/specializations/${specToDelete.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const json = await res.json();
+      console.log('[FormationForm] Delete response:', json);
+
+      if (json.success) {
+        toast.success('Spécialisation supprimée avec succès');
+        // Refresh specializations
+        const specializationsData = await formationService.getSpecializations();
+        setSpecializations(specializationsData);
+        // Clear selected specialization if it was the deleted one
+        if (formData.specializationId === specToDelete.id.toString()) {
+          setFormData(prev => ({ ...prev, specializationId: '' }));
+        }
+      } else {
+        toast.error(json.message || 'Erreur lors de la suppression');
+      }
+    } catch (e) {
+      console.error('[FormationForm] Error deleting specialization:', e);
+      toast.error('Erreur lors de la suppression');
+    } finally {
+      setDeletingSpec(false);
+      setShowDeleteDialog(false);
+      setSpecToDelete(null);
+    }
+  };
+
   return (
     <div className="w-full max-w-5xl mx-auto px-2 sm:px-6 lg:px-8 py-6">
       <Card className="overflow-hidden w-full shadow-xl bg-white dark:bg-gray-900">
@@ -387,17 +441,38 @@ const FormationForm = () => {
                     ))}
                   </SelectContent>
                 </Select>
-                {permissions.isAdmin() || permissions.isRecruiter() || permissions.isSuperadmin() ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="mt-2 w-fit"
-                    onClick={() => setShowAddSpecModal(true)}
-                  >
-                    + Ajouter une spécialisation
-                  </Button>
-                ) : null}
+                {(permissions.isAdmin() || permissions.isRecruiter() || permissions.isSuperadmin()) && (
+                  <div className="flex gap-2 mt-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-fit"
+                      onClick={() => setShowAddSpecModal(true)}
+                    >
+                      + Ajouter une spécialisation
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-fit text-red-500 hover:text-red-700 hover:bg-red-50"
+                      onClick={() => {
+                        if (!formData.specializationId) {
+                          toast.error('Veuillez sélectionner une spécialisation à supprimer');
+                          return;
+                        }
+                        const spec = specializations.find(s => s.id.toString() === formData.specializationId);
+                        if (spec) {
+                          handleDeleteSpecialization(spec.id, spec.name);
+                        }
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Supprimer
+                    </Button>
+                  </div>
+                )}
                 <Dialog open={showAddSpecModal} onOpenChange={setShowAddSpecModal}>
                   <DialogContent aria-describedby="add-spec-desc">
                     <DialogHeader>
@@ -430,6 +505,36 @@ const FormationForm = () => {
                     <DialogFooter className="mt-4 flex gap-2 justify-end">
                       <Button type="button" variant="outline" onClick={() => setShowAddSpecModal(false)} disabled={addingSpec}>Annuler</Button>
                       <Button type="button" onClick={handleAddSpecialization} disabled={addingSpec}>{addingSpec ? 'Ajout...' : 'Ajouter'}</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+
+                <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Supprimer la spécialisation</DialogTitle>
+                      <DialogDescription>
+                        Êtes-vous sûr de vouloir supprimer la spécialisation "{specToDelete?.name}" ?
+                        Cette action ne sera pas possible si la spécialisation est utilisée par des formations.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="mt-4 flex gap-2 justify-end">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setShowDeleteDialog(false)}
+                        disabled={deletingSpec}
+                      >
+                        Annuler
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        onClick={confirmDeleteSpecialization}
+                        disabled={deletingSpec}
+                      >
+                        {deletingSpec ? 'Suppression...' : 'Supprimer'}
+                      </Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
