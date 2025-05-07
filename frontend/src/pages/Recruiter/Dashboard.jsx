@@ -89,12 +89,12 @@ const RecruiterDashboard = () => {
   // Définir les cartes d'accès rapide
   const quickAccessCards = [
     {
-      title: 'Formations',
+      title: 'Gestion des formations',
       description: 'Gérer les formations',
       icon: Briefcase,
       color: 'from-orange-500 to-orange-600',
       textColor: 'text-orange-50',
-      link: '/formations',
+      link: '/formation-management',
     },
     {
       title: "Demandes d'inscription",

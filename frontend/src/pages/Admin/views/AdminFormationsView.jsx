@@ -8,6 +8,7 @@ export default function AdminFormationsView() {
 
   return (
     <div className="max-w-7xl mx-auto py-10 px-2 md:px-0">
+      <h2 className="text-2xl font-bold tracking-tight text-primary drop-shadow mb-8">Liste des Formations</h2>
       <div className="flex justify-end mb-6 gap-2">
         <Button
           variant={view === 'cards' ? 'default' : 'outline'}

@@ -111,7 +111,7 @@ export default function TrainingCarousel() {
       try {
         const data = await formationService.getAllFormations();
         // Limiter à 4 formations maximum
-        setFormations(data.slice(0, 4));
+        setFormations((data.formations || []).slice(0, 4));
         setLoading(false);
       } catch (err) {
         setError(err.message);

@@ -80,7 +80,6 @@ export default function AllFormations() {
   return (
     <div>
       <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
-        <h2 className="text-2xl font-bold tracking-tight text-primary drop-shadow">Liste des Formations</h2>
         <div className="flex items-center gap-4 w-full md:w-auto">
           <div className="relative flex-1 md:flex-initial">
             <input
