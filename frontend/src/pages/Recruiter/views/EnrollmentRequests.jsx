@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Loader2, UserCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -117,16 +117,22 @@ export default function EnrollmentRequests() {
                   <div className="flex items-center gap-3 mb-4">
                     {/* Avatar */}
                     {req.user.profilePictureUrl ? (
-                      <img src={req.user.profilePictureUrl} alt={req.user.firstName} className="w-12 h-12 rounded-full object-cover border-2 border-yellow-300" />
+                      <Link to={`/profile/${req.user.id}`} tabIndex={-1} onClick={e => e.stopPropagation()} className="block">
+                        <img src={req.user.profilePictureUrl} alt={req.user.firstName} className="w-12 h-12 rounded-full object-cover border-2 border-yellow-300" />
+                      </Link>
                     ) : (
-                      <Avatar className="h-12 w-12 border-2 border-yellow-300">
-                        <AvatarFallback className="bg-yellow-100 text-yellow-700 dark:bg-yellow-800 dark:text-yellow-100">
-                          {getInitials(req.user)}
-                        </AvatarFallback>
-                      </Avatar>
+                      <Link to={`/profile/${req.user.id}`} tabIndex={-1} onClick={e => e.stopPropagation()} className="block">
+                        <Avatar className="h-12 w-12 border-2 border-yellow-300">
+                          <AvatarFallback className="bg-yellow-100 text-yellow-700 dark:bg-yellow-800 dark:text-yellow-100">
+                            {getInitials(req.user)}
+                          </AvatarFallback>
+                        </Avatar>
+                      </Link>
                     )}
                     <div>
-                      <div className="font-semibold text-lg text-yellow-900 dark:text-yellow-100">{req.user.firstName} {req.user.lastName}</div>
+                      <Link to={`/profile/${req.user.id}`} className="font-semibold text-lg text-yellow-900 dark:text-yellow-100 block hover:underline" onClick={e => e.stopPropagation()} tabIndex={-1}>
+                        {req.user.firstName} {req.user.lastName}
+                      </Link>
                       <div className="text-xs text-yellow-700 dark:text-yellow-300">{req.user.email}</div>
                     </div>
                   </div>

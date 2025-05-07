@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import apiService from '@/lib/services/apiService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -143,14 +143,20 @@ const MyFormation = () => {
                   students.map((student) => (
                     <div key={student.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-yellow-100/60 dark:hover:bg-yellow-900/20 transition">
                       {student.profilePictureUrl ? (
-                        <img src={student.profilePictureUrl} alt={student.firstName} className="w-9 h-9 rounded-full object-cover" />
+                        <Link to={`/profile/${student.id}`} tabIndex={-1} onClick={e => e.stopPropagation()} className="block">
+                          <img src={student.profilePictureUrl} alt={student.firstName} className="w-9 h-9 rounded-full object-cover" />
+                        </Link>
                       ) : (
-                        <div className="w-9 h-9 rounded-full bg-yellow-300 dark:bg-yellow-800 flex items-center justify-center text-yellow-900 dark:text-yellow-100 font-bold text-lg">
-                          {student.firstName?.[0]}{student.lastName?.[0]}
-                        </div>
+                        <Link to={`/profile/${student.id}`} tabIndex={-1} onClick={e => e.stopPropagation()} className="block">
+                          <div className="w-9 h-9 rounded-full bg-yellow-300 dark:bg-yellow-800 flex items-center justify-center text-yellow-900 dark:text-yellow-100 font-bold text-lg">
+                            {student.firstName?.[0]}{student.lastName?.[0]}
+                          </div>
+                        </Link>
                       )}
                       <div>
-                        <div className="font-medium text-yellow-900 dark:text-yellow-100">{student.firstName} {student.lastName}</div>
+                        <Link to={`/profile/${student.id}`} className="font-medium text-yellow-900 dark:text-yellow-100 block hover:underline" onClick={e => e.stopPropagation()} tabIndex={-1}>
+                          {student.firstName} {student.lastName}
+                        </Link>
                         <div className="text-xs text-yellow-700 dark:text-yellow-300">{student.email}</div>
                       </div>
                     </div>
