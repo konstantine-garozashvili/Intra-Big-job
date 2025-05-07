@@ -35,7 +35,15 @@ export const SearchSuggestionItem = ({ user, index, activeSuggestion, handleSugg
       }}
     >
       <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-[#02284f] to-[#528eb2] flex items-center justify-center mr-3 shadow-sm">
-        <User className="w-5 h-5 text-white" />
+        {user.profilePictureUrl ? (
+          <img
+            src={user.profilePictureUrl}
+            alt={`${user.firstName} ${user.lastName}`}
+            className="w-full h-full object-cover rounded-full"
+          />
+        ) : (
+          <User className="w-5 h-5 text-white" />
+        )}
       </div>
       <div className="flex-1 min-w-0">
         <div className="font-medium text-gray-800 truncate dark:text-white">

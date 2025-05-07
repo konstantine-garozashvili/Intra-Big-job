@@ -17,6 +17,7 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Serializer\SerializerInterface;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Security;
+use App\Service\DocumentStorageFactory;
 
 #[Route('/api/formation-teachers')]
 #[Security("is_granted('ROLE_ADMIN') or is_granted('ROLE_SUPERADMIN') or is_granted('ROLE_RECRUITER')")]
@@ -27,7 +28,8 @@ class FormationTeacherController extends AbstractController
         private FormationTeacherRepository $formationTeacherRepository,
         private FormationRepository $formationRepository,
         private UserRepository $userRepository,
-        private SerializerInterface $serializer
+        private SerializerInterface $serializer,
+        private DocumentStorageFactory $documentStorageFactory
     ) {
     }
 
@@ -81,14 +83,23 @@ class FormationTeacherController extends AbstractController
     {
         $teachers = $this->formationTeacherRepository->findTeachersByFormation($id);
         $data = array_map(function(FormationTeacher $teacher) {
+            $user = $teacher->getUser();
+            $profilePictureUrl = null;
+            if ($user->getProfilePicturePath()) {
+                try {
+                    $profilePictureUrl = $this->documentStorageFactory->getDocumentUrl($user->getProfilePicturePath());
+                } catch (\Exception $e) {
+                    $profilePictureUrl = null;
+                }
+            }
             return [
                 'id' => $teacher->getId(),
                 'isMainTeacher' => $teacher->isMainTeacher(),
                 'user' => [
-                    'id' => $teacher->getUser()->getId(),
-                    'firstName' => $teacher->getUser()->getFirstName(),
-                    'lastName' => $teacher->getUser()->getLastName(),
-                    'profilePicturePath' => $teacher->getUser()->getProfilePicturePath()
+                    'id' => $user->getId(),
+                    'firstName' => $user->getFirstName(),
+                    'lastName' => $user->getLastName(),
+                    'profilePictureUrl' => $profilePictureUrl
                 ]
             ];
         }, $teachers);
