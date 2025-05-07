@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -10,6 +10,7 @@ import { formationService } from '@/services/formation.service';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 function getInitials(user) {
   if (!user) return '';
@@ -223,15 +224,23 @@ export default function EnrollmentRequests() {
                 <CardContent className="p-6">
                   <div className="flex items-center gap-3 mb-4">
                     {/* Avatar */}
-                    {req.user.profilePictureUrl ? (
-                      <img src={req.user.profilePictureUrl} alt={req.user.firstName} className="w-12 h-12 rounded-full object-cover border-2 border-yellow-300" />
-                    ) : (
-                      <div className="w-12 h-12 rounded-full bg-yellow-300 dark:bg-yellow-800 flex items-center justify-center text-yellow-900 dark:text-yellow-100 font-bold text-xl">
-                        {getInitials(req.user)}
-                      </div>
-                    )}
+                    <Link to={`/profile/${req.user.id}`} className="group">
+                      {req.user.profilePictureUrl ? (
+                        <img src={req.user.profilePictureUrl} alt={req.user.firstName} className="w-12 h-12 rounded-full object-cover" />
+                      ) : (
+                        <Avatar className="h-12 w-12">
+                          <AvatarFallback className="bg-yellow-100 text-yellow-700 dark:bg-yellow-800 dark:text-yellow-100">
+                            {getInitials(req.user)}
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
+                    </Link>
                     <div>
-                      <div className="font-semibold text-lg text-yellow-900 dark:text-yellow-100">{req.user.firstName} {req.user.lastName}</div>
+                      <Link to={`/profile/${req.user.id}`}
+                        className="font-semibold text-lg text-yellow-900 dark:text-yellow-100 transition-all group-hover:underline hover:underline focus:underline outline-none hover:text-yellow-700 dark:hover:text-white"
+                      >
+                        {req.user.firstName} {req.user.lastName}
+                      </Link>
                       <div className="text-xs text-yellow-700 dark:text-yellow-300">{req.user.email}</div>
                     </div>
                   </div>
