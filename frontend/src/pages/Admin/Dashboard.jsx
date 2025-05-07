@@ -82,31 +82,10 @@ const AdminDashboard = () => {
       color: 'bg-blue-500'
     },
     {
-      id: 2,
-      title: 'Gestion des entreprises',
-      description: 'Gérer les entreprises partenaires',
-      link: '/admin/companies',
-      color: 'bg-green-500'
-    },
-    {
-      id: 3,
-      title: 'Gestion des offres',
-      description: 'Gérer les offres d\'emploi et de stage',
-      link: '/admin/offers',
-      color: 'bg-purple-500'
-    },
-    {
-      id: 4,
-      title: 'Gestion des événements',
-      description: 'Gérer les événements et les actualités',
-      link: '/admin/events',
-      color: 'bg-yellow-500'
-    },
-    {
       id: 5,
       title: 'Toutes les formations',
       description: 'Voir toutes les formations disponibles',
-      link: '/admin/formations',
+      link: '/formations',
       color: 'bg-orange-500'
     },
     {
@@ -115,6 +94,13 @@ const AdminDashboard = () => {
       description: 'Voir et gérer les étudiants inscrits',
       link: '/admin/formations',
       color: 'bg-yellow-600'
+    },
+    {
+      id: 4,
+      title: 'Gestion des événements',
+      description: 'Gérer les événements et les actualités',
+      link: '/admin/events',
+      color: 'bg-yellow-500'
     }
   ];
 
