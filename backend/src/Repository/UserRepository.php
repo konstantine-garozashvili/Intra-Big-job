@@ -348,6 +348,6 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
             'SELECT f FROM App\\Entity\\Formation f JOIN f.students s WHERE s.id = :userId'
         )
         ->setParameter('userId', $userId)
-        ->getResult();
+            ->getResult();
     }
 }
