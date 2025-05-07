@@ -178,47 +178,46 @@ const FormationForm = () => {
       return;
     }
     setAddingSpec(true);
+    // --- Optimistic update start ---
+    // Generate a temporary negative id
+    const tempId = -(Date.now());
+    const optimisticSpec = { id: tempId, name: newSpec.name, domainId: newSpec.domainId };
+    setSpecializations(prev => [...prev, optimisticSpec]);
+    setFormData(prev => ({ ...prev, specializationId: tempId.toString() }));
+    setShowAddSpecModal(false);
+    setNewSpec({ name: '', domainId: '' });
+    let added = false;
     try {
-      console.log('[FormationForm] Adding new specialization:', newSpec);
       const token = localStorage.getItem('token');
       if (!token) {
-        console.error('[FormationForm] No token found');
-        toast.error('Session expirée. Veuillez vous reconnecter.');
-        return;
+        throw new Error('Session expirée. Veuillez vous reconnecter.');
       }
-
       const res = await fetch('/api/specializations', {
         method: 'POST',
         headers: { 
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json' 
         },
-        body: JSON.stringify({ name: newSpec.name, domainId: newSpec.domainId })
+        body: JSON.stringify({ name: optimisticSpec.name, domainId: optimisticSpec.domainId })
       });
-
       if (!res.ok) {
-        console.error('[FormationForm] Error response:', res.status, res.statusText);
         throw new Error(`HTTP error! status: ${res.status}`);
       }
-
       const json = await res.json();
-      console.log('[FormationForm] Add specialization response:', json);
-
       if (json.success && json.data && json.data.specialization) {
         toast.success('Spécialisation ajoutée');
-        // Refresh specializations
-        const specializationsData = await formationService.getSpecializations();
-        setSpecializations(specializationsData);
+        // Replace the optimistic specialization with the real one
+        setSpecializations(prev => prev.map(s => s.id === tempId ? json.data.specialization : s));
         setFormData(prev => ({ ...prev, specializationId: json.data.specialization.id.toString() }));
-        setShowAddSpecModal(false);
-        setNewSpec({ name: '', domainId: '' });
+        added = true;
       } else {
-        console.error('[FormationForm] Unexpected response structure:', json);
-        toast.error(json.message || 'Erreur lors de l\'ajout');
+        throw new Error(json.message || 'Erreur lors de l\'ajout');
       }
     } catch (e) {
-      console.error('[FormationForm] Error adding specialization:', e);
-      toast.error('Erreur lors de l\'ajout');
+      // Remove the optimistic specialization if error
+      setSpecializations(prev => prev.filter(s => s.id !== tempId));
+      setFormData(prev => ({ ...prev, specializationId: '' }));
+      toast.error(e.message || 'Erreur lors de l\'ajout');
     } finally {
       setAddingSpec(false);
     }
@@ -450,7 +449,7 @@ const FormationForm = () => {
                       className="w-fit"
                       onClick={() => setShowAddSpecModal(true)}
                     >
-                      + Ajouter une spécialisation
+                      + Nouvelle
                     </Button>
                     <Button
                       type="button"

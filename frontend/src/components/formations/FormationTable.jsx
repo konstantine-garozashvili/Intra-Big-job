@@ -14,6 +14,16 @@ import {
 } from '../ui/table';
 import { Image as ImageIcon, Pencil, Trash2, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { motion } from 'framer-motion';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
+import { Loader2, AlertTriangle } from 'lucide-react';
 
 const FormationTableSkeleton = () => {
   return (
@@ -60,6 +70,7 @@ const FormationTableSkeleton = () => {
 const FormationTable = () => {
   const [formations, setFormations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [firstLoading, setFirstLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [pagination, setPagination] = useState({
@@ -69,6 +80,9 @@ const FormationTable = () => {
     total: 0
   });
   const tableRef = useRef(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [formationToDelete, setFormationToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
@@ -100,6 +114,7 @@ const FormationTable = () => {
       toast.error(error.message);
     } finally {
       setLoading(false);
+      setFirstLoading(false);
     }
   };
 
@@ -114,35 +129,41 @@ const FormationTable = () => {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer cette formation ?')) {
-      // Suppression optimiste
-      const prevFormations = formations;
-      const newFormations = formations.filter(f => f.id !== id);
-      setFormations(newFormations);
-      setPagination(prev => ({
-        ...prev,
-        total: prev.total - 1,
-        // Si on supprime le dernier élément de la page, on recule la page si possible
-        currentPage: newFormations.length === 0 && prev.currentPage > 1 ? prev.currentPage - 1 : prev.currentPage
-      }));
-      try {
-        await formationService.deleteFormation(id);
-        toast.success('Formation supprimée avec succès');
-        // Si la page est vide après suppression, recharge la page précédente
-        if (newFormations.length === 0 && pagination.currentPage > 1) {
-          loadFormations(pagination.currentPage - 1);
-        }
-      } catch (error) {
-        // Restaure l'état initial en cas d'échec
-        setFormations(prevFormations);
-        setPagination(prev => ({ ...prev, total: prev.total + 1 }));
-        toast.error(error.message);
+  const handleDeleteClick = (formation) => {
+    setFormationToDelete(formation);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!formationToDelete) return;
+    setDeleting(true);
+    const id = formationToDelete.id;
+    const prevFormations = formations;
+    const newFormations = formations.filter(f => f.id !== id);
+    setFormations(newFormations);
+    setPagination(prev => ({
+      ...prev,
+      total: prev.total - 1,
+      currentPage: newFormations.length === 0 && prev.currentPage > 1 ? prev.currentPage - 1 : prev.currentPage
+    }));
+    try {
+      await formationService.deleteFormation(id);
+      toast.success('Formation supprimée avec succès');
+      if (newFormations.length === 0 && pagination.currentPage > 1) {
+        loadFormations(pagination.currentPage - 1);
       }
+      setDeleteDialogOpen(false);
+      setFormationToDelete(null);
+    } catch (error) {
+      setFormations(prevFormations);
+      setPagination(prev => ({ ...prev, total: prev.total + 1 }));
+      toast.error(error.message);
+    } finally {
+      setDeleting(false);
     }
   };
 
-  if (loading) {
+  if (firstLoading) {
     return (
       <div className="container mx-auto p-4">
         <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
@@ -167,31 +188,31 @@ const FormationTable = () => {
 
   return (
     <div className="container mx-auto p-4">
+      <div className="flex flex-col sm:flex-row justify-end items-center mb-6 gap-4">
+        <div className="flex items-center gap-4 w-full sm:w-auto justify-end">
+          <div className="relative flex-1 sm:flex-initial max-w-[300px]">
+            <input
+              type="text"
+              placeholder="Rechercher une formation..."
+              value={searchTerm}
+              onChange={handleSearch}
+              className="pl-10 pr-4 py-2 w-full rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+            />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          </div>
+          <Link to="/formations/new">
+            <Button className="bg-gradient-to-r from-blue-600 to-cyan-400 text-white shadow-lg hover:from-blue-700 hover:to-cyan-500 transition">
+              Nouvelle Formation
+            </Button>
+          </Link>
+        </div>
+      </div>
       <motion.div
+        ref={tableRef}
         initial={{ opacity: 0, y: 32 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, type: 'spring', stiffness: 100 }}
       >
-        <div ref={tableRef} className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-          <div className="flex items-center gap-4 w-full sm:w-auto">
-            <div className="relative flex-1 sm:flex-initial">
-              <input
-                type="text"
-                placeholder="Rechercher une formation..."
-                value={searchTerm}
-                onChange={handleSearch}
-                className="pl-10 pr-4 py-2 w-full sm:w-[300px] rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white"
-              />
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            </div>
-            <Link to="/formations/new">
-              <Button className="bg-gradient-to-r from-blue-600 to-cyan-400 text-white shadow-lg hover:from-blue-700 hover:to-cyan-500 transition">
-                Nouvelle Formation
-              </Button>
-            </Link>
-          </div>
-        </div>
-
         <div className="overflow-x-auto rounded-xl shadow-lg bg-white dark:bg-gray-900">
           <Table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
             <TableHeader className="sticky top-0 z-10 bg-gray-100 dark:bg-gray-800">
@@ -238,11 +259,20 @@ const FormationTable = () => {
                     <TableCell className="py-3 px-4 text-gray-700 dark:text-gray-300">{formation.specialization?.name || 'Non spécifiée'}</TableCell>
                     <TableCell className="py-3 px-4 text-center">
                       <div className="flex gap-2 justify-center">
+                        <Link to={`/formations/edit/${formation.id}`} title="Éditer la formation">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="hover:bg-blue-600 hover:text-white transition"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                        </Link>
                         <Button
                           variant="destructive"
                           size="icon"
                           className="hover:bg-red-600 hover:text-white transition"
-                          onClick={() => handleDelete(formation.id)}
+                          onClick={() => handleDeleteClick(formation)}
                           title="Supprimer la formation"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -255,8 +285,6 @@ const FormationTable = () => {
             </TableBody>
           </Table>
         </div>
-
-        {/* Pagination Controls */}
         <div className="mt-4 flex items-center justify-between px-4">
           <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
             <span>
@@ -287,6 +315,43 @@ const FormationTable = () => {
           </div>
         </div>
       </motion.div>
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-hidden rounded-2xl border-0 shadow-xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-600" />
+              Confirmation de suppression
+            </DialogTitle>
+            <DialogDescription className="text-base mt-2">
+              Êtes-vous sûr de vouloir supprimer la formation <b>{formationToDelete?.name}</b> ? Cette action est irréversible.
+            </DialogDescription>
+          </DialogHeader>
+          <Alert variant="destructive" className="mb-4">
+            <AlertTitle>Attention</AlertTitle>
+            <AlertDescription>
+              Cette action supprimera définitivement la formation et toutes ses données associées. Cette action ne peut pas être annulée.
+            </AlertDescription>
+          </Alert>
+          <DialogFooter className="mt-6 flex justify-end space-x-2">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={deleting}
+              className="rounded-full border-2 hover:bg-gray-100 transition-all duration-200"
+            >
+              Annuler
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteConfirm}
+              disabled={deleting}
+              className="rounded-full bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 transition-all duration-200"
+            >
+              {deleting ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Suppression...</>) : 'Supprimer définitivement'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

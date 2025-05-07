@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { Card } from '@/components/ui/card';
-import { Loader2, Calendar, Users, Clock, MapPin, Search, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
+import { Loader2, Calendar, Users, Clock, MapPin, Search, ChevronLeft, ChevronRight, Trash2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate, Link } from 'react-router-dom';
@@ -9,6 +9,15 @@ import { motion } from 'framer-motion';
 import Masonry from 'react-masonry-css';
 import { formationService } from '@/services/formation.service';
 import { Progress } from '@/components/ui/progress';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function AllFormations() {
   const [formations, setFormations] = useState([]);
@@ -25,6 +34,9 @@ export default function AllFormations() {
   const navigate = useNavigate();
   const permissions = useRolePermissions();
   const [deletingId, setDeletingId] = useState(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [formationToDelete, setFormationToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
@@ -80,30 +92,36 @@ export default function AllFormations() {
     return { text: 'Places disponibles', color: 'text-green-500', bgColor: 'bg-green-100 dark:bg-green-900/20' };
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer cette formation ?')) {
-      setDeletingId(id);
-      const prevFormations = formations;
-      const newFormations = formations.filter(f => f.id !== id);
-      setFormations(newFormations);
-      setPagination(prev => ({
-        ...prev,
-        total: prev.total - 1,
-        currentPage: newFormations.length === 0 && prev.currentPage > 1 ? prev.currentPage - 1 : prev.currentPage
-      }));
-      try {
-        await formationService.deleteFormation(id);
-        // If the page is empty after deletion, reload previous page
-        if (newFormations.length === 0 && pagination.currentPage > 1) {
-          fetchFormations(pagination.currentPage - 1);
-        }
-      } catch (error) {
-        setFormations(prevFormations);
-        setPagination(prev => ({ ...prev, total: prev.total + 1 }));
-        setError(error.message);
-      } finally {
-        setDeletingId(null);
+  const handleDeleteClick = (formation) => {
+    setFormationToDelete(formation);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!formationToDelete) return;
+    setDeleting(true);
+    const id = formationToDelete.id;
+    const prevFormations = formations;
+    const newFormations = formations.filter(f => f.id !== id);
+    setFormations(newFormations);
+    setPagination(prev => ({
+      ...prev,
+      total: prev.total - 1,
+      currentPage: newFormations.length === 0 && prev.currentPage > 1 ? prev.currentPage - 1 : prev.currentPage
+    }));
+    try {
+      await formationService.deleteFormation(id);
+      if (newFormations.length === 0 && pagination.currentPage > 1) {
+        fetchFormations(pagination.currentPage - 1);
       }
+      setDeleteDialogOpen(false);
+      setFormationToDelete(null);
+    } catch (error) {
+      setFormations(prevFormations);
+      setPagination(prev => ({ ...prev, total: prev.total + 1 }));
+      setError(error.message);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -120,16 +138,16 @@ export default function AllFormations() {
 
   return (
     <div>
-      <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
-        <div className="flex items-center gap-4 w-full md:w-auto">
-          <div className="relative flex-1 md:flex-initial">
+      <div className="flex flex-col md:flex-row justify-end items-center mb-10 gap-4">
+        <div className="flex items-center gap-4 w-full md:w-auto justify-end">
+          <div className="relative flex-1 md:flex-initial max-w-[300px]">
             <input
               type="text"
               placeholder="Rechercher une formation..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               ref={searchRef}
-              className="pl-10 pr-4 py-2 w-full md:w-[300px] rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+              className="pl-10 pr-4 py-2 w-full rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white"
             />
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
           </div>
@@ -208,7 +226,7 @@ export default function AllFormations() {
                             className="hover:bg-red-600 hover:text-white transition ml-2"
                             onClick={e => {
                               e.stopPropagation();
-                              handleDelete(f.id);
+                              handleDeleteClick(f);
                             }}
                             disabled={deletingId === f.id}
                             title="Supprimer la formation"
@@ -292,6 +310,43 @@ export default function AllFormations() {
           </div>
         </>
       )}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-hidden rounded-2xl border-0 shadow-xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-600" />
+              Confirmation de suppression
+            </DialogTitle>
+            <DialogDescription className="text-base mt-2">
+              Êtes-vous sûr de vouloir supprimer la formation <b>{formationToDelete?.name}</b> ? Cette action est irréversible.
+            </DialogDescription>
+          </DialogHeader>
+          <Alert variant="destructive" className="mb-4">
+            <AlertTitle>Attention</AlertTitle>
+            <AlertDescription>
+              Cette action supprimera définitivement la formation et toutes ses données associées. Cette action ne peut pas être annulée.
+            </AlertDescription>
+          </Alert>
+          <DialogFooter className="mt-6 flex justify-end space-x-2">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={deleting}
+              className="rounded-full border-2 hover:bg-gray-100 transition-all duration-200"
+            >
+              Annuler
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteConfirm}
+              disabled={deleting}
+              className="rounded-full bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 transition-all duration-200"
+            >
+              {deleting ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Suppression...</>) : 'Supprimer définitivement'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <style>{`
         .masonry-column {
           background-clip: padding-box;
