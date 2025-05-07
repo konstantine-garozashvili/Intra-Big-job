@@ -359,6 +359,11 @@ class FormationController extends AbstractController
             ], 404);
         }
 
+        // Supprimer explicitement les demandes d'inscription liées
+        foreach ($formation->getEnrollmentRequests() as $enrollmentRequest) {
+            $this->entityManager->remove($enrollmentRequest);
+        }
+
         $this->entityManager->remove($formation);
         $this->entityManager->flush();
 

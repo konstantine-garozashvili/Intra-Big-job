@@ -116,11 +116,27 @@ const FormationTable = () => {
 
   const handleDelete = async (id) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cette formation ?')) {
+      // Suppression optimiste
+      const prevFormations = formations;
+      const newFormations = formations.filter(f => f.id !== id);
+      setFormations(newFormations);
+      setPagination(prev => ({
+        ...prev,
+        total: prev.total - 1,
+        // Si on supprime le dernier élément de la page, on recule la page si possible
+        currentPage: newFormations.length === 0 && prev.currentPage > 1 ? prev.currentPage - 1 : prev.currentPage
+      }));
       try {
         await formationService.deleteFormation(id);
         toast.success('Formation supprimée avec succès');
-        loadFormations(pagination.currentPage);
+        // Si la page est vide après suppression, recharge la page précédente
+        if (newFormations.length === 0 && pagination.currentPage > 1) {
+          loadFormations(pagination.currentPage - 1);
+        }
       } catch (error) {
+        // Restaure l'état initial en cas d'échec
+        setFormations(prevFormations);
+        setPagination(prev => ({ ...prev, total: prev.total + 1 }));
         toast.error(error.message);
       }
     }

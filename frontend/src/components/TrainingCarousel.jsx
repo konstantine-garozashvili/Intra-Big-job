@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
-import { ChevronRight, Clock, Users, ArrowRight, Calendar, MapPin } from "lucide-react";
+import { ChevronRight, Clock, Users, ArrowRight, Calendar, MapPin, InfoIcon, Lock } from "lucide-react";
 import { useMediaQuery } from "@/hooks/use-mobile";
 import { formationService } from "@/services/formation.service";
 import { MagicButton } from "@/components/ui/magic-button";
@@ -11,6 +11,16 @@ import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from 'sonner';
 import { Progress } from '@/components/ui/progress';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose
+} from "@/components/ui/dialog";
+import { ProfileContext } from "@/components/MainLayout";
 
 // Configuration des badges avec des couleurs plus inspirantes
 const badgeVariants = {
@@ -103,33 +113,78 @@ const getCapacityStatus = (enrolled, capacity) => {
   return { text: 'Places disponibles', color: 'text-green-500', bgColor: 'bg-green-100 dark:bg-green-900/20' };
 };
 
+// Ajout d'une fonction utilitaire pour localStorage
+const LOCAL_REQUESTED_KEY = 'requestedFormations';
+function getLocalRequested() {
+  try {
+    return JSON.parse(localStorage.getItem(LOCAL_REQUESTED_KEY)) || [];
+  } catch {
+    return [];
+  }
+}
+function setLocalRequested(ids) {
+  localStorage.setItem(LOCAL_REQUESTED_KEY, JSON.stringify(ids));
+}
+
 export default function TrainingCarousel() {
   const [formations, setFormations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [api, setApi] = useState(null);
   const [showBottomButton, setShowBottomButton] = useState(true);
+  const [confirmDialog, setConfirmDialog] = useState({ open: false, formationId: null });
+  const [requested, setRequested] = useState({}); // { [formationId]: true }
+  const [requesting, setRequesting] = useState({}); // { [formationId]: true }
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
 
   const isMobile = useMediaQuery("(max-width: 768px)");
   const isTablet = useMediaQuery("(min-width: 769px) and (max-width: 1024px)");
 
   const navigate = useNavigate();
 
+  const { profileData } = useContext(ProfileContext) || {};
+  const isProfileAcknowledged = profileData?.stats?.profile?.isAcknowledged;
+
   useEffect(() => {
-    const fetchFormations = async () => {
+    const fetchFormationsAndRequests = async () => {
       try {
-        const data = await formationService.getAllFormations();
+        const [data, myRequests] = await Promise.all([
+          formationService.getAllFormations(),
+          formationService.getMyEnrollmentRequests ? formationService.getMyEnrollmentRequests() : fetchMyRequestsFallback()
+        ]);
         // Limiter à 4 formations maximum
         setFormations((data.formations || []).slice(0, 4));
-        setLoading(false);
+        // Récupérer les IDs déjà demandés côté API
+        let requestedIds = [];
+        if (myRequests && myRequests.requests) {
+          requestedIds = myRequests.requests.map(r => r.formation.id);
+        } else if (Array.isArray(myRequests)) {
+          requestedIds = myRequests.map(r => r.formation?.id || r.formation_id);
+        }
+        // Ajouter les IDs du localStorage (optimisme UI)
+        const localIds = getLocalRequested();
+        const allIds = Array.from(new Set([...requestedIds, ...localIds]));
+        // Mettre à jour le state
+        setRequested(Object.fromEntries(allIds.map(id => [id, true])));
       } catch (err) {
         setError(err.message);
+      } finally {
         setLoading(false);
       }
     };
-
-    fetchFormations();
+    fetchFormationsAndRequests();
   }, []);
+
+  // Fallback si pas de méthode formationService.getMyEnrollmentRequests
+  async function fetchMyRequestsFallback() {
+    const res = await fetch('/api/formation-requests/my', {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+    if (!res.ok) throw new Error('Erreur lors du chargement des demandes');
+    return await res.json();
+  }
 
   useEffect(() => {
     if (!api) return;
@@ -174,13 +229,30 @@ export default function TrainingCarousel() {
     navigate('/formations/list');
   };
 
-  const handleRequestJoin = async (formationId) => {
+  const handleRequestJoin = async (formationId, skipConfirm = false) => {
+    setRequesting((prev) => ({ ...prev, [formationId]: true }));
+    // Optimisme UI : verrouille le bouton tout de suite
+    setRequested((prev) => {
+      const next = { ...prev, [formationId]: true };
+      setLocalRequested(Object.keys(next).map(Number));
+      return next;
+    });
     try {
       await formationService.requestEnrollment(formationId);
-      toast.success('Votre demande pour rejoindre la formation a été envoyée avec succès.');
+      toast.success(
+        <div className="flex items-center gap-2">
+          <svg className="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+          <span className="font-bold">Demande envoyée !</span>
+        </div>,
+        { duration: 5000 }
+      );
     } catch (error) {
-      // Check for duplicate request error (HTTP 409 or backend message)
       if (
+        error?.message && error.message.toLowerCase().includes('compléter votre profil')
+      ) {
+        setProfileDialogOpen(true);
+        setConfirmDialog({ open: false, formationId: null });
+      } else if (
         (error?.message && error.message.toLowerCase().includes('déjà en cours')) ||
         (error?.response?.status === 409)
       ) {
@@ -188,6 +260,9 @@ export default function TrainingCarousel() {
       } else {
         toast.error(error.message || "Erreur lors de la demande d'inscription à la formation.");
       }
+    } finally {
+      setRequesting((prev) => ({ ...prev, [formationId]: false }));
+      setConfirmDialog({ open: false, formationId: null });
     }
   };
 
@@ -218,13 +293,13 @@ export default function TrainingCarousel() {
                       <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-200/30 to-[#528eb2]/30 dark:from-amber-400/30 dark:to-[#78b9dd]/40 flex items-center justify-center mb-6 group-hover:from-amber-300/40 group-hover:to-[#528eb2]/40 dark:group-hover:from-amber-400/40 dark:group-hover:to-[#78b9dd]/50 transition-all duration-300">
                         <ArrowRight className="h-8 w-8 text-amber-600 dark:text-amber-300 group-hover:translate-x-1 transition-transform duration-300" />
                       </div>
-                      <h3 className="text-xl font-bold mb-3 text-amber-600 dark:text-amber-300">Découvrir toutes les formations</h3>
+                      <h3 className="text-xl font-bold mb-3 text-primary">Découvrir toutes les formations</h3>
                       <p className="text-gray-600 dark:text-gray-300 mb-6">
                         Parcourez notre catalogue complet de formations professionnelles.
                       </p>
                       <MagicButton
                         className="w-full text-base font-medium bg-gradient-to-r from-amber-400 via-[#528eb2] to-[#78b9dd] hover:from-amber-400/10 hover:via-[#528eb2]/10 hover:to-[#78b9dd]/10 hover:text-amber-600 dark:hover:text-amber-300 transition-all duration-300"
-                        onClick={handleSeeAllCourses}
+                        onClick={() => { if (!isProfileAcknowledged) setProfileDialogOpen(true); else handleSeeAllCourses(); }}
                       >
                         Voir toutes les formations
                         <ChevronRight className="ml-2 h-5 w-5" />
@@ -284,7 +359,6 @@ export default function TrainingCarousel() {
                         const enrolledCount = Array.isArray(item.students) ? item.students.length : 0;
                         const capacity = item.capacity || 0;
                         const capacityStatus = getCapacityStatus(enrolledCount, capacity);
-                        const progressPercentage = capacity > 0 ? Math.min((enrolledCount / capacity) * 100, 100) : 0;
                         return (
                           <div className="mb-2">
                             <div className="flex items-center justify-between mb-1">
@@ -294,19 +368,35 @@ export default function TrainingCarousel() {
                               </span>
                               <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-semibold ${capacityStatus.bgColor} ${capacityStatus.color}`}>{capacityStatus.text}</span>
                             </div>
-                            <Progress value={progressPercentage} className="h-2" />
                           </div>
                         );
                       })()}
                     </CardContent>
                     <CardFooter className="p-4 pt-0">
-                      <MagicButton
-                        className="w-full text-sm sm:text-base font-medium bg-gradient-to-r from-amber-400 via-[#528eb2] to-[#78b9dd] hover:from-transparent hover:to-transparent hover:text-amber-600 dark:hover:text-white"
-                        onClick={() => handleRequestJoin(item.id)}
-                      >
-                        Demander à rejoindre
-                        <ChevronRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
-                      </MagicButton>
+                      {requested[item.id] ? (
+                        <Button
+                          className="w-full text-sm sm:text-base font-medium bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-300 cursor-not-allowed flex items-center justify-center gap-2"
+                          disabled
+                        >
+                          <Lock className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                          Demande envoyée
+                        </Button>
+                      ) : (
+                        <MagicButton
+                          className="w-full text-sm sm:text-base font-medium bg-gradient-to-r from-amber-400 via-[#528eb2] to-[#78b9dd] hover:from-transparent hover:to-transparent hover:text-amber-600 dark:hover:text-white"
+                          onClick={() => {
+                            if (!isProfileAcknowledged) {
+                              setProfileDialogOpen(true);
+                            } else {
+                              setConfirmDialog({ open: true, formationId: item.id });
+                            }
+                          }}
+                          disabled={requesting[item.id]}
+                        >
+                          Demander à rejoindre
+                          <ChevronRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
+                        </MagicButton>
+                      )}
                     </CardFooter>
                   </Card>
                 )}
@@ -320,7 +410,7 @@ export default function TrainingCarousel() {
         
           <div className="mt-10 flex justify-center">
             <Button
-              onClick={handleSeeAllCourses}
+              onClick={() => { if (!isProfileAcknowledged) setProfileDialogOpen(true); else handleSeeAllCourses(); }}
               className="bg-gradient-to-r from-amber-100 to-amber-50 dark:from-amber-900/30 dark:to-amber-800/20 text-amber-600 dark:text-amber-300 border-2 border-amber-400 dark:border-amber-500/50 hover:from-amber-500 hover:to-amber-400 hover:text-white dark:hover:from-amber-400 dark:hover:to-amber-500 dark:hover:text-white transition-all duration-300 px-8 py-6 text-lg font-medium rounded-md group shadow-lg hover:shadow-xl hover:shadow-amber-200/30 dark:hover:shadow-amber-400/20"
             >
               Voir toutes les formations
@@ -328,6 +418,62 @@ export default function TrainingCarousel() {
             </Button>
           </div>
       </div>
+      {/* Confirmation Dialog */}
+      <Dialog open={confirmDialog.open} onOpenChange={open => setConfirmDialog(prev => ({ ...prev, open }))}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmer la demande</DialogTitle>
+            <DialogDescription>
+              Voulez-vous vraiment rejoindre cette formation ? Cette action enverra une demande d'inscription.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDialog({ open: false, formationId: null })}>
+              Annuler
+            </Button>
+            <Button
+              onClick={() => handleRequestJoin(confirmDialog.formationId, true)}
+              disabled={requesting[confirmDialog.formationId]}
+            >
+              Confirmer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Profile Completion Dialog */}
+      <Dialog open={profileDialogOpen} onOpenChange={setProfileDialogOpen}>
+        <DialogContent className="bg-gradient-to-br from-amber-50 via-blue-50 to-white dark:from-amber-900/30 dark:via-blue-900/20 dark:to-slate-900 p-0 overflow-hidden">
+          <div className="flex flex-col items-center px-6 pt-8 pb-6">
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-pink-300 via-purple-300 to-indigo-300 dark:from-pink-900/30 dark:via-purple-900/30 dark:to-indigo-900/30 flex items-center justify-center mb-4 shadow-lg">
+              <InfoIcon className="w-12 h-12 text-white dark:text-white" />
+            </div>
+            <DialogHeader className="w-full text-center">
+              <DialogTitle className="text-2xl font-bold mb-2">Profil à compléter !</DialogTitle>
+              <DialogDescription asChild>
+                <div className="mb-4 text-base text-gray-700 dark:text-gray-200">
+                  <span className="block mb-2">Oups, il te manque encore quelques infos pour pouvoir demander une formation :</span>
+                  <ul className="list-disc pl-6 space-y-1 text-left">
+                    <li>Ajoute ton profil LinkedIn</li>
+                    <li>Dépose ton CV</li>
+                    <li>Ajoute au moins un diplôme</li>
+                  </ul>
+                  <span className="block mt-4">C'est rapide, et ça t'ouvrira toutes les portes 🚀</span>
+                </div>
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="w-full flex flex-col gap-2 mt-2">
+              <Button variant="outline" onClick={() => setProfileDialogOpen(false)} className="w-full">
+                Fermer
+              </Button>
+              <Button asChild variant="default" className="w-full text-base font-semibold">
+                <a href="/settings/profile" className="text-primary" onClick={() => setProfileDialogOpen(false)}>
+                  Compléter mon profil
+                </a>
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 } 

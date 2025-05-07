@@ -61,7 +61,7 @@ class Formation
     #[Groups(['formation:read'])]
     private Collection $students;
 
-    #[ORM\OneToMany(mappedBy: 'formation', targetEntity: FormationEnrollmentRequest::class)]
+    #[ORM\OneToMany(mappedBy: 'formation', targetEntity: FormationEnrollmentRequest::class, orphanRemoval: true, cascade: ['remove'])]
     private Collection $enrollmentRequests;
 
     #[ORM\ManyToOne(targetEntity: Specialization::class, inversedBy: 'formations')]

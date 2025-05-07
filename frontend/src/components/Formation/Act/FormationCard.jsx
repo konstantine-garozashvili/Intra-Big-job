@@ -1,9 +1,20 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Users, Clock, MapPin, ChevronRight } from "lucide-react";
+import { Calendar, Users, Clock, MapPin, ChevronRight, Lock } from "lucide-react";
 import { MagicButton } from "@/components/ui/magic-button";
 import { Progress } from "@/components/ui/progress";
+import { toast } from 'sonner';
+import { formationService } from '@/services/formation.service';
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter
+} from "@/components/ui/dialog";
 
 // Configuration des badges avec des couleurs plus inspirantes
 const badgeVariants = {
@@ -24,7 +35,20 @@ const getCapacityStatus = (enrolled, capacity) => {
   return { text: "Places disponibles", color: "text-green-500", bgColor: "bg-green-100 dark:bg-green-900/20" };
 };
 
-const FormationCard = ({ formation, onRequestJoin, viewMode }) => {
+// Ajout d'une fonction utilitaire pour localStorage
+const LOCAL_REQUESTED_KEY = 'requestedFormations';
+function getLocalRequested() {
+  try {
+    return JSON.parse(localStorage.getItem(LOCAL_REQUESTED_KEY)) || [];
+  } catch {
+    return [];
+  }
+}
+function setLocalRequested(ids) {
+  localStorage.setItem(LOCAL_REQUESTED_KEY, JSON.stringify(ids));
+}
+
+const FormationCard = ({ formation, viewMode }) => {
   const {
     id,
     name,
@@ -42,6 +66,68 @@ const FormationCard = ({ formation, onRequestJoin, viewMode }) => {
   const enrolledCount = students.length;
   const capacityStatus = getCapacityStatus(enrolledCount, capacity);
   const progressPercentage = Math.min((enrolledCount / capacity) * 100, 100);
+
+  // State pour gestion du bouton
+  const [requested, setRequested] = useState(false);
+  const [requesting, setRequesting] = useState(false);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+
+  // Fetch demandes existantes au chargement
+  useEffect(() => {
+    let isMounted = true;
+    async function fetchRequests() {
+      try {
+        const res = await fetch('/api/formation-requests/my', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        if (!res.ok) throw new Error('Erreur lors du chargement des demandes');
+        const data = await res.json();
+        const apiIds = (data.requests || []).map(r => r.formation.id);
+        const localIds = getLocalRequested();
+        if (isMounted) setRequested(apiIds.includes(id) || localIds.includes(id));
+      } catch {
+        // fallback local only
+        if (isMounted) setRequested(getLocalRequested().includes(id));
+      }
+    }
+    fetchRequests();
+    return () => { isMounted = false; };
+  }, [id]);
+
+  // Handler demande
+  const handleRequestJoin = async () => {
+    setRequesting(true);
+    setRequested(true);
+    setLocalRequested(Array.from(new Set([...getLocalRequested(), id])));
+    try {
+      await formationService.requestEnrollment(id);
+      toast.success(
+        <div className="flex items-center gap-2">
+          <svg className="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+          <span className="font-bold">Demande envoyée !</span>
+        </div>,
+        { duration: 5000 }
+      );
+    } catch (error) {
+      if (
+        error?.message && error.message.toLowerCase().includes('compléter votre profil')
+      ) {
+        toast.error('Complétez votre profil pour demander une formation.');
+      } else if (
+        (error?.message && error.message.toLowerCase().includes('déjà en cours')) ||
+        (error?.response?.status === 409)
+      ) {
+        toast.error('Vous avez déjà fait une demande pour cette formation.');
+      } else {
+        toast.error(error.message || "Erreur lors de la demande d'inscription à la formation.");
+      }
+    } finally {
+      setRequesting(false);
+      setConfirmDialogOpen(false);
+    }
+  };
 
   const InfoItem = ({ icon: Icon, text, colorClass }) => (
     <div className={`flex items-center gap-2 ${colorClass}`}>
@@ -129,16 +215,41 @@ const FormationCard = ({ formation, onRequestJoin, viewMode }) => {
 
           {/* Action Button - bottom right */}
           <div className="absolute bottom-6 right-6">
-            <MagicButton
-              className="text-sm sm:text-base font-medium bg-gradient-to-r from-amber-400 via-[#528eb2] to-[#78b9dd] hover:from-transparent hover:to-transparent hover:text-amber-600 dark:hover:text-white px-8 py-3"
-              onClick={() => onRequestJoin(id)}
-              disabled={enrolledCount >= capacity}
-            >
-              {enrolledCount >= capacity ? 'Formation complète' : 'Demander à rejoindre'}
-              <ChevronRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
-            </MagicButton>
+            {requested ? (
+              <Button className="w-full text-sm sm:text-base font-medium bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-300 cursor-not-allowed flex items-center justify-center gap-2" disabled>
+                <Lock className="h-4 w-4 sm:h-5 sm:w-5 mr-2" /> Demande envoyée
+              </Button>
+            ) : (
+              <MagicButton
+                className="text-sm sm:text-base font-medium bg-gradient-to-r from-amber-400 via-[#528eb2] to-[#78b9dd] hover:from-transparent hover:to-transparent hover:text-amber-600 dark:hover:text-white px-8 py-3"
+                onClick={() => setConfirmDialogOpen(true)}
+                disabled={enrolledCount >= capacity}
+              >
+                Demander à rejoindre
+                <ChevronRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
+              </MagicButton>
+            )}
           </div>
         </div>
+
+        <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirmer la demande</DialogTitle>
+              <DialogDescription>
+                Voulez-vous vraiment rejoindre cette formation ? Cette action enverra une demande d'inscription.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setConfirmDialogOpen(false)}>
+                Annuler
+              </Button>
+              <Button onClick={handleRequestJoin} disabled={requesting}>
+                Confirmer
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </Card>
     );
   }
@@ -189,7 +300,6 @@ const FormationCard = ({ formation, onRequestJoin, viewMode }) => {
               {capacityStatus.text}
             </Badge>
           </div>
-          <Progress value={progressPercentage} className="h-2" />
         </div>
 
         <div className="flex flex-col gap-2 mt-4 text-xs sm:text-sm">
@@ -214,17 +324,42 @@ const FormationCard = ({ formation, onRequestJoin, viewMode }) => {
       </CardContent>
 
       <CardFooter className="p-4 pt-0">
-        <MagicButton
-          className="w-full text-sm sm:text-base font-medium bg-gradient-to-r from-amber-400 via-[#528eb2] to-[#78b9dd] hover:from-transparent hover:to-transparent hover:text-amber-600 dark:hover:text-white"
-          onClick={() => onRequestJoin(id)}
-          disabled={enrolledCount >= capacity}
-        >
-          {enrolledCount >= capacity ? 'Formation complète' : 'Demander à rejoindre'}
-          <ChevronRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
-        </MagicButton>
+        {requested ? (
+          <Button className="w-full text-sm sm:text-base font-medium bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-300 cursor-not-allowed flex items-center justify-center gap-2" disabled>
+            <Lock className="h-4 w-4 sm:h-5 sm:w-5 mr-2" /> Demande envoyée
+          </Button>
+        ) : (
+          <MagicButton
+            className="w-full text-sm sm:text-base font-medium bg-gradient-to-r from-amber-400 via-[#528eb2] to-[#78b9dd] hover:from-transparent hover:to-transparent hover:text-amber-600 dark:hover:text-white"
+            onClick={() => setConfirmDialogOpen(true)}
+            disabled={enrolledCount >= capacity}
+          >
+            Demander à rejoindre
+            <ChevronRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
+          </MagicButton>
+        )}
       </CardFooter>
+
+      <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmer la demande</DialogTitle>
+            <DialogDescription>
+              Voulez-vous vraiment rejoindre cette formation ? Cette action enverra une demande d'inscription.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button onClick={handleRequestJoin} disabled={requesting}>
+              Confirmer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };
 
-export default FormationCard; 
+export default FormationCard;

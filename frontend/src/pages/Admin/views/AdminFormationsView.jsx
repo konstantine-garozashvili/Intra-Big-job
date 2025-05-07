@@ -4,7 +4,7 @@ import FormationTable from '@/components/formations/FormationTable';
 import { Button } from '@/components/ui/button';
 
 export default function AdminFormationsView() {
-  const [view, setView] = useState('cards'); // 'cards' ou 'table'
+  const [view, setView] = useState('table'); // 'cards' ou 'table'
 
   return (
     <div className="max-w-7xl mx-auto py-10 px-2 md:px-0">
