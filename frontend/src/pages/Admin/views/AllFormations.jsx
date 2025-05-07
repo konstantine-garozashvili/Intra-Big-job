@@ -8,6 +8,7 @@ import { useRolePermissions } from '@/features/roles';
 import { motion } from 'framer-motion';
 import Masonry from 'react-masonry-css';
 import { formationService } from '@/services/formation.service';
+import { Progress } from '@/components/ui/progress';
 
 export default function AllFormations() {
   const [formations, setFormations] = useState([]);
@@ -77,6 +78,14 @@ export default function AllFormations() {
     700: 1,
   };
 
+  const getCapacityStatus = (enrolled, capacity) => {
+    const percentage = (enrolled / capacity) * 100;
+    if (percentage >= 100) return { text: 'Complet', color: 'text-red-500', bgColor: 'bg-red-100 dark:bg-red-900/20' };
+    if (percentage >= 80) return { text: 'Presque complet', color: 'text-orange-500', bgColor: 'bg-orange-100 dark:bg-orange-900/20' };
+    if (percentage >= 50) return { text: 'Places limitées', color: 'text-yellow-500', bgColor: 'bg-yellow-100 dark:bg-yellow-900/20' };
+    return { text: 'Places disponibles', color: 'text-green-500', bgColor: 'bg-green-100 dark:bg-green-900/20' };
+  };
+
   return (
     <div>
       <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
@@ -112,69 +121,89 @@ export default function AllFormations() {
             {Array.isArray(formations) && formations.length === 0 ? (
               <div className="text-center text-gray-300 col-span-2">Aucune formation trouvée.</div>
             ) : (
-              Array.isArray(formations) && formations.map((f, idx) => (
-                <motion.div
-                  key={f.id}
-                  initial={{ opacity: 0, y: 40 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.08, duration: 0.6, type: 'spring', stiffness: 120 }}
-                  whileHover={{ scale: 1.03, boxShadow: '0 8px 32px 0 rgba(82, 142, 178, 0.10)' }}
-                  className="flex"
-                >
-                  <Card
-                    className="relative rounded-2xl overflow-hidden bg-white border border-gray-200 shadow-md hover:shadow-lg transition-all cursor-pointer group flex flex-col w-full h-[420px]"
-                    onClick={() => {
-                      navigate(`/formations/edit/${f.id}`);
-                    }}
+              Array.isArray(formations) && formations.map((f, idx) => {
+                const enrolledCount = Array.isArray(f.students) ? f.students.length : 0;
+                const capacity = f.capacity || 0;
+                const capacityStatus = getCapacityStatus(enrolledCount, capacity);
+                const progressPercentage = capacity > 0 ? Math.min((enrolledCount / capacity) * 100, 100) : 0;
+                return (
+                  <motion.div
+                    key={f.id}
+                    initial={{ opacity: 0, y: 40 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.08, duration: 0.6, type: 'spring', stiffness: 120 }}
+                    whileHover={{ scale: 1.03, boxShadow: '0 8px 32px 0 rgba(82, 142, 178, 0.10)' }}
+                    className="flex"
                   >
-                    <div className="w-full h-48 bg-gray-50 flex items-center justify-center overflow-hidden border-b border-gray-100">
-                      <img
-                        src={f.image_url || '/placeholder.svg'}
-                        alt={f.name}
-                        className="object-cover w-full h-full"
-                      />
-                    </div>
-                    <div className="p-6 z-20 relative flex flex-col flex-1 min-h-0">
-                      <div className="flex flex-wrap gap-2 mb-2">
-                        <Badge className="bg-[#528eb2]/10 text-[#528eb2] border border-[#528eb2]/30 font-medium">{f.specialization?.name || 'Formation'}</Badge>
-                        <Badge variant="outline" className="border-[#528eb2]/40 text-[#528eb2] bg-white">{f.promotion || 'N/A'}</Badge>
+                    <Card
+                      className="relative rounded-2xl overflow-hidden bg-white border border-gray-200 shadow-md hover:shadow-lg transition-all cursor-pointer group flex flex-col w-full h-[460px]"
+                      onClick={() => {
+                        navigate(`/formations/edit/${f.id}`);
+                      }}
+                    >
+                      <div className="w-full h-48 bg-gray-50 flex items-center justify-center overflow-hidden border-b border-gray-100">
+                        <img
+                          src={f.image_url || '/placeholder.svg'}
+                          alt={f.name}
+                          className="object-cover w-full h-full"
+                        />
                       </div>
-                      <h2
-                        className="text-xl font-bold text-gray-900 mb-1 line-clamp-2 min-h-[2.5em]"
-                        title={f.name}
-                        style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
-                      >
-                        {f.name}
-                      </h2>
-                      <p
-                        className="text-gray-700 text-sm mb-3 min-h-[40px] line-clamp-2"
-                        title={f.description}
-                        style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
-                      >
-                        {f.description || 'Aucune description.'}
-                      </p>
-                      <div className="flex flex-wrap gap-4 text-gray-500 text-xs mb-3">
-                        <div className="flex items-center gap-1"><Calendar className="w-4 h-4 text-[#528eb2]" />{f.dateStart ? new Date(f.dateStart).toLocaleDateString() : 'N/A'}</div>
-                        <div className="flex items-center gap-1"><Clock className="w-4 h-4 text-[#528eb2]" />{f.duration ? `${f.duration} mois` : 'N/A'}</div>
-                        <div className="flex items-center gap-1"><Users className="w-4 h-4 text-[#528eb2]" />Capacité: {f.capacity || 'N/A'}</div>
-                        {f.location && <div className="flex items-center gap-1"><MapPin className="w-4 h-4 text-[#528eb2]" />{f.location}</div>}
+                      <div className="p-6 z-20 relative flex flex-col flex-1 min-h-0">
+                        <div className="flex flex-wrap gap-2 mb-2">
+                          <Badge className="bg-[#528eb2]/10 text-[#528eb2] border border-[#528eb2]/30 font-medium">{f.specialization?.name || 'Formation'}</Badge>
+                          <Badge variant="outline" className="border-[#528eb2]/40 text-[#528eb2] bg-white">{f.promotion || 'N/A'}</Badge>
+                        </div>
+                        <h2
+                          className="text-xl font-bold text-gray-900 mb-1 line-clamp-2 min-h-[2.5em]"
+                          title={f.name}
+                          style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
+                        >
+                          {f.name}
+                        </h2>
+                        <p
+                          className="text-gray-700 text-sm mb-3 min-h-[40px] line-clamp-2"
+                          title={f.description}
+                          style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
+                        >
+                          {f.description || 'Aucune description.'}
+                        </p>
+                        {/* Capacity Section */}
+                        <div className="mb-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <Users className="h-4 w-4 text-[#528eb2]" />
+                              <span className="text-sm font-medium">
+                                {enrolledCount} / {capacity} étudiants
+                              </span>
+                            </div>
+                            <Badge className={`${capacityStatus.bgColor} ${capacityStatus.color} text-xs`}>
+                              {capacityStatus.text}
+                            </Badge>
+                          </div>
+                          <Progress value={progressPercentage} className="h-2" />
+                        </div>
+                        <div className="flex flex-wrap gap-4 text-gray-500 text-xs mb-3">
+                          <div className="flex items-center gap-1"><Calendar className="w-4 h-4 text-[#528eb2]" />{f.dateStart ? new Date(f.dateStart).toLocaleDateString() : 'N/A'}</div>
+                          <div className="flex items-center gap-1"><Clock className="w-4 h-4 text-[#528eb2]" />{f.duration ? `${f.duration} mois` : 'N/A'}</div>
+                          {f.location && <div className="flex items-center gap-1"><MapPin className="w-4 h-4 text-[#528eb2]" />{f.location}</div>}
+                        </div>
+                        {f.createdAt && (
+                          <div className="text-xs text-gray-400 mt-1">Créée le {new Date(f.createdAt).toLocaleDateString()}</div>
+                        )}
+                        <button
+                          className="absolute right-6 bottom-6 border border-[#528eb2] text-[#528eb2] px-5 py-2 rounded-full font-semibold bg-white hover:bg-[#528eb2] hover:text-white shadow transition-all opacity-0 group-hover:opacity-100 group-hover:translate-y-0 translate-y-4 duration-300"
+                          onClick={e => {
+                            e.stopPropagation();
+                            navigate(`/formations/edit/${f.id}`);
+                          }}
+                        >
+                          Voir détails
+                        </button>
                       </div>
-                      {f.createdAt && (
-                        <div className="text-xs text-gray-400 mt-1">Créée le {new Date(f.createdAt).toLocaleDateString()}</div>
-                      )}
-                      <button
-                        className="absolute right-6 bottom-6 border border-[#528eb2] text-[#528eb2] px-5 py-2 rounded-full font-semibold bg-white hover:bg-[#528eb2] hover:text-white shadow transition-all opacity-0 group-hover:opacity-100 group-hover:translate-y-0 translate-y-4 duration-300"
-                        onClick={e => {
-                          e.stopPropagation();
-                          navigate(`/formations/edit/${f.id}`);
-                        }}
-                      >
-                        Voir détails
-                      </button>
-                    </div>
-                  </Card>
-                </motion.div>
-              ))
+                    </Card>
+                  </motion.div>
+                );
+              })
             )}
           </div>
           {/* Pagination Controls */}

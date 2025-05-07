@@ -3,6 +3,7 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Users, Clock, MapPin, ChevronRight } from "lucide-react";
 import { MagicButton } from "@/components/ui/magic-button";
+import { Progress } from "@/components/ui/progress";
 
 // Configuration des badges avec des couleurs plus inspirantes
 const badgeVariants = {
@@ -13,6 +14,14 @@ const badgeVariants = {
   "IA": "bg-gradient-to-r from-indigo-100 via-blue-100 to-sky-100 dark:from-indigo-900 dark:via-blue-900 dark:to-sky-900 text-indigo-700 dark:text-indigo-300 hover:from-indigo-200 hover:via-blue-200 hover:to-sky-200 dark:hover:from-indigo-800 dark:hover:via-blue-800 dark:hover:to-sky-800",
   "Cloud Computing": "bg-gradient-to-r from-sky-100 via-cyan-100 to-blue-100 dark:from-sky-900 dark:via-cyan-900 dark:to-blue-900 text-sky-700 dark:text-sky-300 hover:from-sky-200 hover:via-cyan-200 hover:to-blue-200 dark:hover:from-sky-800 dark:hover:via-cyan-800 dark:hover:to-blue-800",
   "default": "bg-gradient-to-r from-emerald-100 via-teal-100 to-cyan-100 dark:from-emerald-900 dark:via-teal-900 dark:to-cyan-900 text-emerald-700 dark:text-emerald-300 hover:from-emerald-200 hover:via-teal-200 hover:to-cyan-200 dark:hover:from-emerald-800 dark:hover:via-teal-800 dark:hover:to-cyan-800"
+};
+
+const getCapacityStatus = (enrolled, capacity) => {
+  const percentage = (enrolled / capacity) * 100;
+  if (percentage >= 100) return { text: "Complet", color: "text-red-500", bgColor: "bg-red-100 dark:bg-red-900/20" };
+  if (percentage >= 80) return { text: "Presque complet", color: "text-orange-500", bgColor: "bg-orange-100 dark:bg-orange-900/20" };
+  if (percentage >= 50) return { text: "Places limitées", color: "text-yellow-500", bgColor: "bg-yellow-100 dark:bg-yellow-900/20" };
+  return { text: "Places disponibles", color: "text-green-500", bgColor: "bg-green-100 dark:bg-green-900/20" };
 };
 
 const FormationCard = ({ formation, onRequestJoin, viewMode }) => {
@@ -26,8 +35,13 @@ const FormationCard = ({ formation, onRequestJoin, viewMode }) => {
     dateStart,
     description,
     location,
-    specialization
+    specialization,
+    students = []
   } = formation;
+
+  const enrolledCount = students.length;
+  const capacityStatus = getCapacityStatus(enrolledCount, capacity);
+  const progressPercentage = Math.min((enrolledCount / capacity) * 100, 100);
 
   const InfoItem = ({ icon: Icon, text, colorClass }) => (
     <div className={`flex items-center gap-2 ${colorClass}`}>
@@ -75,6 +89,22 @@ const FormationCard = ({ formation, onRequestJoin, viewMode }) => {
               </p>
             </div>
 
+            {/* Capacity Section */}
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-amber-600 dark:text-amber-300" />
+                  <span className="text-sm font-medium">
+                    {enrolledCount} / {capacity} étudiants
+                  </span>
+                </div>
+                <Badge className={`${capacityStatus.bgColor} ${capacityStatus.color} text-xs`}>
+                  {capacityStatus.text}
+                </Badge>
+              </div>
+              <Progress value={progressPercentage} className="h-2" />
+            </div>
+
             {/* Info Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
               <InfoItem
@@ -86,11 +116,6 @@ const FormationCard = ({ formation, onRequestJoin, viewMode }) => {
                 icon={Clock}
                 text={`${duration} mois`}
                 colorClass="text-[#528eb2] dark:text-[#78b9dd]"
-              />
-              <InfoItem
-                icon={Users}
-                text={`Capacité: ${capacity} étudiants`}
-                colorClass="text-amber-600 dark:text-amber-300"
               />
               {location && (
                 <InfoItem
@@ -107,8 +132,9 @@ const FormationCard = ({ formation, onRequestJoin, viewMode }) => {
             <MagicButton
               className="text-sm sm:text-base font-medium bg-gradient-to-r from-amber-400 via-[#528eb2] to-[#78b9dd] hover:from-transparent hover:to-transparent hover:text-amber-600 dark:hover:text-white px-8 py-3"
               onClick={() => onRequestJoin(id)}
+              disabled={enrolledCount >= capacity}
             >
-              Demander à rejoindre
+              {enrolledCount >= capacity ? 'Formation complète' : 'Demander à rejoindre'}
               <ChevronRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
             </MagicButton>
           </div>
@@ -150,6 +176,22 @@ const FormationCard = ({ formation, onRequestJoin, viewMode }) => {
           {description || 'Aucune description disponible'}
         </p>
 
+        {/* Capacity Section */}
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-amber-600 dark:text-amber-300" />
+              <span className="text-sm font-medium">
+                {enrolledCount} / {capacity} étudiants
+              </span>
+            </div>
+            <Badge className={`${capacityStatus.bgColor} ${capacityStatus.color} text-xs`}>
+              {capacityStatus.text}
+            </Badge>
+          </div>
+          <Progress value={progressPercentage} className="h-2" />
+        </div>
+
         <div className="flex flex-col gap-2 mt-4 text-xs sm:text-sm">
           <InfoItem
             icon={Calendar}
@@ -160,11 +202,6 @@ const FormationCard = ({ formation, onRequestJoin, viewMode }) => {
             icon={Clock}
             text={`${duration} mois`}
             colorClass="text-[#528eb2] dark:text-[#78b9dd]"
-          />
-          <InfoItem
-            icon={Users}
-            text={`Capacité: ${capacity} étudiants`}
-            colorClass="text-amber-600 dark:text-amber-300"
           />
           {location && (
             <InfoItem
@@ -180,8 +217,9 @@ const FormationCard = ({ formation, onRequestJoin, viewMode }) => {
         <MagicButton
           className="w-full text-sm sm:text-base font-medium bg-gradient-to-r from-amber-400 via-[#528eb2] to-[#78b9dd] hover:from-transparent hover:to-transparent hover:text-amber-600 dark:hover:text-white"
           onClick={() => onRequestJoin(id)}
+          disabled={enrolledCount >= capacity}
         >
-          Demander à rejoindre
+          {enrolledCount >= capacity ? 'Formation complète' : 'Demander à rejoindre'}
           <ChevronRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
         </MagicButton>
       </CardFooter>

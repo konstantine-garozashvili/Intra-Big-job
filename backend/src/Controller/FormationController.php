@@ -298,7 +298,23 @@ class FormationController extends AbstractController
         if (isset($data['image_url'])) {
             $formation->setImageUrl($data['image_url']);
         }
-
+        // Add missing fields
+        if (isset($data['capacity'])) {
+            $formation->setCapacity((int)$data['capacity']);
+        }
+        if (isset($data['duration'])) {
+            $formation->setDuration((int)$data['duration']);
+        }
+        if (isset($data['dateStart'])) {
+            try {
+                $formation->setDateStart(new \DateTime($data['dateStart']));
+            } catch (\Exception $e) {
+                // Ignore invalid date
+            }
+        }
+        if (isset($data['location'])) {
+            $formation->setLocation($data['location']);
+        }
         // Gestion de la spécialisation
         if (isset($data['specializationId'])) {
             $specialization = $this->specializationRepository->find($data['specializationId']);
@@ -321,7 +337,11 @@ class FormationController extends AbstractController
                     'specialization' => $formation->getSpecialization() ? [
                         'id' => $formation->getSpecialization()->getId(),
                         'name' => $formation->getSpecialization()->getName()
-                    ] : null
+                    ] : null,
+                    'capacity' => $formation->getCapacity(),
+                    'duration' => $formation->getDuration(),
+                    'dateStart' => $formation->getDateStart() ? $formation->getDateStart()->format('Y-m-d') : null,
+                    'location' => $formation->getLocation(),
                 ]
             ]
         ]);
