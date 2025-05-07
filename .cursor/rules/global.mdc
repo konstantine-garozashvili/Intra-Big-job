@@ -13,6 +13,7 @@ alwaysApply: true
 - **Severity: CRITICAL**
 - Always read the entire file before suggesting any modifications
 - This is essential to understand the context and dependencies
+- Always modifiy the code by yourself like a real agent, I dont want any advises like "you should replace this line by that"
 
 ### Verify imports
 - **Severity: CRITICAL**

@@ -814,4 +814,12 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
         }
         return $this;
     }
+
+    /**
+     * @return Collection<int, Formation>
+     */
+    public function getFormations(): Collection
+    {
+        return $this->formations;
+    }
 }

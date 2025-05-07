@@ -163,16 +163,6 @@ const StudentDashboard = () => {
   // Cartes principales
   const mainCards = [
     {
-      title: 'Emploi du temps',
-      description: 'Consultez votre planning de cours',
-      icon: Calendar,
-      color: 'from-blue-500 to-blue-600',
-      textColor: 'text-blue-50',
-      link: '/student/schedule',
-      stats: '3 cours aujourd\'hui',
-      progress: 75
-    },
-    {
       title: 'Ma formation',
       description: myFormation
         ? `Vous êtes inscrit à : ${myFormation.name}`
@@ -183,6 +173,16 @@ const StudentDashboard = () => {
       link: '/student/formation',
       stats: myFormation ? myFormation.name : 'Non inscrit',
       progress: myFormation ? 100 : 0
+    },
+    {
+      title: 'Emploi du temps',
+      description: 'Consultez votre planning de cours',
+      icon: Calendar,
+      color: 'from-blue-500 to-blue-600',
+      textColor: 'text-blue-50',
+      link: '/student/schedule',
+      stats: '3 cours aujourd\'hui',
+      progress: 75
     },
     {
       title: 'Notes et résultats',
@@ -203,16 +203,6 @@ const StudentDashboard = () => {
       link: '/student/absences',
       stats: '98% de présence',
       progress: 98
-    },
-    {
-      title: 'Projets',
-      description: 'Vos projets en cours et à venir',
-      icon: FolderGit2,
-      color: 'from-purple-500 to-purple-600',
-      textColor: 'text-purple-50',
-      link: '/student/projects',
-      stats: '2 projets en cours',
-      progress: 65
     }
   ];
 
@@ -280,6 +270,19 @@ const StudentDashboard = () => {
       headerTitle="Tableau de bord étudiant"
     >
       <div className="container mx-auto px-4 py-6 space-y-8">
+        {/* Bouton accès absences par utilisateur */}
+        {(user?.id || userProfile?.id) && (
+          <div className="flex justify-end mb-4">
+            <Link
+              to={`/absences/user/${user?.id || userProfile?.id}`}
+              className="inline-block"
+            >
+              <Button variant="secondary" className="bg-amber-500 text-white hover:bg-amber-600">
+                Voir mes absences
+              </Button>
+            </Link>
+          </div>
+        )}
         {/* Cartes principales */}
         <motion.div 
           variants={containerVariants}

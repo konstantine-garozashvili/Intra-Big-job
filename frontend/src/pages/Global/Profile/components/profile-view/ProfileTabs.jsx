@@ -78,7 +78,7 @@ const ProfileTabs = ({ userData, isPublicProfile = false, documents = [] }) => {
             <TabsTrigger 
               value="about" 
               className="relative overflow-hidden 
-                data-[state=active]:bg-primary/10
+                data-[state=active]:bg-transparent !bg-transparent
                 data-[state=active]:text-primary
                 py-2.5 transition-all duration-200 
                 text-slate-400
@@ -103,7 +103,7 @@ const ProfileTabs = ({ userData, isPublicProfile = false, documents = [] }) => {
               <TabsTrigger 
                 value="experience" 
                 className="relative overflow-hidden 
-                  data-[state=active]:bg-primary/10
+                  data-[state=active]:bg-transparent !bg-transparent
                   data-[state=active]:text-primary
                   py-2.5 transition-all duration-200 
                   text-slate-400

@@ -154,7 +154,13 @@ const FormationTeachersSection = ({ formationId }) => {
     // Mise à jour optimiste de l'UI
     setFormationTeachers(prev => prev.filter(ft => ft.id !== id));
     if (teacherToRemove?.user) {
-      setAvailableTeachers(prev => [...prev, teacherToRemove.user]);
+      setAvailableTeachers(prev => {
+        // On ajoute seulement si l'id n'est pas déjà présent
+        if (prev.some(t => t.id === teacherToRemove.user.id)) {
+          return prev;
+        }
+        return [...prev, teacherToRemove.user];
+      });
     }
 
     try {
@@ -207,11 +213,17 @@ const FormationTeachersSection = ({ formationId }) => {
                   <SelectValue placeholder="Choisir un enseignant" />
                 </SelectTrigger>
                 <SelectContent>
-                  {filteredAvailableTeachers.map((teacher) => (
-                    <SelectItem key={teacher.id} value={String(teacher.id)}>
-                      {teacher.firstName} {teacher.lastName}
+                  {filteredAvailableTeachers.length === 0 ? (
+                    <SelectItem disabled value="no-teacher">
+                      Aucun enseignant disponible
                     </SelectItem>
-                  ))}
+                  ) : (
+                    filteredAvailableTeachers.map((teacher) => (
+                      <SelectItem key={`teacher-${teacher.id}`} value={String(teacher.id)}>
+                        {teacher.firstName} {teacher.lastName}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -226,7 +238,7 @@ const FormationTeachersSection = ({ formationId }) => {
             </div>
             <Button
               onClick={handleAddTeacher}
-              disabled={!selectedTeacherId || isLoading || isCreating}
+              disabled={!selectedTeacherId || isLoading || isCreating || filteredAvailableTeachers.length === 0}
             >
               {isCreating ? (
                 <>

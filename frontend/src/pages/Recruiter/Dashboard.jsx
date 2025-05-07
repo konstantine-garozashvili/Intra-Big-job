@@ -111,31 +111,7 @@ const RecruiterDashboard = () => {
       color: 'from-yellow-500 to-yellow-600',
       textColor: 'text-yellow-50',
       link: '/recruiter/formation-management',
-    },
-    {
-      title: 'Étudiants invités',
-      description: 'Gérer les étudiants invités',
-      icon: Users,
-      color: 'from-blue-500 to-blue-600',
-      textColor: 'text-blue-50',
-      link: '/recruiter/guest-students',
-    },
-    {
-      title: 'Événements',
-      description: 'Gérer les événements',
-      icon: Calendar,
-      color: 'from-green-500 to-green-600',
-      textColor: 'text-green-50',
-      link: '/recruiter/events',
-    },
-    {
-      title: 'Offres',
-      description: "Gérer les offres d'emploi",
-      icon: Briefcase,
-      color: 'from-purple-500 to-purple-600',
-      textColor: 'text-purple-50',
-      link: '/recruiter/offers',
-    },
+    }
   ];
 
   return (
@@ -160,7 +136,7 @@ const RecruiterDashboard = () => {
               <Link to={card.link} className="block h-full">
                 <div className="relative h-full overflow-hidden rounded-xl shadow-sm hover:shadow-md transition-all duration-300 group">
                   <div className={`absolute inset-0 bg-gradient-to-br ${card.color} opacity-90 group-hover:opacity-100 transition-opacity`}></div>
-                  <div className="relative p-5 h-full flex flex-col">
+                  <div className="relative p-5 h-full flex flex-col justify-between">
                     <div className="flex items-center justify-between mb-4">
                       <div className="p-2.5 rounded-lg bg-white/20 backdrop-blur-sm">
                         <card.icon className="w-5 h-5 text-white" />
@@ -173,7 +149,7 @@ const RecruiterDashboard = () => {
                     <h2 className="text-xl font-semibold text-white mb-1">
                       {card.title}
                     </h2>
-                    <p className="text-white/80 text-sm mb-4">
+                    <p className="text-white/80 text-sm">
                       {card.description}
                     </p>
                   </div>
