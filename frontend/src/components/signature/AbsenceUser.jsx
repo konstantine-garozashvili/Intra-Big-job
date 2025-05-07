@@ -15,17 +15,24 @@ const AbsenceUser = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [absences, setAbsences] = useState([]);
+  const [totalAbsences, setTotalAbsences] = useState(0);
+  const [limit] = useState(10);
+  const [offset, setOffset] = useState(0);
 
-  const fetchAbsences = async () => {
+  const fetchAbsences = async (newOffset = offset) => {
     setLoading(true);
     setError(null);
     try {
       const res = await signatureService.getAbsencesByUser(userId, {
         formationId: formationId || undefined,
         date: date || undefined,
-        period: period || undefined
+        period: period || undefined,
+        limit,
+        offset: newOffset
       });
       setAbsences(res.absences || []);
+      setTotalAbsences(res.totalAbsences || 0);
+      setOffset(res.offset || 0);
     } catch (e) {
       setError(e.message || 'Erreur lors du chargement des absences');
     } finally {
@@ -34,9 +41,23 @@ const AbsenceUser = () => {
   };
 
   useEffect(() => {
-    fetchAbsences();
+    setOffset(0);
+    fetchAbsences(0);
     // eslint-disable-next-line
   }, [userId, formationId, date, period]);
+
+  const handlePrevPage = () => {
+    if (offset - limit >= 0) {
+      fetchAbsences(offset - limit);
+    }
+  };
+  const handleNextPage = () => {
+    if (offset + limit < totalAbsences) {
+      fetchAbsences(offset + limit);
+    }
+  };
+  const currentPage = Math.floor(offset / limit) + 1;
+  const totalPages = Math.ceil(totalAbsences / limit);
 
   return (
     <div className="max-w-2xl mx-auto p-4">
@@ -57,11 +78,11 @@ const AbsenceUser = () => {
             {periods.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
           </select>
         </div>
-        <button onClick={fetchAbsences} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Rafraîchir</button>
+        <button onClick={() => fetchAbsences(0)} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Rafraîchir</button>
       </div>
       {loading && <div className="my-4">Chargement...</div>}
       {error && <div className="my-4 text-red-600">{error}</div>}
-      <div className="mb-2 text-sm text-gray-600">Total absences : {absences.length}</div>
+      <div className="mb-2 text-sm text-gray-600">Total absences : {totalAbsences}</div>
       <table className="w-full border mt-2">
         <thead>
           <tr className="bg-gray-100">
@@ -84,6 +105,11 @@ const AbsenceUser = () => {
           )}
         </tbody>
       </table>
+      <div className="flex items-center justify-between mt-4">
+        <button onClick={handlePrevPage} disabled={offset === 0} className="px-3 py-1 rounded bg-gray-200 disabled:opacity-50">Précédent</button>
+        <span className="text-sm">Page {currentPage} / {totalPages}</span>
+        <button onClick={handleNextPage} disabled={offset + limit >= totalAbsences} className="px-3 py-1 rounded bg-gray-200 disabled:opacity-50">Suivant</button>
+      </div>
     </div>
   );
 };

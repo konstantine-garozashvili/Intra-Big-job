@@ -15,14 +15,24 @@ const AbsenceFormation = () => {
   const [error, setError] = useState(null);
   const [absents, setAbsents] = useState([]);
   const [studentCount, setStudentCount] = useState(0);
+  const [totalAbsents, setTotalAbsents] = useState(0);
+  const [limit] = useState(10);
+  const [offset, setOffset] = useState(0);
 
-  const fetchAbsences = async () => {
+  const fetchAbsences = async (newOffset = offset) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await signatureService.getAbsencesByFormation(formationId, { date, period });
+      const res = await signatureService.getAbsencesByFormation(formationId, {
+        date,
+        period,
+        limit,
+        offset: newOffset
+      });
       setAbsents(res.absents || []);
       setStudentCount(res.studentCount || 0);
+      setTotalAbsents(res.totalAbsents || 0);
+      setOffset(res.offset || 0);
     } catch (e) {
       setError(e.message || 'Erreur lors du chargement des absences');
     } finally {
@@ -31,9 +41,23 @@ const AbsenceFormation = () => {
   };
 
   useEffect(() => {
-    fetchAbsences();
+    setOffset(0);
+    fetchAbsences(0);
     // eslint-disable-next-line
   }, [formationId, date, period]);
+
+  const handlePrevPage = () => {
+    if (offset - limit >= 0) {
+      fetchAbsences(offset - limit);
+    }
+  };
+  const handleNextPage = () => {
+    if (offset + limit < totalAbsents) {
+      fetchAbsences(offset + limit);
+    }
+  };
+  const currentPage = Math.floor(offset / limit) + 1;
+  const totalPages = Math.ceil(totalAbsents / limit);
 
   return (
     <div className="max-w-2xl mx-auto p-4">
@@ -49,11 +73,11 @@ const AbsenceFormation = () => {
             {periods.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
           </select>
         </div>
-        <button onClick={fetchAbsences} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Rafraîchir</button>
+        <button onClick={() => fetchAbsences(0)} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Rafraîchir</button>
       </div>
       {loading && <div className="my-4">Chargement...</div>}
       {error && <div className="my-4 text-red-600">{error}</div>}
-      <div className="mb-2 text-sm text-gray-600">Total étudiants : {studentCount} | Absents : {absents.length}</div>
+      <div className="mb-2 text-sm text-gray-600">Total étudiants : {studentCount} | Absents : {totalAbsents}</div>
       <table className="w-full border mt-2">
         <thead>
           <tr className="bg-gray-100">
@@ -76,6 +100,11 @@ const AbsenceFormation = () => {
           )}
         </tbody>
       </table>
+      <div className="flex items-center justify-between mt-4">
+        <button onClick={handlePrevPage} disabled={offset === 0} className="px-3 py-1 rounded bg-gray-200 disabled:opacity-50">Précédent</button>
+        <span className="text-sm">Page {currentPage} / {totalPages}</span>
+        <button onClick={handleNextPage} disabled={offset + limit >= totalAbsents} className="px-3 py-1 rounded bg-gray-200 disabled:opacity-50">Suivant</button>
+      </div>
     </div>
   );
 };

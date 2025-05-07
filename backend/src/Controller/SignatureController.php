@@ -441,6 +441,10 @@ class SignatureController extends AbstractController
             $period = Signature::PERIOD_MORNING;
         }
 
+        // Pagination params
+        $limit = (int) $request->query->get('limit', 20);
+        $offset = (int) $request->query->get('offset', 0);
+
         // Récupérer la formation et les étudiants
         $formation = $this->entityManager->getRepository(\App\Entity\Formation::class)->find($formationId);
         if (!$formation) {
@@ -476,14 +480,19 @@ class SignatureController extends AbstractController
                 ];
             }
         }
+        $totalAbsents = count($absents);
+        $absentsPage = array_slice($absents, $offset, $limit);
         return $this->json([
             'success' => true,
             'formationId' => $formationId,
             'date' => $date,
             'period' => $period,
-            'absents' => $absents,
-            'absentCount' => count($absents),
+            'absents' => $absentsPage,
+            'absentCount' => count($absentsPage),
+            'totalAbsents' => $totalAbsents,
             'studentCount' => count($students),
+            'limit' => $limit,
+            'offset' => $offset,
         ]);
     }
 
@@ -511,6 +520,10 @@ class SignatureController extends AbstractController
         if ($period && !in_array($period, [Signature::PERIOD_MORNING, Signature::PERIOD_AFTERNOON], true)) {
             return $this->json(['message' => 'Invalid period'], Response::HTTP_BAD_REQUEST);
         }
+
+        // Pagination params
+        $limit = (int) $request->query->get('limit', 20);
+        $offset = (int) $request->query->get('offset', 0);
 
         // Récupérer l'utilisateur cible
         $user = $this->entityManager->getRepository(\App\Entity\User::class)->find($userId);
@@ -588,11 +601,16 @@ class SignatureController extends AbstractController
                 }
             }
         }
+        $totalAbsences = count($absences);
+        $absencesPage = array_slice($absences, $offset, $limit);
         return $this->json([
             'success' => true,
             'userId' => $userId,
-            'absences' => $absences,
-            'absenceCount' => count($absences),
+            'absences' => $absencesPage,
+            'absenceCount' => count($absencesPage),
+            'totalAbsences' => $totalAbsences,
+            'limit' => $limit,
+            'offset' => $offset,
         ]);
     }
 }
