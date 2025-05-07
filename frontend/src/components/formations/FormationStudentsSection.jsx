@@ -215,8 +215,12 @@ export default function FormationStudentsSection({ formationId }) {
                   const initials = `${student.firstName?.[0] || ''}${student.lastName?.[0] || ''}`.toUpperCase();
                   return (
                     <li key={`${student.id}-${student.email}`} className="py-3 flex items-center gap-4 group hover:bg-gray-100 rounded-xl transition">
-                      <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center font-bold text-[#2563eb] text-lg border-2 border-gray-300">
-                        {initials}
+                      <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center font-bold text-[#2563eb] text-xl border-2 border-gray-300">
+                        {student.profilePictureUrl ? (
+                          <img src={student.profilePictureUrl} alt={`${student.firstName} ${student.lastName}`} className="w-full h-full object-cover rounded-full" />
+                        ) : (
+                          initials
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-[#60a5fa] truncate">{student.firstName} {student.lastName}</div>
@@ -269,8 +273,12 @@ export default function FormationStudentsSection({ formationId }) {
                     const initials = `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase();
                     return (
                       <li key={user.id} className="py-2 flex items-center gap-4 group hover:bg-gray-100 rounded-xl transition">
-                        <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center font-bold text-[#2563eb] text-base border-2 border-gray-300">
-                          {initials}
+                        <div className="w-11 h-11 rounded-full bg-gray-200 flex items-center justify-center font-bold text-[#2563eb] text-lg border-2 border-gray-300">
+                          {user.profilePictureUrl ? (
+                            <img src={user.profilePictureUrl} alt={`${user.firstName} ${user.lastName}`} className="w-full h-full object-cover rounded-full" />
+                          ) : (
+                            initials
+                          )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="font-medium text-[#60a5fa] truncate">{user.firstName} {user.lastName}</div>
