@@ -1,69 +1,75 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { Card } from '@/components/ui/card';
-import { Loader2, Calendar, Users, Clock, MapPin, ChevronDown } from 'lucide-react';
-import apiService from '@/lib/services/apiService';
+import { Loader2, Calendar, Users, Clock, MapPin, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useRolePermissions } from '@/features/roles';
 import { motion } from 'framer-motion';
 import Masonry from 'react-masonry-css';
-
-const SORT_OPTIONS = [
-  { value: 'newest', label: 'Nouveautés' },
-  { value: 'oldest', label: 'Plus anciennes' },
-  { value: 'name', label: 'Nom (A-Z)' },
-  { value: 'capacity', label: 'Capacité' },
-];
+import { formationService } from '@/services/formation.service';
 
 export default function AllFormations() {
   const [formations, setFormations] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [sortBy, setSortBy] = useState('newest');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [error, setError] = useState(null);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    limit: 9,
+    total: 0
+  });
+  const searchRef = useRef(null);
+  const listRef = useRef(null);
   const navigate = useNavigate();
   const permissions = useRolePermissions();
 
   useEffect(() => {
-    const fetchFormations = async () => {
-      setLoading(true);
-      try {
-        const res = await apiService.get('/api/formations');
-        let formationsArray = [];
-        if (res && res.success && Array.isArray(res.data)) {
-          formationsArray = res.data;
-        } else if (res && res.success && res.data && Array.isArray(res.data.formations)) {
-          formationsArray = res.data.formations;
-        } else if (Array.isArray(res)) {
-          formationsArray = res;
-        }
-        setFormations(formationsArray);
-      } catch (err) {
-        setFormations([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchFormations();
-  }, []);
+    const delayDebounceFn = setTimeout(() => {
+      setPagination(prev => ({ ...prev, currentPage: 1 }));
+      fetchFormations(1);
+    }, 300);
+    return () => clearTimeout(delayDebounceFn);
+    // eslint-disable-next-line
+  }, [searchTerm]);
 
-  const sortedFormations = useMemo(() => {
-    let arr = [...formations];
-    switch (sortBy) {
-      case 'oldest':
-        arr.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-        break;
-      case 'name':
-        arr.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-        break;
-      case 'capacity':
-        arr.sort((a, b) => (b.capacity || 0) - (a.capacity || 0));
-        break;
-      case 'newest':
-      default:
-        arr.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        break;
+  useEffect(() => {
+    fetchFormations(pagination.currentPage);
+    // eslint-disable-next-line
+  }, [pagination.currentPage]);
+
+  useEffect(() => {
+    if (listRef.current) {
+      listRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-    return arr;
-  }, [formations, sortBy]);
+  }, [pagination.currentPage]);
+
+  const fetchFormations = async (page = 1) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await formationService.getAllFormations(page, pagination.limit, searchTerm);
+      setFormations(data.formations);
+      setPagination(data.pagination || {
+        currentPage: page,
+        totalPages: 1,
+        limit: pagination.limit,
+        total: data.formations.length
+      });
+    } catch (err) {
+      setFormations([]);
+      setError('Erreur lors du chargement des formations.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= pagination.totalPages) {
+      setPagination(prev => ({ ...prev, currentPage: newPage }));
+    }
+  };
 
   const breakpointColumnsObj = {
     default: 3,
@@ -72,96 +78,137 @@ export default function AllFormations() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto py-10 px-2 md:px-0">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-10 gap-4">
-        <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white drop-shadow-lg tracking-tight">Toutes les formations</h1>
-        <div className="relative inline-block">
-          <select
-            className="appearance-none bg-white dark:bg-blue-900 text-gray-900 dark:text-white px-6 py-2 rounded-xl border border-[#2563eb] shadow focus:outline-none focus:ring-2 focus:ring-blue-400 transition font-semibold"
-            value={sortBy}
-            onChange={e => setSortBy(e.target.value)}
-          >
-            {SORT_OPTIONS.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-[#2563eb] dark:text-white pointer-events-none" size={22} />
+    <div>
+      <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
+        <h2 className="text-2xl font-bold tracking-tight text-primary drop-shadow">Liste des Formations</h2>
+        <div className="flex items-center gap-4 w-full md:w-auto">
+          <div className="relative flex-1 md:flex-initial">
+            <input
+              type="text"
+              placeholder="Rechercher une formation..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              ref={searchRef}
+              className="pl-10 pr-4 py-2 w-full md:w-[300px] rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+            />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          </div>
+          <Link to="/formations/new">
+            <Button className="bg-gradient-to-r from-blue-600 to-cyan-400 text-white shadow-lg hover:from-blue-700 hover:to-cyan-500 transition">
+              Nouvelle Formation
+            </Button>
+          </Link>
         </div>
       </div>
+      <div ref={listRef} />
       {loading ? (
         <div className="flex justify-center items-center py-24">
           <Loader2 className="animate-spin w-10 h-10 text-blue-300" />
         </div>
+      ) : error ? (
+        <div className="text-center text-red-500 py-8">{error}</div>
       ) : (
-        <Masonry
-          breakpointCols={breakpointColumnsObj}
-          className="flex gap-8"
-          columnClassName="masonry-column"
-        >
-          {Array.isArray(sortedFormations) && sortedFormations.length === 0 ? (
-            <div className="text-center text-gray-300 col-span-2">Aucune formation trouvée.</div>
-          ) : (
-            Array.isArray(sortedFormations) && sortedFormations.map((f, idx) => (
-              <motion.div
-                key={f.id}
-                initial={{ opacity: 0, y: 40 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.08, duration: 0.6, type: 'spring', stiffness: 120 }}
-                whileHover={{ scale: 1.03, boxShadow: '0 8px 32px 0 rgba(82, 142, 178, 0.10)' }}
-                className="mb-8"
-              >
-                <Card
-                  className="relative rounded-2xl overflow-hidden bg-white border border-gray-200 shadow-md hover:shadow-lg transition-all cursor-pointer group"
-                  onClick={() => {
-                    if (permissions.isRecruiter()) {
-                      navigate(`/recruiter/formation-management/${f.id}`);
-                    } else {
-                      navigate(`/admin/formations/${f.id}`);
-                    }
-                  }}
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {Array.isArray(formations) && formations.length === 0 ? (
+              <div className="text-center text-gray-300 col-span-2">Aucune formation trouvée.</div>
+            ) : (
+              Array.isArray(formations) && formations.map((f, idx) => (
+                <motion.div
+                  key={f.id}
+                  initial={{ opacity: 0, y: 40 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.08, duration: 0.6, type: 'spring', stiffness: 120 }}
+                  whileHover={{ scale: 1.03, boxShadow: '0 8px 32px 0 rgba(82, 142, 178, 0.10)' }}
+                  className="flex"
                 >
-                  <div className="w-full h-48 bg-gray-50 flex items-center justify-center overflow-hidden border-b border-gray-100">
-                    <img
-                      src={f.image_url || '/placeholder.svg'}
-                      alt={f.name}
-                      className="object-cover w-full h-full"
-                    />
-                  </div>
-                  <div className="p-6 z-20 relative">
-                    <div className="flex flex-wrap gap-2 mb-2">
-                      <Badge className="bg-[#528eb2]/10 text-[#528eb2] border border-[#528eb2]/30 font-medium">{f.specialization?.name || 'Formation'}</Badge>
-                      <Badge variant="outline" className="border-[#528eb2]/40 text-[#528eb2] bg-white">{f.promotion || 'N/A'}</Badge>
+                  <Card
+                    className="relative rounded-2xl overflow-hidden bg-white border border-gray-200 shadow-md hover:shadow-lg transition-all cursor-pointer group flex flex-col w-full h-[420px]"
+                    onClick={() => {
+                      navigate(`/formations/edit/${f.id}`);
+                    }}
+                  >
+                    <div className="w-full h-48 bg-gray-50 flex items-center justify-center overflow-hidden border-b border-gray-100">
+                      <img
+                        src={f.image_url || '/placeholder.svg'}
+                        alt={f.name}
+                        className="object-cover w-full h-full"
+                      />
                     </div>
-                    <h2 className="text-xl font-bold text-gray-900 mb-1 truncate" title={f.name}>{f.name}</h2>
-                    <p className="text-gray-700 text-sm mb-3 min-h-[40px] truncate" title={f.description}>{f.description || 'Aucune description.'}</p>
-                    <div className="flex flex-wrap gap-4 text-gray-500 text-xs mb-3">
-                      <div className="flex items-center gap-1"><Calendar className="w-4 h-4 text-[#528eb2]" />{f.dateStart ? new Date(f.dateStart).toLocaleDateString() : 'N/A'}</div>
-                      <div className="flex items-center gap-1"><Clock className="w-4 h-4 text-[#528eb2]" />{f.duration ? `${f.duration} mois` : 'N/A'}</div>
-                      <div className="flex items-center gap-1"><Users className="w-4 h-4 text-[#528eb2]" />Capacité: {f.capacity || 'N/A'}</div>
-                      {f.location && <div className="flex items-center gap-1"><MapPin className="w-4 h-4 text-[#528eb2]" />{f.location}</div>}
+                    <div className="p-6 z-20 relative flex flex-col flex-1 min-h-0">
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        <Badge className="bg-[#528eb2]/10 text-[#528eb2] border border-[#528eb2]/30 font-medium">{f.specialization?.name || 'Formation'}</Badge>
+                        <Badge variant="outline" className="border-[#528eb2]/40 text-[#528eb2] bg-white">{f.promotion || 'N/A'}</Badge>
+                      </div>
+                      <h2
+                        className="text-xl font-bold text-gray-900 mb-1 line-clamp-2 min-h-[2.5em]"
+                        title={f.name}
+                        style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
+                      >
+                        {f.name}
+                      </h2>
+                      <p
+                        className="text-gray-700 text-sm mb-3 min-h-[40px] line-clamp-2"
+                        title={f.description}
+                        style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
+                      >
+                        {f.description || 'Aucune description.'}
+                      </p>
+                      <div className="flex flex-wrap gap-4 text-gray-500 text-xs mb-3">
+                        <div className="flex items-center gap-1"><Calendar className="w-4 h-4 text-[#528eb2]" />{f.dateStart ? new Date(f.dateStart).toLocaleDateString() : 'N/A'}</div>
+                        <div className="flex items-center gap-1"><Clock className="w-4 h-4 text-[#528eb2]" />{f.duration ? `${f.duration} mois` : 'N/A'}</div>
+                        <div className="flex items-center gap-1"><Users className="w-4 h-4 text-[#528eb2]" />Capacité: {f.capacity || 'N/A'}</div>
+                        {f.location && <div className="flex items-center gap-1"><MapPin className="w-4 h-4 text-[#528eb2]" />{f.location}</div>}
+                      </div>
+                      {f.createdAt && (
+                        <div className="text-xs text-gray-400 mt-1">Créée le {new Date(f.createdAt).toLocaleDateString()}</div>
+                      )}
+                      <button
+                        className="absolute right-6 bottom-6 border border-[#528eb2] text-[#528eb2] px-5 py-2 rounded-full font-semibold bg-white hover:bg-[#528eb2] hover:text-white shadow transition-all opacity-0 group-hover:opacity-100 group-hover:translate-y-0 translate-y-4 duration-300"
+                        onClick={e => {
+                          e.stopPropagation();
+                          navigate(`/formations/edit/${f.id}`);
+                        }}
+                      >
+                        Voir détails
+                      </button>
                     </div>
-                    {f.createdAt && (
-                      <div className="text-xs text-gray-400 mt-1">Créée le {new Date(f.createdAt).toLocaleDateString()}</div>
-                    )}
-                    <button
-                      className="absolute right-6 bottom-6 border border-[#528eb2] text-[#528eb2] px-5 py-2 rounded-full font-semibold bg-white hover:bg-[#528eb2] hover:text-white shadow transition-all opacity-0 group-hover:opacity-100 group-hover:translate-y-0 translate-y-4 duration-300"
-                      onClick={e => {
-                        e.stopPropagation();
-                        if (permissions.isRecruiter()) {
-                          navigate(`/recruiter/formation-management/${f.id}`);
-                        } else {
-                          navigate(`/admin/formations/${f.id}`);
-                        }
-                      }}
-                    >
-                      Voir détails
-                    </button>
-                  </div>
-                </Card>
-              </motion.div>
-            ))
-          )}
-        </Masonry>
+                  </Card>
+                </motion.div>
+              ))
+            )}
+          </div>
+          {/* Pagination Controls */}
+          <div className="mt-4 flex items-center justify-between px-4">
+            <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+              <span>
+                Page {pagination.currentPage} sur {pagination.totalPages} ({pagination.total} formations)
+              </span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(pagination.currentPage - 1)}
+                disabled={pagination.currentPage === 1}
+                className="flex items-center gap-1"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                Précédent
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(pagination.currentPage + 1)}
+                disabled={pagination.currentPage >= pagination.totalPages}
+                className="flex items-center gap-1"
+              >
+                Suivant
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </>
       )}
       <style>{`
         .masonry-column {
