@@ -8,13 +8,14 @@ import { Textarea } from '../ui/textarea';
 import { toast } from 'sonner';
 import { Card, CardHeader, CardTitle } from '../ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Upload, Trash2, Info, Calendar, Users, Image as ImageIcon, BookOpen, MapPin } from 'lucide-react';
+import { Upload, Trash2, Info, Calendar, Users, Image as ImageIcon, BookOpen, MapPin, ArrowLeft } from 'lucide-react';
 import FormationTeachersSection from './FormationTeachersSection';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
 import { Separator } from '../ui/separator';
 import { cn } from '../../lib/utils';
 import { Badge } from '../ui/badge';
 import { motion } from 'framer-motion';
+import FormationStudentsSection from './FormationStudentsSection';
 
 const EditFormationForm = () => {
   const navigate = useNavigate();
@@ -240,6 +241,18 @@ const EditFormationForm = () => {
 
   return (
     <div className="w-full max-w-5xl mx-auto px-2 sm:px-6 lg:px-8 py-10 min-h-[90vh]">
+      {/* Bouton retour en haut à gauche */}
+      <div className="mb-4 flex items-center">
+        <Button
+          type="button"
+          variant="ghost"
+          className="flex items-center gap-2 text-blue-700 hover:bg-blue-50 font-semibold shadow-none px-3 py-2 rounded-lg"
+          onClick={() => navigate('/formation-management')}
+        >
+          <ArrowLeft className="w-5 h-5" />
+          <span>Retour</span>
+        </Button>
+      </div>
       <Card className="overflow-hidden w-full shadow-2xl">
         <CardHeader className="px-6 py-6 bg-gradient-to-r from-blue-700 to-cyan-500 text-white border-b-0">
           <div className="flex items-center gap-3">
@@ -253,6 +266,7 @@ const EditFormationForm = () => {
             <TabsList className="flex gap-4 mb-8 bg-transparent">
               <TabsTrigger value="informations" className="text-lg font-semibold px-6 py-2 rounded-md bg-white/80 dark:bg-gray-800/80 shadow hover:bg-blue-100 dark:hover:bg-gray-700 transition-colors data-[state=active]:bg-blue-600 data-[state=active]:text-white">Informations</TabsTrigger>
               <TabsTrigger value="teachers" className="text-lg font-semibold px-6 py-2 rounded-md bg-white/80 dark:bg-gray-800/80 shadow hover:bg-blue-100 dark:hover:bg-gray-700 transition-colors data-[state=active]:bg-blue-600 data-[state=active]:text-white">Enseignants</TabsTrigger>
+              <TabsTrigger value="students" className="text-lg font-semibold px-6 py-2 rounded-md bg-white/80 dark:bg-gray-800/80 shadow hover:bg-blue-100 dark:hover:bg-gray-700 transition-colors data-[state=active]:bg-blue-600 data-[state=active]:text-white">Étudiants</TabsTrigger>
             </TabsList>
             <TabsContent value="informations" className="p-0 mt-0">
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="space-y-10">
@@ -351,6 +365,11 @@ const EditFormationForm = () => {
             <TabsContent value="teachers" className="p-0 mt-0">
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="relative rounded-b-xl p-6">
                 {formationId && <FormationTeachersSection formationId={formationId} />}
+              </motion.div>
+            </TabsContent>
+            <TabsContent value="students" className="p-0 mt-0">
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="relative rounded-b-xl p-6">
+                {formationId && <FormationStudentsSection formationId={formationId} />}
               </motion.div>
             </TabsContent>
           </Tabs>
