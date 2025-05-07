@@ -34,6 +34,7 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import RoleBadge from "@/components/ui/RoleBadge";
 import { ROLE_SOLID_COLORS } from "@/lib/constants/roles";
+import { Link } from 'react-router-dom';
 
 export function UserTable({ 
     paginatedUsers, 
@@ -131,18 +132,22 @@ export function UserTable({
                                 transition={{ duration: 0.3, delay: index * 0.05 }}
                             >
                                 <TableCell className="py-3">
-                                    <Avatar className={`h-9 w-9 ${getAvatarColorClass(user)}`}>
-                                        {user.profilePictureUrl ? (
-                                            <AvatarImage src={user.profilePictureUrl} alt={`${user.firstName} ${user.lastName}`} />
-                                        ) : null}
-                                        <AvatarFallback className={isDark ? 'text-gray-200 bg-gray-700' : ''}>
-                                            {getInitials(user.firstName, user.lastName)}
-                                        </AvatarFallback>
-                                    </Avatar>
+                                    <Link to={`/profile/${user.id}`} tabIndex={-1} onClick={e => e.stopPropagation()}>
+                                        <Avatar className={`h-9 w-9 ${getAvatarColorClass(user)}`}>
+                                            {user.profilePictureUrl ? (
+                                                <AvatarImage src={user.profilePictureUrl} alt={`${user.firstName} ${user.lastName}`} />
+                                            ) : null}
+                                            <AvatarFallback className={isDark ? 'text-gray-200 bg-gray-700' : ''}>
+                                                {getInitials(user.firstName, user.lastName)}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                    </Link>
                                 </TableCell>
                                 <TableCell className={`font-medium py-3 ${isDark ? 'text-gray-200' : ''}`}>
                                     <div className="flex flex-col">
-                                        <span>{user.firstName} {user.lastName}</span>
+                                        <Link to={`/profile/${user.id}`} className="hover:underline" onClick={e => e.stopPropagation()} tabIndex={-1}>
+                                            <span>{user.firstName} {user.lastName}</span>
+                                        </Link>
                                         {userHasSuperAdminRole(user) && (
                                             <span className={`text-xs ${isDark ? 'text-red-400' : 'text-red-600'} mt-1`}>SuperAdmin</span>
                                         )}
