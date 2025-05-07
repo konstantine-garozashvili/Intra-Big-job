@@ -214,6 +214,32 @@ class FormationEnrollmentRequestController extends AbstractController
         return $this->json(['message' => 'Demande supprimée'], Response::HTTP_NO_CONTENT);
     }
 
+    #[Route('/formation-requests/{id}/cancel', methods: ['DELETE'])]
+    #[IsGranted('ROLE_GUEST')]
+    public function cancelEnrollmentRequest(FormationEnrollmentRequest $request): Response
+    {
+        $user = $this->getUser();
+        
+        // Check if the request belongs to the current user
+        if ($request->getUser()->getId() !== $user->getId()) {
+            return $this->json([
+                'message' => 'Vous n\'êtes pas autorisé à annuler cette demande'
+            ], Response::HTTP_FORBIDDEN);
+        }
+
+        // Only allow cancellation of pending requests
+        if ($request->getStatus() !== null) {
+            return $this->json([
+                'message' => 'Seules les demandes en attente peuvent être annulées'
+            ], Response::HTTP_BAD_REQUEST);
+        }
+
+        $this->entityManager->remove($request);
+        $this->entityManager->flush();
+
+        return $this->json(['message' => 'Demande annulée avec succès'], Response::HTTP_OK);
+    }
+
     #[Route('/formations/{id}/enrollment-requests', methods: ['GET'])]
     #[\Symfony\Bundle\SecurityBundle\Attribute\Security("is_granted('ROLE_ADMIN') or is_granted('ROLE_RECRUITER')")]
     public function getEnrollmentRequestsForFormation(Formation $formation, Request $request): Response
