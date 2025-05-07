@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, UserCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 function getInitials(user) {
   if (!user) return '';
@@ -118,9 +119,11 @@ export default function EnrollmentRequests() {
                     {req.user.profilePictureUrl ? (
                       <img src={req.user.profilePictureUrl} alt={req.user.firstName} className="w-12 h-12 rounded-full object-cover border-2 border-yellow-300" />
                     ) : (
-                      <div className="w-12 h-12 rounded-full bg-yellow-300 dark:bg-yellow-800 flex items-center justify-center text-yellow-900 dark:text-yellow-100 font-bold text-xl">
-                        {getInitials(req.user)}
-                      </div>
+                      <Avatar className="h-12 w-12 border-2 border-yellow-300">
+                        <AvatarFallback className="bg-yellow-100 text-yellow-700 dark:bg-yellow-800 dark:text-yellow-100">
+                          {getInitials(req.user)}
+                        </AvatarFallback>
+                      </Avatar>
                     )}
                     <div>
                       <div className="font-semibold text-lg text-yellow-900 dark:text-yellow-100">{req.user.firstName} {req.user.lastName}</div>

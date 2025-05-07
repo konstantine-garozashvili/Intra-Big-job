@@ -15,16 +15,30 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use App\Domains\Student\Service\StudentProfileService;
+use App\Service\DocumentStorageFactory;
 
 #[Route('/api')]
 class FormationEnrollmentRequestController extends AbstractController
 {
+    private EntityManagerInterface $entityManager;
+    private FormationRepository $formationRepository;
+    private RoleRepository $roleRepository;
+    private StudentProfileService $studentProfileService;
+    private DocumentStorageFactory $documentStorageFactory;
+
     public function __construct(
-        private EntityManagerInterface $entityManager,
-        private FormationRepository $formationRepository,
-        private RoleRepository $roleRepository,
-        private StudentProfileService $studentProfileService
-    ) {}
+        EntityManagerInterface $entityManager,
+        FormationRepository $formationRepository,
+        RoleRepository $roleRepository,
+        StudentProfileService $studentProfileService,
+        DocumentStorageFactory $documentStorageFactory
+    ) {
+        $this->entityManager = $entityManager;
+        $this->formationRepository = $formationRepository;
+        $this->roleRepository = $roleRepository;
+        $this->studentProfileService = $studentProfileService;
+        $this->documentStorageFactory = $documentStorageFactory;
+    }
 
     #[Route('/formations/{id}/enroll', methods: ['POST'])]
     #[Route('/formations/{id}/enrollment-request', methods: ['POST'])]
@@ -76,6 +90,15 @@ class FormationEnrollmentRequestController extends AbstractController
 
         return $this->json([
             'requests' => array_map(function($request) {
+                $profilePictureUrl = null;
+                $profilePicturePath = $request->getUser()->getProfilePicturePath();
+                if ($profilePicturePath) {
+                    try {
+                        $profilePictureUrl = $this->documentStorageFactory->getDocumentUrl($profilePicturePath);
+                    } catch (\Exception $e) {
+                        $profilePictureUrl = null;
+                    }
+                }
                 return [
                     'id' => $request->getId(),
                     'formation' => [
@@ -86,7 +109,8 @@ class FormationEnrollmentRequestController extends AbstractController
                         'id' => $request->getUser()->getId(),
                         'email' => $request->getUser()->getEmail(),
                         'firstName' => $request->getUser()->getFirstName(),
-                        'lastName' => $request->getUser()->getLastName()
+                        'lastName' => $request->getUser()->getLastName(),
+                        'profilePictureUrl' => $profilePictureUrl
                     ],
                     'createdAt' => $request->getCreatedAt()->format('Y-m-d H:i:s')
                 ];
