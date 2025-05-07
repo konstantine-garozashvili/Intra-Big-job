@@ -226,7 +226,6 @@ export default function TrainingCarousel() {
                   <Card className="h-full flex flex-col bg-white dark:bg-slate-800 shadow-lg border-0 overflow-hidden rounded-lg transition-all duration-300 hover:shadow-xl hover:shadow-amber-200/30 dark:hover:shadow-amber-400/20 group">
                     <div className="relative aspect-[16/9] overflow-hidden">
                       <div className="absolute inset-0 bg-gradient-to-t from-[#02284f]/90 via-[#02284f]/50 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-4">
-                        <span className="text-white font-medium">Voir la formation</span>
                       </div>
                       <img
                         src={item.image_url || "/placeholder.svg"}
