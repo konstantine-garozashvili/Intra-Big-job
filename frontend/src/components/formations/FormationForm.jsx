@@ -9,6 +9,8 @@ import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Upload } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
+import { useRolePermissions } from '@/features/roles';
 
 const FormationForm = () => {
   const navigate = useNavigate();
@@ -26,6 +28,11 @@ const FormationForm = () => {
     specializationId: '',
     imageFile: null
   });
+  const permissions = useRolePermissions();
+  const [showAddSpecModal, setShowAddSpecModal] = useState(false);
+  const [domains, setDomains] = useState([]);
+  const [newSpec, setNewSpec] = useState({ name: '', domainId: '' });
+  const [addingSpec, setAddingSpec] = useState(false);
 
   useEffect(() => {
     const loadSpecializations = async () => {
@@ -48,6 +55,50 @@ const FormationForm = () => {
 
     loadSpecializations();
   }, []);
+
+  // Fetch domains for the modal
+  useEffect(() => {
+    if (!showAddSpecModal) return;
+    const fetchDomains = async () => {
+      try {
+        console.log('[FormationForm] Fetching domains');
+        const token = localStorage.getItem('token');
+        if (!token) {
+          console.error('[FormationForm] No token found');
+          toast.error('Session expirée. Veuillez vous reconnecter.');
+          return;
+        }
+
+        const res = await fetch('/api/domains', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!res.ok) {
+          console.error('[FormationForm] Error response:', res.status, res.statusText);
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        
+        const json = await res.json();
+        console.log('[FormationForm] Domains response:', json);
+        
+        if (json.success && json.data && Array.isArray(json.data.domains)) {
+          setDomains(json.data.domains);
+        } else {
+          console.error('[FormationForm] Unexpected domains data structure:', json);
+          setDomains([]);
+          toast.error('Structure de données de domaines inattendue');
+        }
+      } catch (e) {
+        console.error('[FormationForm] Error fetching domains:', e);
+        setDomains([]);
+        toast.error('Erreur lors du chargement des domaines');
+      }
+    };
+    fetchDomains();
+  }, [showAddSpecModal]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -115,6 +166,58 @@ const FormationForm = () => {
       toast.error(error.message || 'Erreur lors de la création de la formation');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAddSpecialization = async () => {
+    if (!newSpec.name || !newSpec.domainId) {
+      toast.error('Veuillez remplir tous les champs');
+      return;
+    }
+    setAddingSpec(true);
+    try {
+      console.log('[FormationForm] Adding new specialization:', newSpec);
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('[FormationForm] No token found');
+        toast.error('Session expirée. Veuillez vous reconnecter.');
+        return;
+      }
+
+      const res = await fetch('/api/specializations', {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify({ name: newSpec.name, domainId: newSpec.domainId })
+      });
+
+      if (!res.ok) {
+        console.error('[FormationForm] Error response:', res.status, res.statusText);
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+
+      const json = await res.json();
+      console.log('[FormationForm] Add specialization response:', json);
+
+      if (json.success && json.data && json.data.specialization) {
+        toast.success('Spécialisation ajoutée');
+        // Refresh specializations
+        const specializationsData = await formationService.getSpecializations();
+        setSpecializations(specializationsData);
+        setFormData(prev => ({ ...prev, specializationId: json.data.specialization.id.toString() }));
+        setShowAddSpecModal(false);
+        setNewSpec({ name: '', domainId: '' });
+      } else {
+        console.error('[FormationForm] Unexpected response structure:', json);
+        toast.error(json.message || 'Erreur lors de l\'ajout');
+      }
+    } catch (e) {
+      console.error('[FormationForm] Error adding specialization:', e);
+      toast.error('Erreur lors de l\'ajout');
+    } finally {
+      setAddingSpec(false);
     }
   };
 
@@ -284,6 +387,52 @@ const FormationForm = () => {
                     ))}
                   </SelectContent>
                 </Select>
+                {permissions.isAdmin() || permissions.isRecruiter() || permissions.isSuperadmin() ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-2 w-fit"
+                    onClick={() => setShowAddSpecModal(true)}
+                  >
+                    + Ajouter une spécialisation
+                  </Button>
+                ) : null}
+                <Dialog open={showAddSpecModal} onOpenChange={setShowAddSpecModal}>
+                  <DialogContent aria-describedby="add-spec-desc">
+                    <DialogHeader>
+                      <DialogTitle>Nouvelle spécialisation</DialogTitle>
+                      <p id="add-spec-desc" className="text-sm text-gray-500">Ajoutez une nouvelle spécialisation et associez-la à un domaine.</p>
+                    </DialogHeader>
+                    <div className="flex flex-col gap-4">
+                      <Label htmlFor="new-spec-name">Nom</Label>
+                      <Input
+                        id="new-spec-name"
+                        value={newSpec.name}
+                        onChange={e => setNewSpec(s => ({ ...s, name: e.target.value }))}
+                        placeholder="Nom de la spécialisation"
+                        disabled={addingSpec}
+                      />
+                      <Label htmlFor="new-spec-domain">Domaine</Label>
+                      <select
+                        id="new-spec-domain"
+                        className="border rounded px-3 py-2"
+                        value={newSpec.domainId}
+                        onChange={e => setNewSpec(s => ({ ...s, domainId: e.target.value }))}
+                        disabled={addingSpec}
+                      >
+                        <option value="">Sélectionnez un domaine</option>
+                        {domains.map(domain => (
+                          <option key={domain.id} value={domain.id}>{domain.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <DialogFooter className="mt-4 flex gap-2 justify-end">
+                      <Button type="button" variant="outline" onClick={() => setShowAddSpecModal(false)} disabled={addingSpec}>Annuler</Button>
+                      <Button type="button" onClick={handleAddSpecialization} disabled={addingSpec}>{addingSpec ? 'Ajout...' : 'Ajouter'}</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
             </div>
 
