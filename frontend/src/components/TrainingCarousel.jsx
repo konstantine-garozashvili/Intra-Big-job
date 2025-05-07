@@ -299,7 +299,7 @@ export default function TrainingCarousel() {
                       </p>
                       <MagicButton
                         className="w-full text-base font-medium bg-gradient-to-r from-amber-400 via-[#528eb2] to-[#78b9dd] hover:from-amber-400/10 hover:via-[#528eb2]/10 hover:to-[#78b9dd]/10 hover:text-amber-600 dark:hover:text-amber-300 transition-all duration-300"
-                        onClick={() => { if (!isProfileAcknowledged) setProfileDialogOpen(true); else handleSeeAllCourses(); }}
+                        onClick={handleSeeAllCourses}
                       >
                         Voir toutes les formations
                         <ChevronRight className="ml-2 h-5 w-5" />
@@ -307,17 +307,21 @@ export default function TrainingCarousel() {
                     </div>
                   </Card>
                 ) : (
-                  <Card className="h-full flex flex-col bg-white dark:bg-slate-800 shadow-lg border-0 overflow-hidden rounded-lg transition-all duration-300 hover:shadow-xl hover:shadow-amber-200/30 dark:hover:shadow-amber-400/20 group">
+                  <Card
+                    className="h-full flex flex-col bg-white dark:bg-slate-800 shadow-lg border-0 overflow-hidden rounded-lg transition-all duration-300 group cursor-pointer"
+                    onClick={() => navigate(`/formations/${item.id}`)}
+                  >
                     <div className="relative aspect-[16/9] overflow-hidden">
-                      <div className="absolute inset-0 bg-gradient-to-t from-[#02284f]/90 via-[#02284f]/50 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-4">
-                      </div>
                       <img
                         src={item.image_url || "/placeholder.svg"}
                         alt={item.name}
                         className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
                       />
+                      <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-t from-[#02284f]/90 via-[#02284f]/50 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <span className="text-white text-lg font-semibold drop-shadow-lg">Voir détail</span>
+                      </div>
                     </div>
-                    <CardContent className="flex-grow p-4 sm:p-6 transform transition-transform duration-300 group-hover:translate-y-[-4px]">
+                    <CardContent className="flex-grow p-4 sm:p-6">
                       <div className="flex flex-wrap gap-2 mb-3">
                         <Badge
                           className={`${badgeVariants[item.specialization?.name || 'default']} transition-all duration-300 text-xs sm:text-sm`}
@@ -328,24 +332,16 @@ export default function TrainingCarousel() {
                           {item.promotion}
                         </Badge>
                       </div>
-                      <h3 className="text-lg sm:text-xl font-bold mb-2 text-slate-800 dark:text-slate-100 transition-transform duration-300 group-hover:translate-x-1 line-clamp-2">
+                      <h3 className="text-lg sm:text-xl font-bold mb-2 text-slate-800 dark:text-slate-100 line-clamp-2">
                         {item.name}
                       </h3>
-                      <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm line-clamp-3 min-h-[3em]">
+                      <p className="text-gray-600 dark:text-gray-300 mb-2 text-sm line-clamp-3 min-h-[3em]">
                         {item.description || 'Aucune description disponible'}
                       </p>
-                      <div className="flex flex-col gap-2 mt-4 text-xs sm:text-sm">
+                      <div className="flex justify-between items-center mt-2 text-xs sm:text-sm w-full">
                         <div className="flex items-center gap-2 text-amber-600 dark:text-amber-300">
                           <Calendar className="h-4 w-4 flex-shrink-0" />
-                          <span className="truncate">Début le {new Date(item.date_start).toLocaleDateString()}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-[#528eb2] dark:text-[#78b9dd]">
-                          <Clock className="h-4 w-4 flex-shrink-0" />
-                          <span className="truncate">{item.duration} mois</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-amber-600 dark:text-amber-300">
-                          <Users className="h-4 w-4 flex-shrink-0" />
-                          <span className="truncate">Capacité: {item.capacity} étudiants</span>
+                          <span className="truncate">Début le {item.dateStart ? (item.dateStart instanceof Date ? item.dateStart.toLocaleDateString() : new Date(item.dateStart).toLocaleDateString()) : ''}</span>
                         </div>
                         {item.location && (
                           <div className="flex items-center gap-2 text-[#528eb2] dark:text-[#78b9dd]">
@@ -354,29 +350,13 @@ export default function TrainingCarousel() {
                           </div>
                         )}
                       </div>
-                      {/* Capacity Section (replace old static capacity) */}
-                      {(() => {
-                        const enrolledCount = Array.isArray(item.students) ? item.students.length : 0;
-                        const capacity = item.capacity || 0;
-                        const capacityStatus = getCapacityStatus(enrolledCount, capacity);
-                        return (
-                          <div className="mb-2">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="flex items-center gap-2 text-xs font-medium">
-                                <Users className="h-4 w-4 text-blue-500" />
-                                {enrolledCount} / {capacity} étudiants
-                              </span>
-                              <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-semibold ${capacityStatus.bgColor} ${capacityStatus.color}`}>{capacityStatus.text}</span>
-                            </div>
-                          </div>
-                        );
-                      })()}
                     </CardContent>
                     <CardFooter className="p-4 pt-0">
                       {requested[item.id] ? (
                         <Button
                           className="w-full text-sm sm:text-base font-medium bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-300 cursor-not-allowed flex items-center justify-center gap-2"
                           disabled
+                          onClick={e => e.stopPropagation()}
                         >
                           <Lock className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                           Demande envoyée
@@ -384,7 +364,8 @@ export default function TrainingCarousel() {
                       ) : (
                         <MagicButton
                           className="w-full text-sm sm:text-base font-medium bg-gradient-to-r from-amber-400 via-[#528eb2] to-[#78b9dd] hover:from-transparent hover:to-transparent hover:text-amber-600 dark:hover:text-white"
-                          onClick={() => {
+                          onClick={e => {
+                            e.stopPropagation();
                             if (!isProfileAcknowledged) {
                               setProfileDialogOpen(true);
                             } else {
@@ -410,7 +391,7 @@ export default function TrainingCarousel() {
         
           <div className="mt-10 flex justify-center">
             <Button
-              onClick={() => { if (!isProfileAcknowledged) setProfileDialogOpen(true); else handleSeeAllCourses(); }}
+              onClick={handleSeeAllCourses}
               className="bg-gradient-to-r from-amber-100 to-amber-50 dark:from-amber-900/30 dark:to-amber-800/20 text-amber-600 dark:text-amber-300 border-2 border-amber-400 dark:border-amber-500/50 hover:from-amber-500 hover:to-amber-400 hover:text-white dark:hover:from-amber-400 dark:hover:to-amber-500 dark:hover:text-white transition-all duration-300 px-8 py-6 text-lg font-medium rounded-md group shadow-lg hover:shadow-xl hover:shadow-amber-200/30 dark:hover:shadow-amber-400/20"
             >
               Voir toutes les formations
@@ -453,18 +434,48 @@ export default function TrainingCarousel() {
                 <div className="mb-4 text-base text-gray-700 dark:text-gray-200">
                   <span className="block mb-2">Oups, il te manque encore quelques infos pour pouvoir demander une formation :</span>
                   <ul className="list-disc pl-6 space-y-1 text-left">
-                    <li>Ajoute ton profil LinkedIn</li>
-                    <li>Dépose ton CV</li>
-                    <li>Ajoute au moins un diplôme</li>
+                    <li>
+                      <button
+                        type="button"
+                        className="underline text-blue-600 dark:text-blue-300 hover:text-blue-800 dark:hover:text-blue-100 transition-colors cursor-pointer p-0 bg-transparent border-0"
+                        onClick={() => {
+                          setProfileDialogOpen(false);
+                          navigate('/settings/profile');
+                        }}
+                      >
+                        Ajoute ton profil LinkedIn
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        type="button"
+                        className="underline text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 transition-colors cursor-pointer p-0 bg-transparent border-0"
+                        onClick={() => {
+                          setProfileDialogOpen(false);
+                          navigate('/settings/career');
+                        }}
+                      >
+                        Dépose ton CV
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        type="button"
+                        className="underline text-emerald-700 dark:text-emerald-300 hover:text-emerald-900 dark:hover:text-emerald-100 transition-colors cursor-pointer p-0 bg-transparent border-0"
+                        onClick={() => {
+                          setProfileDialogOpen(false);
+                          navigate('/settings/career');
+                        }}
+                      >
+                        Ajoute au moins un diplôme
+                      </button>
+                    </li>
                   </ul>
                   <span className="block mt-4">C'est rapide, et ça t'ouvrira toutes les portes 🚀</span>
                 </div>
               </DialogDescription>
             </DialogHeader>
             <DialogFooter className="w-full flex flex-col gap-2 mt-2">
-              <Button variant="outline" onClick={() => setProfileDialogOpen(false)} className="w-full">
-                Fermer
-              </Button>
               <Button asChild variant="default" className="w-full text-base font-semibold">
                 <a href="/settings/profile" className="text-primary" onClick={() => setProfileDialogOpen(false)}>
                   Compléter mon profil

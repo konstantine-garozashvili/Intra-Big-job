@@ -37,6 +37,7 @@ import { notificationService } from './lib/services/notificationService';
 import React from 'react';
 import AbsenceFormation from './components/signature/AbsenceFormation';
 import AbsenceUser from './components/signature/AbsenceUser';
+import FormationDetail from './pages/FormationDetail';
 
 // Export queryClient to be used elsewhere
 export { queryClient };
@@ -446,6 +447,9 @@ const App = () => {
                     {/* Absences par formation et par utilisateur */}
                     <Route path="/absences/formation/:formationId" element={<RoleGuard roles={[ROLES.TEACHER, ROLES.ADMIN, ROLES.SUPERADMIN]} fallback={<Navigate to="/dashboard" replace />}><AbsenceFormation /></RoleGuard>} />
                     <Route path="/absences/user/:userId" element={<RoleGuard roles={[ROLES.TEACHER, ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.STUDENT]} fallback={<Navigate to="/dashboard" replace />}><AbsenceUser /></RoleGuard>} />
+
+                    {/* Formation Detail Route */}
+                    <Route path="/formations/:id" element={<FormationDetail />} />
                   </Route>
                 </Route>
 

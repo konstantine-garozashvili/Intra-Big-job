@@ -15,6 +15,7 @@ import {
   DialogDescription,
   DialogFooter
 } from "@/components/ui/dialog";
+import { useNavigate } from 'react-router-dom';
 
 // Configuration des badges avec des couleurs plus inspirantes
 const badgeVariants = {
@@ -54,220 +55,34 @@ const FormationCard = ({ formation, viewMode }) => {
     name,
     promotion,
     image_url,
-    capacity,
-    duration,
-    dateStart,
-    description,
-    location,
     specialization,
-    students = []
+    description,
+    dateStart,
+    location
   } = formation;
 
-  const enrolledCount = students.length;
-  const capacityStatus = getCapacityStatus(enrolledCount, capacity);
-  const progressPercentage = Math.min((enrolledCount / capacity) * 100, 100);
-
-  // State pour gestion du bouton
   const [requested, setRequested] = useState(false);
   const [requesting, setRequesting] = useState(false);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const navigate = useNavigate ? useNavigate() : null;
 
-  // Fetch demandes existantes au chargement
-  useEffect(() => {
-    let isMounted = true;
-    async function fetchRequests() {
-      try {
-        const res = await fetch('/api/formation-requests/my', {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-        if (!res.ok) throw new Error('Erreur lors du chargement des demandes');
-        const data = await res.json();
-        const apiIds = (data.requests || []).map(r => r.formation.id);
-        const localIds = getLocalRequested();
-        if (isMounted) setRequested(apiIds.includes(id) || localIds.includes(id));
-      } catch {
-        // fallback local only
-        if (isMounted) setRequested(getLocalRequested().includes(id));
-      }
-    }
-    fetchRequests();
-    return () => { isMounted = false; };
-  }, [id]);
-
-  // Handler demande
-  const handleRequestJoin = async () => {
-    setRequesting(true);
-    setRequested(true);
-    setLocalRequested(Array.from(new Set([...getLocalRequested(), id])));
-    try {
-      await formationService.requestEnrollment(id);
-      toast.success(
-        <div className="flex items-center gap-2">
-          <svg className="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-          <span className="font-bold">Demande envoyée !</span>
-        </div>,
-        { duration: 5000 }
-      );
-    } catch (error) {
-      if (
-        error?.message && error.message.toLowerCase().includes('compléter votre profil')
-      ) {
-        toast.error('Complétez votre profil pour demander une formation.');
-      } else if (
-        (error?.message && error.message.toLowerCase().includes('déjà en cours')) ||
-        (error?.response?.status === 409)
-      ) {
-        toast.error('Vous avez déjà fait une demande pour cette formation.');
-      } else {
-        toast.error(error.message || "Erreur lors de la demande d'inscription à la formation.");
-      }
-    } finally {
-      setRequesting(false);
-      setConfirmDialogOpen(false);
-    }
-  };
-
-  const InfoItem = ({ icon: Icon, text, colorClass }) => (
-    <div className={`flex items-center gap-2 ${colorClass}`}>
-      <Icon className="h-4 w-4 flex-shrink-0" />
-      <span className="truncate">{text}</span>
-    </div>
-  );
-
-  if (viewMode === 'list') {
-    return (
-      <Card className="flex flex-col sm:flex-row bg-white dark:bg-slate-800 shadow-lg border-0 overflow-hidden rounded-lg transition-all duration-300 hover:shadow-xl hover:shadow-amber-200/30 dark:hover:shadow-amber-400/20 group">
-        {/* Image Section */}
-        <div className="relative w-full sm:w-72 h-48 sm:h-auto">
-          <div className="absolute inset-0 bg-gradient-to-t from-[#02284f]/90 via-[#02284f]/50 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-4">
-          </div>
-          <img
-            src={image_url || "/placeholder.svg"}
-            alt={name}
-            className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
-          />
-        </div>
-
-        {/* Content Section */}
-        <div className="flex-1 flex flex-col p-6 relative min-h-[220px]">
-          <div className="flex-grow pb-16">
-            {/* Badges */}
-            <div className="flex flex-wrap gap-2 mb-4">
-              <Badge
-                className={`${badgeVariants[specialization?.name || 'default']} transition-all duration-300 text-xs sm:text-sm`}
-              >
-                {specialization?.name || 'Formation'}
-              </Badge>
-              <Badge variant="outline" className="bg-gradient-to-r from-amber-50 to-white dark:from-amber-900/20 dark:to-slate-900 border-amber-200 dark:border-amber-700/50 text-xs sm:text-sm">
-                {promotion}
-              </Badge>
-            </div>
-
-            {/* Title and Description */}
-            <div className="mb-4">
-              <h3 className="text-xl font-bold mb-2 text-slate-800 dark:text-slate-100 transition-transform duration-300 group-hover:translate-x-1">
-                {name}
-              </h3>
-              <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-2">
-                {description || 'Aucune description disponible'}
-              </p>
-            </div>
-
-            {/* Capacity Section */}
-            <div className="mb-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-amber-600 dark:text-amber-300" />
-                  <span className="text-sm font-medium">
-                    {enrolledCount} / {capacity} étudiants
-                  </span>
-                </div>
-                <Badge className={`${capacityStatus.bgColor} ${capacityStatus.color} text-xs`}>
-                  {capacityStatus.text}
-                </Badge>
-              </div>
-              <Progress value={progressPercentage} className="h-2" />
-            </div>
-
-            {/* Info Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-              <InfoItem
-                icon={Calendar}
-                text={`Début le ${new Date(dateStart).toLocaleDateString()}`}
-                colorClass="text-amber-600 dark:text-amber-300"
-              />
-              <InfoItem
-                icon={Clock}
-                text={`${duration} mois`}
-                colorClass="text-[#528eb2] dark:text-[#78b9dd]"
-              />
-              {location && (
-                <InfoItem
-                  icon={MapPin}
-                  text={location}
-                  colorClass="text-[#528eb2] dark:text-[#78b9dd]"
-                />
-              )}
-            </div>
-          </div>
-
-          {/* Action Button - bottom right */}
-          <div className="absolute bottom-6 right-6">
-            {requested ? (
-              <Button className="w-full text-sm sm:text-base font-medium bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-300 cursor-not-allowed flex items-center justify-center gap-2" disabled>
-                <Lock className="h-4 w-4 sm:h-5 sm:w-5 mr-2" /> Demande envoyée
-              </Button>
-            ) : (
-              <MagicButton
-                className="text-sm sm:text-base font-medium bg-gradient-to-r from-amber-400 via-[#528eb2] to-[#78b9dd] hover:from-transparent hover:to-transparent hover:text-amber-600 dark:hover:text-white px-8 py-3"
-                onClick={() => setConfirmDialogOpen(true)}
-                disabled={enrolledCount >= capacity}
-              >
-                Demander à rejoindre
-                <ChevronRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
-              </MagicButton>
-            )}
-          </div>
-        </div>
-
-        <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Confirmer la demande</DialogTitle>
-              <DialogDescription>
-                Voulez-vous vraiment rejoindre cette formation ? Cette action enverra une demande d'inscription.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setConfirmDialogOpen(false)}>
-                Annuler
-              </Button>
-              <Button onClick={handleRequestJoin} disabled={requesting}>
-                Confirmer
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </Card>
-    );
-  }
-
-  // Grid View
+  // Mode liste ou grille : même contenu simplifié
   return (
-    <Card className="h-full flex flex-col bg-white dark:bg-slate-800 shadow-lg border-0 overflow-hidden rounded-lg transition-all duration-300 hover:shadow-xl hover:shadow-amber-200/30 dark:hover:shadow-amber-400/20 group">
+    <Card
+      className="h-full flex flex-col bg-white dark:bg-slate-800 shadow-lg border-0 overflow-hidden rounded-lg transition-all duration-300 group cursor-pointer"
+      onClick={() => navigate && navigate(`/formations/${id}`)}
+    >
       <div className="relative aspect-[16/9] overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-t from-[#02284f]/90 via-[#02284f]/50 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-4">
-        </div>
         <img
           src={image_url || "/placeholder.svg"}
           alt={name}
           className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
         />
+        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-t from-[#02284f]/90 via-[#02284f]/50 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <span className="text-white text-lg font-semibold drop-shadow-lg">Voir détail</span>
+        </div>
       </div>
-
-      <CardContent className="flex-grow p-4 sm:p-6 transform transition-transform duration-300 group-hover:translate-y-[-4px]">
+      <CardContent className="flex-grow p-4 sm:p-6">
         <div className="flex flex-wrap gap-2 mb-3">
           <Badge
             className={`${badgeVariants[specialization?.name || 'default']} transition-all duration-300 text-xs sm:text-sm`}
@@ -278,68 +93,49 @@ const FormationCard = ({ formation, viewMode }) => {
             {promotion}
           </Badge>
         </div>
-
-        <h3 className="text-lg sm:text-xl font-bold mb-2 text-slate-800 dark:text-slate-100 transition-transform duration-300 group-hover:translate-x-1 line-clamp-2">
+        <h3 className="text-lg sm:text-xl font-bold mb-2 text-slate-800 dark:text-slate-100 line-clamp-2">
           {name}
         </h3>
-
-        <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm line-clamp-3 min-h-[3em]">
+        <p className="text-gray-600 dark:text-gray-300 mb-2 text-sm line-clamp-3 min-h-[3em]">
           {description || 'Aucune description disponible'}
         </p>
-
-        {/* Capacity Section */}
-        <div className="mb-4">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-amber-600 dark:text-amber-300" />
-              <span className="text-sm font-medium">
-                {enrolledCount} / {capacity} étudiants
-              </span>
-            </div>
-            <Badge className={`${capacityStatus.bgColor} ${capacityStatus.color} text-xs`}>
-              {capacityStatus.text}
-            </Badge>
+        <div className="flex justify-between items-center mt-2 text-xs sm:text-sm w-full">
+          <div className="flex items-center gap-2 text-amber-600 dark:text-amber-300">
+            <Calendar className="h-4 w-4 flex-shrink-0" />
+            <span className="truncate">Début le {dateStart ? (dateStart instanceof Date ? dateStart.toLocaleDateString() : new Date(dateStart).toLocaleDateString()) : ''}</span>
           </div>
-        </div>
-
-        <div className="flex flex-col gap-2 mt-4 text-xs sm:text-sm">
-          <InfoItem
-            icon={Calendar}
-            text={`Début le ${new Date(dateStart).toLocaleDateString()}`}
-            colorClass="text-amber-600 dark:text-amber-300"
-          />
-          <InfoItem
-            icon={Clock}
-            text={`${duration} mois`}
-            colorClass="text-[#528eb2] dark:text-[#78b9dd]"
-          />
           {location && (
-            <InfoItem
-              icon={MapPin}
-              text={location}
-              colorClass="text-[#528eb2] dark:text-[#78b9dd]"
-            />
+            <div className="flex items-center gap-2 text-[#528eb2] dark:text-[#78b9dd]">
+              <MapPin className="h-4 w-4 flex-shrink-0" />
+              <span className="truncate">{location}</span>
+            </div>
           )}
         </div>
       </CardContent>
-
       <CardFooter className="p-4 pt-0">
         {requested ? (
-          <Button className="w-full text-sm sm:text-base font-medium bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-300 cursor-not-allowed flex items-center justify-center gap-2" disabled>
-            <Lock className="h-4 w-4 sm:h-5 sm:w-5 mr-2" /> Demande envoyée
+          <Button
+            className="w-full text-sm sm:text-base font-medium bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-300 cursor-not-allowed flex items-center justify-center gap-2"
+            disabled
+            onClick={e => e.stopPropagation()}
+          >
+            <Lock className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+            Demande envoyée
           </Button>
         ) : (
           <MagicButton
             className="w-full text-sm sm:text-base font-medium bg-gradient-to-r from-amber-400 via-[#528eb2] to-[#78b9dd] hover:from-transparent hover:to-transparent hover:text-amber-600 dark:hover:text-white"
-            onClick={() => setConfirmDialogOpen(true)}
-            disabled={enrolledCount >= capacity}
+            onClick={e => {
+              e.stopPropagation();
+              setConfirmDialogOpen(true);
+            }}
+            disabled={requesting}
           >
             Demander à rejoindre
             <ChevronRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
           </MagicButton>
         )}
       </CardFooter>
-
       <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -352,7 +148,7 @@ const FormationCard = ({ formation, viewMode }) => {
             <Button variant="outline" onClick={() => setConfirmDialogOpen(false)}>
               Annuler
             </Button>
-            <Button onClick={handleRequestJoin} disabled={requesting}>
+            <Button onClick={async e => { e.stopPropagation(); await handleRequestJoin(); }} disabled={requesting}>
               Confirmer
             </Button>
           </DialogFooter>
