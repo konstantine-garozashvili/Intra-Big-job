@@ -60,7 +60,7 @@ const AbsenceUser = () => {
   const totalPages = Math.ceil(totalAbsences / limit);
 
   return (
-    <div className="max-w-2xl mx-auto p-6 bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 mt-8 animate-fadeInUp">
+    <div className="max-w-5xl w-full mx-auto p-6 bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 mt-8 animate-fadeInUp">
       <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white flex items-center gap-2">
         <span className="inline-block w-2 h-6 bg-blue-500 rounded-full mr-2"></span>
         Absences de l'utilisateur
