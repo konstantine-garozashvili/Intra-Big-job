@@ -31,7 +31,7 @@ import {
     Mail,
     User
 } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import RoleBadge from "@/components/ui/RoleBadge";
 import { ROLE_SOLID_COLORS } from "@/lib/constants/roles";
 
@@ -132,6 +132,9 @@ export function UserTable({
                             >
                                 <TableCell className="py-3">
                                     <Avatar className={`h-9 w-9 ${getAvatarColorClass(user)}`}>
+                                        {user.profilePictureUrl ? (
+                                            <AvatarImage src={user.profilePictureUrl} alt={`${user.firstName} ${user.lastName}`} />
+                                        ) : null}
                                         <AvatarFallback className={isDark ? 'text-gray-200 bg-gray-700' : ''}>
                                             {getInitials(user.firstName, user.lastName)}
                                         </AvatarFallback>

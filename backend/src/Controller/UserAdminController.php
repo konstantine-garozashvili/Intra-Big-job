@@ -14,16 +14,20 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use App\Service\UserService;
+use App\Service\DocumentStorageFactory;
 
 #[Route('/api')]
 class UserAdminController extends AbstractController
 {
     private $userRepository;
+    private $documentStorageFactory;
     
     public function __construct(
-        UserRepository $userRepository
+        UserRepository $userRepository,
+        DocumentStorageFactory $documentStorageFactory
     ) {
         $this->userRepository = $userRepository;
+        $this->documentStorageFactory = $documentStorageFactory;
     }
     
     /**
@@ -36,10 +40,24 @@ class UserAdminController extends AbstractController
     {
         try {
             $users = $this->userRepository->findAllWithRoles();
-            
+            $usersWithProfilePicture = array_map(function ($user) {
+                $profilePictureUrl = null;
+                $profilePicturePath = isset($user['profilePicturePath']) ? $user['profilePicturePath'] : null;
+                if ($profilePicturePath) {
+                    try {
+                        $profilePictureUrl = $this->documentStorageFactory->getDocumentUrl($profilePicturePath);
+                    } catch (\Exception $e) {
+                        $profilePictureUrl = null;
+                    }
+                }
+                // Just add the profilePictureUrl to the user array
+                return array_merge($user, [
+                    'profilePictureUrl' => $profilePictureUrl
+                ]);
+            }, $users);
             return $this->json([
                 'success' => true,
-                'data' => $users
+                'data' => $usersWithProfilePicture
             ]);
         } catch (\Exception $e) {
             return $this->json([

@@ -299,7 +299,8 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
                 'birthDate' => $user->getBirthDate() ? $user->getBirthDate()->format('Y-m-d') : null,
                 'createdAt' => $user->getCreatedAt() ? $user->getCreatedAt()->format('Y-m-d H:i:s') : null,
                 'updatedAt' => $user->getUpdatedAt() ? $user->getUpdatedAt()->format('Y-m-d H:i:s') : null,
-                'roles' => $roles
+                'roles' => $roles,
+                'profilePicturePath' => $user->getProfilePicturePath(),
             ];
             
             $result[] = $userData;
