@@ -38,10 +38,11 @@ const Act = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [formationsData, specializationsData] = await Promise.all([
+        const [formationsResult, specializationsData] = await Promise.all([
           formationService.getAllFormations(),
           formationService.getSpecializations()
         ]);
+        const formationsData = formationsResult.formations || [];
         console.log('🔍 [DEBUG] Initial Data:', {
           formations: formationsData.map(f => ({
             id: f.id,
