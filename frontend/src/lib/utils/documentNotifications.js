@@ -126,7 +126,7 @@ export const createDocumentNotification = async (document, type, title, message,
 export const documentNotifications = {
   uploaded: (document, customMessage = null, forceCreate = false) => {
     const title = 'Document mis en ligne avec succès';
-    const message = customMessage || `Votre document ${document.name} a été téléchargé avec succès.`;
+    const message = customMessage || `Votre document ${document.name} a été mis en ligne avec succès.`;
     return createDocumentNotification(document, 'DOCUMENT_UPLOADED', title, message, '/documents', forceCreate);
   },
   

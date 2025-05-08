@@ -45,69 +45,13 @@ const CVUpload = memo(({ userData, onUpdate }) => {
     isPending: isUploading
   } = useApiMutation('/api/documents/upload/cv', 'post', 'userCVDocument', {
     onSuccess: () => {
-      toast.success('CV téléchargé avec succès');
+      // toast.success('CV téléchargé avec succès'); // SUPPRIMÉ : notification toast upload
       setCvFile(null);
       
       // Dispatch event to notify MainLayout about the update
       document.dispatchEvent(new CustomEvent('user:data-updated'));
       
-      // Create document uploaded notification using the utility
-      // D'abord récupérer les données à jour du document
-      refetchCV().then(data => {
-        if (data && data.data && data.data[0]) {
-          // Forcer la création de la notification frontend (même si normalement gérée par le backend)
-          documentNotifications.uploaded({
-            name: data.data[0].name || 'CV',
-            id: data.data[0].id
-          }, null, true);
-        } else {
-          // Fallback si on ne peut pas obtenir les données du document
-          documentNotifications.uploaded({
-            name: 'CV',
-            id: Date.now()
-          }, null, true);
-        }
-      }).catch(() => {
-        // Créer quand même une notification en cas d'erreur
-        documentNotifications.uploaded({
-          name: 'CV',
-          id: Date.now()
-        }, null, true);
-      });
-      
-      // Créer une notification locale pour l'utilisateur
-      const mockNotification = {
-        id: Date.now(),
-        title: 'CV téléchargé avec succès',
-        message: 'Votre CV a été téléchargé avec succès et est prêt à être consulté par les recruteurs.',
-        type: 'document_uploaded',
-        isRead: false,
-        createdAt: new Date().toISOString(),
-        targetUrl: '/documents'
-      };
-      
-      // Ajouter la notification directement dans le cache du service 
-      if (notificationService.cache.notifications && notificationService.cache.notifications.notifications) {
-        // Insérer au début du tableau
-        notificationService.cache.notifications.notifications.unshift(mockNotification);
-        
-        // Mettre à jour le compteur de notifications non lues
-        notificationService.cache.unreadCount = (notificationService.cache.unreadCount || 0) + 1;
-        
-        // Mettre à jour le compteur dans les données de pagination
-        if (notificationService.cache.notifications.pagination) {
-          notificationService.cache.notifications.pagination.total += 1;
-        }
-        
-        // Notifier les abonnés du changement
-        notificationService.notifySubscribers();
-        
-        // Forcer le rafraîchissement du compteur 
-        setTimeout(() => {
-          notificationService.getUnreadCount(true)
-            .catch(() => {});
-        }, 300);
-      }
+      // La notification backend s'affichera automatiquement via Firebase
       
       // Reset file input
       const fileInput = document.getElementById('cv-upload');
