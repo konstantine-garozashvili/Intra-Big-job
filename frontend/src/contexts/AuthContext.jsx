@@ -36,7 +36,6 @@ export const AuthProvider = ({ children }) => {
       // Check if token is expired or will expire in the next 5 minutes
       return exp - now < 300; // 300 seconds = 5 minutes
     } catch (error) {
-      console.error('Error checking token expiration:', error);
       return true;
     }
   };
@@ -48,7 +47,6 @@ export const AuthProvider = ({ children }) => {
       await authService.refreshToken();
       return true;
     } catch (error) {
-      console.error('Token refresh failed:', error);
       return false;
     } finally {
       setRefreshingToken(false);
@@ -64,7 +62,6 @@ export const AuthProvider = ({ children }) => {
       
       // Store user ID explicitly for notification purposes
       if (userData && userData.id) {
-        console.log('Storing user ID in localStorage:', userData.id);
         localStorage.setItem('userId', String(userData.id));
         
         // Stocker également l'utilisateur complet pour référence
@@ -77,7 +74,6 @@ export const AuthProvider = ({ children }) => {
       
       return userData;
     } catch (error) {
-      console.error('Failed to load user data:', error);
       setUser(null);
       return null;
     } finally {
@@ -100,12 +96,10 @@ export const AuthProvider = ({ children }) => {
         
         // Check if token is expired or about to expire
         if (isTokenExpired()) {
-          console.log('Token is expired or about to expire, attempting refresh');
           const refreshSuccessful = await refreshToken();
           
           if (!refreshSuccessful) {
             // If refresh failed, logout
-            console.log('Token refresh failed, logging out');
             logout();
             return;
           }
@@ -114,7 +108,6 @@ export const AuthProvider = ({ children }) => {
         // Load user data
         await loadUserData();
       } catch (error) {
-        console.error('Authentication check failed:', error);
         // Clear tokens and user data
         logout();
       } finally {
@@ -127,9 +120,7 @@ export const AuthProvider = ({ children }) => {
     // Set up token refresh interval
     const tokenRefreshInterval = setInterval(() => {
       if (localStorage.getItem('token') && isTokenExpired()) {
-        console.log('Refreshing token from interval');
-        refreshToken().catch(error => {
-          console.error('Token refresh interval failed:', error);
+        refreshToken().catch(() => {
           logout();
         });
       }
@@ -155,7 +146,6 @@ export const AuthProvider = ({ children }) => {
         // Double-check user ID storage
         if (userData && userData.id) {
           localStorage.setItem('userId', String(userData.id));
-          console.log('User ID stored in localStorage after login:', userData.id);
         }
         
         toast.success('Connexion réussie');

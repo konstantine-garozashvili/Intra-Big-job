@@ -26,14 +26,14 @@ const getCurrentUserState = {
 
 export const authService = {
   async register(userData) {
+    // console.log('[authService] Début de l\'inscription:', { ...userData, password: '***' });
     try {
-      console.log('[authService] Début de l\'inscription:', { ...userData, password: '***' });
       const response = await apiService.post('/register', userData);
       if (response?.token) localStorage.setItem('token', response.token);
       return { status: response.status || 201, data: response };
     } catch (error) {
-      console.error('[authService] Erreur lors de l\'inscription:', error);
-      console.error('[authService] Détails:', error.response?.data || error.message);
+      // console.error('[authService] Erreur lors de l\'inscription:', error);
+      // console.error('[authService] Détails:', error.response?.data || error.message);
       throw error;
     }
   },
@@ -423,31 +423,42 @@ export const authService = {
 
   async fixProfileDataIssues() {
     try {
+      // console.log('Attempting to fix profile data issues...');
+      // Check if user is logged in
       const token = localStorage.getItem('token');
-      if (!token) return { success: false, message: 'Not authenticated' };
-      
+      if (!token) {
+        // console.warn('No authentication token found. User is not logged in.');
+        return { success: false, message: 'Not authenticated' };
+      }
+      // Clear any cached profile data
       const queryClient = getQueryClient();
       if (queryClient) {
         queryClient.invalidateQueries({ queryKey: ['user'] });
         queryClient.invalidateQueries({ queryKey: ['profile'] });
       }
-      
+      // Try to fetch fresh profile data
       try {
-        const userData = await apiService.get('/api/profile', {
+        const correctApiPath = '/api/profile';
+        const userData = await apiService.get(correctApiPath, {
           noCache: true,
           retries: 2,
           timeout: 10000
         });
-        
         if (userData) {
+          // Update localStorage with fresh data
           localStorage.setItem('user', JSON.stringify(userData));
+          // console.log('Profile data fixed successfully');
+          // Update React Query cache
           if (queryClient) {
             queryClient.setQueryData(['user', 'current'], userData);
           }
           return { success: true, message: 'Profile data fixed successfully' };
         }
-      } catch (apiError) {}
-      
+      } catch (apiError) {
+        // console.error('Error fetching fresh profile data:', apiError);
+      }
+      // If we couldn't fetch fresh data, create minimal profile data
+      // Based on data from token
       try {
         const token = localStorage.getItem('token');
         if (token) {
@@ -459,17 +470,17 @@ export const authService = {
               roles: decodedToken.roles || ['ROLE_USER'],
               _fixedAt: Date.now()
             };
-            
             localStorage.setItem('user', JSON.stringify(minimalUser));
-            localStorage.setItem('userRoles', JSON.stringify(minimalUser.roles));
-            
+            // console.log('Created minimal profile data from token');
             return { success: true, message: 'Created minimal profile data' };
           }
         }
-      } catch (tokenError) {}
-      
+      } catch (tokenError) {
+        // console.error('Error creating fallback profile data:', tokenError);
+      }
       return { success: false, message: 'Could not fix profile data' };
     } catch (error) {
+      // console.error('Error in fixProfileDataIssues:', error);
       return { success: false, message: error.message };
     }
   },
@@ -652,22 +663,19 @@ export const authService = {
    */
   async fixProfileDataIssues() {
     try {
-      console.log('Attempting to fix profile data issues...');
-      
+      // console.log('Attempting to fix profile data issues...');
       // Check if user is logged in
       const token = localStorage.getItem('token');
       if (!token) {
-        console.warn('No authentication token found. User is not logged in.');
+        // console.warn('No authentication token found. User is not logged in.');
         return { success: false, message: 'Not authenticated' };
       }
-      
       // Clear any cached profile data
       const queryClient = getQueryClient();
       if (queryClient) {
         queryClient.invalidateQueries({ queryKey: ['user'] });
         queryClient.invalidateQueries({ queryKey: ['profile'] });
       }
-      
       // Try to fetch fresh profile data
       try {
         const correctApiPath = '/api/profile';
@@ -676,23 +684,19 @@ export const authService = {
           retries: 2,
           timeout: 10000
         });
-        
         if (userData) {
           // Update localStorage with fresh data
           localStorage.setItem('user', JSON.stringify(userData));
-          console.log('Profile data fixed successfully');
-          
+          // console.log('Profile data fixed successfully');
           // Update React Query cache
           if (queryClient) {
             queryClient.setQueryData(['user', 'current'], userData);
           }
-          
           return { success: true, message: 'Profile data fixed successfully' };
         }
       } catch (apiError) {
-        console.error('Error fetching fresh profile data:', apiError);
+        // console.error('Error fetching fresh profile data:', apiError);
       }
-      
       // If we couldn't fetch fresh data, create minimal profile data
       // Based on data from token
       try {
@@ -706,20 +710,17 @@ export const authService = {
               roles: decodedToken.roles || ['ROLE_USER'],
               _fixedAt: Date.now()
             };
-            
             localStorage.setItem('user', JSON.stringify(minimalUser));
-            
-            console.log('Created minimal profile data from token');
+            // console.log('Created minimal profile data from token');
             return { success: true, message: 'Created minimal profile data' };
           }
         }
       } catch (tokenError) {
-        console.error('Error creating fallback profile data:', tokenError);
+        // console.error('Error creating fallback profile data:', tokenError);
       }
-      
       return { success: false, message: 'Could not fix profile data' };
     } catch (error) {
-      console.error('Error in fixProfileDataIssues:', error);
+      // console.error('Error in fixProfileDataIssues:', error);
       return { success: false, message: error.message };
     }
   },

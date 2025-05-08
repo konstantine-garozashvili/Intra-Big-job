@@ -43,14 +43,12 @@ export default function TicketDetail() {
         if (tokenParts.length !== 3) return;
         
         const payload = JSON.parse(atob(tokenParts[1]));
-        console.log('User roles from token:', payload.roles); // Debug log
         
         const userIsAdmin = payload.roles && 
           (payload.roles.includes('ROLE_ADMIN') || 
            payload.roles.includes('ROLE_SUPER_ADMIN') ||
            payload.roles.includes('ROLE_SUPERADMIN'));
            
-        console.log('Is admin check result:', userIsAdmin); // Debug log
         setIsAdmin(userIsAdmin);
       } catch (error) {
         console.error('Error checking admin role:', error);
@@ -64,7 +62,6 @@ export default function TicketDetail() {
     const fetchStatuses = async () => {
       try {
         const statusResponse = await axiosInstance.get('/tickets/status');
-        console.log('Status response:', statusResponse.data);
         
         if (statusResponse.data && statusResponse.data.statuses) {
           setStatuses(statusResponse.data.statuses);
@@ -107,23 +104,13 @@ export default function TicketDetail() {
     setUpdating(true);
     
     try {
-      console.log('Sending ticket update:', { 
-        statusId: selectedStatus, 
-        priority: selectedPriority,
-        currentStatusId: ticket.status.id,
-        currentStatusName: ticket.status.name 
-      });
-      
       const response = await axiosInstance.put(`/tickets/${id}`, {
         statusId: selectedStatus,
         priority: selectedPriority
       });
       
-      console.log('Ticket update response:', response.data);
-      
       // Find the selected status object to update the ticket properly
       const updatedStatus = statuses.find(status => status.id === selectedStatus);
-      console.log('Found status for update:', updatedStatus);
       
       // Create a proper updated ticket state
       const updatedTicket = {
@@ -133,7 +120,6 @@ export default function TicketDetail() {
         updatedAt: new Date().toISOString()
       };
       
-      console.log('Updated ticket state:', updatedTicket);
       setTicket(updatedTicket);
       toast.success('Ticket mis à jour avec succès');
       
@@ -150,7 +136,6 @@ export default function TicketDetail() {
   const fetchTicketData = async () => {
     try {
       setLoading(true);
-      console.log(`Refreshing ticket data for ID: ${id}`);
       
       const token = localStorage.getItem('token');
       if (!token) {
@@ -159,14 +144,9 @@ export default function TicketDetail() {
         return;
       }
       
-      // Log the request we're about to make for debugging
-      console.log('About to request:', `/tickets/${id}`);
-      console.log('Authorization header set:', !!token);
-      
       try {
         // Fetch ticket details using axiosInstance which handles baseURL and authentication
         const response = await axiosInstance.get(`/tickets/${id}`);
-        console.log('Refreshed ticket response:', response.data);
         
         if (response.data && response.data.ticket) {
           setTicket(response.data.ticket);
@@ -177,16 +157,11 @@ export default function TicketDetail() {
           throw new Error('Invalid ticket data received');
         }
       } catch (error) {
-        console.error('Error fetching specific ticket. Status:', error.response?.status);
-        console.error('Error response:', error.response?.data);
-        
         // Try to fetch from /tickets endpoint if there's a 403
         if (error.response?.status === 403) {
-          console.log('Permission denied for direct access, trying to fetch from tickets list');
           try {
             // Fetch all tickets (which we know works for admin ticket list)
             const allTicketsResponse = await axiosInstance.get('/tickets');
-            console.log('All tickets response:', allTicketsResponse.data);
             
             if (allTicketsResponse.data?.tickets?.length > 0) {
               // Find the ticket with the matching ID
@@ -195,7 +170,6 @@ export default function TicketDetail() {
               );
               
               if (matchingTicket) {
-                console.log('Found matching ticket in all tickets response:', matchingTicket);
                 setTicket(matchingTicket);
                 setSelectedStatus(matchingTicket.status?.id || '');
                 setSelectedPriority(matchingTicket.priority || 'Normal');
@@ -208,7 +182,6 @@ export default function TicketDetail() {
             setError("Vous n'avez pas accès à ce ticket.");
             setLoading(false);
           } catch (fallbackError) {
-            console.error('Error in fallback tickets fetch:', fallbackError);
             setError("Vous n'avez pas accès à ce ticket.");
             setLoading(false);
           }
@@ -218,7 +191,6 @@ export default function TicketDetail() {
         }
       }
     } catch (error) {
-      console.error('Unexpected error refreshing ticket details:', error);
       setError(error.message || 'Failed to load ticket details');
       setLoading(false);
     }

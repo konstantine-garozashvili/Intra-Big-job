@@ -68,11 +68,10 @@ const RecruiterDashboard = () => {
     const refreshUserData = async () => {
       try {
         refreshAttemptedRef.current = true;
-        console.log("RecruiterDashboard: Refreshing user data once");
         // Utiliser le refetch du hook useUserData plutôt que d'appeler directement l'API
         await refetch();
       } catch (error) {
-        console.log("Erreur lors du rafraîchissement des données utilisateur", error);
+        // console.log("Erreur lors du rafraîchissement des données utilisateur", error);
       }
     };
     

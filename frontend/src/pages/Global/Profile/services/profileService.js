@@ -113,7 +113,6 @@ class ProfileService {
         stats: response.stats || { profile: { completionPercentage: 0 } }
       };
     } catch (error) {
-      console.error('Error fetching profile stats:', error);
       return {
         stats: { profile: { completionPercentage: 0 } }
       };
@@ -140,7 +139,6 @@ class ProfileService {
       apiService.invalidateCache('/api/profile/stats');
       return response;
     } catch (error) {
-      console.error('Error acknowledging profile completion:', error);
       throw error;
     }
   }
@@ -167,7 +165,6 @@ class ProfileService {
       if (!options.forceRefresh && 
           profileCache.consolidatedData && 
           (now - profileCache.consolidatedDataTimestamp) < profileCache.cacheDuration) {
-        console.log('Utilisation des données consolidées en cache local');
         return profileCache.consolidatedData;
       }
       

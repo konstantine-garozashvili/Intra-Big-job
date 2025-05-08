@@ -124,7 +124,6 @@ const RegisterForm = () => {
   
   // Fonction pour passer à l'étape suivante
   const goToNextStep = useCallback(() => {
-    // console.log(`Passage à l'étape ${currentStep + 1}`);
     if (currentStep === 1) {
       setStep1Attempted(true);
     } else if (currentStep === 2) {
@@ -136,7 +135,6 @@ const RegisterForm = () => {
   // Fonction pour revenir à l'étape précédente
   const goToPrevStep = useCallback(() => {
     if (currentStep > 1) {
-      // console.log(`Retour à l'étape ${currentStep - 1}`);
       setCurrentStep(prev => prev - 1);
     }
   }, [currentStep]);
@@ -163,7 +161,6 @@ const RegisterForm = () => {
   // Version personnalisée de handleSubmit qui utilise notre validation
   const handleFormSubmit = useCallback((e) => {
     e.preventDefault();
-    // console.log("handleFormSubmit appelé dans RegisterForm");
     
     // Créer une version modifiée de l'événement pour contourner la validation du contexte
     const customEvent = {
@@ -177,7 +174,6 @@ const RegisterForm = () => {
     };
     
     // Utiliser le handleSubmit du contexte
-    // console.log("Appel de contextHandleSubmit avec customEvent");
     contextHandleSubmit(customEvent);
   }, [contextHandleSubmit]);
   

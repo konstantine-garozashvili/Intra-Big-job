@@ -133,10 +133,6 @@ const TechOdysseyFusion = () => {
   const handleLeadCaptureComplete = (userInfo) => {
     setUserInfo(userInfo);
     
-    // Here you would typically send the data to your backend
-    console.log('Lead captured:', userInfo);
-    console.log('User profile:', userProfile);
-    
     // Navigate to home or another page
     navigate('/');
   };

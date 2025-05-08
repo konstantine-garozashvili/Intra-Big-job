@@ -80,14 +80,12 @@ const SidebarProfile = memo(({ onNavigate }) => {
         shouldShowCareer: isStudent || isGuest
       };
       setDebugInfo(info);
-      console.log('SidebarProfile: User role debug info:', info);
     }
   }, [user, isStudent, isGuest]);
 
   // Informer le contexte que la sidebar est chargée lorsque les données utilisateur sont prêtes
   useEffect(() => {
     if (!isLoading && user && setSidebarLoaded) {
-      console.log('SidebarProfile: Signaling sidebar loaded');
       setSidebarLoaded(true);
     }
   }, [isLoading, user, setSidebarLoaded]);

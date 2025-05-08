@@ -123,8 +123,6 @@ import { studentProfileService } from "../services/studentProfileService";
 
 // Fonction pour synchroniser la mise à jour du portfolio dans l'application
 export const synchronizePortfolioUpdate = (portfolioUrl) => {
-  console.log("profileUtils: Synchronizing portfolio update:", portfolioUrl);
-  
   // Dispatcher un événement personnalisé pour notifier tous les composants
   const event = new CustomEvent('portfolio-updated', {
     detail: { portfolioUrl }
@@ -195,7 +193,7 @@ export const synchronizePortfolioUpdate = (portfolioUrl) => {
       }
     }
   } catch (error) {
-    console.warn("profileUtils: Error updating local storage:", error);
+    // Retirer tous les console.log et console.warn
   }
   
   // Forcer l'invalidation du cache du service

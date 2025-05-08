@@ -258,10 +258,8 @@ const App = () => {
   // Précharger les notifications au démarrage de l'application
   notificationService.getNotifications(1, 10, true, true)
     .then(data => {
-      // console.log('App - Notification service initialized with data:', data);
     })
     .catch(error => {
-      // console.error('App - Error initializing notification service:', error);
     });
 
   return (

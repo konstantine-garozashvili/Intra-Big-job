@@ -27,14 +27,6 @@ export const formationService = {
         duration: parseInt(formation.duration) || 0
       })) || [];
 
-      console.log('[FormationService] Formations data:', {
-        count: formations.length,
-        sample: formations[0],
-        allSpecIds: formations.map(f => f.specializationId),
-        pagination: data?.pagination,
-        searchTerm: search
-      });
-
       return {
         formations,
         pagination: data?.pagination || {
@@ -154,42 +146,27 @@ export const formationService = {
         throw new Error('Fichier image invalide');
       }
 
-      // Log the FormData content for debugging
-      console.log('[FormationService] Uploading image:', {
-        formationId,
-        fileName: imageFile.name,
-        fileType: imageFile.type,
-        fileSize: imageFile.size
-      });
-
       const response = await formationApi.uploadImage(formationId, formData);
       
-      // Log the response for debugging
-      console.log('[FormationService] Upload response:', response);
-
       // Check if the response has data
       if (!response?.data) {
-        console.error('[FormationService] Invalid response:', response);
         throw new Error('Réponse invalide du serveur');
       }
 
       // Get the image URL from the response
       const imageUrl = response.data.data?.image_url || response.data.image_url;
       if (!imageUrl) {
-        console.error('[FormationService] No image URL in response:', response.data);
         throw new Error('URL de l\'image manquante dans la réponse');
       }
 
       // Clean and return the image URL
       const cleanedUrl = cleanImageUrl(imageUrl);
-      console.log('[FormationService] Upload successful:', { originalUrl: imageUrl, cleanedUrl });
 
       return {
         success: true,
         image_url: cleanedUrl
       };
     } catch (error) {
-      console.error('[FormationService] Error uploading image:', error);
       throw error instanceof Error ? error : new Error('Erreur lors du téléchargement de l\'image');
     }
   },
@@ -240,10 +217,6 @@ export const formationService = {
   getSpecializations: async () => {
     try {
       const response = await formationApi.getSpecializations();
-      console.log('[FormationService] Specializations response:', {
-        raw: response,
-        specializations: response?.data?.specializations
-      });
       
       if (response?.success && response?.data?.specializations) {
         return response.data.specializations;
@@ -251,7 +224,6 @@ export const formationService = {
       
       return [];
     } catch (error) {
-      console.error('[FormationService] Error loading specializations:', error);
       throw new Error(handleApiError(error));
     }
   },

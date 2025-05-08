@@ -93,21 +93,13 @@ const NotificationSettings = () => {
           return;
         }
 
-        console.log('Chargement des préférences pour l\'utilisateur ID:', userId);
-        console.log('Informations utilisateur:', user);
-          
-          // Charger les préférences depuis Firestore
+        // Charger les préférences depuis Firestore
         const preferencesRef = doc(db, 'notificationPreferences', userId);
-        console.log('Référence du document pour les préférences:', preferencesRef.path);
         
-          const preferencesSnap = await getDoc(preferencesRef);
-          
-        // Loguer les données brutes pour débogage
-        console.log('Préférences brutes depuis Firestore:', 
-          preferencesSnap.exists() ? preferencesSnap.data() : 'Aucune préférence trouvée');
-          
-          if (preferencesSnap.exists()) {
-            const preferences = preferencesSnap.data();
+        const preferencesSnap = await getDoc(preferencesRef);
+        
+        if (preferencesSnap.exists()) {
+          const preferences = preferencesSnap.data();
           
           // Security check: verify if preferences belong to this user
           if (preferences.userId && preferences.userId !== userId) {
@@ -123,19 +115,12 @@ const NotificationSettings = () => {
           
           // Update user email if needed to ensure continuity across sessions
           if (userEmail && (!preferences.userEmail || preferences.userEmail !== userEmail)) {
-            console.log('Mise à jour de l\'email utilisateur dans les préférences', {
-              oldEmail: preferences.userEmail || 'none',
-              newEmail: userEmail
-            });
-            
             // Update the email without changing other preferences
             await updateDoc(preferencesRef, {
               userEmail: userEmail,
               lastUpdated: new Date()
             });
           }
-          
-          console.log('Préférences chargées depuis Firestore:', preferences);
           
           // Mettre à jour le state avec les valeurs exactes de Firestore
           const newSettings = {
@@ -149,11 +134,9 @@ const NotificationSettings = () => {
             }
           };
           
-          console.log('Nouvelles préférences appliquées:', newSettings);
           setSettings(newSettings);
           setInitialSettings(JSON.stringify(newSettings));
         } else {
-          console.log('Aucune préférence trouvée pour cet utilisateur, création des valeurs par défaut');
           await createDefaultPreferences(userId, userEmail);
         }
       } catch (error) {
@@ -197,8 +180,6 @@ const NotificationSettings = () => {
         
         await setDoc(preferencesRef, newPreferences);
         
-        console.log('Préférences par défaut créées dans Firestore pour utilisateur:', userId);
-        
         setSettings(defaultSettings);
         setInitialSettings(JSON.stringify(defaultSettings));
       } catch (error) {
@@ -230,8 +211,6 @@ const NotificationSettings = () => {
   };
     setSettings(newSettings);
 
-    console.log(`Changement de préférence pour utilisateur ${userId}: ${setting} → ${!settings[category][setting]}`);
-
     // Enregistrer immédiatement le changement
     setSavingChanges(true);
     try {
@@ -243,7 +222,6 @@ const NotificationSettings = () => {
       
       if (preferencesSnap.exists()) {
         const updatedPrefs = preferencesSnap.data();
-        console.log('Préférences après mise à jour pour utilisateur', userId, ':', updatedPrefs);
         
         // Security check: verify if preferences belong to this user
         if (updatedPrefs.userId && updatedPrefs.userId !== userId) {
@@ -271,7 +249,6 @@ const NotificationSettings = () => {
             ...updatedPrefs,
             lastUpdated: new Date().toISOString() 
           }));
-          console.log('Préférences sauvegardées dans le localStorage comme backup');
         } catch (e) {
           console.warn('Impossible de sauvegarder les préférences dans localStorage:', e);
         }

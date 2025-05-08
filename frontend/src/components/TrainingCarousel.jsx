@@ -245,12 +245,10 @@ export default function TrainingCarousel() {
 
   const handleImageClick = (id) => {
     // Navigation vers la page de détail de la formation
-    console.log(`Navigating to formation details: ${id}`);
   };
 
   const handleSeeMore = (id) => {
     // Navigation vers la page de détail de la formation
-    console.log(`Navigating to formation details: ${id}`);
   };
 
   const handleSeeAllCourses = () => {
@@ -258,7 +256,6 @@ export default function TrainingCarousel() {
   };
 
   const handleRequestJoin = async (formationId, skipConfirm = false) => {
-    console.log('[TrainingCarousel] handleRequestJoin called', { formationId, skipConfirm });
     setRequesting((prev) => ({ ...prev, [formationId]: true }));
     setRequested((prev) => {
       const next = { ...prev, [formationId]: true };
@@ -267,32 +264,26 @@ export default function TrainingCarousel() {
     });
     try {
       const formation = formations.find(f => f.id === formationId);
-      console.log('[TrainingCarousel] formation trouvé ?', { formation });
       await formationService.requestEnrollment(formationId);
       // Appel formationNotifications.requested (notification Firestore + UI)
       if (formation) {
-        console.log('[TrainingCarousel] Avant formationNotifications.requested', { formation });
         await formationNotifications.requested({
           formationName: formation.name,
           formationId: formation.id,
           userId: profileData?.id
         });
-        console.log('[TrainingCarousel] Après formationNotifications.requested');
         // Notifier le recruteur si l'utilisateur est guest
         const userRoles = profileData?.roles || profileData?.userRoles || [];
         const isGuest = Array.isArray(userRoles)
           ? userRoles.some(role => typeof role === 'object' ? role.name === 'ROLE_GUEST' || role.name === 'GUEST' : role === 'ROLE_GUEST' || role === 'GUEST')
           : userRoles === 'ROLE_GUEST' || userRoles === 'GUEST';
         const recruiterId = formation.recruiterId || (formation.recruiter && formation.recruiter.id);
-        console.log('[DEBUG] formation object:', formation);
-        console.log('[DEBUG] recruiterId:', recruiterId, 'isGuest:', isGuest);
         if (isGuest && recruiterId) {
           await formationNotifications.guestApplication({
             formationName: formation.name,
             recruiterId,
             guestId: profileData?.id
           });
-          console.log('[TrainingCarousel] Notification envoyée au recruteur', recruiterId);
         }
       }
       toast.success(
@@ -303,14 +294,12 @@ export default function TrainingCarousel() {
         { duration: 5000 }
       );
     } catch (error) {
-      console.error('[TrainingCarousel] Erreur dans handleRequestJoin', error);
       // Si l'erreur indique que la demande a quand même été créée, on notifie !
       if (
         error?.message && error.message.toLowerCase().includes("demande d'inscription créée avec succès")
       ) {
         const formation = formations.find(f => f.id === formationId);
         if (formation) {
-          console.log('[TrainingCarousel] Notification malgré erreur "succès"', { formation });
           await formationNotifications.requested({
             formationName: formation.name,
             formationId: formation.id,
@@ -322,15 +311,12 @@ export default function TrainingCarousel() {
             ? userRoles.some(role => typeof role === 'object' ? role.name === 'ROLE_GUEST' || role.name === 'GUEST' : role === 'ROLE_GUEST' || role === 'GUEST')
             : userRoles === 'ROLE_GUEST' || userRoles === 'GUEST';
           const recruiterId = formation.recruiterId || (formation.recruiter && formation.recruiter.id);
-          console.log('[DEBUG][catch] formation object:', formation);
-          console.log('[DEBUG][catch] recruiterId:', recruiterId, 'isGuest:', isGuest);
           if (isGuest && recruiterId) {
             await formationNotifications.guestApplication({
               formationName: formation.name,
               recruiterId,
               guestId: profileData?.id
             });
-            console.log('[TrainingCarousel][catch] Notification envoyée au recruteur', recruiterId);
           }
         }
         toast.success(
@@ -509,7 +495,6 @@ export default function TrainingCarousel() {
             </Button>
             <Button
               onClick={() => {
-                console.log('[TrainingCarousel] Dialog Confirmer clicked', confirmDialog.formationId);
                 handleRequestJoin(confirmDialog.formationId, true);
               }}
               disabled={requesting[confirmDialog.formationId]}

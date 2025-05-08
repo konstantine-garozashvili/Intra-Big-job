@@ -103,8 +103,6 @@ const SignatureHistory = () => {
               !['Saturday', 'Sunday'].includes(day.dayName)
             );
           }
-          
-          // console.log('Weekly signature history from API:', apiData);
         } else {
           const errorData = await response.json().catch(() => ({}));
           console.error('API error response:', errorData);
@@ -120,7 +118,6 @@ const SignatureHistory = () => {
         setWeeklyData(apiData);
       } else {
         // Fallback: générer des données locales à partir du localStorage
-        // console.log('Fallback: Using local signature data');
         
         // Obtenir les dates de la semaine courante
         const today = new Date();
@@ -173,7 +170,6 @@ const SignatureHistory = () => {
               try {
                 morningData = JSON.parse(storedData);
               } catch (e) {
-                // console.log('Error parsing morning signature data:', e);
               }
             }
             
@@ -191,7 +187,6 @@ const SignatureHistory = () => {
               try {
                 afternoonData = JSON.parse(storedData);
               } catch (e) {
-                // console.log('Error parsing afternoon signature data:', e);
               }
             }
             
@@ -215,7 +210,6 @@ const SignatureHistory = () => {
           });
         });
         
-        // console.log('Generated local weekly data:', localWeeklyData);
         setWeeklyData(localWeeklyData);
       }
     } catch (error) {
@@ -287,7 +281,6 @@ const SignatureHistory = () => {
           // Vérifier si la signature du matin existe
           if (day.signatures && day.signatures.morning) {
             presentPeriods += 1;
-            // console.log(`Présence du matin comptée pour ${day.date}`);
           }
         }
         
@@ -297,13 +290,11 @@ const SignatureHistory = () => {
           // Vérifier si la signature de l'après-midi existe
           if (day.signatures && day.signatures.afternoon) {
             presentPeriods += 1;
-            // console.log(`Présence de l'après-midi comptée pour ${day.date}`);
           }
         }
       }
     });
     
-    // console.log(`Résumé de la semaine - Total: ${totalPeriods}, Présent: ${presentPeriods}`);
     
     return {
       total: totalPeriods,

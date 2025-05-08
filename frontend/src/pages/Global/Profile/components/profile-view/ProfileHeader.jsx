@@ -234,29 +234,20 @@ const ProfileHeader = ({ userData, isPublicProfile = false, profilePictureUrl })
             >
               <AnimatePresence>
                 {(() => {
-                  console.log('userData dans ProfileHeader:', userData);
-                  
                   // Get roles securely, prioritizing the structure passed by ProfileView
                   let roles = [];
                   if (userData?.roles && Array.isArray(userData.roles)) {
-                    console.log('Utilisation de userData.roles:', userData.roles);
                     roles = userData.roles;
                   } else if (userData?.user?.roles && Array.isArray(userData.user.roles)) {
-                    console.log('Utilisation de userData.user.roles:', userData.user.roles);
                     roles = userData.user.roles;
                   } else if (userData?.data?.roles && Array.isArray(userData.data.roles)) {
-                    console.log('Utilisation de userData.data.roles:', userData.data.roles);
                     roles = userData.data.roles;
                   } else if (Array.isArray(userData)) {
-                    console.log('Utilisation de userData comme tableau:', userData);
                     roles = userData;
                   }
 
-                  console.log('Rôles finaux:', roles);
-
                   // Si aucun rôle n'est trouvé mais que nous avons un rôle dans user
                   if (roles.length === 0 && userData?.user?.role) {
-                    console.log('Utilisation du rôle unique depuis user.role:', userData.user.role);
                     roles = [userData.user.role];
                   }
 
@@ -271,8 +262,6 @@ const ProfileHeader = ({ userData, isPublicProfile = false, profilePictureUrl })
                       const roleName = typeof role === 'object' && role !== null 
                         ? (role.name || role || "USER")
                         : String(role);
-                      
-                      console.log('Role passé au RoleBadge:', { roleName, originalRole: role });
                       
                       return (
                         <RoleBadge

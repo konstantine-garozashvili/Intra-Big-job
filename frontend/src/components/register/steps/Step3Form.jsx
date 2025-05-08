@@ -59,31 +59,17 @@ const Step3Form = ({ goToPrevStep, onSubmit }) => {
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
     
-    console.log('Step3Form - Starting form submission');
-    console.log('Current form data:', {
-      addressName,
-      addressComplement,
-      city,
-      postalCode
-    });
-
     const isValid = validateStep3();
-    console.log('Form validation result:', isValid);
-    console.log('Validation errors:', localErrors);
 
     if (isValid) {
       try {
-        console.log('Attempting to submit form...');
         onSubmit(e);
       } catch (error) {
-        console.error('Error during form submission:', error);
         setLocalErrors({
           ...localErrors,
           addressName: "Erreur lors de la validation de l'adresse. Veuillez réessayer."
         });
       }
-    } else {
-      console.log('Form validation failed');
     }
   };
 

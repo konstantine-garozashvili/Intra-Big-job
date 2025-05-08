@@ -178,7 +178,6 @@ const UserProfileSettings = () => {
       
       return hasBirthdayOccurredThisYear ? age : age - 1;
     } catch (e) {
-      // console.error('Error calculating age:', e);
       return null;
     }
   };
@@ -231,11 +230,6 @@ const UserProfileSettings = () => {
     try {
       const value = editedData.personal[field];
       
-      // Debug log for linkedinUrl
-      if (field === 'linkedinUrl') {
-        console.log(`handleSavePersonal - linkedinUrl value: ${JSON.stringify(value)}`);
-      }
-      
       // Validation spécifique selon le type de champ
       if (field === 'birthDate' && value) {
         const birthDate = new Date(value);
@@ -282,7 +276,6 @@ const UserProfileSettings = () => {
       }
       // Special case: allow null/empty for linkedinUrl deletion
       if (field === 'linkedinUrl' && (value === null || value === '')) {
-        console.log('Deleting LinkedIn URL');
         // Continue with deletion
       }
 
@@ -311,7 +304,6 @@ const UserProfileSettings = () => {
 
       toast.success(`${field} mis à jour avec succès`);
     } catch (error) {
-      // console.error(`Error updating ${field}:`, error);
       // Revert optimistic update on error
       if (field === 'portfolioUrl' && isStudent) {
         updateLocalState('portfolioUrl', profileData?.data?.studentProfile?.portfolioUrl || null);
@@ -359,7 +351,6 @@ const UserProfileSettings = () => {
       await refetchProfile();
       
     } catch (error) {
-      console.error('Error saving address:', error);
       toast.error('Erreur lors de la mise à jour de l\'adresse');
     }
   };
@@ -442,30 +433,6 @@ const UserProfileSettings = () => {
   // Handler for profile picture changes - DISABLED TO BREAK CIRCULAR DEPENDENCY
   const handleProfilePictureChange = useCallback((newUrl) => {
     // TEMPORARILY DISABLED TO BREAK CIRCULAR DEPENDENCY
-    console.log("UserProfileSettings - Profile picture change handler disabled to prevent infinite loops");
-    
-    /* Original code commented out
-    console.log("UserProfileSettings - Profile picture changed, conditionally refetching");
-    
-    // Skip if the URL is the same as what we already have
-    if (newUrl === lastProfilePictureUrl) {
-      console.log("UserProfileSettings - Skipping refetch (same URL)");
-      return;
-    }
-    
-    // Only refetch if we have a valid URL and it's different from the current one
-    // and we haven't refetched recently
-    if (newUrl && 
-        (!userData?.profilePictureUrl || newUrl !== userData.profilePictureUrl) &&
-        Date.now() - lastRefetchTime > 10000) { // Only refetch if it's been more than 10 seconds
-      console.log("UserProfileSettings - Refetching profile with new URL:", newUrl);
-      setLastProfilePictureUrl(newUrl);
-      setLastRefetchTime(Date.now());
-      refetchProfile();
-    } else {
-      console.log("UserProfileSettings - Skipping refetch (too recent or no change)");
-    }
-    */
   }, []);
 
   // Render loading state

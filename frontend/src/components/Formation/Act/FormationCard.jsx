@@ -152,13 +152,11 @@ const FormationCard = (props) => {
     try {
       await formationService.requestEnrollment(formation.id);
       // Notification Firestore + cache local
-      console.log('[FormationCard] Avant formationNotifications.requested', { formation });
       await formationNotifications.requested({
         formationName: formation.name,
         formationId: formation.id,
         userId: profileData?.id
       });
-      console.log('[FormationCard] Après formationNotifications.requested');
       setConfirmDialogOpen(false);
       toast.success(
         <div className="flex items-center gap-2">
@@ -168,11 +166,9 @@ const FormationCard = (props) => {
         { duration: 5000 }
       );
     } catch (error) {
-      console.error('[FormationCard] Erreur dans handleRequestJoin', error);
       if (
         error?.message && error.message.toLowerCase().includes("demande d'inscription créée avec succès")
       ) {
-        console.log('[FormationCard] Notification malgré erreur "succès"', { formation });
         await formationNotifications.requested({
           formationName: formation.name,
           formationId: formation.id,

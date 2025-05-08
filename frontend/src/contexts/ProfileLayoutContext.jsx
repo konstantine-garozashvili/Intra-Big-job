@@ -36,7 +36,7 @@ export const ProfileLayoutProvider = ({ children }) => {
         
       // If we have fresh data (less than 30s old), use it directly without triggering more calls
       if (cachedData && now - cacheTimestamp < 30000) {
-        console.log("ProfileLayoutContext: Using cached user data");
+        // console.log("ProfileLayoutContext: Using cached user data");
         return Promise.resolve(cachedData);
       }
       

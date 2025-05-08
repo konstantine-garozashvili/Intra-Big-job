@@ -59,7 +59,6 @@ const DashboardLayout = ({
   
   // Afficher l'erreur si présente
   if (error) {
-    console.log("DashboardLayout - Rendering error display:", error);
     return (
       <div className={`container mx-auto p-8 ${className}`}>
         <ErrorDisplay errorMessage={error} />

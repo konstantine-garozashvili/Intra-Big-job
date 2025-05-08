@@ -206,10 +206,7 @@ const DashboardHeader = ({ user, icon: Icon, roleTitle }) => {
     };
   }, [user]);
   
-  // Log final des données affichées
-  useEffect(() => {
-    // console.log("DashboardHeader - Final display data:", userData);
-  }, [userData]);
+
   
   // Récupérer les données à afficher directement depuis l'état
   const { firstName, lastName, profilePicture } = userData;

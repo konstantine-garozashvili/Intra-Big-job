@@ -51,11 +51,9 @@ const EditFormationForm = () => {
 
       try {
         setLoading(true);
-        console.log('[EditFormationForm] Loading formation data for id:', formationId);
         
         // Charger les spécialisations d'abord
         const specializationsData = await formationService.getSpecializations();
-        console.log('[EditFormationForm] Received specializations:', specializationsData);
         
         if (Array.isArray(specializationsData)) {
           setSpecializations(specializationsData);
@@ -65,7 +63,6 @@ const EditFormationForm = () => {
 
         // Charger les données de la formation
         const formationData = await formationService.getFormation(formationId);
-        console.log('[EditFormationForm] Received formation data:', formationData);
         
         if (!formationData) {
           console.error('[EditFormationForm] No formation data received');
@@ -93,7 +90,6 @@ const EditFormationForm = () => {
           setImagePreview(formationData.image_url);
         }
       } catch (error) {
-        console.error('[EditFormationForm] Error loading data:', error);
         toast.error('Erreur lors du chargement de la formation');
       } finally {
         setLoading(false);
@@ -159,7 +155,6 @@ const EditFormationForm = () => {
       setFormData(prev => ({ ...prev, imageFile: null }));
       toast.success('Image supprimée avec succès');
     } catch (error) {
-      console.error('Error deleting image:', error);
       toast.error('Erreur lors de la suppression de l\'image');
     } finally {
       setLoading(false);

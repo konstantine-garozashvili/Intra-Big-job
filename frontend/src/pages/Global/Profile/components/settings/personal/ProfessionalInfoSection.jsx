@@ -68,7 +68,6 @@ export const ProfessionalInfoSection = ({
   useEffect(() => {
     const handlePortfolioUpdate = (event) => {
       if (event.detail?.portfolioUrl !== undefined) {
-        console.log('Mise à jour du portfolio détectée:', event.detail.portfolioUrl);
         setLocalPortfolioUrl(event.detail.portfolioUrl);
       }
     };
@@ -120,7 +119,6 @@ export const ProfessionalInfoSection = ({
     } catch (error) {
       // Restaurer l'ancienne valeur en cas d'erreur
       setLocalPortfolioUrl(currentPortfolioUrl);
-      console.error('Erreur lors de la mise à jour du portfolio:', error);
       toast.error(error.message || "Une erreur est survenue lors de la mise à jour du portfolio");
     } finally {
       setLoading(false);
@@ -171,13 +169,6 @@ export const ProfessionalInfoSection = ({
        handleInputChange('linkedinUrl', value);
     }
   };
-
-  // Pour débogage - loguer les valeurs importantes
-  useEffect(() => {
-    console.log('ProfessionalInfoSection - studentProfile?.portfolioUrl:', studentProfile?.portfolioUrl);
-    console.log('ProfessionalInfoSection - localPortfolioUrl:', localPortfolioUrl);
-    console.log('ProfessionalInfoSection - editedData.personal.portfolioUrl:', editedData.personal.portfolioUrl);
-  }, [studentProfile?.portfolioUrl, localPortfolioUrl, editedData.personal.portfolioUrl]);
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6">

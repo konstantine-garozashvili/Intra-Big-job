@@ -222,7 +222,6 @@ class DocumentService {
       
       // Use the correct endpoint path without additional /api prefix
       const url = `${API_URL}/documents/${documentId}/download`;
-      console.log('Downloading document from:', url); // Debug log
       
       const response = await axios.get(url, config);
       
@@ -232,7 +231,6 @@ class DocumentService {
       
       return response.data;
     } catch (error) {
-      console.error('Download error:', error); // Debug log
       if (error.response) {
         const errorMessage = error.response.data instanceof Blob 
           ? 'Erreur lors du téléchargement'

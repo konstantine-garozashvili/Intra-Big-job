@@ -480,7 +480,6 @@ const Navbar = memo(() => {
 
               // Only refresh if data is old AND we haven't refreshed in the last 30 seconds
               if (dataAge > 2 * 60 * 1000 && timeSinceLastRefresh > 30000) {
-                // console.log("Navbar: Data is stale, refreshing in background");
                 window._lastNavbarRefreshTime = now;
 
                 // Récupérer les données en arrière-plan sans bloquer l'interface

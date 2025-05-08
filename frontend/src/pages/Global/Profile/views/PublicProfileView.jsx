@@ -17,9 +17,6 @@ const PublicProfileView = () => {
   const [isOwnProfile, setIsOwnProfile] = useState(false);
   const roleUI = useRoleUI();
   
-  console.log('PublicProfileView - userId from params:', userId);
-  console.log('PublicProfileView - Current URL:', window.location.pathname);
-  
   useEffect(() => {
     const checkCurrentUser = async () => {
       try {
@@ -31,7 +28,6 @@ const PublicProfileView = () => {
         }
         return false;
       } catch (error) {
-        console.error('Error checking current user:', error);
         return false;
       }
     };
@@ -43,33 +39,24 @@ const PublicProfileView = () => {
         
         apiService.clearPublicProfileCache(userId);
         
-        console.log('Fetching public profile for userId:', userId);
         const response = await apiService.getPublicProfile(userId);
-        console.log('Raw API Response:', response);
         
         if (response?.data?.user) {
-          console.log('Using response.data.user:', response.data.user);
           setProfileData(response.data.user);
           
-          // Extraire l'URL de la photo de profil
           if (response.data.user.profilePictureUrl) {
             setProfilePictureUrl(response.data.user.profilePictureUrl);
-            console.log('Profile picture URL found:', response.data.user.profilePictureUrl);
           } else if (response.data.user.profilePicturePath) {
-            // Fallback: utiliser getProfilePictureUrl du frontend si l'URL n'est pas fournie
             const { getProfilePictureUrl } = require('@/lib/utils/profileUtils');
             const fallbackUrl = getProfilePictureUrl(response.data.user.profilePicturePath);
             setProfilePictureUrl(fallbackUrl);
-            console.log('Profile picture URL generated from path:', fallbackUrl);
           } else {
             setProfilePictureUrl(null);
-            console.log('No profile picture available');
           }
         } else {
           setError('Données du profil non disponibles');
         }
       } catch (error) {
-        console.error('Error in fetchPublicProfile:', error);
         setError(error.message || 'Erreur lors de la récupération du profil');
       } finally {
         setIsLoading(false);
@@ -134,21 +121,17 @@ const PublicProfileView = () => {
     );
   }
 
-  console.log('ProfileData before transformation:', profileData);
-  
   const userData = {
     user: {
       ...profileData,
       profilePictureUrl: profilePictureUrl,
       roles: Array.isArray(profileData.roles) 
         ? profileData.roles.map(role => {
-            console.log('[PublicProfileView] Role avant transformation:', role);
             const transformedRole = {
               name: role,
               displayName: roleUI.translateRoleName(role),
               color: roleUI.getRoleBadgeColor(role)
             };
-            console.log('[PublicProfileView] Role après transformation:', transformedRole);
             return transformedRole;
           })
         : [{ 
@@ -175,12 +158,6 @@ const PublicProfileView = () => {
     addresses: profileData.addresses || [],
     stats: { profile: { completionPercentage: 0 } }
   };
-
-  console.log('[PublicProfileView] userData final:', {
-    roles: userData.user.roles,
-    isPublicProfile: true,
-    profilePictureUrl: userData.user.profilePictureUrl
-  });
 
   return (
     <motion.div

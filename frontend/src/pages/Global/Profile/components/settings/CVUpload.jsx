@@ -60,17 +60,14 @@ const CVUpload = memo(({ userData, onUpdate }) => {
             name: data.data[0].name || 'CV',
             id: data.data[0].id
           }, null, true);
-          console.log('Notification de téléchargement de CV créée avec succès');
         } else {
           // Fallback si on ne peut pas obtenir les données du document
           documentNotifications.uploaded({
             name: 'CV',
             id: Date.now()
           }, null, true);
-          console.log('Notification de téléchargement de CV créée avec données par défaut');
         }
-      }).catch(err => {
-        console.error('Erreur lors de la récupération du document CV:', err);
+      }).catch(() => {
         // Créer quand même une notification en cas d'erreur
         documentNotifications.uploaded({
           name: 'CV',
@@ -108,7 +105,7 @@ const CVUpload = memo(({ userData, onUpdate }) => {
         // Forcer le rafraîchissement du compteur 
         setTimeout(() => {
           notificationService.getUnreadCount(true)
-            .catch(console.error);
+            .catch(() => {});
         }, 300);
       }
       
@@ -211,7 +208,6 @@ const CVUpload = memo(({ userData, onUpdate }) => {
     const isGuest = user?.roles?.includes('ROLE_GUEST');
     
     if (isStudent || isGuest) {
-      console.log('Creating backup frontend notification for student/guest user');
       // Force creation of notification in frontend (bypassing backend check)
       documentNotifications.deleted(documentInfo, null, true);
     }
@@ -251,7 +247,6 @@ const CVUpload = memo(({ userData, onUpdate }) => {
       
       toast.success('Document importé avec succès');
     } catch (error) {
-      console.error('Erreur lors du téléchargement du CV:', error);
       toast.error('Erreur lors du téléchargement du CV');
     }
   }, [cvDocument]);

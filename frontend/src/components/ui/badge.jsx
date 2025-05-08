@@ -36,8 +36,9 @@ function Badge({
   variant,
   ...props
 }) {
+  const { isDark, ...restProps } = props;
   return (
-    <span className={cn(badgeVariants({ variant }), className)} {...props} />
+    <span className={cn(badgeVariants({ variant }), className)} {...restProps} />
   )
 }
 

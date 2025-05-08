@@ -160,7 +160,6 @@ export function UserTable({
                                             <RoleBadge 
                                                 key={role.id} 
                                                 role={role.name} 
-                                                isDark={isDark}
                                             />
                                         ))}
                                     </div>

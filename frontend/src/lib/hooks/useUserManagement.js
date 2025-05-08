@@ -158,7 +158,7 @@ export function useUserManagement(initialFilter = "ALL") {
             if (response.success) {
                 // Convertir l'ID en chaîne de caractères
                 const userIdString = String(userId);
-                console.log('Changing role for user:', userIdString);
+                // console.log('Changing role for user:', userIdString);
 
                 try {
                     // Vérifier les préférences de notification
@@ -167,12 +167,11 @@ export function useUserManagement(initialFilter = "ALL") {
                     const preferencesSnap = await getDoc(preferencesRef);
                     const preferences = preferencesSnap.data() || {};
 
-                    console.log('Notification preferences:', preferences);
+                    // console.log('Notification preferences:', preferences);
 
                     // Si les notifications de rôle ne sont pas explicitement désactivées
                     if (preferences['ROLE_UPDATE'] !== false) {
-                        console.log('Creating notification for user:', userIdString);
-                        
+                        // console.log('Creating notification for user:', userIdString);
                         // Créer la notification
                         const notificationData = {
                             recipientId: userIdString,
@@ -183,12 +182,12 @@ export function useUserManagement(initialFilter = "ALL") {
                             type: 'ROLE_UPDATE'
                         };
 
-                        console.log('Notification data:', notificationData);
+                        // console.log('Notification data:', notificationData);
 
                         await addDoc(collection(db, 'notifications'), notificationData);
-                        console.log('Notification created successfully');
+                        // console.log('Notification created successfully');
                     } else {
-                        console.log('Notifications are disabled for this user');
+                        // console.log('Notifications are disabled for this user');
                     }
                 } catch (firebaseError) {
                     console.error('Firebase error:', firebaseError);

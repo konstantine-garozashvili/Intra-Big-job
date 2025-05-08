@@ -25,16 +25,6 @@ const ProfileLayoutContent = () => {
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
-  
-  // Effet de débogage (sera supprimé en production)
-  useEffect(() => {
-    console.log('ProfileLayout debug:', { 
-      isLayoutLoading, 
-      isUserDataLoading, 
-      isSidebarLoaded, 
-      showSkeleton 
-    });
-  }, [isLayoutLoading, isUserDataLoading, isSidebarLoaded, showSkeleton]);
 
   return (
     <div className="container mx-auto px-4 py-8">

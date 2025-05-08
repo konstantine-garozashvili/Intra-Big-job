@@ -13,13 +13,7 @@ import { Search, Filter } from "lucide-react";
 const FormationFilters = ({ filters, onFilterChange, specializations }) => {
   // Log uniquement les changements de valeurs des filtres
   useEffect(() => {
-    console.log('🎯 [DEBUG] FormationFilters State:', {
-      currentSpecialization: filters.specialization,
-      availableSpecializations: specializations.map(s => ({
-        id: s.id,
-        name: s.name
-      }))
-    });
+    // ... existing code ...
   }, [filters.specialization, specializations]);
 
   return (

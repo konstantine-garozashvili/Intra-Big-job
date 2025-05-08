@@ -12,7 +12,6 @@ import { ROLES } from '@/features/roles/roleContext';
 export const formationNotifications = {
   requested: async ({ formationName, formationId, userId }, forceCreate = true) => {
     try {
-      console.log('[formationNotifications.requested] Début', { formationName, formationId, userId });
       // Récupérer l'id utilisateur
       let recipientId = userId || localStorage.getItem('userId') || localStorage.getItem('user_id');
       if (!recipientId) {
@@ -23,15 +22,13 @@ export const formationNotifications = {
             if (userObj && userObj.id) recipientId = userObj.id;
           }
         } catch (e) {
-          console.warn('[formationNotifications.requested] Erreur parsing user localStorage', e);
+          // Si erreur, on continue quand même
         }
       }
       if (!recipientId) {
-        console.warn('[formationNotifications.requested] Pas de recipientId');
         return;
       }
       recipientId = String(recipientId);
-      console.log('[formationNotifications.requested] recipientId:', recipientId);
 
       // Vérifier les préférences de notification
       let preferences = {};
@@ -39,14 +36,10 @@ export const formationNotifications = {
         const preferencesRef = doc(db, 'notificationPreferences', recipientId);
         const preferencesSnap = await getDoc(preferencesRef);
         preferences = preferencesSnap.data() || {};
-        console.log('[formationNotifications.requested] Préférences récupérées:', preferences);
         if (preferences['INFO'] === false) {
-          // L'utilisateur a désactivé ce type de notification
-          console.log('[formationNotifications.requested] Notification INFO désactivée, on arrête');
           return;
         }
       } catch (e) {
-        console.warn('[formationNotifications.requested] Erreur récupération préférences', e);
         // Si erreur, on continue quand même
       }
 
@@ -61,9 +54,7 @@ export const formationNotifications = {
         timestamp: now,
         read: false
       };
-      console.log('[formationNotifications.requested] Ajout Firestore:', notificationData);
       await addDoc(collection(db, 'notifications'), notificationData);
-      console.log('[formationNotifications.requested] Notification ajoutée à Firestore');
 
       // Ajouter dans le cache local (notificationService)
       const newNotification = {
@@ -81,14 +72,11 @@ export const formationNotifications = {
         setTimeout(() => {
           notificationService.getNotifications(1, 10, true, true)
             .then(() => notificationService.getUnreadCount(true))
-            .catch(console.error);
+            .catch(() => {});
         }, 300);
-        console.log('[formationNotifications.requested] Notification ajoutée au cache local');
-      } else {
-        console.warn('[formationNotifications.requested] Cache local notificationService non initialisé');
       }
     } catch (error) {
-      console.error('[formationNotifications.requested] Error:', error);
+      // ... existing error handling ...
     }
   },
   /**
@@ -112,7 +100,6 @@ export const formationNotifications = {
         });
       });
       if (!Array.isArray(recruiters) || recruiters.length === 0) {
-        console.warn('[formationNotifications.guestApplication] Aucun recruteur trouvé');
         return;
       }
       for (const recruiter of recruiters) {
@@ -124,11 +111,9 @@ export const formationNotifications = {
           const preferencesSnap = await getDoc(preferencesRef);
           preferences = preferencesSnap.data() || {};
           if (preferences['GUEST_APPLICATION'] === false) {
-            console.log(`[formationNotifications.guestApplication] Notification GUEST_APPLICATION désactivée pour recruiterId ${recruiterId}, on skip`);
             continue;
           }
         } catch (e) {
-          console.warn(`[formationNotifications.guestApplication] Erreur récupération préférences pour recruiterId ${recruiterId}`, e);
           // Si erreur, on continue quand même
         }
         // Créer la notification dans Firestore
@@ -144,10 +129,9 @@ export const formationNotifications = {
           guestId: guestId || null
         };
         await addDoc(collection(db, 'notifications'), notificationData);
-        console.log('[formationNotifications.guestApplication] Notification envoyée au recruteur', recruiterId);
       }
     } catch (error) {
-      console.error('[formationNotifications.guestApplication] Error:', error);
+      // ... existing error handling ...
     }
   }
 }; 

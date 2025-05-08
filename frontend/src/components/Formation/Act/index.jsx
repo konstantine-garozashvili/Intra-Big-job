@@ -46,18 +46,6 @@ const Act = () => {
           formationService.getSpecializations()
         ]);
         const formationsData = formationsResult.formations || [];
-        console.log('🔍 [DEBUG] Initial Data:', {
-          formations: formationsData.map(f => ({
-            id: f.id,
-            name: f.name,
-            specId: f.specializationId,
-            specName: f.specialization?.name
-          })),
-          specializations: specializationsData.map(s => ({
-            id: s.id,
-            name: s.name
-          }))
-        });
         setFormations(formationsData);
         setSpecializations(specializationsData);
       } catch (err) {
@@ -71,11 +59,6 @@ const Act = () => {
   }, []);
 
   const handleFilterChange = (key, value) => {
-    console.log('🔄 [DEBUG] Filter Change:', {
-      key,
-      newValue: value,
-      oldValue: filters[key]
-    });
     if (key === 'reset') {
       setFilters({
         search: '',
@@ -106,17 +89,6 @@ const Act = () => {
       const matchesSpecialization = filters.specialization === 'all' ||
         (formation.specialization && formation.specialization.id.toString() === filters.specialization);
 
-      // Log uniquement si le filtrage échoue
-      if (!matchesSpecialization && filters.specialization !== 'all') {
-        console.log('❌ [DEBUG] Formation filtered out:', {
-          name: formation.name,
-          formationSpecId: formation.specialization?.id,
-          filterSpecId: filters.specialization,
-          specialization: formation.specialization?.name,
-          reason: 'specialization mismatch'
-        });
-      }
-
       return matchesSearch && matchesSpecialization;
     })
     .sort((a, b) => {
@@ -130,19 +102,6 @@ const Act = () => {
           return new Date(a.dateStart) - new Date(b.dateStart);
       }
     });
-
-  // Log uniquement quand le nombre de résultats change
-  useEffect(() => {
-    console.log('📊 [DEBUG] Filtered Results:', {
-      total: formations.length,
-      filtered: filteredFormations.length,
-      filters: {
-        search: filters.search,
-        specialization: filters.specialization,
-        sortBy: filters.sortBy
-      }
-    });
-  }, [filteredFormations.length, formations.length, filters]);
 
   if (error) {
     return (

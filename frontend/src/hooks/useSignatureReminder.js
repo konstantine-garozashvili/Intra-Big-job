@@ -86,11 +86,10 @@ export function useSignatureReminder() {
           }
         } catch (error) {
           // En cas d'erreur d'API, nous supposons que la signature est nécessaire
-          console.error('Erreur lors de la vérification de la signature:', error);
           if (isMounted) setNeedsSignature(true);
         }
       } catch (error) {
-        console.error('Erreur dans useSignatureReminder:', error);
+        // console.error('Erreur dans useSignatureReminder:', error);
       }
     };
     
@@ -102,7 +101,7 @@ export function useSignatureReminder() {
     
     // Écouteur d'événement pour la signature soumise
     const handleSignatureSubmitted = (event) => {
-      console.log('Signature submitted event received', event.detail);
+      // console.log('Signature submitted event received', event.detail);
       if (event.detail.success) {
         // Enregistrer la signature dans le localStorage en plus de mettre à jour l'état
         const todayStr = new Date().toISOString().split('T')[0];

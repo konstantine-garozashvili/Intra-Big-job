@@ -117,26 +117,19 @@ export const isStudent = (userRole) => {
  */
 export const isGuest = (userRole) => {
   if (!userRole) {
-    console.log('isGuest check with null/undefined userRole');
     return false;
   }
   
   if (Array.isArray(userRole)) {
-    console.log('isGuest check with array:', userRole);
     const result = userRole.some(role => {
       const roleName = typeof role === 'object' && role !== null ? role.name : role;
       const isGuestRole = roleName === 'ROLE_GUEST' || roleName === 'GUEST';
-      console.log(`Role ${roleName} is guest? ${isGuestRole}`);
       return isGuestRole;
     });
-    console.log('isGuest result with array:', result);
     return result;
   }
   
-  console.log('isGuest check with string:', userRole);
-  const result = userRole === 'ROLE_GUEST' || userRole === 'GUEST';
-  console.log('isGuest result with string:', result);
-  return result;
+  return userRole === 'ROLE_GUEST' || userRole === 'GUEST';
 };
 
 /**
@@ -188,14 +181,6 @@ export const canEditAddress = (userRole) => {
   const isAdminResult = isAdmin(userRole);
   const isSuperAdminResult = isSuperAdmin(userRole);
   const isGuestResult = isGuest(userRole);
-  
-  console.log('canEditAddress check:', {
-    userRole,
-    isAdminResult,
-    isSuperAdminResult,
-    isGuestResult,
-    result: isAdminResult || isSuperAdminResult || isGuestResult
-  });
   
   return isAdminResult || isSuperAdminResult || isGuestResult;
 };

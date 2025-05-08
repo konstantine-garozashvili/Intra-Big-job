@@ -164,11 +164,8 @@ export default function FormationDetails() {
   const handleAddUser = async (userId) => {
     setAddingUserId(userId);
     try {
-      console.log('[handleAddUser] Adding user to formation:', { formationId: id, userId });
       const res = await apiService.post(`/api/formations/${id}/students/${userId}`);
-      console.log('[handleAddUser] Response from add student:', res);
       if (!res.success) {
-        console.error('[handleAddUser] Add student failed:', res);
         throw new Error(res.message || "Erreur lors de l'ajout de l'utilisateur.");
       }
       toast.success('Utilisateur ajouté à la formation.');
@@ -191,7 +188,6 @@ export default function FormationDetails() {
         }
       }
     } catch (error) {
-      console.error('[handleAddUser] Error:', error);
       toast.error(error.message || "Erreur lors de l'ajout de l'utilisateur.");
     } finally {
       setAddingUserId(null);

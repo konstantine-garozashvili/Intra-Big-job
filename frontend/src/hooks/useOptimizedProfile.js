@@ -35,8 +35,7 @@ export const useOptimizedProfile = (options = {}) => {
           
           // Use very fresh cache immediately for instant response
           if (cacheAge < 20000) { // 20 seconds
-            console.log("useOptimizedProfile - Using very fresh cached data");
-            
+            // console.log("useOptimizedProfile - Using very fresh cached data");
             // Refresh in background if needed but with memory optimization
             if (cacheAge > 5000) { // Older than 5 seconds
               setTimeout(() => {
@@ -55,7 +54,7 @@ export const useOptimizedProfile = (options = {}) => {
         }
         
         // If we don't have fresh cache or skipCache is true, fetch from API
-        console.log("useOptimizedProfile - Fetching fresh data from API");
+        // console.log("useOptimizedProfile - Fetching fresh data from API");
         const userData = await apiService.getUserProfile({
           timeout: 2000,
           retries: 0,
@@ -64,13 +63,12 @@ export const useOptimizedProfile = (options = {}) => {
         
         return userData;
       } catch (error) {
-        console.error("Error in useOptimizedProfile:", error);
-        
+        // console.error("Error in useOptimizedProfile:", error);
         // Try to use cached data as fallback even if it's older
         try {
           const cachedData = localStorage.getItem('user');
           if (cachedData) {
-            console.log("useOptimizedProfile - Using cached data as fallback after error");
+            // console.log("useOptimizedProfile - Using cached data as fallback after error");
             return JSON.parse(cachedData);
           }
         } catch (cacheError) {
@@ -119,7 +117,7 @@ function useMemoryMonitoring() {
       
       // If using more than 80% of heap limit, clear caches
       if (memoryInfo.usedJSHeapSize > memoryInfo.jsHeapSizeLimit * 0.8) {
-        console.warn('Memory usage high, clearing caches');
+        // console.warn('Memory usage high, clearing caches');
         apiService.clearMemoryCache();
         
         // Use our centralized queryClient instance
@@ -138,7 +136,7 @@ function useMemoryMonitoring() {
   // Listen for low memory events on mobile devices
   if ('onlowmemory' in window) {
     window.addEventListener('lowmemory', () => {
-      console.warn('Low memory event detected, clearing caches');
+      // console.warn('Low memory event detected, clearing caches');
       apiService.clearMemoryCache();
     });
   }

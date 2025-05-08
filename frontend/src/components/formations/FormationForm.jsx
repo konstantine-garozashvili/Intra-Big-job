@@ -40,18 +40,14 @@ const FormationForm = () => {
   useEffect(() => {
     const loadSpecializations = async () => {
       try {
-        console.log('[FormationForm] Loading specializations');
         const specializationsData = await formationService.getSpecializations();
-        console.log('[FormationForm] Received specializations data:', specializationsData);
         
         if (Array.isArray(specializationsData)) {
           setSpecializations(specializationsData);
         } else {
-          console.error('[FormationForm] Unexpected specializations data structure:', specializationsData);
           toast.error('Structure de données de spécialisation inattendue');
         }
       } catch (error) {
-        console.error('[FormationForm] Error loading specializations:', error);
         toast.error('Erreur lors du chargement des spécialisations');
       }
     };
@@ -64,10 +60,8 @@ const FormationForm = () => {
     if (!showAddSpecModal) return;
     const fetchDomains = async () => {
       try {
-        console.log('[FormationForm] Fetching domains');
         const token = localStorage.getItem('token');
         if (!token) {
-          console.error('[FormationForm] No token found');
           toast.error('Session expirée. Veuillez vous reconnecter.');
           return;
         }
@@ -80,22 +74,18 @@ const FormationForm = () => {
         });
         
         if (!res.ok) {
-          console.error('[FormationForm] Error response:', res.status, res.statusText);
           throw new Error(`HTTP error! status: ${res.status}`);
         }
         
         const json = await res.json();
-        console.log('[FormationForm] Domains response:', json);
         
         if (json.success && json.data && Array.isArray(json.data.domains)) {
           setDomains(json.data.domains);
         } else {
-          console.error('[FormationForm] Unexpected domains data structure:', json);
           setDomains([]);
           toast.error('Structure de données de domaines inattendue');
         }
       } catch (e) {
-        console.error('[FormationForm] Error fetching domains:', e);
         setDomains([]);
         toast.error('Erreur lors du chargement des domaines');
       }
@@ -165,7 +155,6 @@ const FormationForm = () => {
       toast.success('Formation créée avec succès');
       navigate('/formations');
     } catch (error) {
-      console.error('Error creating formation:', error);
       toast.error(error.message || 'Erreur lors de la création de la formation');
     } finally {
       setLoading(false);
@@ -233,10 +222,8 @@ const FormationForm = () => {
     
     setDeletingSpec(true);
     try {
-      console.log('[FormationForm] Deleting specialization:', specToDelete);
       const token = localStorage.getItem('token');
       if (!token) {
-        console.error('[FormationForm] No token found');
         toast.error('Session expirée. Veuillez vous reconnecter.');
         return;
       }
@@ -250,7 +237,6 @@ const FormationForm = () => {
       });
 
       const json = await res.json();
-      console.log('[FormationForm] Delete response:', json);
 
       if (json.success) {
         toast.success('Spécialisation supprimée avec succès');
@@ -265,7 +251,6 @@ const FormationForm = () => {
         toast.error(json.message || 'Erreur lors de la suppression');
       }
     } catch (e) {
-      console.error('[FormationForm] Error deleting specialization:', e);
       toast.error('Erreur lors de la suppression');
     } finally {
       setDeletingSpec(false);
