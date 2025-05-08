@@ -442,8 +442,8 @@ const CVUpload = memo(({ userData, onUpdate }) => {
                 </div>
               ) : (
                 <>
-                  <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5" />
-                  Envoyer
+                  <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5 dark:text-white" />
+                  <p className="dark:text-white">Envoyer</p>
                 </>
               )}
             </Button>

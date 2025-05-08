@@ -17,6 +17,7 @@ import {
   DialogDescription,
   DialogFooter
 } from '@/components/ui/dialog';
+import { formationNotifications } from '@/lib/utils/formationNotifications';
 
 export default function FormationDetail() {
   const { id } = useParams();
@@ -29,6 +30,7 @@ export default function FormationDetail() {
   const { profileData } = useContext(ProfileContext) || {};
   const isProfileAcknowledged = profileData?.stats?.profile?.isAcknowledged;
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -44,17 +46,28 @@ export default function FormationDetail() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  const handleRequestJoin = async () => {
+  const handleRequestClick = () => {
     if (!isProfileAcknowledged) {
       setProfileDialogOpen(true);
       return;
     }
+    setConfirmDialogOpen(true);
+  };
+
+  const handleRequestJoin = async () => {
     setRequesting(true);
     setRequested(true);
     const localRequested = JSON.parse(localStorage.getItem('requestedFormations') || '[]');
     localStorage.setItem('requestedFormations', JSON.stringify([...new Set([...localRequested, Number(id)])]));
     try {
       await formationService.requestEnrollment(id);
+      if (formation) {
+        await formationNotifications.requested({
+          formationName: formation.name,
+          formationId: formation.id,
+          userId: profileData?.id
+        });
+      }
       toast.success(
         <div className="flex items-center gap-2">
           <svg className="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
@@ -63,10 +76,33 @@ export default function FormationDetail() {
         { duration: 5000 }
       );
     } catch (error) {
+      console.error('[FormationDetail] Erreur dans handleRequestJoin', error);
+      if (
+        error?.message && error.message.toLowerCase().includes("demande d'inscription créée avec succès")
+      ) {
+        if (formation) {
+          await formationNotifications.requested({
+            formationName: formation.name,
+            formationId: formation.id,
+            userId: profileData?.id
+          });
+        }
+        toast.success(
+          <div className="flex items-center gap-2">
+            <svg className="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+            <span className="font-bold">Demande envoyée !</span>
+          </div>,
+          { duration: 5000 }
+        );
+        setRequesting(false);
+        setConfirmDialogOpen(false);
+        return;
+      }
       toast.error(error.message || "Erreur lors de la demande d'inscription à la formation.");
       setRequested(false);
     } finally {
       setRequesting(false);
+      setConfirmDialogOpen(false);
     }
   };
 
@@ -169,7 +205,7 @@ export default function FormationDetail() {
             <div className="w-full flex justify-center mt-8">
               <MagicButton
                 className="w-full max-w-xs text-base font-medium bg-gradient-to-r from-amber-400 via-[#528eb2] to-[#78b9dd] hover:from-transparent hover:to-transparent hover:text-amber-600 dark:hover:text-white"
-                onClick={handleRequestJoin}
+                onClick={handleRequestClick}
                 disabled={requested || requesting}
               >
                 {requested ? (
@@ -192,7 +228,8 @@ export default function FormationDetail() {
               <DialogTitle className="text-2xl font-bold mb-2">Profil à compléter !</DialogTitle>
               <DialogDescription asChild>
                 <div className="mb-4 text-base text-gray-700 dark:text-gray-200">
-                  <span className="block mb-2">Oups, il te manque encore quelques infos pour pouvoir demander une formation :</span>
+                  <span className="block mb-2">Oups, il te manque encore quelques infos pour pouvoir faire une 
+demande :</span>
                   <ul className="list-disc pl-6 space-y-1 text-left">
                     <li>
                       <button
@@ -246,6 +283,24 @@ export default function FormationDetail() {
               </Button>
             </DialogFooter>
           </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmer la demande</DialogTitle>
+            <DialogDescription>
+              Voulez-vous vraiment rejoindre cette formation ? Cette action enverra une demande d'inscription.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button onClick={handleRequestJoin} disabled={requesting}>
+              Confirmer
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

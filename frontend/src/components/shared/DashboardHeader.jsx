@@ -9,6 +9,7 @@ import userDataManager from '@/lib/services/userDataManager';
 import UserSkeleton from '@/components/ui/UserSkeleton';
 import ProfilePictureDisplay from '@/components/ProfilePictureDisplay';
 import { useTranslation } from '@/contexts/TranslationContext';
+import { useRolePermissions } from '@/features/roles/useRolePermissions';
 
 const getInitials = (firstName, lastName) => {
   if (!firstName || !lastName) return '?';
@@ -48,6 +49,8 @@ const DashboardHeader = ({ user, icon: Icon, roleTitle }) => {
   
   // État pour le temps actuel
   const [currentTime, setCurrentTime] = useState(new Date());
+
+  const permissions = useRolePermissions();
 
   // Effet pour mettre à jour l'heure
   useEffect(() => {
@@ -328,7 +331,7 @@ const DashboardHeader = ({ user, icon: Icon, roleTitle }) => {
             </Button>
           </Link>
           {/* Only show for guest role */}
-          {user?.role === 'guest' && (
+          {permissions.isGuest() && (
             <Link to="/guest/enrollment-requests">
               <Button size="sm" variant="outline" className="gap-2 ml-2">
                 <span className="hidden sm:inline">Mes demandes</span>

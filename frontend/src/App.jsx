@@ -424,7 +424,7 @@ const App = () => {
                       } />
                       <Route path="list" element={
                         <RoleGuard 
-                          roles={[ROLES.STUDENT, ROLES.GUEST]} 
+                          roles={[ROLES.GUEST]} 
                           fallback={<Navigate to="/dashboard" replace />}
                         >
                           <Act />

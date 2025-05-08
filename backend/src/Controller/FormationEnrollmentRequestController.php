@@ -16,6 +16,7 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use App\Domains\Student\Service\StudentProfileService;
 use App\Service\DocumentStorageFactory;
+use Symfony\Component\HttpClient\NativeHttpClient;
 
 #[Route('/api')]
 class FormationEnrollmentRequestController extends AbstractController
@@ -74,6 +75,55 @@ class FormationEnrollmentRequestController extends AbstractController
 
         $this->entityManager->persist($enrollmentRequest);
         $this->entityManager->flush();
+
+        // Notifier tous les recruteurs via Firestore
+        try {
+            $recruiters = $this->entityManager->getRepository(\App\Entity\User::class)
+                ->findByRoleWithRelations('RECRUITER');
+            $formationName = $formation->getName();
+            $firebaseUrl = $this->getParameter('firebase_database_url') ?? 'https://firestore.googleapis.com/v1/projects/bigproject-d6daf/databases/(default)/documents';
+            $client = new NativeHttpClient();
+            foreach ($recruiters as $recruiter) {
+                $userId = (string)$recruiter->getId();
+                // Vérifier la préférence Firestore du recruteur
+                $prefUrl = $firebaseUrl . '/notificationPreferences/' . $userId;
+                $prefResp = $client->request('GET', $prefUrl, [
+                    'headers' => [
+                        'Content-Type' => 'application/json',
+                    ]
+                ]);
+                $prefData = json_decode($prefResp->getContent(false), true);
+                $fields = $prefData['fields'] ?? [];
+                if (isset($fields['GUEST_APPLICATION']['booleanValue']) && $fields['GUEST_APPLICATION']['booleanValue'] === false) {
+                    // Préférence désactivée, on skip
+                    continue;
+                }
+                $notificationData = [
+                    'fields' => [
+                        'recipientId' => ['stringValue' => $userId],
+                        'title' => ['stringValue' => "Nouvelle demande d'inscription invité"],
+                        'message' => ['stringValue' => "Un invité a demandé à rejoindre la formation $formationName."],
+                        'type' => ['stringValue' => 'GUEST_APPLICATION'],
+                        'timestamp' => ['timestampValue' => (new \DateTime())->format(\DateTime::RFC3339)],
+                        'read' => ['booleanValue' => false],
+                        'targetUrl' => ['stringValue' => '/formations'],
+                        'source' => ['stringValue' => 'backend'],
+                        'appVersion' => ['stringValue' => '1.0']
+                    ]
+                ];
+                $client->request('POST', $firebaseUrl . '/notifications', [
+                    'json' => $notificationData,
+                    'headers' => [
+                        'Content-Type' => 'application/json',
+                    ]
+                ]);
+            }
+        } catch (\Exception $e) {
+            // Log mais ne bloque pas la création
+            if (method_exists($this, 'getLogger') && $this->getLogger()) {
+                $this->getLogger()->error('Erreur envoi notification Firestore: ' . $e->getMessage());
+            }
+        }
 
         return $this->json([
             'message' => 'Demande d\'inscription créée avec succès',

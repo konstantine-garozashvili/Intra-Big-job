@@ -21,7 +21,8 @@ const NotificationSettings = () => {
       DOCUMENT_UPLOADED: true,
       DOCUMENT_DELETED: true,
       DOCUMENT_APPROVED: true,
-      DOCUMENT_REJECTED: true
+      DOCUMENT_REJECTED: true,
+      GUEST_APPLICATION: true // Ajout du nouveau type par défaut
     }
   });
   const [initialSettings, setInitialSettings] = useState(null);
@@ -143,7 +144,8 @@ const NotificationSettings = () => {
               DOCUMENT_UPLOADED: preferences.DOCUMENT_UPLOADED !== false,
               DOCUMENT_DELETED: preferences.DOCUMENT_DELETED !== false,
               DOCUMENT_APPROVED: preferences.DOCUMENT_APPROVED !== false,
-              DOCUMENT_REJECTED: preferences.DOCUMENT_REJECTED !== false
+              DOCUMENT_REJECTED: preferences.DOCUMENT_REJECTED !== false,
+              GUEST_APPLICATION: preferences.GUEST_APPLICATION !== false // Ajout du nouveau type
             }
           };
           
@@ -172,7 +174,8 @@ const NotificationSettings = () => {
             DOCUMENT_UPLOADED: true,
             DOCUMENT_DELETED: true,
             DOCUMENT_APPROVED: true,
-            DOCUMENT_REJECTED: true
+            DOCUMENT_REJECTED: true,
+            GUEST_APPLICATION: true // Ajout du nouveau type
           }
         };
         
@@ -187,6 +190,7 @@ const NotificationSettings = () => {
           DOCUMENT_DELETED: true,
           DOCUMENT_APPROVED: true,
           DOCUMENT_REJECTED: true,
+          GUEST_APPLICATION: true, // Ajout du nouveau type
           createdAt: new Date(),
           lastLogin: new Date()
         };
@@ -441,6 +445,12 @@ const NotificationSettings = () => {
               setting="DOCUMENT_REJECTED"
               label="Rejet de documents"
               description="Recevez des notifications lorsqu'un document est rejeté."
+            />
+            <NotificationSwitch
+              category="app"
+              setting="GUEST_APPLICATION"
+              label="Demandes d'inscription invité"
+              description="Recevez une notification lorsqu'un invité fait une demande d'inscription à une formation."
             />
           </CardContent>
         </Card>

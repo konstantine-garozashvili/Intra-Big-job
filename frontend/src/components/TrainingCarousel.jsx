@@ -21,6 +21,8 @@ import {
   DialogClose
 } from "@/components/ui/dialog";
 import { ProfileContext } from "@/components/MainLayout";
+import { useNotifications } from '@/lib/hooks/useNotifications';
+import { formationNotifications } from '@/lib/utils/formationNotifications';
 
 // Configuration des badges avec des couleurs plus inspirantes
 const badgeVariants = {
@@ -143,6 +145,7 @@ export default function TrainingCarousel() {
   const navigate = useNavigate();
 
   const { profileData } = useContext(ProfileContext) || {};
+  const { createNotification } = useNotifications();
   const isProfileAcknowledged = profileData?.stats?.profile?.isAcknowledged;
 
   useEffect(() => {
@@ -230,15 +233,43 @@ export default function TrainingCarousel() {
   };
 
   const handleRequestJoin = async (formationId, skipConfirm = false) => {
+    console.log('[TrainingCarousel] handleRequestJoin called', { formationId, skipConfirm });
     setRequesting((prev) => ({ ...prev, [formationId]: true }));
-    // Optimisme UI : verrouille le bouton tout de suite
     setRequested((prev) => {
       const next = { ...prev, [formationId]: true };
       setLocalRequested(Object.keys(next).map(Number));
       return next;
     });
     try {
+      const formation = formations.find(f => f.id === formationId);
+      console.log('[TrainingCarousel] formation trouvé ?', { formation });
       await formationService.requestEnrollment(formationId);
+      // Appel formationNotifications.requested (notification Firestore + UI)
+      if (formation) {
+        console.log('[TrainingCarousel] Avant formationNotifications.requested', { formation });
+        await formationNotifications.requested({
+          formationName: formation.name,
+          formationId: formation.id,
+          userId: profileData?.id
+        });
+        console.log('[TrainingCarousel] Après formationNotifications.requested');
+        // Notifier le recruteur si l'utilisateur est guest
+        const userRoles = profileData?.roles || profileData?.userRoles || [];
+        const isGuest = Array.isArray(userRoles)
+          ? userRoles.some(role => typeof role === 'object' ? role.name === 'ROLE_GUEST' || role.name === 'GUEST' : role === 'ROLE_GUEST' || role === 'GUEST')
+          : userRoles === 'ROLE_GUEST' || userRoles === 'GUEST';
+        const recruiterId = formation.recruiterId || (formation.recruiter && formation.recruiter.id);
+        console.log('[DEBUG] formation object:', formation);
+        console.log('[DEBUG] recruiterId:', recruiterId, 'isGuest:', isGuest);
+        if (isGuest && recruiterId) {
+          await formationNotifications.guestApplication({
+            formationName: formation.name,
+            recruiterId,
+            guestId: profileData?.id
+          });
+          console.log('[TrainingCarousel] Notification envoyée au recruteur', recruiterId);
+        }
+      }
       toast.success(
         <div className="flex items-center gap-2">
           <svg className="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
@@ -247,6 +278,45 @@ export default function TrainingCarousel() {
         { duration: 5000 }
       );
     } catch (error) {
+      console.error('[TrainingCarousel] Erreur dans handleRequestJoin', error);
+      // Si l'erreur indique que la demande a quand même été créée, on notifie !
+      if (
+        error?.message && error.message.toLowerCase().includes("demande d'inscription créée avec succès")
+      ) {
+        const formation = formations.find(f => f.id === formationId);
+        if (formation) {
+          console.log('[TrainingCarousel] Notification malgré erreur "succès"', { formation });
+          await formationNotifications.requested({
+            formationName: formation.name,
+            formationId: formation.id,
+            userId: profileData?.id
+          });
+          // Ajout notification recruteur même en cas d'erreur "succès"
+          const userRoles = profileData?.roles || profileData?.userRoles || [];
+          const isGuest = Array.isArray(userRoles)
+            ? userRoles.some(role => typeof role === 'object' ? role.name === 'ROLE_GUEST' || role.name === 'GUEST' : role === 'ROLE_GUEST' || role === 'GUEST')
+            : userRoles === 'ROLE_GUEST' || userRoles === 'GUEST';
+          const recruiterId = formation.recruiterId || (formation.recruiter && formation.recruiter.id);
+          console.log('[DEBUG][catch] formation object:', formation);
+          console.log('[DEBUG][catch] recruiterId:', recruiterId, 'isGuest:', isGuest);
+          if (isGuest && recruiterId) {
+            await formationNotifications.guestApplication({
+              formationName: formation.name,
+              recruiterId,
+              guestId: profileData?.id
+            });
+            console.log('[TrainingCarousel][catch] Notification envoyée au recruteur', recruiterId);
+          }
+        }
+        toast.success(
+          <div className="flex items-center gap-2">
+            <svg className="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+            <span className="font-bold">Demande envoyée !</span>
+          </div>,
+          { duration: 5000 }
+        );
+        return;
+      }
       if (
         error?.message && error.message.toLowerCase().includes('compléter votre profil')
       ) {
@@ -366,7 +436,7 @@ export default function TrainingCarousel() {
                           className="w-full text-sm sm:text-base font-medium bg-gradient-to-r from-amber-400 via-[#528eb2] to-[#78b9dd] hover:from-transparent hover:to-transparent hover:text-amber-600 dark:hover:text-white"
                           onClick={e => {
                             e.stopPropagation();
-                            if (!isProfileAcknowledged) {
+                            if (isProfileAcknowledged === false) {
                               setProfileDialogOpen(true);
                             } else {
                               setConfirmDialog({ open: true, formationId: item.id });
@@ -413,7 +483,10 @@ export default function TrainingCarousel() {
               Annuler
             </Button>
             <Button
-              onClick={() => handleRequestJoin(confirmDialog.formationId, true)}
+              onClick={() => {
+                console.log('[TrainingCarousel] Dialog Confirmer clicked', confirmDialog.formationId);
+                handleRequestJoin(confirmDialog.formationId, true);
+              }}
               disabled={requesting[confirmDialog.formationId]}
             >
               Confirmer
@@ -432,7 +505,8 @@ export default function TrainingCarousel() {
               <DialogTitle className="text-2xl font-bold mb-2">Profil à compléter !</DialogTitle>
               <DialogDescription asChild>
                 <div className="mb-4 text-base text-gray-700 dark:text-gray-200">
-                  <span className="block mb-2">Oups, il te manque encore quelques infos pour pouvoir demander une formation :</span>
+                  <span className="block mb-2">Oups, il te manque encore quelques infos pour pouvoir faire une 
+demande :</span>
                   <ul className="list-disc pl-6 space-y-1 text-left">
                     <li>
                       <button

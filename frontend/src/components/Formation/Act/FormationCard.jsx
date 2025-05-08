@@ -16,6 +16,7 @@ import {
   DialogFooter
 } from "@/components/ui/dialog";
 import { useNavigate } from 'react-router-dom';
+import { formationNotifications } from '@/lib/utils/formationNotifications';
 
 // Configuration des badges avec des couleurs plus inspirantes
 const badgeVariants = {
@@ -49,7 +50,7 @@ function setLocalRequested(ids) {
   localStorage.setItem(LOCAL_REQUESTED_KEY, JSON.stringify(ids));
 }
 
-const FormationCard = ({ formation, viewMode }) => {
+const FormationCard = ({ formation, viewMode, profileData }) => {
   const {
     id,
     name,
@@ -65,6 +66,57 @@ const FormationCard = ({ formation, viewMode }) => {
   const [requesting, setRequesting] = useState(false);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const navigate = useNavigate ? useNavigate() : null;
+
+  const handleRequestJoin = async () => {
+    if (!formation) return;
+    setRequesting(true);
+    setRequested(true);
+    try {
+      await formationService.requestEnrollment(formation.id);
+      // Notification Firestore + cache local
+      console.log('[FormationCard] Avant formationNotifications.requested', { formation });
+      await formationNotifications.requested({
+        formationName: formation.name,
+        formationId: formation.id,
+        userId: profileData?.id
+      });
+      console.log('[FormationCard] Après formationNotifications.requested');
+      setConfirmDialogOpen(false);
+      toast.success(
+        <div className="flex items-center gap-2">
+          <svg className="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+          <span className="font-bold">Demande envoyée !</span>
+        </div>,
+        { duration: 5000 }
+      );
+    } catch (error) {
+      console.error('[FormationCard] Erreur dans handleRequestJoin', error);
+      if (
+        error?.message && error.message.toLowerCase().includes("demande d'inscription créée avec succès")
+      ) {
+        console.log('[FormationCard] Notification malgré erreur "succès"', { formation });
+        await formationNotifications.requested({
+          formationName: formation.name,
+          formationId: formation.id,
+          userId: profileData?.id
+        });
+        setConfirmDialogOpen(false);
+        toast.success(
+          <div className="flex items-center gap-2">
+            <svg className="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+            <span className="font-bold">Demande envoyée !</span>
+          </div>,
+          { duration: 5000 }
+        );
+        setRequesting(false);
+        return;
+      }
+      toast.error(error.message || "Erreur lors de la demande d'inscription à la formation.");
+      setRequested(false);
+    } finally {
+      setRequesting(false);
+    }
+  };
 
   // Mode liste ou grille : même contenu simplifié
   return (

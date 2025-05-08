@@ -298,6 +298,27 @@ class ProfileDataController extends AbstractController
             ];
         }
         
+        // Ajouter le CV public si disponible
+        $cvType = $this->documentTypeRepository->findOneBy(['code' => 'CV']);
+        $cvDocument = null;
+        if ($cvType) {
+            $cv = $this->documentRepository->findOneBy([
+                'user' => $user,
+                'documentType' => $cvType
+            ]);
+            if ($cv) {
+                // Générer une URL de téléchargement sécurisée
+                $downloadUrl = $this->generateUrl('app_document_download', ['id' => $cv->getId()], 0);
+                $cvDocument = [
+                    'id' => $cv->getId(),
+                    'name' => $cv->getName(),
+                    'mimeType' => $cv->getMimeType(),
+                    'downloadUrl' => $downloadUrl
+                ];
+            }
+        }
+        $userData['user']['cvDocument'] = $cvDocument;
+        
         return $this->json([
             'success' => true,
             'data' => $userData
