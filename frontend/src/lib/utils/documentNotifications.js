@@ -25,12 +25,11 @@ const BACKEND_MANAGED_NOTIFICATIONS = [
  * @param {boolean} forceCreate - Force creation even if managed by backend
  */
 export const createDocumentNotification = async (document, type, title, message, targetUrl = '/documents', forceCreate = false) => {
+  // Ne jamais créer de notification locale pour les types gérés par le backend, sauf si forceCreate est true
+  if (!forceCreate && BACKEND_MANAGED_NOTIFICATIONS.includes(type)) {
+    return;
+  }
   try {
-    // Vérifier si le type de notification est géré par le backend
-    if (!forceCreate && BACKEND_MANAGED_NOTIFICATIONS.includes(type)) {
-      return;
-    }
-    
     // Récupérer l'ID utilisateur avec plusieurs méthodes possibles
     let userId = localStorage.getItem('userId') || localStorage.getItem('user_id');
     
@@ -94,30 +93,28 @@ export const createDocumentNotification = async (document, type, title, message,
     };
     
     // Add notification to the notification service cache
-    if (notificationService.cache.notifications && notificationService.cache.notifications.notifications) {
-      // Insert at the beginning of the array
-      notificationService.cache.notifications.notifications.unshift(newNotification);
-      
-      // Update the unread count
-      notificationService.cache.unreadCount = (notificationService.cache.unreadCount || 0) + 1;
-      
-      // Update the counter in pagination data
-      if (notificationService.cache.notifications.pagination) {
-        notificationService.cache.notifications.pagination.total += 1;
+    if (!BACKEND_MANAGED_NOTIFICATIONS.includes(type) || forceCreate) {
+      if (notificationService.cache.notifications && notificationService.cache.notifications.notifications) {
+        // Insert at the beginning of the array
+        notificationService.cache.notifications.notifications.unshift(newNotification);
+        // Update the unread count
+        notificationService.cache.unreadCount = (notificationService.cache.unreadCount || 0) + 1;
+        // Update the counter in pagination data
+        if (notificationService.cache.notifications.pagination) {
+          notificationService.cache.notifications.pagination.total += 1;
+        }
+        // Notify subscribers of the change
+        notificationService.notifySubscribers();
+        // Ensure we reload notifications from the cache to update all components
+        setTimeout(() => {
+          notificationService.getNotifications(1, 10, true, true)
+            .then(() => {
+              notificationService.getUnreadCount(true);
+            })
+            .catch(() => {
+            });
+        }, 300);
       }
-      
-      // Notify subscribers of the change
-      notificationService.notifySubscribers();
-      
-      // Ensure we reload notifications from the cache to update all components
-      setTimeout(() => {
-        notificationService.getNotifications(1, 10, true, true)
-          .then(() => {
-            notificationService.getUnreadCount(true);
-          })
-          .catch(() => {
-          });
-      }, 300);
     }
   } catch (error) {
   }
