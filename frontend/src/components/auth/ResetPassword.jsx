@@ -29,9 +29,7 @@ const ResetPassword = () => {
             setIsLoading(true);
             
             try {
-                console.log('Vérification du token:', token);
                 const response = await apiService.get(`/api/reset-password/verify/${token}`);
-                console.log('Réponse de vérification:', response);
                 
                 if (response.success) {
                     setIsValid(true);
@@ -41,7 +39,6 @@ const ResetPassword = () => {
                     toast.error(response.message || 'Lien de réinitialisation invalide');
                 }
             } catch (error) {
-                console.error('Erreur de vérification:', error);
                 setIsValid(false);
                 toast.error('Ce lien de réinitialisation est invalide ou a expiré.');
             } finally {
@@ -71,13 +68,9 @@ const ResetPassword = () => {
         setIsSubmitting(true);
         
         try {
-            console.log('Envoi de la réinitialisation pour le token:', token);
-            
             const response = await apiService.post(`/api/reset-password/reset/${token}`, { 
                 password
             });
-            
-            console.log('Réponse de réinitialisation:', response);
             
             if (response.success) {
                 toast.success('Votre mot de passe a été réinitialisé avec succès');
@@ -88,7 +81,6 @@ const ResetPassword = () => {
                 toast.error(response.message || 'Une erreur est survenue');
             }
         } catch (error) {
-            console.error('Erreur de réinitialisation:', error);
             const errorMessage = error.response?.data?.message || 
                                 'Impossible de réinitialiser votre mot de passe. Veuillez réessayer plus tard.';
             toast.error(errorMessage);

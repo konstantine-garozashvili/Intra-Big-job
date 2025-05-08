@@ -6,17 +6,17 @@ import {
     DialogTitle, 
     DialogFooter,
     DialogDescription
-} from '../../../components/ui/dialog';
-import { Button } from '../../../components/ui/button';
-import { Input } from '../../../components/ui/input';
-import { Label } from '../../../components/ui/label';
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { 
     Alert,
     AlertDescription,
     AlertTitle
-} from '../../../components/ui/alert';
-import { Avatar, AvatarFallback } from '../../../components/ui/avatar';
-import { Badge } from '../../../components/ui/badge';
+} from '@/components/ui/alert';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import { 
     Loader2, 
@@ -31,8 +31,8 @@ import {
     UserCog
 } from 'lucide-react';
 import { format, parse, isValid } from 'date-fns';
-import { PhoneInput } from '../../../components/ui/phone-input';
-import { isValidPhone } from '../../../lib/utils/validation';
+import { PhoneInput } from '@/components/ui/phone-input';
+import { isValidPhone } from '@/lib/utils/validation';
 
 const EditUserDialog = ({ 
     isOpen, 
@@ -40,7 +40,8 @@ const EditUserDialog = ({
     user, 
     onUpdateUser, 
     isProcessing, 
-    currentUserIsSuperAdmin 
+    currentUserIsSuperAdmin,
+    isDark
 }) => {
     const [formData, setFormData] = useState({
         firstName: '',
@@ -181,44 +182,44 @@ const EditUserDialog = ({
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden">
-                <DialogHeader className="px-6 pt-6 pb-2">
-                    <DialogTitle className="text-xl font-semibold flex items-center gap-2">
-                        <UserCog className="h-5 w-5 text-blue-600" />
+            <DialogContent className={`sm:max-w-[550px] ${isDark ? 'bg-gray-800 border-gray-700' : ''}`}>
+                <DialogHeader className={`px-6 pt-6 pb-2 ${isDark ? 'text-gray-100' : ''}`}>
+                    <DialogTitle className={`text-xl font-semibold flex items-center gap-2 ${isDark ? 'text-gray-100' : ''}`}>
+                        <UserCog className={`h-5 w-5 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
                         Modifier l'utilisateur
                     </DialogTitle>
-                    <DialogDescription className="text-gray-500 mt-1.5">
+                    <DialogDescription className={`text-gray-500 mt-1.5 ${isDark ? 'text-gray-400' : ''}`}>
                         Mettez à jour les informations de l'utilisateur ici.
                     </DialogDescription>
                 </DialogHeader>
                 
                 {user && (
-                    <div className="px-6 pb-4">
-                        <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg mb-4 border border-gray-200">
-                            <Avatar className="h-12 w-12 border-2 border-white shadow-sm">
-                                <AvatarFallback className="bg-blue-100 text-blue-700 font-medium">
+                    <div className={`px-6 pb-4 ${isDark ? 'bg-gray-900/50' : 'bg-gray-50'} rounded-lg mb-4 border ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+                        <div className="flex items-center gap-4 p-4">
+                            <Avatar className={`h-12 w-12 border-2 ${isDark ? 'border-gray-700' : 'border-white'} shadow-sm`}>
+                                <AvatarFallback className={`${isDark ? 'bg-gray-700 text-gray-200' : 'bg-blue-100 text-blue-700'} font-medium`}>
                                     {getInitials(user.firstName, user.lastName)}
                                 </AvatarFallback>
                             </Avatar>
                             <div>
                                 <div className="flex items-center gap-2">
-                                    <h3 className="font-medium text-gray-900">{user.firstName} {user.lastName}</h3>
+                                    <h3 className={`font-medium ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{user.firstName} {user.lastName}</h3>
                                     {user.roles && user.roles.some(role => 
                                         role.name === 'SUPERADMIN' || role.name === 'ROLE_SUPERADMIN') && (
-                                        <Badge className="bg-red-100 text-red-700 border-red-200">
+                                        <Badge className={`${isDark ? 'bg-red-100 text-red-700 border-red-200' : 'bg-red-100 text-red-700 border-red-200'}`}>
                                             SuperAdmin
                                         </Badge>
                                     )}
                                 </div>
-                                <p className="text-sm text-gray-500">{user.email}</p>
+                                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{user.email}</p>
                             </div>
                         </div>
                         
                         {isSuperAdminAndCurrentUserIsNot && (
-                            <Alert variant="destructive" className="mb-4 bg-red-50 text-red-800 border-red-200">
+                            <Alert variant="destructive" className={`${isDark ? 'bg-red-50 text-red-800 border-red-200' : 'bg-red-50 text-red-800 border-red-200'} mb-4`}>
                                 <Ban className="h-4 w-4" />
-                                <AlertTitle className="font-medium">Accès limité</AlertTitle>
-                                <AlertDescription className="text-sm">
+                                <AlertTitle className={`${isDark ? 'font-medium' : 'font-medium'}`}>Accès limité</AlertTitle>
+                                <AlertDescription className={`${isDark ? 'text-sm' : 'text-sm'}`}>
                                     Vous ne pouvez pas modifier un SuperAdmin.
                                 </AlertDescription>
                             </Alert>
@@ -230,7 +231,7 @@ const EditUserDialog = ({
                     <div className="space-y-4 py-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="firstName" className="text-sm font-medium text-gray-700">
+                                <Label htmlFor="firstName" className={`text-sm font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
                                     <User className="h-3.5 w-3.5 inline mr-1.5 text-gray-500" />
                                     Prénom
                                 </Label>
@@ -240,7 +241,7 @@ const EditUserDialog = ({
                                         name="firstName"
                                         value={formData.firstName}
                                         onChange={handleChange}
-                                        className={`w-full ${errors.firstName ? 'border-red-300 focus:ring-red-500' : ''}`}
+                                        className={`w-full ${isDark ? 'bg-gray-900 border-gray-700 text-gray-200' : ''} ${errors.firstName ? 'border-red-500' : ''}`}
                                         disabled={isProcessing || isSuperAdminAndCurrentUserIsNot}
                                         placeholder="Jean"
                                     />
@@ -253,7 +254,7 @@ const EditUserDialog = ({
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="lastName" className="text-sm font-medium text-gray-700">
+                                <Label htmlFor="lastName" className={`text-sm font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
                                     <User className="h-3.5 w-3.5 inline mr-1.5 text-gray-500" />
                                     Nom
                                 </Label>
@@ -263,7 +264,7 @@ const EditUserDialog = ({
                                         name="lastName"
                                         value={formData.lastName}
                                         onChange={handleChange}
-                                        className={`w-full ${errors.lastName ? 'border-red-300 focus:ring-red-500' : ''}`}
+                                        className={`w-full ${isDark ? 'bg-gray-900 border-gray-700 text-gray-200' : ''} ${errors.lastName ? 'border-red-500' : ''}`}
                                         disabled={isProcessing || isSuperAdminAndCurrentUserIsNot}
                                         placeholder="Dupont"
                                     />
@@ -278,7 +279,7 @@ const EditUserDialog = ({
                         </div>
                         
                         <div className="space-y-2">
-                            <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+                            <Label htmlFor="email" className={`text-sm font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
                                 <Mail className="h-3.5 w-3.5 inline mr-1.5 text-gray-500" />
                                 Email
                             </Label>
@@ -289,7 +290,7 @@ const EditUserDialog = ({
                                     type="email"
                                     value={formData.email}
                                     onChange={handleChange}
-                                    className={`w-full ${errors.email ? 'border-red-300 focus:ring-red-500' : ''}`}
+                                    className={`w-full ${isDark ? 'bg-gray-900 border-gray-700 text-gray-200' : ''} ${errors.email ? 'border-red-500' : ''}`}
                                     disabled={isProcessing || isSuperAdminAndCurrentUserIsNot}
                                     placeholder="jean.dupont@example.com"
                                 />
@@ -304,7 +305,7 @@ const EditUserDialog = ({
                         
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="phoneNumber" className="text-sm font-medium text-gray-700">
+                                <Label htmlFor="phoneNumber" className={`text-sm font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
                                     <Phone className="h-3.5 w-3.5 inline mr-1.5 text-gray-500" />
                                     Téléphone
                                 </Label>
@@ -327,7 +328,7 @@ const EditUserDialog = ({
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="birthDate" className="text-sm font-medium text-gray-700">
+                                <Label htmlFor="birthDate" className={`text-sm font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
                                     <Calendar className="h-3.5 w-3.5 inline mr-1.5 text-gray-500" />
                                     Date de naissance
                                 </Label>
@@ -338,7 +339,7 @@ const EditUserDialog = ({
                                         type="date"
                                         value={formData.birthDate}
                                         onChange={handleChange}
-                                        className={`w-full ${errors.birthDate ? 'border-red-300 focus:ring-red-500' : ''}`}
+                                        className={`w-full ${isDark ? 'bg-gray-900 border-gray-700 text-gray-200' : ''} ${errors.birthDate ? 'border-red-500' : ''}`}
                                         disabled={isProcessing || isSuperAdminAndCurrentUserIsNot}
                                     />
                                     {errors.birthDate && (
@@ -358,7 +359,7 @@ const EditUserDialog = ({
                             variant="outline" 
                             onClick={onClose}
                             disabled={isProcessing}
-                            className="bg-white hover:bg-gray-50"
+                            className={`${isDark ? 'bg-gray-900 border-gray-700 hover:bg-gray-800 text-gray-200' : 'bg-white hover:bg-gray-50'}`}
                         >
                             Annuler
                         </Button>
@@ -369,7 +370,7 @@ const EditUserDialog = ({
                             <Button 
                                 type="submit" 
                                 disabled={isProcessing || isSuperAdminAndCurrentUserIsNot || !formChanged}
-                                className="bg-blue-600 hover:bg-blue-700 text-white"
+                                className={`${isDark ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
                             >
                                 {isProcessing ? (
                                     <div className="flex items-center">

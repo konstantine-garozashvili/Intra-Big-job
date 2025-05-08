@@ -1157,3 +1157,9 @@
   color: #f3f4f6;
   border-color: #22304a;
 }
+
+.address-btn-compact {
+  padding: 0.35rem 0.9rem !important;
+  font-size: 0.92rem !important;
+  border-radius: 0.55rem !important;
+}

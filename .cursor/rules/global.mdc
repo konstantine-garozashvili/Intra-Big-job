@@ -13,6 +13,7 @@ alwaysApply: true
 - **Severity: CRITICAL**
 - Always read the entire file before suggesting any modifications
 - This is essential to understand the context and dependencies
+- Always modifiy the code by yourself like a real agent, I dont want any advises like "you should replace this line by that" or "Would you like me to implement this..."
 
 ### Verify imports
 - **Severity: CRITICAL**
@@ -38,7 +39,6 @@ alwaysApply: true
 - **Severity: CRITICAL**
 - Always use Docker for development (see [Infrastructure Rules](mdc:infrastructure.mdc))
 - Never execute `npm install` or `npm run dev` directly on host; all dependencies are managed in containers
-- Never modify package.json in the frontend directory
 
 ## High Priority Rules
 
@@ -51,13 +51,13 @@ alwaysApply: true
 - **Severity: HIGH**
 - Consider the user role system for any feature modifications
 - The system has 7 distinct roles with different permissions:
-  1. ADMIN (ID: 100)
-  2. SUPERADMIN (ID: 101)
-  3. HR (ID: 102)
-  4. TEACHER (ID: 103)
-  5. STUDENT (ID: 104)
-  6. GUEST (ID: 105)
-  7. RECRUITER (ID: 106)
+  1. ADMIN
+  2. SUPERADMIN
+  3. HR
+  4. TEACHER
+  5. STUDENT
+  6. GUEST
+  7. RECRUITER
 
 ### Document relationships
 - **Severity: HIGH**

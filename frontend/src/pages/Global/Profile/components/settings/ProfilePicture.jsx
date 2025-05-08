@@ -82,7 +82,6 @@ const ProfilePicture = ({ userData, onProfilePictureChange, isLoading: externalL
   const debouncedNotify = useRef(
     debounce((url) => {
       if (onProfilePictureChange && shouldNotifyParent(url)) {
-        console.log("ProfilePicture - Profile picture URL changed, notifying parent (debounced)");
         onProfilePictureChange(url);
       }
     }, 2000) // 2 second debounce
@@ -160,7 +159,6 @@ const ProfilePicture = ({ userData, onProfilePictureChange, isLoading: externalL
         }
       });
     } catch (error) {
-      console.error("Erreur non gérée lors de l'upload:", error);
       toast.error('Erreur lors de la mise à jour de la photo de profil');
     }
   };
@@ -188,12 +186,10 @@ const ProfilePicture = ({ userData, onProfilePictureChange, isLoading: externalL
           refetch();
           
           toast.error('Erreur lors de la suppression de la photo de profil');
-          // console.error('Error deleting profile picture:', error);
         }
       });
     } catch (error) {
       toast.error('Erreur lors de la suppression de la photo de profil');
-      // console.error('Error deleting profile picture:', error);
     } finally {
       setIsDeleting(false);
     }
@@ -216,7 +212,6 @@ const ProfilePicture = ({ userData, onProfilePictureChange, isLoading: externalL
     // Check if the URL is a blob URL - but don't try to fetch it as that causes errors
     if (profilePictureUrl.startsWith('blob:')) {
       // Just log it and return null - we'll use the fallback
-      console.log("Blob URL detected, using fallback:", profilePictureUrl);
       return null;
     }
     
@@ -225,7 +220,6 @@ const ProfilePicture = ({ userData, onProfilePictureChange, isLoading: externalL
 
   // Handle image load error
   const handleImageError = (e) => {
-    console.error("Image failed to load:", e.target.src);
     e.target.style.display = 'none'; // Hide the broken image
     e.target.onerror = null; // Prevent infinite error loop
     

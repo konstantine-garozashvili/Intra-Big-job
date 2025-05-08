@@ -1,7 +1,7 @@
 ---
 description: Comprehensive documentation of database structure
 globs: 
-alwaysApply: true
+alwaysApply: false
 ---
 # Database Structure
 
@@ -57,13 +57,13 @@ alwaysApply: true
   - `createdAt`: datetime_immutable
   - `updatedAt`: datetime_immutable
 - **Standard Values**:
-  - ADMIN (100)
-  - SUPERADMIN (101)
-  - HR (102)
-  - TEACHER (103)
+  - ADMIN
+  - SUPERADMIN
+  - HR
+  - TEACHER
   - STUDENT (104)
-  - GUEST (105)
-  - RECRUITER (106)
+  - GUEST
+  - RECRUITER
 
 ### UserStatus
 - **Primary Keys**: `id` (auto-increment)

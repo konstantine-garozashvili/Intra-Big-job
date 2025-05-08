@@ -808,7 +808,7 @@ const apiService = {
    */
   clearMemoryCache() {
     apiCache.clear();
-    console.log('API memory cache cleared');
+    // console.log('API memory cache cleared');
     
     // Force garbage collection hint
     if (window.gc) {
@@ -826,19 +826,16 @@ const apiService = {
     }
 
     const cacheKey = `${PUBLIC_PROFILE_CACHE_KEY}-${userId}`;
-    console.log('Attempting to fetch public profile for userId:', userId);
     
     try {
       // Vérifier le cache seulement si pas de signal d'abort
       if (!options.signal) {
         const cached = apiCache.get(cacheKey);
         if (cached && cached.expiry > Date.now()) {
-          console.log('Returning cached profile data');
           return cached.data;
         }
       }
 
-      console.log('Making API request to:', `/profile/public/${userId}`);
       const response = await this.get(`/profile/public/${userId}`, {
         ...options,
         noCache: true, // Force disable personal profile cache
@@ -850,7 +847,6 @@ const apiService = {
         },
         timeout: getAdaptiveTimeout(5000, true)
       });
-      console.log('Raw API response:', response);
 
       if (response) {
         // Normaliser la réponse
@@ -860,11 +856,9 @@ const apiService = {
             user: response.data?.user || response.data || response
           }
         };
-        console.log('Formatted response:', formattedResponse);
-
+        
         // Ne pas mettre en cache si un signal d'abort est présent
         if (!options.signal) {
-          console.log('Caching formatted response');
           apiCache.set(cacheKey, {
             data: formattedResponse,
             timestamp: Date.now(),
@@ -875,15 +869,12 @@ const apiService = {
         return formattedResponse;
       }
 
-      console.error('No response received from server');
       throw new Error('No response received from server');
     } catch (error) {
-      console.error('Error in getPublicProfile:', error);
       if (error.code === 'ECONNABORTED') {
         throw new Error('La requête a pris trop de temps, veuillez réessayer');
       }
       if (error.response) {
-        console.error('Server response error:', error.response.data);
         throw new Error(error.response.data.message || 'Erreur lors de la récupération du profil public');
       }
       throw error;

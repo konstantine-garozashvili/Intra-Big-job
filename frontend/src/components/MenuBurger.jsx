@@ -291,6 +291,30 @@ const MenuBurger = memo(() => {
       to: '/trombinoscope',
     },
     
+    // Formations 
+    {
+      key: 'formations_section',
+      label: 'Formations',
+      icon: <BookOpen className="w-5 h-5 mr-2 text-[#528eb2]" />,
+      roles: [ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.RECRUITER],
+      links: [
+        { 
+          name: 'Toutes les formations', 
+          to: '/formations', 
+          roles: [ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.RECRUITER] 
+        },
+        { 
+          name: 'Créer une formation', 
+          to: '/formations/new', 
+          roles: [ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.RECRUITER] 
+        },
+        { 
+          name: 'Demandes en attente', 
+          to: '/formations/pending', 
+          roles: [ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.RECRUITER] 
+        },
+      ],
+    },
     // --- SECTION ÉTUDES ET FORMATIONS ---
     {
       key: 'etudiants',
@@ -327,7 +351,7 @@ const MenuBurger = memo(() => {
       label: 'Gestion des formations',
       icon: <BookOpen className="w-5 h-5 mr-2 text-[#528eb2]" />,
       roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.TEACHER, ROLES.RECRUITER],
-      to: '/formations',
+      to: '/formation-management',
     },
     {
       key: 'justification_absence',

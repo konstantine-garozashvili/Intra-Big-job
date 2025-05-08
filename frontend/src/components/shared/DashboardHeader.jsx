@@ -9,6 +9,7 @@ import userDataManager from '@/lib/services/userDataManager';
 import UserSkeleton from '@/components/ui/UserSkeleton';
 import ProfilePictureDisplay from '@/components/ProfilePictureDisplay';
 import { useTranslation } from '@/contexts/TranslationContext';
+import { useRolePermissions } from '@/features/roles/useRolePermissions';
 
 const getInitials = (firstName, lastName) => {
   if (!firstName || !lastName) return '?';
@@ -48,6 +49,8 @@ const DashboardHeader = ({ user, icon: Icon, roleTitle }) => {
   
   // État pour le temps actuel
   const [currentTime, setCurrentTime] = useState(new Date());
+
+  const permissions = useRolePermissions();
 
   // Effet pour mettre à jour l'heure
   useEffect(() => {
@@ -99,7 +102,6 @@ const DashboardHeader = ({ user, icon: Icon, roleTitle }) => {
         firstName: user.firstName,
         lastName: user.lastName
       };
-      console.log('DashboardHeader - Updating with partial data:', partialData);
       setUserData(prev => ({ ...prev, ...partialData }));
     }
   }, [user]);
@@ -120,9 +122,6 @@ const DashboardHeader = ({ user, icon: Icon, roleTitle }) => {
   useEffect(() => {
     // Si les données utilisateur sont partiellement complètes (au moins prénom OU nom)
     if (user && (user.firstName || user.lastName)) {
-      console.log("DashboardHeader - Updating with partial data:", { firstName: user.firstName, lastName: user.lastName });
-      
-      // Mettre à jour les données stables de façon incrémentale
       const newUserData = {
         firstName: user.firstName || stableUserDataRef.current?.firstName,
         lastName: user.lastName || stableUserDataRef.current?.lastName,
@@ -149,8 +148,6 @@ const DashboardHeader = ({ user, icon: Icon, roleTitle }) => {
     }
     // Si les données utilisateur sont complètes (les deux prénom ET nom)
     else if (hasCompleteUserData(user)) {
-      console.log("DashboardHeader - Updating with complete data");
-      
       // Marquer que nous avons reçu des données complètes
       hasReceivedCompleteDataRef.current = true;
       lastDataChangeRef.current = Date.now();
@@ -182,7 +179,6 @@ const DashboardHeader = ({ user, icon: Icon, roleTitle }) => {
     }
     // Si les données sont absentes mais que nous n'avons pas encore de données stables
     else if (!hasCompleteUserData(user) && !stableUserDataRef.current) {
-      console.log("DashboardHeader - No data available, showing skeleton soon");
       // Si le timer n'est pas déjà programmé, programmer l'affichage du skeleton
       if (!skeletonTimerRef.current) {
         skeletonTimerRef.current = setTimeout(() => {
@@ -194,12 +190,10 @@ const DashboardHeader = ({ user, icon: Icon, roleTitle }) => {
     else if (stableUserDataRef.current && hasReceivedCompleteDataRef.current) {
       // Calculer le temps écoulé depuis les dernières données valides
       const timeSinceLastValidData = Date.now() - lastDataChangeRef.current;
-      console.log("DashboardHeader - Using stable data, time since last valid data:", timeSinceLastValidData);
       
       // Ne montrer le skeleton que si les données sont absentes depuis longtemps (10s)
       // Sinon, continuer à utiliser les données stables
       if (timeSinceLastValidData > 10000) {
-        console.log("DashboardHeader - Data missing for too long, showing skeleton");
         setShowSkeleton(true);
       }
     }
@@ -212,10 +206,7 @@ const DashboardHeader = ({ user, icon: Icon, roleTitle }) => {
     };
   }, [user]);
   
-  // Log final des données affichées
-  useEffect(() => {
-    console.log("DashboardHeader - Final display data:", userData);
-  }, [userData]);
+
   
   // Récupérer les données à afficher directement depuis l'état
   const { firstName, lastName, profilePicture } = userData;
@@ -327,6 +318,14 @@ const DashboardHeader = ({ user, icon: Icon, roleTitle }) => {
               <span className="hidden sm:inline">{translatedProfile}</span>
             </Button>
           </Link>
+          {/* Only show for guest role */}
+          {permissions.isGuest() && (
+            <Link to="/guest/enrollment-requests">
+              <Button size="sm" variant="outline" className="gap-2 ml-2">
+                <span className="hidden sm:inline">Mes demandes</span>
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
       <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-indigo-600"></div>
@@ -351,4 +350,4 @@ export default memo(DashboardHeader, (prevProps, nextProps) => {
   
   // Dans tous les autres cas, ne pas re-rendre
   return true;
-}); 
+});

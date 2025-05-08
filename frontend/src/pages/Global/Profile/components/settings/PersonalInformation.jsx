@@ -97,8 +97,6 @@ const PersonalInformation = ({
       const portfolioUrl = event.detail?.portfolioUrl;
       
       if (portfolioUrl !== undefined) {
-        console.log('Mise à jour du portfolio détectée:', portfolioUrl);
-        
         // Mettre à jour l'état local
         setEditedData(prev => ({
           ...prev,

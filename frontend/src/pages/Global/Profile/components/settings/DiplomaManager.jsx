@@ -60,7 +60,6 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
       enabled: true, // Always enabled to ensure we have the data
       onSuccess: (data) => {
         // Ensure diplomas state is always in sync with API data
-        console.log("[DiplomaManager] Successfully fetched user diplomas:", data);
         if (data && Array.isArray(data)) {
           setDiplomas(data);
         } else if (data && data.data && Array.isArray(data.data)) {
@@ -83,8 +82,6 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
 
   // Function to ensure we definitely call both API endpoints
   const forceRefreshAllData = () => {
-    console.log("[DiplomaManager] Force refreshing all diploma data");
-    
     // Clear caches first
     queryClient.invalidateQueries(['userDiplomas']);
     queryClient.invalidateQueries(['availableDiplomas']);
@@ -93,16 +90,14 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
     // Force direct API calls regardless of React Query cache
     setTimeout(() => {
       // Call user diplomas endpoint with direct service call
-      console.log("[DiplomaManager] Calling getUserDiplomas directly");
       diplomaService.getUserDiplomas()
-        .then(data => console.log("[DiplomaManager] Direct getUserDiplomas success"))
-        .catch(err => console.error("[DiplomaManager] Error in direct getUserDiplomas call:", err));
+        .then(data => {})
+        .catch(err => {});
       
       // Call available diplomas endpoint with direct service call
-      console.log("[DiplomaManager] Calling getAvailableDiplomas directly");
       diplomaService.getAvailableDiplomas()
-        .then(data => console.log("[DiplomaManager] Direct getAvailableDiplomas success"))
-        .catch(err => console.error("[DiplomaManager] Error in direct getAvailableDiplomas call:", err));
+        .then(data => {})
+        .catch(err => {});
       
       // Also refetch through React Query
       refetchUserDiplomas();
@@ -145,7 +140,6 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
         
         // Then queue a refetch of available diplomas with a slight delay to ensure backend processing is complete
         setTimeout(() => {
-          console.log("[DiplomaManager] Refetching available diplomas after add");
           // Use both methods to ensure the API call happens
           refetchAvailableDiplomas();
           diplomaService.getAvailableDiplomas().catch(err => 
@@ -228,7 +222,6 @@ const DiplomaManager = ({ userData, diplomas, setDiplomas }) => {
         
         // Then queue a refetch of available diplomas with a slight delay to ensure backend processing is complete
         setTimeout(() => {
-          console.log("[DiplomaManager] Refetching available diplomas after delete");
           // Use both methods to ensure the API call happens
           refetchAvailableDiplomas();
           diplomaService.getAvailableDiplomas().catch(err => 

@@ -200,7 +200,7 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
     public function findOneWithAllRelations(int $id): ?User
     {
         return $this->createQueryBuilder('u')
-            ->select('u', 'n', 't', 'ur', 'r', 's', 'ud', 'd', 'a')
+            ->select('u', 'n', 't', 'ur', 'r', 's', 'ud', 'd', 'a', 'f')
             ->leftJoin('u.nationality', 'n')
             ->leftJoin('u.theme', 't')
             ->leftJoin('u.userRoles', 'ur')
@@ -210,6 +210,7 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
             ->leftJoin('ud.diploma', 'd')
             ->leftJoin('u.addresses', 'a')
             ->leftJoin('u.studentProfile', 'sp')
+            ->leftJoin('u.formations', 'f')
             ->andWhere('u.id = :id')
             ->setParameter('id', $id)
             ->getQuery()
@@ -298,7 +299,8 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
                 'birthDate' => $user->getBirthDate() ? $user->getBirthDate()->format('Y-m-d') : null,
                 'createdAt' => $user->getCreatedAt() ? $user->getCreatedAt()->format('Y-m-d H:i:s') : null,
                 'updatedAt' => $user->getUpdatedAt() ? $user->getUpdatedAt()->format('Y-m-d H:i:s') : null,
-                'roles' => $roles
+                'roles' => $roles,
+                'profilePicturePath' => $user->getProfilePicturePath(),
             ];
             
             $result[] = $userData;
@@ -335,6 +337,18 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
 
         return $queryBuilder
             ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Fetch formations for a user directly via join
+     */
+    public function findFormationsForUser(int $userId): array
+    {
+        return $this->getEntityManager()->createQuery(
+            'SELECT f FROM App\\Entity\\Formation f JOIN f.students s WHERE s.id = :userId'
+        )
+        ->setParameter('userId', $userId)
             ->getResult();
     }
 }

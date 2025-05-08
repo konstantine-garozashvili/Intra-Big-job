@@ -173,33 +173,23 @@ export default function AdminTicketList() {
           const tokenParts = token.split('.');
           if (tokenParts.length === 3) {
             const payload = JSON.parse(atob(tokenParts[1]));
-            console.log('JWT Token payload:', payload);
-            console.log('Roles from token:', payload.roles);
           }
         } catch (tokenError) {
-          console.error('Error parsing token:', tokenError);
         }
 
         try {
           // Use axiosInstance instead of fetch for consistent error handling
-          console.log('Fetching raw tickets data');
           const rawResponse = await axiosInstance.get('/tickets/raw-data');
-          console.log('Raw tickets API response:', rawResponse.data);
           
           if (rawResponse.data.success && rawResponse.data.rawTickets) {
             setRawTickets(rawResponse.data.rawTickets);
-            console.log(`Found ${rawResponse.data.rawTickets.length} tickets in raw data`);
           } else {
-            console.warn('No raw tickets found or unexpected response format:', rawResponse.data);
           }
         } catch (rawError) {
-          console.error('Raw fetch error:', rawError.response?.data || rawError.message);
           
           // Fallback to regular tickets endpoint
           try {
-            console.log('Falling back to regular tickets endpoint');
             const ticketsResponse = await axiosInstance.get('/tickets');
-            console.log('Regular tickets API response:', ticketsResponse.data);
             
             if (ticketsResponse.data.success && ticketsResponse.data.tickets) {
               // Convert regular ticket objects to raw format for compatibility
@@ -219,45 +209,35 @@ export default function AdminTicketList() {
               }));
               
               setRawTickets(simpleTickets);
-              console.log(`Found ${simpleTickets.length} tickets in regular API`);
             } else {
               toast.error('Impossible de récupérer les tickets');
             }
           } catch (fallbackError) {
-            console.error('Error in fallback ticket fetch:', fallbackError);
             toast.error('Erreur lors de la récupération des tickets');
           }
         }
         
         // Continue with other API calls for statuses and services
         try {
-          console.log('Fetching statuses');
           const statusResponse = await axiosInstance.get('/tickets/status');
-          console.log('Statuses API response:', statusResponse.data);
           
           if (statusResponse.data && statusResponse.data.statuses) {
             setStatuses(statusResponse.data.statuses);
           } else {
-            console.warn('Unexpected statuses response format:', statusResponse.data);
           }
         } catch (statusError) {
-          console.error('Error fetching statuses:', statusError.response?.data || statusError.message);
           toast.error(`Error fetching statuses: ${statusError.response?.data?.message || statusError.message}`);
         }
         
         try {
-          console.log('Fetching services');
           const servicesResponse = await axiosInstance.get('/ticket-services');
-          console.log('Services API response:', servicesResponse.data);
           setServices(servicesResponse.data);
         } catch (servicesError) {
-          console.error('Error fetching services:', servicesError.response?.data || servicesError.message);
           toast.error(`Error fetching services: ${servicesError.response?.data?.message || servicesError.message}`);
         }
         
         setLoading(false);
       } catch (error) {
-        console.error('Error in fetchData:', error);
         setError('Failed to load data. Please try again later.');
         toast.error('Failed to load data');
         setLoading(false);
@@ -322,9 +302,6 @@ export default function AdminTicketList() {
       // Get a list of valid ticket IDs to update (use selected tickets or fallback to common IDs)
       const ticketIdsToUpdate = selectedTickets.length > 0 ? selectedTickets : [199, 200, 201, 202, 203];
       
-      console.log('Updating tickets with status:', selectedStatus);
-      console.log('Ticket IDs to update:', ticketIdsToUpdate);
-      
       const response = await axiosInstance.post('/tickets/custom-bulk-update', {
         ticketIds: ticketIdsToUpdate,
         statusId: selectedStatus.id
@@ -334,7 +311,6 @@ export default function AdminTicketList() {
         toast.success(`Successfully updated ${response.data.updatedCount} tickets`);
         if (response.data.errors && response.data.errors.length > 0) {
           toast.warning(`Some tickets could not be updated: ${response.data.errors.join(', ')}`);
-          console.log('Errors:', response.data.errors);
         }
         // Clear selection and refresh data
         setSelectedTickets([]);
@@ -348,7 +324,6 @@ export default function AdminTicketList() {
         toast.error(response.data.message || 'Failed to update tickets');
       }
     } catch (error) {
-      console.error('Error updating tickets:', error);
       toast.error(error.response?.data?.message || 'Failed to update tickets');
     } finally {
       setProcessingBulkAction(false);

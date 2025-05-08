@@ -79,7 +79,57 @@ const AboutTab = ({ userData, isPublicProfile = false, documents = [] }) => {
   const isSeekingApprenticeship = user?.studentProfile?.isSeekingApprenticeship || false;
   const isActivelySearching = isSeekingInternship || isSeekingApprenticeship;
 
+  // Si profil public, on utilise le champ cvDocument du backend
+  const publicCvDocument = isPublicProfile ? user?.cvDocument : null;
+
   const handleDownloadCV = async () => {
+    // Cas profil public : téléchargement direct via l'URL
+    if (isPublicProfile && publicCvDocument && publicCvDocument.downloadUrl) {
+      setIsDownloading(true);
+      try {
+        // Patch robuste : supporte VITE_API_URL avec ou sans /api à la fin
+        let apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        // On retire tous les / finaux pour éviter les doublons
+        apiBaseUrl = apiBaseUrl.replace(/\/+$/, '');
+        let downloadUrl = publicCvDocument.downloadUrl;
+        try {
+          const urlObj = new URL(downloadUrl, apiBaseUrl);
+          let path = urlObj.pathname;
+          // Si la base API se termine par /api et le path commence par /api, on retire un /api
+          if (apiBaseUrl.endsWith('/api') && path.startsWith('/api/')) {
+            path = path.replace(/^\/api\//, '/');
+          }
+          downloadUrl = apiBaseUrl + path + urlObj.search;
+        } catch (e) {
+          // fallback: si ce n'est pas une URL valide, on garde la valeur d'origine
+        }
+        const response = await fetch(downloadUrl, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        if (!response.ok) throw new Error('Erreur lors du téléchargement du CV');
+        const blob = await response.blob();
+        const fileName = publicCvDocument.name || 'cv.pdf';
+        const safeFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = safeFileName;
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => {
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(link);
+        }, 100);
+        toast.success('CV téléchargé avec succès');
+      } catch (error) {
+        toast.error(error.message || 'Erreur lors du téléchargement du CV');
+      } finally {
+        setIsDownloading(false);
+      }
+      return;
+    }
     // Si nous avons un finalCvDocument avec ID, utiliser le service de document
     if (finalCvDocument && finalCvDocument.id) {
       setIsDownloading(true);
@@ -211,7 +261,17 @@ const AboutTab = ({ userData, isPublicProfile = false, documents = [] }) => {
               />
             )}
 
-            {canHaveResume && hasCV && (
+            {/* Affichage du CV pour profil public */}
+            {isPublicProfile && publicCvDocument && (
+              <InfoCard
+                icon={FileText}
+                title="CV"
+                value={publicCvDocument.name || 'Télécharger le CV'}
+                isDownload={true}
+              />
+            )}
+            {/* Ancien affichage pour profil privé */}
+            {!isPublicProfile && canHaveResume && hasCV && (
               <InfoCard
                 icon={FileText}
                 title="CV"

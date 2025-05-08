@@ -26,7 +26,7 @@ import { Loader2, ShieldAlert, UserCog, AlertTriangle } from "lucide-react";
 import { motion } from "framer-motion";
 import { getRoleDisplayName } from "@/lib/constants/roles";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Toaster } from "@/components/ui/sonner";
+import { toast } from "sonner";
 import RoleBadge from "@/components/ui/RoleBadge";
 
 export function RoleDialog({
@@ -40,7 +40,8 @@ export function RoleDialog({
     isSuperAdmin,
     isProcessing,
     changeUserRole,
-    onSuccess
+    onSuccess,
+    isDark
 }) {
     // Generate avatar initials
     const getInitials = (firstName, lastName) => {
@@ -96,8 +97,8 @@ export function RoleDialog({
                 });
 
                 if (hasRole) {
-                    // Utiliser le Toaster pour notifier l'utilisateur
-                    Toaster.warning("L'utilisateur possède déjà ce rôle");
+                    // Utiliser le toast pour notifier l'utilisateur
+                    toast.warning("L'utilisateur possède déjà ce rôle");
                     return;
                 }
 
@@ -127,139 +128,116 @@ export function RoleDialog({
 
     return (
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden">
-                <DialogHeader className="px-6 pt-6 pb-2">
-                    <DialogTitle className="text-xl font-semibold flex items-center gap-2">
-                        <UserCog className="h-5 w-5 text-blue-600" />
-                        Modifier le rôle utilisateur
+            <DialogContent className={`sm:max-w-[550px] ${isDark ? 'bg-gray-800 border-gray-700' : ''}`}>
+                <DialogHeader>
+                    <DialogTitle className={`text-xl flex items-center gap-2 ${isDark ? 'text-gray-100' : ''}`}>
+                        <UserCog className={`h-5 w-5 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
+                        Modifier les rôles
                     </DialogTitle>
-                    <DialogDescription className="text-gray-500 mt-1.5">
-                        Choisissez un nouveau rôle pour l'utilisateur sélectionné
+                    <DialogDescription className={isDark ? 'text-gray-400' : ''}>
+                        Choisissez un nouveau rôle pour l'utilisateur.
                     </DialogDescription>
                 </DialogHeader>
-                
+
                 {selectedUser && (
-                    <div className="px-6 pb-4">
-                        <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg border border-gray-100 mt-4">
-                            <Avatar className="h-12 w-12 border-2 border-white shadow-sm">
-                                <AvatarFallback className="bg-blue-100 text-blue-800 font-medium">
+                    <div className={`p-4 ${isDark ? 'bg-gray-900/50' : 'bg-gray-50'} rounded-lg mb-4 border ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+                        <div className="flex items-center gap-3">
+                            <Avatar className={`h-10 w-10 border-2 ${isDark ? 'border-gray-700' : 'border-white'} shadow-sm`}>
+                                <AvatarFallback className={`${isDark ? 'bg-gray-700 text-gray-200' : 'bg-blue-100 text-blue-700'} font-medium`}>
                                     {getInitials(selectedUser.firstName, selectedUser.lastName)}
                                 </AvatarFallback>
                             </Avatar>
-                            
-                            <div className="flex-1">
-                                <h3 className="font-semibold">{selectedUser.firstName} {selectedUser.lastName}</h3>
-                                <p className="text-sm text-gray-500">{selectedUser.email}</p>
-                                <div className="flex flex-wrap mt-2 gap-1">
-                                    {selectedUser.roles && selectedUser.roles.map((role, idx) => (
+                            <div>
+                                <h3 className={`font-medium ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                                    {selectedUser.firstName} {selectedUser.lastName}
+                                </h3>
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                    {selectedUser.roles?.map(role => (
                                         <RoleBadge 
-                                            key={`${role.id || idx}-${role.name}`}
+                                            key={role.id} 
                                             role={role.name}
-                                            solid={true}
-                                            useVariant={true}
-                                            interactive={false}
+                                            isDark={isDark}
                                         />
                                     ))}
                                 </div>
                             </div>
                         </div>
-                        
-                        {userHasSuperAdminRole(selectedUser) && !isSuperAdmin && (
-                            <Alert variant="destructive" className="mt-4">
-                                <AlertTitle className="flex items-center">
-                                    <AlertTriangle className="h-4 w-4 mr-2" />
-                                    Action restreinte
-                                </AlertTitle>
-                                <AlertDescription>
-                                    Vous n'avez pas l'autorisation de modifier le rôle d'un SuperAdmin. 
-                                    Seul un SuperAdmin peut modifier le rôle d'un autre SuperAdmin.
-                                </AlertDescription>
-                            </Alert>
-                        )}
                     </div>
                 )}
-                
-                <div className="px-6 pb-6">
-                    <Label htmlFor="role-select" className="mb-2 block text-gray-700">
-                        Choisir un nouveau rôle
-                    </Label>
-                    <Select
-                        onValueChange={(value) => setSelectedRoleId(Number(value))}
-                        value={selectedRoleId?.toString() || ""}
-                        disabled={selectedUser && userHasSuperAdminRole(selectedUser) && !isSuperAdmin}
-                    >
-                        <SelectTrigger 
-                            className="w-full bg-white border-gray-200 hover:border-gray-300 transition-colors" 
-                            id="role-select"
+
+                {userHasSuperAdminRole(selectedUser) && !isSuperAdmin && (
+                    <Alert variant="destructive" className={`mb-4 ${isDark ? 'bg-red-900/20 border-red-900 text-red-400' : ''}`}>
+                        <AlertTriangle className="h-4 w-4" />
+                        <AlertTitle>Action non autorisée</AlertTitle>
+                        <AlertDescription>
+                            Vous n'avez pas les permissions nécessaires pour modifier les rôles d'un SuperAdmin.
+                        </AlertDescription>
+                    </Alert>
+                )}
+
+                <div className="space-y-4">
+                    <div>
+                        <Label htmlFor="role-select" className={`block mb-2 ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
+                            Sélectionner un nouveau rôle
+                        </Label>
+                        <Select
+                            onValueChange={(value) => setSelectedRoleId(Number(value))}
+                            value={selectedRoleId?.toString() || ""}
+                            disabled={selectedUser && userHasSuperAdminRole(selectedUser) && !isSuperAdmin}
                         >
-                            <SelectValue placeholder="Sélectionner un rôle" />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-[400px]">
-                            <SelectGroup>
-                                <SelectLabel className="text-gray-500">Rôles disponibles</SelectLabel>
-                                {roles.map(role => {
-                                    // Filtrer le rôle SuperAdmin pour les non-SuperAdmin
-                                    const isSuperAdminRole = role.name === 'SUPERADMIN' || role.name === 'ROLE_SUPERADMIN';
-                                    if (isSuperAdminRole && !isSuperAdmin) {
-                                        return null;
-                                    }
-                                    
-                                    const roleProps = getRoleDisplayProps(role.name);
-                                    
-                                    return (
-                                        <SelectItem 
-                                            key={role.id} 
-                                            value={role.id.toString()}
-                                            className={`flex items-center gap-2 my-1 rounded ${roleProps.bgColor} ${roleProps.textColor}`}
-                                        >
-                                            <div className="flex items-center">
-                                                {roleProps.icon}
-                                                {getRoleDisplayName(role.name)}
-                                            </div>
-                                        </SelectItem>
-                                    );
-                                })}
-                            </SelectGroup>
-                        </SelectContent>
-                    </Select>
-                    
-                    {!isSuperAdmin && (
-                        <p className="text-amber-600 mt-2 text-xs flex items-center">
-                            <AlertTriangle className="h-3 w-3 mr-1" />
-                            Seuls les SuperAdmin peuvent attribuer le rôle SuperAdmin.
-                        </p>
-                    )}
+                            <SelectTrigger 
+                                className={`w-full ${isDark ? 'bg-gray-900 border-gray-700 hover:border-gray-600' : 'bg-white border-gray-200 hover:border-gray-300'} transition-colors`}
+                                id="role-select"
+                            >
+                                <SelectValue placeholder="Sélectionner un rôle" />
+                            </SelectTrigger>
+                            <SelectContent className={`max-h-[400px] ${isDark ? 'bg-gray-800 border-gray-700' : ''}`}>
+                                <SelectGroup>
+                                    <SelectLabel className={isDark ? 'text-gray-400' : 'text-gray-500'}>
+                                        Rôles disponibles
+                                    </SelectLabel>
+                                    {roles.map(role => {
+                                        const isSuperAdminRole = role.name === 'SUPERADMIN' || role.name === 'ROLE_SUPERADMIN';
+                                        if (isSuperAdminRole && !isSuperAdmin) return null;
+                                        
+                                        return (
+                                            <SelectItem 
+                                                key={role.id} 
+                                                value={role.id.toString()}
+                                                className={`flex items-center gap-2 ${isDark ? 'text-gray-200 hover:bg-gray-700' : ''}`}
+                                            >
+                                                <RoleBadge role={role.name} isDark={isDark} />
+                                            </SelectItem>
+                                        );
+                                    })}
+                                </SelectGroup>
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </div>
-                
-                <DialogFooter className="px-6 py-4 bg-gray-50 border-t flex justify-between">
+
+                <DialogFooter className="mt-6">
                     <Button
                         variant="outline"
                         onClick={() => setIsDialogOpen(false)}
-                        disabled={isProcessing}
-                        className="bg-white hover:bg-gray-50"
+                        className={`${isDark ? 'bg-gray-900 border-gray-700 hover:bg-gray-800 text-gray-200' : ''}`}
                     >
                         Annuler
                     </Button>
-                    <motion.div
-                        whileHover={{ scale: isProcessing || !selectedRoleId || (selectedUser && userHasSuperAdminRole(selectedUser) && !isSuperAdmin) ? 1 : 1.02 }}
-                        whileTap={{ scale: 0.98 }}
+                    <Button
+                        onClick={handleRoleChange}
+                        disabled={isProcessing || !selectedRoleId || (userHasSuperAdminRole(selectedUser) && !isSuperAdmin)}
+                        className={isDark ? 'bg-blue-600 hover:bg-blue-700' : ''}
                     >
-                        <Button
-                            variant="default"
-                            onClick={handleRoleChange}
-                            disabled={isProcessing || !selectedRoleId || (selectedUser && userHasSuperAdminRole(selectedUser) && !isSuperAdmin)}
-                            className="bg-blue-600 hover:bg-blue-700 text-white"
-                        >
-                            {isProcessing ? (
-                                <div className="flex items-center">
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Modification en cours...
-                                </div>
-                            ) : (
-                                "Appliquer le changement"
-                            )}
-                        </Button>
-                    </motion.div>
+                        {isProcessing ? (
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Modification en cours...
+                            </>
+                        ) : (
+                            'Confirmer le changement'
+                        )}
+                    </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

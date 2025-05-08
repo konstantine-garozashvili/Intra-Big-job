@@ -45,8 +45,7 @@ export const adresseApi = {
         autocomplete: 1
       };
       
-      // DEBUG: Log the query being sent to the API
-      console.log('[adresseApi.searchAddress] Sending query:', trimmedQuery, 'Params:', params);
+      // console.log('[adresseApi.searchAddress] Sending query:', trimmedQuery, 'Params:', params);
       
       const response = await addressApiInstance.get(`/search`, { params });
       
@@ -70,10 +69,7 @@ export const adresseApi = {
         };
       });
     } catch (error) {
-      // Gestion silencieuse des erreurs en production
-      if (import.meta.env.DEV) {
-        console.error('Erreur lors de la recherche d\'adresse:', error);
-      }
+      // console.error('Erreur lors de la recherche d\'adresse:', error);
       return [];
     }
   },
@@ -109,7 +105,7 @@ export const adresseApi = {
         coordinates: feature.geometry.coordinates
       };
     } catch (error) {
-      console.error('Erreur lors de la géolocalisation inverse:', error);
+      // console.error('Erreur lors de la géolocalisation inverse:', error);
       return null;
     }
   }

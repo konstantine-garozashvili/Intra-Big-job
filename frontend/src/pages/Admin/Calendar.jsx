@@ -113,11 +113,8 @@ const Calendar = () => {
                 setError("Aucun événement trouvé.");
             }
         } catch (error) {
-            console.error("Erreur lors du chargement des événements:", error);
-            
             // Retry logic for network errors
             if (retryCount < 3 && (error.code === 'ECONNABORTED' || error.message.includes('timeout'))) {
-                console.log(`Retrying events fetch attempt ${retryCount + 1}/3...`);
                 setTimeout(() => fetchEvents(retryCount + 1), 1000 * (retryCount + 1));
                 return;
             }
@@ -183,7 +180,6 @@ const Calendar = () => {
             setEditMode(false);
             setIsSaving(false);
         } catch (error) {
-            console.error('Erreur lors de la sauvegarde de l\'événement:', error);
             setError(error.response?.data?.message || 'Erreur lors de la sauvegarde de l\'événement');
             setIsSaving(false);
         }

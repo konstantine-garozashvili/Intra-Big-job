@@ -76,7 +76,6 @@ export const studentProfileService = {
   clearCache: () => {
     profileCache = null;
     profileCacheTimestamp = 0;
-    console.log("StudentProfileService: Cache cleared");
   },
   
   /**
@@ -92,17 +91,13 @@ export const studentProfileService = {
       // Vérifier si on peut utiliser le cache
       const now = Date.now();
       if (!shouldForceRefresh && profileCache && now - profileCacheTimestamp < CACHE_EXPIRY_MS) {
-        console.log("StudentProfileService: Using cached profile data");
         return profileCache;
       }
       
-      console.log("StudentProfileService: Fetching student profile...");
       const response = await apiService.get(API_URLS.PROFILE);
-      console.log("StudentProfileService: Raw student profile response:", response);
       
       // Normalisation de la réponse
       const normalizedResponse = normalizeResponse(response);
-      console.log("StudentProfileService: Normalized student profile response:", normalizedResponse);
       
       // Mettre à jour le cache
       profileCache = normalizedResponse;
@@ -110,7 +105,6 @@ export const studentProfileService = {
       
       return normalizedResponse;
     } catch (error) {
-      console.error("StudentProfileService: Error fetching student profile:", error);
       throw error;
     }
   },
@@ -140,13 +134,10 @@ export const studentProfileService = {
         throw new Error("Invalid status data: at least one valid status property is required");
       }
       
-      console.log("StudentProfileService: Updating job seeking status with data:", validStatusData);
       const response = await apiService.put(API_URLS.JOB_SEEKING_STATUS, validStatusData);
-      console.log("StudentProfileService: Job seeking status update response:", response);
       
       // Normalisation de la réponse
       const normalizedResponse = normalizeResponse(response);
-      console.log("StudentProfileService: Normalized job seeking status response:", normalizedResponse);
       
       // Mettre à jour le cache avec les nouvelles données
       if (normalizedResponse.success && normalizedResponse.data) {
@@ -178,7 +169,6 @@ export const studentProfileService = {
       
       return normalizedResponse;
     } catch (error) {
-      console.error("StudentProfileService: Error updating job seeking status:", error);
       // Invalider le cache en cas d'erreur pour forcer un rafraîchissement
       studentProfileService.clearCache();
       throw error;
@@ -192,8 +182,6 @@ export const studentProfileService = {
    */
   toggleInternshipSeeking: async (newStatus) => {
     try {
-      console.log("StudentProfileService: Toggling internship seeking status to:", newStatus);
-      
       // Si un statut spécifique est fourni, utiliser updateJobSeekingStatus
       if (typeof newStatus === 'boolean') {
         const response = await studentProfileService.updateJobSeekingStatus({
@@ -209,7 +197,6 @@ export const studentProfileService = {
       }
       
       // Sinon, utiliser l'endpoint de basculement qui gère le toggle côté serveur
-      console.log("StudentProfileService: Using toggle endpoint for internship status");
       const response = await apiService.put(API_URLS.TOGGLE_INTERNSHIP);
       
       const normalizedResponse = normalizeResponse(response);
@@ -237,10 +224,8 @@ export const studentProfileService = {
         detail: { type: 'internship', status: updatedStatus }
       }));
       
-      console.log("StudentProfileService: Internship toggle response:", normalizedResponse);
       return normalizedResponse;
     } catch (error) {
-      console.error("StudentProfileService: Error toggling internship seeking status:", error);
       // Invalider le cache en cas d'erreur
       studentProfileService.clearCache();
       throw error;
@@ -254,8 +239,6 @@ export const studentProfileService = {
    */
   toggleApprenticeshipSeeking: async (newStatus) => {
     try {
-      console.log("StudentProfileService: Toggling apprenticeship seeking status to:", newStatus);
-      
       // Si un statut spécifique est fourni, utiliser updateJobSeekingStatus
       if (typeof newStatus === 'boolean') {
         const response = await studentProfileService.updateJobSeekingStatus({
@@ -271,7 +254,6 @@ export const studentProfileService = {
       }
       
       // Sinon, utiliser l'endpoint de basculement qui gère le toggle côté serveur
-      console.log("StudentProfileService: Using toggle endpoint for apprenticeship status");
       const response = await apiService.put(API_URLS.TOGGLE_APPRENTICESHIP);
       
       const normalizedResponse = normalizeResponse(response);
@@ -299,10 +281,8 @@ export const studentProfileService = {
         detail: { type: 'apprenticeship', status: updatedStatus }
       }));
       
-      console.log("StudentProfileService: Apprenticeship toggle response:", normalizedResponse);
       return normalizedResponse;
     } catch (error) {
-      console.error("StudentProfileService: Error toggling apprenticeship seeking status:", error);
       // Invalider le cache en cas d'erreur
       studentProfileService.clearCache();
       throw error;
@@ -316,8 +296,6 @@ export const studentProfileService = {
    */
   updatePortfolioUrl: async (portfolioUrl) => {
     try {
-      console.log("StudentProfileService: Updating portfolio URL to:", portfolioUrl);
-      
       // Vérifier que l'URL est valide
       if (portfolioUrl && !portfolioUrl.startsWith('https://')) {
         throw new Error("L'URL du portfolio doit commencer par https://");
@@ -327,7 +305,6 @@ export const studentProfileService = {
       
       // Normalisation de la réponse
       const normalizedResponse = normalizeResponse(response);
-      console.log("StudentProfileService: Portfolio URL update response:", normalizedResponse);
       
       // Après une mise à jour du portfolio, toujours invalider le cache
       studentProfileService.clearCache();
@@ -343,16 +320,13 @@ export const studentProfileService = {
             localStorage.setItem('user', JSON.stringify(userData));
           }
         }
-      } catch (storageError) {
-        console.warn("Couldn't update user in localStorage:", storageError);
-      }
+      } catch (e) {}
       
       // Utiliser l'utilitaire centralisé pour notifier tous les composants
       synchronizePortfolioUpdate(portfolioUrl);
       
       return normalizedResponse;
     } catch (error) {
-      console.error("StudentProfileService: Error updating portfolio URL:", error);
       // Invalider le cache en cas d'erreur
       studentProfileService.clearCache();
       throw error;

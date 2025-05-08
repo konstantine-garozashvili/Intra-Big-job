@@ -65,7 +65,6 @@ const TeacherProtectedRoute = () => {
         
         if (cachedUserData) {
           // Utiliser les données en cache si disponibles
-          console.log('TeacherProtectedRoute: Utilisation des données utilisateur en cache');
           userData = cachedUserData;
           
           // Vérifier si les données sont actuelles
@@ -77,12 +76,10 @@ const TeacherProtectedRoute = () => {
               background: true,
               requestId: 'teacher_protected_route_background'
             }).catch(e => {
-              console.warn('Erreur lors du rafraîchissement en arrière-plan:', e);
             });
           }
         } else {
           // Si pas de cache, récupérer les données via le service utilisateur
-          console.log('TeacherProtectedRoute: Récupération des données utilisateur via API');
           userData = await authService.getCurrentUser(false, { requestSource: 'teacherProtectedRoute' });
         }
         

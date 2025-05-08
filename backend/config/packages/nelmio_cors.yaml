@@ -1,15 +1,15 @@
 nelmio_cors:
     defaults:
         origin_regex: true
-        # Permettre toutes les origines en développement
-        allow_origin: ['*']
+        allow_origin: ['%env(CORS_ALLOW_ORIGIN)%']
         allow_methods: ['GET', 'OPTIONS', 'POST', 'PUT', 'PATCH', 'DELETE']
         allow_headers: ['Content-Type', 'Authorization']
-        expose_headers: ['Link']
+        expose_headers: ['Content-Disposition', 'Link']
         max_age: 3600
     paths:
         '^/api/':
-            allow_origin: ['*']
-            allow_headers: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
-            allow_methods: ['GET', 'OPTIONS', 'POST', 'PUT', 'PATCH', 'DELETE']
+            allow_origin: ['https://peru-ape-766379.hostingersite.com']
+            allow_headers: ['*']
+            allow_methods: ['POST', 'PUT', 'GET', 'DELETE', 'OPTIONS']
             max_age: 3600
+            allow_credentials: true

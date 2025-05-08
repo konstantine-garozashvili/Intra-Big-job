@@ -23,7 +23,7 @@ alwaysApply: true
 - **Severity: CRITICAL**
 - Always read the entire file contents before suggesting modifications
 - This ensures you understand the component's purpose and dependencies
-- Always use the frontend commands in the frontend container
+- Always use the frontend commands in the frontend docker container
 
 
 ### Verify imports
@@ -57,7 +57,7 @@ alwaysApply: true
 
 ### Tailwind CSS
 - **Severity: HIGH**
-- Use Tailwind CSS for styling components
+- Use Tailwind CSS and shadcn for styling components 
 - Avoid inline styles and CSS files when possible
 - Follow existing component patterns for styling
 

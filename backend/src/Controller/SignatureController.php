@@ -419,4 +419,198 @@ class SignatureController extends AbstractController
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
+
+    #[Route('/absences/formation/{formationId}', methods: ['GET'])]
+    public function getAbsencesByFormation(int $formationId, Request $request): JsonResponse
+    {
+        $user = $this->getUser();
+        if (!$user) {
+            return $this->json(['message' => 'User not authenticated'], Response::HTTP_UNAUTHORIZED);
+        }
+        // Seuls les enseignants peuvent accéder à cette route
+        if (!in_array('ROLE_TEACHER', $user->getRoles())) {
+            return $this->json(['message' => 'Access denied'], Response::HTTP_FORBIDDEN);
+        }
+
+        $date = $request->query->get('date'); // format YYYY-MM-DD
+        $period = $request->query->get('period'); // morning/afternoon
+        if (!$date) {
+            $date = (new \DateTimeImmutable('now', new \DateTimeZone('Europe/Paris')))->format('Y-m-d');
+        }
+        if (!in_array($period, [Signature::PERIOD_MORNING, Signature::PERIOD_AFTERNOON], true)) {
+            $period = Signature::PERIOD_MORNING;
+        }
+
+        // Pagination params
+        $limit = (int) $request->query->get('limit', 20);
+        $offset = (int) $request->query->get('offset', 0);
+
+        // Récupérer la formation et les étudiants
+        $formation = $this->entityManager->getRepository(\App\Entity\Formation::class)->find($formationId);
+        if (!$formation) {
+            return $this->json(['message' => 'Formation not found'], Response::HTTP_NOT_FOUND);
+        }
+        $students = $formation->getStudents();
+
+        // Récupérer les signatures pour cette date/période
+        $start = new \DateTimeImmutable($date . ' 00:00:00', new \DateTimeZone('Europe/Paris'));
+        $end = $start->modify('+1 day');
+        $signatures = $this->signatureRepository->createQueryBuilder('s')
+            ->where('s.date >= :start')
+            ->andWhere('s.date < :end')
+            ->andWhere('s.period = :period')
+            ->andWhere('s.user IN (:students)')
+            ->setParameter('start', $start)
+            ->setParameter('end', $end)
+            ->setParameter('period', $period)
+            ->setParameter('students', $students)
+            ->getQuery()
+            ->getResult();
+        $signedUserIds = array_map(fn($s) => $s->getUser()->getId(), $signatures);
+
+        // Les absents sont les étudiants sans signature pour cette période/date
+        $absents = [];
+        foreach ($students as $student) {
+            if (!in_array($student->getId(), $signedUserIds)) {
+                $absents[] = [
+                    'id' => $student->getId(),
+                    'firstName' => $student->getFirstName(),
+                    'lastName' => $student->getLastName(),
+                    'email' => $student->getEmail(),
+                ];
+            }
+        }
+        $totalAbsents = count($absents);
+        $absentsPage = array_slice($absents, $offset, $limit);
+        return $this->json([
+            'success' => true,
+            'formationId' => $formationId,
+            'date' => $date,
+            'period' => $period,
+            'absents' => $absentsPage,
+            'absentCount' => count($absentsPage),
+            'totalAbsents' => $totalAbsents,
+            'studentCount' => count($students),
+            'limit' => $limit,
+            'offset' => $offset,
+        ]);
+    }
+
+    #[Route('/absences/user/{userId}', methods: ['GET'])]
+    public function getAbsencesByUser(int $userId, Request $request): JsonResponse
+    {
+        $currentUser = $this->getUser();
+        if (!$currentUser) {
+            return $this->json(['message' => 'User not authenticated'], Response::HTTP_UNAUTHORIZED);
+        }
+        $isTeacher = in_array('ROLE_TEACHER', $currentUser->getRoles());
+        $isStudent = in_array('ROLE_STUDENT', $currentUser->getRoles());
+
+        // L'utilisateur peut voir ses propres absences
+        if ($currentUser->getId() !== $userId && !$isTeacher) {
+            return $this->json(['message' => 'Access denied'], Response::HTTP_FORBIDDEN);
+        }
+
+        $date = $request->query->get('date'); // format YYYY-MM-DD
+        $period = $request->query->get('period'); // morning/afternoon
+        $formationId = $request->query->get('formationId'); // optionnel
+        if ($date && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+            return $this->json(['message' => 'Invalid date format'], Response::HTTP_BAD_REQUEST);
+        }
+        if ($period && !in_array($period, [Signature::PERIOD_MORNING, Signature::PERIOD_AFTERNOON], true)) {
+            return $this->json(['message' => 'Invalid period'], Response::HTTP_BAD_REQUEST);
+        }
+
+        // Pagination params
+        $limit = (int) $request->query->get('limit', 20);
+        $offset = (int) $request->query->get('offset', 0);
+
+        // Récupérer l'utilisateur cible
+        $user = $this->entityManager->getRepository(\App\Entity\User::class)->find($userId);
+        if (!$user) {
+            return $this->json(['message' => 'User not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        // Si teacher, vérifier qu'il est responsable d'une formation où l'élève est inscrit
+        if ($isTeacher && $currentUser->getId() !== $userId) {
+            $formations = $this->entityManager->getRepository(\App\Entity\Formation::class)
+                ->createQueryBuilder('f')
+                ->leftJoin('f.students', 's')
+                ->leftJoin('f.formationTeachers', 'ft')
+                ->where('s.id = :studentId')
+                ->andWhere('ft.user = :teacherId')
+                ->setParameter('studentId', $userId)
+                ->setParameter('teacherId', $currentUser->getId())
+                ->getQuery()
+                ->getResult();
+            if (empty($formations)) {
+                return $this->json(['message' => 'Access denied: not responsible for this student'], Response::HTTP_FORBIDDEN);
+            }
+        }
+
+        // Récupérer les formations concernées
+        $formationRepo = $this->entityManager->getRepository(\App\Entity\Formation::class);
+        $formations = [];
+        if ($formationId) {
+            $formation = $formationRepo->find($formationId);
+            if (!$formation) {
+                return $this->json(['message' => 'Formation not found'], Response::HTTP_NOT_FOUND);
+            }
+            if (!$formation->getStudents()->contains($user)) {
+                return $this->json(['message' => 'User is not a student of this formation'], Response::HTTP_FORBIDDEN);
+            }
+            $formations = [$formation];
+        } else {
+            // Toutes les formations où l'utilisateur est étudiant
+            $formations = $user->getFormations();
+        }
+
+        $absences = [];
+        foreach ($formations as $formation) {
+            // Pour chaque jour de la formation (on prend la période demandée ou les deux)
+            $dateStart = $formation->getDateStart();
+            $duration = $formation->getDuration();
+            for ($i = 0; $i < $duration; $i++) {
+                $currentDate = (clone $dateStart)->modify("+{$i} days");
+                $dateStr = $currentDate->format('Y-m-d');
+                if ($date && $dateStr !== $date) continue;
+                $periods = $period ? [$period] : [Signature::PERIOD_MORNING, Signature::PERIOD_AFTERNOON];
+                foreach ($periods as $p) {
+                    // Signature présente ?
+                    $start = new \DateTimeImmutable($dateStr . ' 00:00:00', new \DateTimeZone('Europe/Paris'));
+                    $end = $start->modify('+1 day');
+                    $signature = $this->signatureRepository->createQueryBuilder('s')
+                        ->where('s.user = :user')
+                        ->andWhere('s.date >= :start')
+                        ->andWhere('s.date < :end')
+                        ->andWhere('s.period = :period')
+                        ->setParameter('user', $user)
+                        ->setParameter('start', $start)
+                        ->setParameter('end', $end)
+                        ->setParameter('period', $p)
+                        ->getQuery()
+                        ->getOneOrNullResult();
+                    if (!$signature) {
+                        $absences[] = [
+                            'date' => $dateStr,
+                            'period' => $p,
+                            'formationId' => $formation->getId(),
+                            'formationName' => $formation->getName(),
+                        ];
+                    }
+                }
+            }
+        }
+        $totalAbsences = count($absences);
+        $absencesPage = array_slice($absences, $offset, $limit);
+        return $this->json([
+            'success' => true,
+            'userId' => $userId,
+            'absences' => $absencesPage,
+            'absenceCount' => count($absencesPage),
+            'totalAbsences' => $totalAbsences,
+            'limit' => $limit,
+            'offset' => $offset,
+        ]);
+    }
 }

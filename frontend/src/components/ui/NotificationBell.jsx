@@ -12,9 +12,9 @@ import {
 } from './dropdown-menu';
 import { Button } from './button';
 import { useAuth } from '@/contexts/AuthContext';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Badge } from './badge';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import { addDoc, collection } from 'firebase/firestore';
 import { db } from '@/lib/services/firebase';
 
@@ -39,7 +39,7 @@ const formatTimestamp = (timestamp) => {
     }
     return 'Date inconnue';
   } catch (error) {
-    console.error('Erreur lors du formatage de la date:', error);
+    // console.error('Erreur lors du formatage de la date:', error);
     return 'Date incorrecte';
   }
 };
@@ -65,7 +65,7 @@ const getRelativeTime = (timestamp) => {
     
     return formatDistanceToNow(date, { addSuffix: true, locale: fr });
   } catch (error) {
-    console.error('Erreur lors du calcul du temps relatif:', error);
+    // console.error('Erreur lors du calcul du temps relatif:', error);
     return '';
   }
 };
@@ -123,71 +123,63 @@ export const NotificationBell = () => {
   const { user } = useAuth();
   const { notifications, loading, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const [isHovering, setIsHovering] = useState(false);
-  const [displayedNotifications, setDisplayedNotifications] = useState([]);
   const lastNotificationRef = useRef(null);
   const hasRenderedRef = useRef(false);
+  const controls = useAnimation();
+  const navigate = useNavigate();
 
-  // Utiliser useEffect pour éviter l'affichage multiple des notifications
+  // Animation sequence for the bell
+  const swingSequence = async () => {
+    await controls.start({ rotate: -10, transition: { duration: 0.08 } });
+    await controls.start({ rotate: 10, transition: { duration: 0.12 } });
+    await controls.start({ rotate: -10, transition: { duration: 0.12 } });
+    await controls.start({ rotate: 10, transition: { duration: 0.12 } });
+    await controls.start({ rotate: 0, transition: { duration: 0.16 } });
+  };
+
   useEffect(() => {
-    // Ignorer le premier rendu pour éviter les notifications multiples au démarrage
-    if (!hasRenderedRef.current) {
-      hasRenderedRef.current = true;
-      setDisplayedNotifications(notifications || []);
+    if (isHovering) {
+      swingSequence();
+    } else {
+      controls.start({ rotate: 0, transition: { duration: 0.2 } });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isHovering]);
+
+  const handleNotificationClick = async (notification) => {
+    await markAsRead(notification.id);
+    // Redirection selon le type de notification
+    if (
+      notification.type === 'INFO' &&
+      notification.title && (
+        notification.title.toLowerCase().includes("votre demande d'inscription a été acceptée") ||
+        notification.title.toLowerCase().includes("votre demande d'inscription a été refusée")
+      )
+    ) {
+      navigate('/notifications');
       return;
     }
-
-    // Si les notifications ont changé, mettre à jour l'affichage
-    if (notifications && notifications.length > 0) {
-      // Vérifier si de nouvelles notifications sont arrivées
-      const lastNotificationId = lastNotificationRef.current;
-      const newNotificationsCount = notifications.filter(n => 
-        !n.read && (!lastNotificationId || n.id !== lastNotificationId)
-      ).length;
-
-      // Mettre à jour la référence de la dernière notification
-      if (notifications.length > 0) {
-        lastNotificationRef.current = notifications[0].id;
-      }
-
-      // Mettre à jour les notifications affichées
-      setDisplayedNotifications(notifications);
+    if (
+      notification.type === 'INFO' &&
+      notification.title && notification.title.toLowerCase().includes("demande d'inscription envoyée")
+    ) {
+      navigate('/guest/enrollment-requests');
+      return;
     }
-  }, [notifications]);
-
-  // Console logs uniquement en développement
-  if (process.env.NODE_ENV === 'development') {
-    console.log('NotificationBell - User object from auth context:', user);
-    console.log('NotificationBell - userId from localStorage:', localStorage.getItem('userId'));
-    console.log('NotificationBell - Rendering with:', {
-      notificationsCount: displayedNotifications?.length,
-      unreadCount,
-      loading
-    });
-
-    // Journaliser les types de notifications reçus
-    if (displayedNotifications?.length > 0) {
-      console.log('NotificationBell - Notification types displayed:', displayedNotifications.map(n => n.type));
-      console.log('NotificationBell - First notification details:', displayedNotifications[0]);
-    } else {
-      console.log('NotificationBell - No notifications available');
+    if (notification.type === 'GUEST_APPLICATION') {
+      navigate('/recruiter/enrollment-requests');
+      return;
     }
+  };
 
-    if (loading) {
-      console.log('NotificationBell - Still loading');
-    }
+  // Ne pas afficher pendant le chargement initial
+  if (loading) {
+    return null;
   }
 
-  const handleNotificationClick = (notificationId) => {
-    console.log('NotificationBell - Notification clicked:', notificationId);
-    markAsRead(notificationId);
-    
-    // Mettre à jour l'état local pour une UX plus réactive
-    setDisplayedNotifications(prevNotifications => 
-      prevNotifications.map(n => 
-        n.id === notificationId ? { ...n, read: true } : n
-      )
-    );
-  };
+  // Determine if user is a student or guest
+  const isStudent = user?.roles?.includes('ROLE_STUDENT');
+  const isGuest = user?.roles?.includes('ROLE_GUEST');
 
   // Ne pas afficher pendant le chargement initial
   if (loading) {
@@ -210,8 +202,9 @@ export const NotificationBell = () => {
           onMouseLeave={() => setIsHovering(false)}
         >
           <motion.div
-            animate={isHovering ? { rotate: [0, -10, 10, -10, 10, 0] } : {}}
-            transition={{ duration: 0.5, ease: "easeInOut" }}
+            animate={controls}
+            initial={{ rotate: 0 }}
+            style={{ display: 'inline-block' }}
           >
             <Bell className="h-5 w-5 text-gray-200 group-hover:text-white transition-colors" />
           </motion.div>
@@ -248,9 +241,8 @@ export const NotificationBell = () => {
           <div className="flex items-center gap-2">
             {unreadCount > 0 && (
               <Button
-                onClick={() => {
-                  console.log('NotificationBell - Marking all as read');
-                  markAllAsRead();
+                onClick={async () => {
+                  await markAllAsRead();
                 }}
                 variant="ghost"
                 size="sm"
@@ -273,7 +265,7 @@ export const NotificationBell = () => {
         </div>
 
         <div className="max-h-96 overflow-y-auto">
-          {displayedNotifications.length === 0 ? (
+          {notifications.filter(n => !n.read).length === 0 ? (
             <div className="py-8 px-4 text-center">
               <Bell className="h-12 w-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
               <p className="text-gray-500 dark:text-gray-400 font-medium">Aucune notification</p>
@@ -282,28 +274,17 @@ export const NotificationBell = () => {
               </p>
             </div>
           ) : (
-            displayedNotifications.slice(0, 5).map((notification) => {
-              console.log('NotificationBell - Rendering notification:', notification);
+            notifications.filter(n => !n.read).slice(0, 5).map((notification) => {
               const typeConfig = notificationTypeConfig[notification.type] || {
                 color: 'bg-gray-100 text-gray-600',
                 icon: <Bell className="h-4 w-4 text-gray-500" />
               };
               const relativeTime = getRelativeTime(notification.timestamp);
-              
-              // Journaliser chaque notification rendue
-              console.log('NotificationBell - Notification type config:', {
-                type: notification.type,
-                hasConfig: !!notificationTypeConfig[notification.type],
-                usingConfig: typeConfig
-              });
-              
               return (
                 <div
                   key={notification.id}
-                  onClick={() => handleNotificationClick(notification.id)}
-                  className={`p-4 border-b border-gray-100 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${
-                    !notification.read ? 'bg-blue-50/60 dark:bg-blue-900/20' : ''
-                  }`}
+                  onClick={() => handleNotificationClick(notification)}
+                  className={`p-4 border-b border-gray-100 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors bg-blue-50/60 dark:bg-blue-900/20`}
                 >
                   <div className="flex gap-3">
                     <div className="mt-0.5">
@@ -315,41 +296,42 @@ export const NotificationBell = () => {
                     </div>
                     <div className="flex-1">
                       <div className="flex justify-between items-start">
-                        <p className={`font-medium text-sm ${
-                          !notification.read 
-                            ? 'text-gray-900 dark:text-white' 
-                            : 'text-gray-700 dark:text-gray-300'
-                        }`}>
+                        <p className="font-medium text-sm text-gray-900 dark:text-white">
                           {notification.title}
                         </p>
                         <div className="flex items-center">
-                          {!notification.read ? (
-                            <span className="h-2 w-2 bg-blue-500 rounded-full mr-2"></span>
-                          ) : (
-                            <Clock className="h-3 w-3 text-gray-400 mr-2" />
-                          )}
+                          <span className="h-2 w-2 bg-blue-500 rounded-full mr-2"></span>
                           <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">
                             {relativeTime}
                           </span>
                         </div>
                       </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
-                        {notification.message}
-                      </p>
-                      {!notification.read && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="mt-2 text-xs h-6 px-2 text-blue-600 dark:text-blue-400"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            markAsRead(notification.id);
-                          }}
-                        >
-                          <CheckCheck className="h-3 w-3 mr-1" />
-                          Marquer comme lue
-                        </Button>
-                      )}
+                      {/* Affichage du message et du commentaire séparément si présent */}
+                      {(() => {
+                        if (notification.message && notification.message.includes('Commentaire du recruteur :')) {
+                          const [mainMsg, comment] = notification.message.split(/\nCommentaire du recruteur ?: ?/);
+                          return <>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">{mainMsg}</p>
+                            <div className="mt-2 p-2 rounded bg-yellow-50 dark:bg-yellow-900/30 border-l-4 border-yellow-400 text-yellow-900 dark:text-yellow-100 text-sm font-medium whitespace-pre-line">
+                              <span className="font-semibold">Commentaire du recruteur :</span> {comment}
+                            </div>
+                          </>;
+                        } else {
+                          return <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">{notification.message}</p>;
+                        }
+                      })()}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="mt-2 text-xs h-6 px-2 text-blue-600 dark:text-blue-400"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          await markAsRead(notification.id);
+                        }}
+                      >
+                        <CheckCheck className="h-3 w-3 mr-1" />
+                        Marquer comme lue
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -358,10 +340,10 @@ export const NotificationBell = () => {
           )}
         </div>
         
-        {displayedNotifications.length > 5 && (
+        {notifications.filter(n => !n.read).length > 5 && (
           <div className="p-2 text-center border-t border-gray-100 dark:border-gray-700">
             <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-              {displayedNotifications.length - 5} notifications supplémentaires
+              {notifications.filter(n => !n.read).length - 5} notifications supplémentaires
             </p>
           </div>
         )}

@@ -104,4 +104,20 @@ class StudentProfileService
         
         return $uniqueProfiles;
     }
+
+    /**
+     * Create a student profile for a user if not already present
+     */
+    public function createProfileForUser(User $user): StudentProfile
+    {
+        $profile = $this->getProfileByUser($user);
+        if ($profile) {
+            return $profile;
+        }
+        $profile = new StudentProfile();
+        $profile->setUser($user);
+        $this->entityManager->persist($profile);
+        $this->entityManager->flush();
+        return $profile;
+    }
 } 

@@ -82,25 +82,11 @@ const AdminDashboard = () => {
       color: 'bg-blue-500'
     },
     {
-      id: 2,
-      title: 'Gestion des entreprises',
-      description: 'Gérer les entreprises partenaires',
-      link: '/admin/companies',
-      color: 'bg-green-500'
-    },
-    {
-      id: 3,
-      title: 'Gestion des offres',
-      description: 'Gérer les offres d\'emploi et de stage',
-      link: '/admin/offers',
-      color: 'bg-purple-500'
-    },
-    {
-      id: 4,
-      title: 'Gestion des événements',
-      description: 'Gérer les événements et les actualités',
-      link: '/admin/events',
-      color: 'bg-yellow-500'
+      id: 6,
+      title: 'Gestion des formations',
+      description: 'Voir et gérer les étudiants inscrits',
+      link: '/admin/formations',
+      color: 'bg-yellow-600'
     }
   ];
 
@@ -115,7 +101,6 @@ const AdminDashboard = () => {
         toast.success('Les informations de l\'utilisateur ont été mises à jour.');
       },
       onError: (error) => {
-        console.error('Erreur lors de la modification de l\'utilisateur:', error);
         toast.error('Impossible de modifier l\'utilisateur.');
       }
     }
@@ -132,7 +117,6 @@ const AdminDashboard = () => {
         toast.success('L\'utilisateur a été supprimé avec succès.');
       },
       onError: (error) => {
-        console.error('Erreur lors de la suppression de l\'utilisateur:', error);
         toast.error('Impossible de supprimer l\'utilisateur.');
       }
     }
@@ -148,7 +132,6 @@ const AdminDashboard = () => {
         toast.error('Impossible de récupérer les rôles disponibles');
       }
     } catch (error) {
-      console.error('Erreur lors de la récupération des rôles:', error);
       toast.error('Échec de la récupération des rôles');
     } finally {
       setIsLoadingRoles(false);
@@ -175,7 +158,6 @@ const AdminDashboard = () => {
     try {
       editUserMutation.mutate(userData);
     } catch (error) {
-      console.error('Error in handleEditUser:', error);
       toast.error('Une erreur s\'est produite. Veuillez réessayer.');
     }
   };
@@ -189,14 +171,12 @@ const AdminDashboard = () => {
     try {
       deleteUserMutation.mutate(selectedUser.id);
     } catch (error) {
-      console.error('Error in handleDeleteUser:', error);
       toast.error('Une erreur s\'est produite lors de la suppression.');
     }
   };
 
   const openEditModal = (user) => {
     if (!user || !user.id) {
-      console.error('Invalid user object received in openEditModal:', user);
       toast.error('Impossible d\'éditer cet utilisateur. Données invalides.');
       return;
     }
@@ -221,7 +201,6 @@ const AdminDashboard = () => {
 
   const openDeleteModal = (user) => {
     if (!user || !user.id) {
-      console.error('Invalid user object received in openDeleteModal:', user);
       toast.error('Impossible de supprimer cet utilisateur. Données invalides.');
       return;
     }
@@ -268,28 +247,24 @@ const AdminDashboard = () => {
 
   // Log initial mount
   useEffect(() => {
-    console.log('[AdminDashboard] Component mounted');
-    console.log('[AdminDashboard] Current language:', currentLanguage);
+    // Removed console.log('[AdminDashboard] Component mounted');
+    // Removed console.log('[AdminDashboard] Current language:', currentLanguage);
   }, []);
 
   // Log language changes
   useEffect(() => {
-    console.log('[Translation] Language changed to:', currentLanguage);
+    // Removed console.log('[Translation] Language changed to:', currentLanguage);
   }, [currentLanguage]);
 
   // Log translations
   const loggedTranslate = async (text) => {
-    console.log('[Translation] Attempting to translate:', text);
+    // Removed console.log('[Translation] Attempting to translate:', text);
     try {
       const result = await translate(text);
-      console.log('[Translation] Result:', {
-        original: text,
-        translated: result,
-        language: currentLanguage
-      });
+      // Removed console.log('[Translation] Result:', { original: text, translated: result, language: currentLanguage });
       return result;
     } catch (error) {
-      console.error('[Translation] Error:', error);
+      // Removed console.error('[Translation] Error:', error);
       return text;
     }
   };

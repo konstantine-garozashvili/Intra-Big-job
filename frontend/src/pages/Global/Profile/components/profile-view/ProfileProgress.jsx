@@ -45,8 +45,6 @@ const ProfileProgress = () => {
   // Function to refresh data with cache busting
   const forceFreshProfileData = async () => {
     try {
-      console.log('Forcing fresh profile data...');
-      
       // First check for existing acknowledgment
       const isAlreadyAcknowledged = localStorage.getItem('profile_completion_acknowledged') === 'true';
       const recentlyAcknowledged = (() => {
@@ -62,38 +60,18 @@ const ProfileProgress = () => {
       
       // First check what the current completion status is
       const before = profileData?.stats?.profile || { completedItems: 0 };
-      console.log('Profile status before refresh:', before);
       
       // First refresh the profile data
       const newData = await refreshProfileData({ forceRefresh: true });
-      console.log('Profile data refreshed');
       
       // Then get fresh stats
       const stats = await profileService.getStats({ forceRefresh: true });
-      console.log('Fresh stats received:', stats);
       
       // Check if the profile just became complete with this refresh
       const after = stats?.stats?.profile || { completedItems: 0 };
       const justCompleted = (after.completedItems === 3) && 
                            (before.completedItems < 3 || before.completedItems === undefined);
                            
-      console.log('Profile status after refresh:', after, 'Just completed:', justCompleted);
-      
-      // If we just completed the profile and it's not acknowledged, trigger the event
-      const isLocalAcknowledged = localStorage.getItem('profile_completion_acknowledged') === 'true';
-      if (justCompleted && !after.isAcknowledged && !isLocalAcknowledged && !recentlyAcknowledged && !currentlyShowing) {
-        console.log('Profile just completed during data refresh! Triggering event...');
-        
-        // Dispatch completion event
-        document.dispatchEvent(new CustomEvent('profile:completion', {
-          detail: { 
-            timestamp: Date.now(),
-            from: 'forceFreshProfileData',
-            justCompleted: true
-          }
-        }));
-      }
-      
       // Check if acknowledged
       if (stats?.stats?.profile?.isAcknowledged) {
         setLocalAcknowledged(true);
@@ -109,7 +87,7 @@ const ProfileProgress = () => {
       
       return newData;
     } catch (error) {
-      console.error('Error refreshing profile data:', error);
+      // Error handling silently
     }
   };
   
@@ -175,8 +153,6 @@ const ProfileProgress = () => {
 
   // Check if profile just became complete
   useEffect(() => {
-    // Log backend value for debugging
-    console.log('[ProfileProgress] profileData.stats.profile.isAcknowledged:', profileData?.stats?.profile?.isAcknowledged);
     // Always trust backend: if acknowledged in DB, never show popup/event
     if (profileData?.stats?.profile?.isAcknowledged) {
       setLocalAcknowledged(true);
@@ -184,30 +160,8 @@ const ProfileProgress = () => {
       // Do not trigger any event or popup
       return;
     }
-    // Log current state for debugging
-    console.log('[ProfileProgress] Profile status:', {
-      completedItems,
-      previousCompletion: previousCompletionRef.current,
-      isAcknowledged,
-      localAcknowledged,
-      hasDispatchedEvent,
-      profileDataPresent: !!profileData
-    });
     // Check if the items were just completed (transition from incomplete to complete)
     const justCompleted = completedItems === 3 && previousCompletionRef.current < 3;
-    // If we're in dev mode, allow forcing the event regardless of hasDispatchedEvent state
-    const isDevMode = process.env.NODE_ENV === 'development';
-    const forceDispatch = isDevMode && window.location.search.includes('force_event');
-    // Logging to help debug the completion detection
-    if (completedItems === 3) {
-      console.log('[ProfileProgress] Profile is complete! Checking conditions for celebration:', {
-        isAcknowledged,
-        localAcknowledged,
-        hasDispatchedEvent,
-        justCompleted,
-        forceDispatch
-      });
-    }
     // If completedItems is 3, this means the profile is complete
     if (completedItems === 3) {
       // Only dispatch event if not acknowledged and not already dispatched
@@ -219,7 +173,6 @@ const ProfileProgress = () => {
           // After refresh, check again
           const latestAck = profileData?.stats?.profile?.isAcknowledged;
           if (!latestAck) {
-            console.log('[ProfileProgress] 🎉 TRIGGERING PROFILE COMPLETION EVENT (after refresh) 🎉');
             const celebrationEvent = new CustomEvent('profile:completion', {
               detail: {
                 timestamp: Date.now(),
@@ -229,7 +182,6 @@ const ProfileProgress = () => {
               }
             });
             document.dispatchEvent(celebrationEvent);
-            console.log('[ProfileProgress] Event dispatched:', celebrationEvent);
           }
         })();
         const timer = setTimeout(() => {
@@ -393,7 +345,7 @@ const ProfileProgress = () => {
                             variant="outline"
                             size="xs"
                             className="mt-2 h-6 px-2 text-xs w-full justify-center"
-                            onClick={() => console.log("Parse CV clicked!")}
+                            onClick={() => {}}
                           >
                             Extraire LinkedIn du CV
                           </Button>

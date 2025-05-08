@@ -20,7 +20,6 @@ try {
     echo "Clearing existing data...\n";
     $tables = [
         'role', 'ticket_status', 'ticket_service', 'theme', 
-        'formation', 'nationality', 'specialization', 'diploma',
         'domain', 'user_status', 'user_situation_type'
     ];
     

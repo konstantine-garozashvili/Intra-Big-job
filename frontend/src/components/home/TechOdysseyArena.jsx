@@ -169,7 +169,6 @@ const TechOdysseyArena = () => {
   const handleLeadSubmit = (e) => {
     e.preventDefault();
     // Here you would typically send the data to your backend
-    console.log('Lead captured:', userInfo);
     // Show full report
     setCurrentScreen('fullReport');
   };

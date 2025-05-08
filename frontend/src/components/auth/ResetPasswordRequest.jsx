@@ -24,10 +24,7 @@ const ResetPasswordRequest = () => {
         
         try {
             // Utiliser le chemin correct avec le préfixe /api
-            console.log('Envoi de la demande de réinitialisation pour:', email);
             const response = await apiService.post('/api/reset-password/request', { email });
-            
-            console.log('Réponse reçue:', response);
             
             // Si la réponse contient success=true
             if (response.success) {
@@ -43,7 +40,6 @@ const ResetPasswordRequest = () => {
                 toast.error(response.message || 'Une erreur est survenue');
             }
         } catch (error) {
-            console.error('Erreur complète:', error);
             const errorMessage = error.response?.data?.message || 
                                'Impossible de traiter votre demande. Veuillez réessayer plus tard.';
             toast.error(errorMessage);

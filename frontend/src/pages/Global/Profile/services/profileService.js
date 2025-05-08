@@ -113,6 +113,32 @@ class ProfileService {
         stats: response.stats || { profile: { completionPercentage: 0 } }
       };
     } catch (error) {
+      return {
+        stats: { profile: { completionPercentage: 0 } }
+      };
+    }
+  }
+
+  /**
+   * Acknowledge profile completion
+   * This will mark the profile completion message as seen
+   */
+  async acknowledgeProfileCompletion() {
+    try {
+      // Do not set localStorage for acknowledgment anymore
+      const response = await apiService.post('/api/profile/acknowledge-completion', {}, {
+        ...apiService.withAuth(),
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
+      await this.getStats({ forceRefresh: true });
+      this.invalidateCache('profile_data');
+      apiService.invalidateCache('/api/profile/stats');
+      return response;
+    } catch (error) {
       console.error('Error fetching profile stats:', error);
       return {
         stats: { profile: { completionPercentage: 0 } }
@@ -167,7 +193,6 @@ class ProfileService {
       if (!options.forceRefresh && 
           profileCache.consolidatedData && 
           (now - profileCache.consolidatedDataTimestamp) < profileCache.cacheDuration) {
-        console.log('Utilisation des données consolidées en cache local');
         return profileCache.consolidatedData;
       }
       

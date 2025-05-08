@@ -31,9 +31,10 @@ import {
     Mail,
     User
 } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import RoleBadge from "@/components/ui/RoleBadge";
 import { ROLE_SOLID_COLORS } from "@/lib/constants/roles";
+import { Link } from 'react-router-dom';
 
 export function UserTable({ 
     paginatedUsers, 
@@ -43,7 +44,8 @@ export function UserTable({
     openDeleteDialog,
     userHasSuperAdminRole,
     isSuperAdmin,
-    openEditDialog
+    openEditDialog,
+    isDark
 }) {
     const getSortIcon = (key) => {
         if (sortConfig.key === key) {
@@ -72,43 +74,43 @@ export function UserTable({
     };
 
     return (
-        <motion.div 
-            className="rounded-md border border-gray-200 overflow-hidden shadow-sm"
+        <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.4 }}
+            transition={{ duration: 0.3 }}
+            className="rounded-lg border shadow-sm overflow-hidden"
         >
             <Table>
-                <TableHeader className="bg-gray-50">
-                    <TableRow className="hover:bg-gray-50/80">
+                <TableHeader className={isDark ? 'bg-gray-800/50' : 'bg-gray-50'}>
+                    <TableRow className={isDark ? 'hover:bg-gray-800/80' : 'hover:bg-gray-50/80'}>
                         <TableHead className="w-12"></TableHead>
                         <TableHead 
-                            className="cursor-pointer font-medium text-gray-700"
+                            className={`cursor-pointer font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}
                             onClick={() => handleSort('lastName')}
                         >
                             <div className="flex items-center">
-                                <User className="h-4 w-4 mr-2 text-gray-500" />
+                                <User className={`h-4 w-4 mr-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
                                 Nom
                                 {getSortIcon('lastName')}
                             </div>
                         </TableHead>
                         <TableHead 
-                            className="cursor-pointer font-medium text-gray-700"
+                            className={`cursor-pointer font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}
                             onClick={() => handleSort('email')}
                         >
                             <div className="flex items-center">
-                                <Mail className="h-4 w-4 mr-2 text-gray-500" />
+                                <Mail className={`h-4 w-4 mr-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
                                 Email
                                 {getSortIcon('email')}
                             </div>
                         </TableHead>
-                        <TableHead className="font-medium text-gray-700">
+                        <TableHead className={`font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
                             <div className="flex items-center">
-                                <UserCog className="h-4 w-4 mr-2 text-gray-500" />
+                                <UserCog className={`h-4 w-4 mr-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
                                 Rôles
                             </div>
                         </TableHead>
-                        <TableHead className="text-right font-medium text-gray-700">Actions</TableHead>
+                        <TableHead className={`text-right font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>Actions</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -116,50 +118,51 @@ export function UserTable({
                         paginatedUsers.map((user, index) => (
                             <motion.tr
                                 key={user.id}
-                                className={`border-b border-gray-100 group transition-colors hover:bg-blue-50/30 ${userHasSuperAdminRole(user) ? 'bg-red-50/30' : ''}`}
+                                className={`border-b ${isDark ? 'border-gray-700' : 'border-gray-100'} group transition-colors ${
+                                    isDark 
+                                        ? userHasSuperAdminRole(user) 
+                                            ? 'bg-red-900/20 hover:bg-red-900/30' 
+                                            : 'hover:bg-gray-800/50'
+                                        : userHasSuperAdminRole(user)
+                                            ? 'bg-red-50/30 hover:bg-red-50/50'
+                                            : 'hover:bg-blue-50/30'
+                                }`}
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.3, delay: index * 0.05 }}
-                                whileHover={{ backgroundColor: 'rgba(243, 244, 246, 0.8)' }}
                             >
                                 <TableCell className="py-3">
-                                    <Avatar className={`h-9 w-9 ${getAvatarColorClass(user)}`}>
-                                        <AvatarFallback>
-                                            {getInitials(user.firstName, user.lastName)}
-                                        </AvatarFallback>
-                                    </Avatar>
+                                    <Link to={`/profile/${user.id}`} tabIndex={-1} onClick={e => e.stopPropagation()}>
+                                        <Avatar className={`h-9 w-9 ${getAvatarColorClass(user)}`}>
+                                            {user.profilePictureUrl ? (
+                                                <AvatarImage src={user.profilePictureUrl} alt={`${user.firstName} ${user.lastName}`} />
+                                            ) : null}
+                                            <AvatarFallback className={isDark ? 'text-gray-200 bg-gray-700' : ''}>
+                                                {getInitials(user.firstName, user.lastName)}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                    </Link>
                                 </TableCell>
-                                <TableCell className="font-medium py-3">
+                                <TableCell className={`font-medium py-3 ${isDark ? 'text-gray-200' : ''}`}>
                                     <div className="flex flex-col">
-                                        <span>{user.firstName} {user.lastName}</span>
+                                        <Link to={`/profile/${user.id}`} className="hover:underline" onClick={e => e.stopPropagation()} tabIndex={-1}>
+                                            <span>{user.firstName} {user.lastName}</span>
+                                        </Link>
                                         {userHasSuperAdminRole(user) && (
-                                            <span className="text-xs text-red-600 mt-1">SuperAdmin</span>
+                                            <span className={`text-xs ${isDark ? 'text-red-400' : 'text-red-600'} mt-1`}>SuperAdmin</span>
                                         )}
                                     </div>
                                 </TableCell>
-                                <TableCell className="py-3">
-                                    <a href={`mailto:${user.email}`} className="text-blue-600 hover:text-blue-800 hover:underline transition-colors">
-                                        {user.email}
-                                    </a>
-                                </TableCell>
-                                <TableCell className="py-3">
-                                    {user.roles && user.roles.length > 0 ? (
-                                        <div className="flex flex-wrap gap-1.5">
-                                            {user.roles.map((role, roleIndex) => (
-                                                <RoleBadge 
-                                                    key={`${user.id}-role-${roleIndex}`} 
-                                                    role={role.name}
-                                                    solid
-                                                    useVariant
-                                                    className="transition-all duration-200 hover:scale-105"
-                                                />
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <span className="text-sm text-gray-500">
-                                            Aucun rôle
-                                        </span>
-                                    )}
+                                <TableCell className={isDark ? 'text-gray-300' : ''}>{user.email}</TableCell>
+                                <TableCell>
+                                    <div className="flex flex-wrap gap-1">
+                                        {user.roles?.map(role => (
+                                            <RoleBadge 
+                                                key={role.id} 
+                                                role={role.name} 
+                                            />
+                                        ))}
+                                    </div>
                                 </TableCell>
                                 <TableCell className="text-right py-3">
                                     <TooltipProvider>
@@ -167,41 +170,47 @@ export function UserTable({
                                             <TooltipTrigger asChild>
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="hover:bg-gray-100">
+                                                        <Button 
+                                                            variant="ghost" 
+                                                            size="icon" 
+                                                            className={`${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+                                                        >
                                                             <MoreVertical className="h-4 w-4" />
                                                         </Button>
                                                     </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end" className="w-48">
+                                                    <DropdownMenuContent 
+                                                        align="end" 
+                                                        className={`w-48 ${isDark ? 'bg-gray-800 border-gray-700' : ''}`}
+                                                    >
                                                         <DropdownMenuItem 
                                                             onClick={() => openChangeRoleDialog(user)}
                                                             disabled={userHasSuperAdminRole(user) && !isSuperAdmin}
-                                                            className="cursor-pointer"
+                                                            className={`cursor-pointer ${isDark ? 'hover:bg-gray-700' : ''}`}
                                                         >
-                                                            <UserCog className="h-4 w-4 mr-2 text-blue-600" />
+                                                            <UserCog className={`h-4 w-4 mr-2 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
                                                             <span>Gérer les rôles</span>
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem 
-                                                            onClick={() => openEditDialog && openEditDialog(user)}
-                                                            disabled={userHasSuperAdminRole(user) && !isSuperAdmin}
-                                                            className="cursor-pointer"
+                                                            onClick={() => openEditDialog(user)}
+                                                            className={`cursor-pointer ${isDark ? 'hover:bg-gray-700' : ''}`}
                                                         >
-                                                            <Edit className="h-4 w-4 mr-2 text-green-600" />
-                                                            <span>Modifier l'utilisateur</span>
+                                                            <Edit className={`h-4 w-4 mr-2 ${isDark ? 'text-green-400' : 'text-green-600'}`} />
+                                                            <span>Modifier</span>
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuSeparator className={isDark ? 'bg-gray-700' : ''} />
                                                         <DropdownMenuItem 
                                                             onClick={() => openDeleteDialog(user)}
                                                             disabled={userHasSuperAdminRole(user) && !isSuperAdmin}
-                                                            className="text-red-600 cursor-pointer"
+                                                            className={`cursor-pointer ${isDark ? 'hover:bg-gray-700 text-red-400' : 'text-red-600'}`}
                                                         >
                                                             <Trash2 className="h-4 w-4 mr-2" />
-                                                            <span>Supprimer l'utilisateur</span>
+                                                            <span>Supprimer</span>
                                                         </DropdownMenuItem>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
                                             </TooltipTrigger>
-                                            <TooltipContent side="left">
-                                                <p>Actions pour {user.firstName} {user.lastName}</p>
+                                            <TooltipContent>
+                                                <p>Actions disponibles</p>
                                             </TooltipContent>
                                         </Tooltip>
                                     </TooltipProvider>
@@ -210,11 +219,15 @@ export function UserTable({
                         ))
                     ) : (
                         <TableRow>
-                            <TableCell colSpan={5} className="text-center py-10 text-gray-500">
+                            <TableCell colSpan={5} className={`text-center py-10 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                                 <div className="flex flex-col items-center justify-center">
-                                    <User className="h-10 w-10 text-gray-300 mb-2" />
-                                    <p className="text-base font-medium text-gray-600 mb-1">Aucun utilisateur trouvé</p>
-                                    <p className="text-sm text-gray-500">Modifiez vos filtres ou ajoutez de nouveaux utilisateurs</p>
+                                    <User className={`h-10 w-10 ${isDark ? 'text-gray-600' : 'text-gray-300'} mb-2`} />
+                                    <p className={`text-base font-medium ${isDark ? 'text-gray-300' : 'text-gray-600'} mb-1`}>
+                                        Aucun utilisateur trouvé
+                                    </p>
+                                    <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                                        Modifiez vos filtres ou ajoutez de nouveaux utilisateurs
+                                    </p>
                                 </div>
                             </TableCell>
                         </TableRow>

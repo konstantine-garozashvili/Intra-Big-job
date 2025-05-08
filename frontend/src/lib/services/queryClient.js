@@ -29,9 +29,9 @@ export const queryClient = new QueryClient({
   // Enable detailed logging in development mode only
   logger: import.meta.env.DEV 
     ? {
-        log: (...args) => console.log('[ReactQuery]', ...args),
-        warn: (...args) => console.warn('[ReactQuery]', ...args),
-        error: (...args) => console.error('[ReactQuery]', ...args)
+        log: () => {},
+        warn: () => {},
+        error: (...args) => console.error(...args)
       }
     : {
         log: () => {},
@@ -51,7 +51,6 @@ export const queryClient = new QueryClient({
 export const setQueryClient = (client) => {
   // Cette fonction existe pour la compatibilité avec le code existant
   // mais ne fait rien car nous utilisons déjà une instance exportée
-  console.debug('setQueryClient called, but no action needed as queryClient is already initialized');
 };
 
 /**

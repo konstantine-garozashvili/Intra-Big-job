@@ -14,16 +14,20 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use App\Service\UserService;
+use App\Service\DocumentStorageFactory;
 
 #[Route('/api')]
 class UserAdminController extends AbstractController
 {
     private $userRepository;
+    private $documentStorageFactory;
     
     public function __construct(
-        UserRepository $userRepository
+        UserRepository $userRepository,
+        DocumentStorageFactory $documentStorageFactory
     ) {
         $this->userRepository = $userRepository;
+        $this->documentStorageFactory = $documentStorageFactory;
     }
     
     /**
@@ -36,10 +40,24 @@ class UserAdminController extends AbstractController
     {
         try {
             $users = $this->userRepository->findAllWithRoles();
-            
+            $usersWithProfilePicture = array_map(function ($user) {
+                $profilePictureUrl = null;
+                $profilePicturePath = isset($user['profilePicturePath']) ? $user['profilePicturePath'] : null;
+                if ($profilePicturePath) {
+                    try {
+                        $profilePictureUrl = $this->documentStorageFactory->getDocumentUrl($profilePicturePath);
+                    } catch (\Exception $e) {
+                        $profilePictureUrl = null;
+                    }
+                }
+                // Just add the profilePictureUrl to the user array
+                return array_merge($user, [
+                    'profilePictureUrl' => $profilePictureUrl
+                ]);
+            }, $users);
             return $this->json([
                 'success' => true,
-                'data' => $users
+                'data' => $usersWithProfilePicture
             ]);
         } catch (\Exception $e) {
             return $this->json([
@@ -303,5 +321,44 @@ class UserAdminController extends AbstractController
         }
         
         return false;
+    }
+
+    /**
+     * Récupère tous les utilisateurs avec leurs formations
+     * Accessible par ADMIN, SUPERADMIN, RECRUITER
+     */
+    #[Route('/users/formations', name: 'api_users_with_formations', methods: ['GET'])]
+    #[IsGranted('ROLE_ADMIN')]
+    public function getUsersWithFormations(): JsonResponse
+    {
+        try {
+            $users = $this->userRepository->findAllWithRelations();
+            $data = [];
+            foreach ($users as $user) {
+                $formations = [];
+                if (method_exists($user, 'getFormations')) {
+                    foreach ($user->getFormations() as $formation) {
+                        $formations[] = [
+                            'id' => $formation->getId(),
+                            'name' => $formation->getName(),
+                            'promotion' => $formation->getPromotion(),
+                        ];
+                    }
+                }
+                $data[] = [
+                    'id' => $user->getId(),
+                    'firstName' => $user->getFirstName(),
+                    'lastName' => $user->getLastName(),
+                    'email' => $user->getEmail(),
+                    'formations' => $formations,
+                ];
+            }
+            return $this->json(['success' => true, 'data' => $data]);
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Erreur lors de la récupération des utilisateurs avec formations: ' . $e->getMessage()
+            ], 500);
+        }
     }
 } 

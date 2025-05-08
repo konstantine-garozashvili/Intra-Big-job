@@ -556,7 +556,7 @@
 
 /* Styles pour les tabs shadcn */
 [role="tablist"] {
-  background-color: #f3f4f6 !important;
+  /* background-color: #f3f4f6 !important; */
   padding: 0.25rem !important;
   border-radius: 0.5rem !important;
 }

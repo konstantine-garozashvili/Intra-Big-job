@@ -103,8 +103,6 @@ const SignatureHistory = () => {
               !['Saturday', 'Sunday'].includes(day.dayName)
             );
           }
-          
-          console.log('Weekly signature history from API:', apiData);
         } else {
           const errorData = await response.json().catch(() => ({}));
           console.error('API error response:', errorData);
@@ -120,7 +118,6 @@ const SignatureHistory = () => {
         setWeeklyData(apiData);
       } else {
         // Fallback: générer des données locales à partir du localStorage
-        console.log('Fallback: Using local signature data');
         
         // Obtenir les dates de la semaine courante
         const today = new Date();
@@ -173,7 +170,6 @@ const SignatureHistory = () => {
               try {
                 morningData = JSON.parse(storedData);
               } catch (e) {
-                console.error('Error parsing morning signature data:', e);
               }
             }
             
@@ -191,7 +187,6 @@ const SignatureHistory = () => {
               try {
                 afternoonData = JSON.parse(storedData);
               } catch (e) {
-                console.error('Error parsing afternoon signature data:', e);
               }
             }
             
@@ -215,7 +210,6 @@ const SignatureHistory = () => {
           });
         });
         
-        console.log('Generated local weekly data:', localWeeklyData);
         setWeeklyData(localWeeklyData);
       }
     } catch (error) {
@@ -287,7 +281,6 @@ const SignatureHistory = () => {
           // Vérifier si la signature du matin existe
           if (day.signatures && day.signatures.morning) {
             presentPeriods += 1;
-            console.log(`Présence du matin comptée pour ${day.date}`);
           }
         }
         
@@ -297,13 +290,11 @@ const SignatureHistory = () => {
           // Vérifier si la signature de l'après-midi existe
           if (day.signatures && day.signatures.afternoon) {
             presentPeriods += 1;
-            console.log(`Présence de l'après-midi comptée pour ${day.date}`);
           }
         }
       }
     });
     
-    console.log(`Résumé de la semaine - Total: ${totalPeriods}, Présent: ${presentPeriods}`);
     
     return {
       total: totalPeriods,
@@ -392,40 +383,7 @@ const SignatureHistory = () => {
       initial="hidden"
       animate="visible"
     >
-      {/* Summary Card */}
-      <motion.div variants={itemVariants}>
-        <Card className="overflow-hidden border-blue-100 dark:border-blue-900/50">
-          <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-900/30 border-b border-blue-100 dark:border-blue-900/10">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-blue-800 dark:text-blue-400 flex items-center gap-2">
-                <ClipboardList className="h-5 w-5" />
-                Résumé de la semaine
-              </CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-4">              
-            <div className="grid grid-cols-2 gap-3 mt-4">
-              <div className="p-3 bg-gray-50 dark:bg-gray-800/30 rounded-lg border border-gray-200 dark:border-gray-700">
-                <div className="flex items-center gap-2 mb-1">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                  <span className="text-sm font-medium">Présent</span>
-                </div>
-                <span className="text-2xl font-bold text-green-600">{summary.present}</span>
-                <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">périodes</span>
-              </div>
-              
-              <div className="p-3 bg-gray-50 dark:bg-gray-800/30 rounded-lg border border-gray-200 dark:border-gray-700">
-                <div className="flex items-center gap-2 mb-1">
-                  <XCircle className="h-4 w-4 text-red-600" />
-                  <span className="text-sm font-medium">Absent</span>
-                </div>
-                <span className="text-2xl font-bold text-red-600">{summary.total - summary.present}</span>
-                <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">périodes</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+
 
       {/* Detailed Table */}
       <motion.div variants={itemVariants}>

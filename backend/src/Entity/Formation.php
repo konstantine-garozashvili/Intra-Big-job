@@ -7,7 +7,10 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Validator\Constraints as Assert;
 use App\Entity\User;
+use App\Entity\Specialization;
 
 #[ORM\Entity(repositoryClass: FormationRepository::class)]
 class Formation
@@ -15,24 +18,70 @@ class Formation
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['formation:read'])]
     private ?int $id = null;
     
     #[ORM\Column(length: 255)]
+    #[Assert\NotBlank]
+    #[Groups(['formation:read'])]
     private ?string $name = null;
     
     #[ORM\Column(length: 255)]
+    #[Assert\NotBlank]
+    #[Groups(['formation:read'])]
     private ?string $promotion = null;
     
     #[ORM\Column(type: Types::TEXT, nullable: true)]
+    #[Groups(['formation:read'])]
     private ?string $description = null;
+
+    #[ORM\Column]
+    #[Assert\NotBlank]
+    #[Assert\Positive]
+    #[Groups(['formation:read'])]
+    private ?int $capacity = null;
+
+    #[ORM\Column(type: Types::DATE_MUTABLE)]
+    #[Assert\NotBlank]
+    #[Groups(['formation:read'])]
+    private ?\DateTimeInterface $dateStart = null;
+
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    #[Groups(['formation:read'])]
+    private ?string $location = null;
+
+    #[ORM\Column]
+    #[Assert\NotBlank]
+    #[Assert\Positive]
+    #[Groups(['formation:read'])]
+    private ?int $duration = null;
     
     #[ORM\ManyToMany(targetEntity: User::class, inversedBy: 'formations')]
     #[ORM\JoinTable(name: 'formation_student')]
+    #[Groups(['formation:read'])]
     private Collection $students;
+
+    #[ORM\OneToMany(mappedBy: 'formation', targetEntity: FormationEnrollmentRequest::class, orphanRemoval: true, cascade: ['remove'])]
+    private Collection $enrollmentRequests;
+
+    #[ORM\ManyToOne(targetEntity: Specialization::class, inversedBy: 'formations')]
+    #[ORM\JoinColumn(nullable: false)]
+    #[Groups(['formation:read', 'specialization:item'])]
+    private ?Specialization $specialization = null;
+    
+    #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['formation:read'])]
+    private ?string $imageUrl = null;
+    
+    #[ORM\OneToMany(mappedBy: 'formation', targetEntity: FormationTeacher::class, orphanRemoval: true)]
+    #[Groups(['formation:read'])]
+    private Collection $formationTeachers;
     
     public function __construct()
     {
         $this->students = new ArrayCollection();
+        $this->enrollmentRequests = new ArrayCollection();
+        $this->formationTeachers = new ArrayCollection();
     }
     
     public function getId(): ?int
@@ -72,7 +121,51 @@ class Formation
         $this->description = $description;
         return $this;
     }
-    
+
+    public function getCapacity(): ?int
+    {
+        return $this->capacity;
+    }
+
+    public function setCapacity(int $capacity): static
+    {
+        $this->capacity = $capacity;
+        return $this;
+    }
+
+    public function getDateStart(): ?\DateTimeInterface
+    {
+        return $this->dateStart;
+    }
+
+    public function setDateStart(\DateTimeInterface $dateStart): static
+    {
+        $this->dateStart = $dateStart;
+        return $this;
+    }
+
+    public function getLocation(): ?string
+    {
+        return $this->location;
+    }
+
+    public function setLocation(?string $location): static
+    {
+        $this->location = $location;
+        return $this;
+    }
+
+    public function getDuration(): ?int
+    {
+        return $this->duration;
+    }
+
+    public function setDuration(int $duration): static
+    {
+        $this->duration = $duration;
+        return $this;
+    }
+
     /**
      * @return Collection<int, User>
      */
@@ -85,6 +178,10 @@ class Formation
     {
         if (!$this->students->contains($student)) {
             $this->students->add($student);
+            // Ensure bidirectional relationship
+            if (method_exists($student, 'addFormation')) {
+                $student->addFormation($this);
+            }
         }
         return $this;
     }
@@ -92,6 +189,84 @@ class Formation
     public function removeStudent(User $student): self
     {
         $this->students->removeElement($student);
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, FormationEnrollmentRequest>
+     */
+    public function getEnrollmentRequests(): Collection
+    {
+        return $this->enrollmentRequests;
+    }
+
+    public function addEnrollmentRequest(FormationEnrollmentRequest $enrollmentRequest): static
+    {
+        if (!$this->enrollmentRequests->contains($enrollmentRequest)) {
+            $this->enrollmentRequests->add($enrollmentRequest);
+            $enrollmentRequest->setFormation($this);
+        }
+        return $this;
+    }
+
+    public function removeEnrollmentRequest(FormationEnrollmentRequest $enrollmentRequest): static
+    {
+        if ($this->enrollmentRequests->removeElement($enrollmentRequest)) {
+            // set the owning side to null (unless already changed)
+            if ($enrollmentRequest->getFormation() === $this) {
+                $enrollmentRequest->setFormation(null);
+            }
+        }
+        return $this;
+    }
+
+    public function getSpecialization(): ?Specialization
+    {
+        return $this->specialization;
+    }
+
+    public function setSpecialization(?Specialization $specialization): static
+    {
+        $this->specialization = $specialization;
+        return $this;
+    }
+
+    public function getImageUrl(): ?string
+    {
+        return $this->imageUrl;
+    }
+
+    public function setImageUrl(?string $imageUrl): static
+    {
+        $this->imageUrl = $imageUrl;
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, FormationTeacher>
+     */
+    public function getFormationTeachers(): Collection
+    {
+        return $this->formationTeachers;
+    }
+
+    public function addFormationTeacher(FormationTeacher $formationTeacher): self
+    {
+        if (!$this->formationTeachers->contains($formationTeacher)) {
+            $this->formationTeachers->add($formationTeacher);
+            $formationTeacher->setFormation($this);
+        }
+        return $this;
+    }
+
+    public function removeFormationTeacher(FormationTeacher $formationTeacher): self
+    {
+        if ($this->formationTeachers->removeElement($formationTeacher)) {
+            // set the owning side to null (unless already changed)
+            if ($formationTeacher->getFormation() === $this) {
+                $formationTeacher->setFormation(null);
+            }
+        }
         return $this;
     }
 }

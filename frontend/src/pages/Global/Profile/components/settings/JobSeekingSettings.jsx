@@ -99,23 +99,23 @@ const JobSeekingSettings = memo(({ profile, onProfileUpdate }) => {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <p className="text-sm sm:text-base text-gray-600">
+      <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300">
         Activez ces options pour indiquer que vous êtes à la recherche d'un emploi et/ou d'une alternance.
         <strong className="block mt-2 sm:mt-3">Vous pouvez activer les deux options simultanément si vous êtes ouvert aux deux types d'opportunités.</strong>
       </p>
       
       <div className="space-y-3 sm:space-y-4">
         {/* Option de recherche d'emploi */}
-        <div className={`flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 rounded-lg ${isSeekingInternship ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50'}`}>
+        <div className={`flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 rounded-lg ${isSeekingInternship ? 'bg-blue-50 border border-blue-200 dark:bg-blue-900/20 dark:border-blue-700' : 'bg-gray-50 dark:bg-gray-800/50'}`}>
           <div className="flex items-start sm:items-center space-x-3 mb-3 sm:mb-0">
-            <div className={`p-2 rounded-full ${isSeekingInternship ? 'bg-blue-100' : 'bg-gray-100'}`}>
-              <BookOpen className={`h-4 w-4 sm:h-5 sm:w-5 ${isSeekingInternship ? 'text-blue-600' : 'text-gray-500'}`} />
+            <div className={`p-2 rounded-full ${isSeekingInternship ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-gray-100 dark:bg-gray-700'}`}>
+              <BookOpen className={`h-4 w-4 sm:h-5 sm:w-5 ${isSeekingInternship ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`} />
             </div>
             <div>
-              <Label htmlFor="seeking-internship" className="text-sm sm:text-base font-medium">
+              <Label htmlFor="seeking-internship" className="text-sm sm:text-base font-medium text-gray-800 dark:text-gray-200">
                 Recherche d'emploi
               </Label>
-              <p className="text-xs sm:text-sm text-gray-500 mt-1">
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
                 Activez cette option si vous recherchez un emploi
               </p>
             </div>
@@ -130,16 +130,16 @@ const JobSeekingSettings = memo(({ profile, onProfileUpdate }) => {
         </div>
         
         {/* Option de recherche d'alternance */}
-        <div className={`flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 rounded-lg ${isSeekingApprenticeship ? 'bg-purple-50 border border-purple-200' : 'bg-gray-50'}`}>
+        <div className={`flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 rounded-lg ${isSeekingApprenticeship ? 'bg-purple-50 border border-purple-200 dark:bg-purple-900/20 dark:border-purple-700' : 'bg-gray-50 dark:bg-gray-800/50'}`}>
           <div className="flex items-start sm:items-center space-x-3 mb-3 sm:mb-0">
-            <div className={`p-2 rounded-full ${isSeekingApprenticeship ? 'bg-purple-100' : 'bg-gray-100'}`}>
-              <Briefcase className={`h-4 w-4 sm:h-5 sm:w-5 ${isSeekingApprenticeship ? 'text-purple-600' : 'text-gray-500'}`} />
+            <div className={`p-2 rounded-full ${isSeekingApprenticeship ? 'bg-purple-100 dark:bg-purple-900/30' : 'bg-gray-100 dark:bg-gray-700'}`}>
+              <Briefcase className={`h-4 w-4 sm:h-5 sm:w-5 ${isSeekingApprenticeship ? 'text-purple-600 dark:text-purple-400' : 'text-gray-500 dark:text-gray-400'}`} />
             </div>
             <div>
-              <Label htmlFor="seeking-apprenticeship" className="text-sm sm:text-base font-medium">
+              <Label htmlFor="seeking-apprenticeship" className="text-sm sm:text-base font-medium text-gray-800 dark:text-gray-200">
                 Recherche d'alternance
               </Label>
-              <p className="text-xs sm:text-sm text-gray-500 mt-1">
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
                 Activez cette option si vous recherchez une alternance
               </p>
             </div>
@@ -155,8 +155,8 @@ const JobSeekingSettings = memo(({ profile, onProfileUpdate }) => {
         
         {/* Informations supplémentaires */}
         {(isSeekingInternship || isSeekingApprenticeship) && (
-          <div className="mt-4 p-3 sm:p-4 bg-green-50 border border-green-200 rounded-lg">
-            <p className="text-xs sm:text-sm text-green-800">
+          <div className="mt-4 p-3 sm:p-4 bg-green-50 border border-green-200 dark:bg-green-900/20 dark:border-green-700 rounded-lg">
+            <p className="text-xs sm:text-sm text-green-800 dark:text-green-300">
               <span className="font-semibold">Votre profil est visible</span> par les recruteurs et les entreprises partenaires.
               Assurez-vous que votre CV est à jour pour maximiser vos chances.
             </p>

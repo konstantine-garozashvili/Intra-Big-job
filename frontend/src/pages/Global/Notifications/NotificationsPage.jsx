@@ -94,6 +94,11 @@ const notificationTypeConfig = {
     label: 'Document mis à jour',
     color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
     icon: <File className="h-4 w-4" />
+  },
+  GUEST_APPLICATION: {
+    label: 'Demande invité',
+    color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
+    icon: <Bell className="h-4 w-4" />
   }
 };
 
@@ -103,6 +108,18 @@ const NotificationsPage = () => {
   const { notifications, loading, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const [activeTab, setActiveTab] = useState('all');
   const [filter, setFilter] = useState(null);
+
+  // Calculer les types de notifications présents
+  const notificationTypesWithCount = notifications.reduce((acc, notif) => {
+    if (notif.type) {
+      acc[notif.type] = (acc[notif.type] || 0) + 1;
+    }
+    return acc;
+  }, {});
+
+  // On ne montre les filtres que s'il y a au moins 2 types différents
+  const availableTypes = Object.keys(notificationTypesWithCount);
+  const showTypeFilters = availableTypes.length > 1;
 
   // Fonction pour obtenir les notifications filtrées
   const getFilteredNotifications = () => {
@@ -129,7 +146,17 @@ const NotificationsPage = () => {
   // Fonction pour gérer le clic sur une notification
   const handleNotificationClick = (notification) => {
     markAsRead(notification.id);
-    
+    // Redirection selon le type de notification
+    if (
+      notification.type === 'INFO' &&
+      notification.title && (
+        notification.title.toLowerCase().includes("votre demande d'inscription a été acceptée") ||
+        notification.title.toLowerCase().includes("votre demande d'inscription a été refusée")
+      )
+    ) {
+      navigate('/settings/notifications');
+      return;
+    }
     // Si la notification a un lien de redirection, y naviguer
     if (notification.targetUrl) {
       navigate(notification.targetUrl);
@@ -210,9 +237,20 @@ const NotificationsPage = () => {
                       </span>
                     </div>
                   </div>
-                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                    {notification.message}
-                  </p>
+                  {/* Affichage du message et du commentaire séparément si présent */}
+                  {(() => {
+                    if (notification.message && notification.message.includes('Commentaire du recruteur :')) {
+                      const [mainMsg, comment] = notification.message.split(/\nCommentaire du recruteur ?: ?/);
+                      return <>
+                        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{mainMsg}</p>
+                        <div className="mt-2 p-2 rounded bg-yellow-50 dark:bg-yellow-900/30 border-l-4 border-yellow-400 text-yellow-900 dark:text-yellow-100 text-sm font-medium whitespace-pre-line">
+                          <span className="font-semibold">Commentaire du recruteur :</span> {comment}
+                        </div>
+                      </>;
+                    } else {
+                      return <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{notification.message}</p>;
+                    }
+                  })()}
                   
                   <div className="mt-2 flex items-center gap-2">
                     <Badge className={
@@ -292,29 +330,34 @@ const NotificationsPage = () => {
         </Tabs>
         
         <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-          {Object.entries(notificationTypeConfig).map(([type, config]) => (
-            <Badge 
-              key={type}
-              className={`cursor-pointer ${
-                filter === type 
-                  ? 'bg-blue-500 text-white hover:bg-blue-600' 
-                  : 'bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
-              }`}
-              onClick={() => setFilter(filter === type ? null : type)}
-            >
-              {config.label}
-            </Badge>
-          ))}
-          
-          {filter && (
-            <Button 
-              variant="ghost" 
-              size="sm"
-              className="text-xs h-7"
-              onClick={() => setFilter(null)}
-            >
-              Réinitialiser
-            </Button>
+          {showTypeFilters && (
+            <>
+              {Object.entries(notificationTypeConfig)
+                .filter(([type]) => notificationTypesWithCount[type])
+                .map(([type, config]) => (
+                  <Badge 
+                    key={type}
+                    className={`cursor-pointer ${
+                      filter === type 
+                        ? 'bg-blue-500 text-white hover:bg-blue-600' 
+                        : 'bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                    }`}
+                    onClick={() => setFilter(filter === type ? null : type)}
+                  >
+                    {config.label}
+                  </Badge>
+                ))}
+              {filter && (
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  className="text-xs h-7"
+                  onClick={() => setFilter(null)}
+                >
+                  Réinitialiser
+                </Button>
+              )}
+            </>
           )}
         </div>
         

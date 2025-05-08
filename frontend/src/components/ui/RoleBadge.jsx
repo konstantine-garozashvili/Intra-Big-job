@@ -99,7 +99,7 @@ const RoleBadge = ({
         <Badge 
           className={badgeClasses} 
           variant={badgeVariant}
-          {...props}
+          {...(() => { const { isDark, ...rest } = props; return rest; })()}
         >
           {badgeContent}
         </Badge>
@@ -112,7 +112,7 @@ const RoleBadge = ({
     <Badge 
       className={badgeClasses} 
       variant={badgeVariant}
-      {...props}
+      {...(() => { const { isDark, ...rest } = props; return rest; })()}
     >
       {badgeContent}
     </Badge>

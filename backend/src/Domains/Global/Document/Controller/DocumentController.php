@@ -405,19 +405,22 @@ class DocumentController extends AbstractController
     private function checkDocumentAccessPermission(Document $document): void
     {
         $user = $this->getUser();
-        
-        // SuperAdmin can access any document
+        $documentType = $document->getDocumentType();
+        // Si c'est un CV, tout utilisateur authentifié peut y accéder
+        if ($documentType && $documentType->getCode() === 'CV') {
+            if ($user) {
+                return;
+            }
+        }
+        // SuperAdmin peut accéder à tout
         if ($this->isGranted('ROLE_SUPER_ADMIN')) {
             return;
         }
-        
-        // Users can access their own documents
+        // Le propriétaire peut accéder à ses propres documents
         if ($document->getUser() === $user) {
             return;
         }
-        
-        // Other role-based permissions can be added here
-        
+        // Sinon, accès refusé
         throw new AccessDeniedHttpException('You do not have permission to access this document');
     }
     

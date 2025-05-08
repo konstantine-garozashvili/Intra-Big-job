@@ -22,18 +22,6 @@ export const ContactInfoSection = ({
 }) => {
   const { user: currentUser } = useAuth();
   
-  // Add debug logging
-  useEffect(() => {
-    console.log('ContactInfoSection rendered with:', {
-      'isFieldEditable("address")': isFieldEditable('address'),
-      'isFieldEditable("phoneNumber")': isFieldEditable('phoneNumber'),
-      'isFieldEditable("linkedinUrl")': isFieldEditable('linkedinUrl'),
-      'userData?.id': userData?.id,
-      'currentUser?.id': currentUser?.id,
-      'currentUser?.roles': currentUser?.roles
-    });
-  }, [userData, currentUser, isFieldEditable]);
-  
   // Get the handleCancelAddress function from the hook
   const handleCancelAddress = () => {
     const address = userData.addresses && userData.addresses.length > 0 

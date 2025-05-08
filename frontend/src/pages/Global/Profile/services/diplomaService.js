@@ -19,12 +19,10 @@ export const diplomaEvents = {
 // Cache management for diplomas
 const diplomaCache = {
   clearUserDiplomas() {
-    console.log('[DiplomaService] Clearing user diplomas cache');
     localStorage.removeItem('user_diplomas_cache');
   },
   
   clearAvailableDiplomas() {
-    console.log('[DiplomaService] Clearing available diplomas cache');
     localStorage.removeItem('available_diplomas_cache');
   },
   
@@ -45,23 +43,17 @@ class DiplomaService {
    */
   async getAvailableDiplomas(bypassCache = true) {
     try {
-      console.log('[DiplomaService] Calling API for available diplomas');
-      
-      // Add cache-busting parameter if requested
       const url = bypassCache 
         ? `/api/user-diplomas/available?_=${Date.now()}` 
         : '/api/user-diplomas/available';
         
       const response = await apiService.get(url);
       
-      console.log('[DiplomaService] API response for available diplomas received');
-      
       // Always clear cache after fetching
       diplomaCache.clearAvailableDiplomas();
       
       return response.data;
     } catch (error) {
-      console.error('[DiplomaService] Error in getAvailableDiplomas:', error);
       throw error;
     }
   }
@@ -73,23 +65,17 @@ class DiplomaService {
    */
   async getUserDiplomas(bypassCache = true) {
     try {
-      console.log('[DiplomaService] Calling API for user diplomas');
-      
-      // Add cache-busting parameter if requested
       const url = bypassCache 
         ? `/api/user-diplomas?_=${Date.now()}` 
         : '/api/user-diplomas';
         
       const response = await apiService.get(url);
       
-      console.log('[DiplomaService] API response for user diplomas received');
-      
       // Always clear cache after fetching
       diplomaCache.clearUserDiplomas();
       
       return response.data;
     } catch (error) {
-      console.error('[DiplomaService] Error in getUserDiplomas:', error);
       throw error;
     }
   }
@@ -103,33 +89,20 @@ class DiplomaService {
    */
   async addUserDiploma(diplomaData) {
     try {
-      console.log('[DiplomaService] Adding user diploma', diplomaData);
-      
       // Clear caches before operation
       diplomaCache.clearAll();
       
       const response = await apiService.post('/api/user-diplomas', diplomaData);
       
-      console.log('[DiplomaService] Diploma added successfully');
-      
-      // Clear caches after operation
-      diplomaCache.clearAll();
-      
       // Notify subscribers about the update
       diplomaEvents.notify();
       
       // Force refetch after add
-      this.getUserDiplomas(true).catch(err => 
-        console.error('[DiplomaService] Error refetching user diplomas after add:', err)
-      );
-      
-      this.getAvailableDiplomas(true).catch(err => 
-        console.error('[DiplomaService] Error refetching available diplomas after add:', err)
-      );
+      this.getUserDiplomas(true).catch(() => {});
+      this.getAvailableDiplomas(true).catch(() => {});
       
       return response.data;
     } catch (error) {
-      console.error('[DiplomaService] Error in addUserDiploma:', error);
       throw error;
     }
   }
@@ -141,33 +114,20 @@ class DiplomaService {
    */
   async deleteUserDiploma(id) {
     try {
-      console.log('[DiplomaService] Deleting user diploma', id);
-      
       // Clear caches before operation
       diplomaCache.clearAll();
       
       const response = await apiService.delete(`/api/user-diplomas/${id}`);
       
-      console.log('[DiplomaService] Diploma deleted successfully');
-      
-      // Clear caches after operation
-      diplomaCache.clearAll();
-      
       // Notify subscribers about the update
       diplomaEvents.notify();
       
       // Force refetch after delete
-      this.getUserDiplomas(true).catch(err => 
-        console.error('[DiplomaService] Error refetching user diplomas after delete:', err)
-      );
-      
-      this.getAvailableDiplomas(true).catch(err => 
-        console.error('[DiplomaService] Error refetching available diplomas after delete:', err)
-      );
+      this.getUserDiplomas(true).catch(() => {});
+      this.getAvailableDiplomas(true).catch(() => {});
       
       return response.data;
     } catch (error) {
-      console.error('[DiplomaService] Error in deleteUserDiploma:', error);
       throw error;
     }
   }

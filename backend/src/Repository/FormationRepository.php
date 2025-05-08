@@ -8,6 +8,11 @@ use Doctrine\Persistence\ManagerRegistry;
 
 /**
  * @extends ServiceEntityRepository<Formation>
+ *
+ * @method Formation|null find($id, $lockMode = null, $lockVersion = null)
+ * @method Formation|null findOneBy(array $criteria, array $orderBy = null)
+ * @method Formation[]    findAll()
+ * @method Formation[]    findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
  */
 class FormationRepository extends ServiceEntityRepository
 {
@@ -16,28 +21,31 @@ class FormationRepository extends ServiceEntityRepository
         parent::__construct($registry, Formation::class);
     }
 
-    //    /**
-    //     * @return Formation[] Returns an array of Formation objects
-    //     */
-    //    public function findByExampleField($value): array
-    //    {
-    //        return $this->createQueryBuilder('f')
-    //            ->andWhere('f.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->orderBy('f.id', 'ASC')
-    //            ->setMaxResults(10)
-    //            ->getQuery()
-    //            ->getResult()
-    //        ;
-    //    }
+    public function searchByName(?string $search, int $limit, int $offset): array
+    {
+        $qb = $this->createQueryBuilder('f')
+            ->orderBy('f.id', 'DESC')
+            ->setFirstResult($offset)
+            ->setMaxResults($limit);
 
-    //    public function findOneBySomeField($value): ?Formation
-    //    {
-    //        return $this->createQueryBuilder('f')
-    //            ->andWhere('f.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->getQuery()
-    //            ->getOneOrNullResult()
-    //        ;
-    //    }
-}
+        if ($search) {
+            $qb->andWhere('LOWER(f.name) LIKE :search')
+               ->setParameter('search', '%' . strtolower($search) . '%');
+        }
+
+        return $qb->getQuery()->getResult();
+    }
+
+    public function countByName(?string $search): int
+    {
+        $qb = $this->createQueryBuilder('f')
+            ->select('COUNT(f.id)');
+
+        if ($search) {
+            $qb->andWhere('LOWER(f.name) LIKE :search')
+               ->setParameter('search', '%' . strtolower($search) . '%');
+        }
+
+        return (int) $qb->getQuery()->getSingleScalarResult();
+    }
+} 

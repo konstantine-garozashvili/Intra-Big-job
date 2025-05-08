@@ -1,4 +1,4 @@
-import React, { memo, useState, useEffect } from 'react';
+import React, { memo, useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PhoneInput } from '@/components/ui/phone-input';
@@ -29,6 +29,19 @@ const EditableField = memo(({
   // Local state for optimistic updates
   const [localValue, setLocalValue] = useState(value);
   const [error, setError] = useState(null);
+  
+  // Ajout d'une ref pour l'input URL
+  const inputRef = useRef(null);
+
+  // Place le curseur à la fin du champ URL lors du passage en édition
+  useEffect(() => {
+    if (isEditing && type === 'url' && inputRef.current) {
+      const input = inputRef.current;
+      // Place le curseur à la fin
+      input.focus();
+      input.setSelectionRange(input.value.length, input.value.length);
+    }
+  }, [isEditing, type]);
   
   // Update local value when the actual value changes (only if not in edit mode)
   useEffect(() => {
@@ -115,7 +128,7 @@ const EditableField = memo(({
                 disabled={loading}
               />
             ) : (
-              <div className="relative">
+              <div className="relative mb-4">
                 <Input
                   type={type}
                   value={editedValue}
@@ -123,6 +136,7 @@ const EditableField = memo(({
                   className={`address-input w-full pl-10 ${error ? 'border-red-500' : ''} break-all`}
                   disabled={loading}
                   placeholder={type === 'url' ? 'https://...' : ''}
+                  ref={type === 'url' ? inputRef : undefined}
                 />
                 {icon && <span className="address-input-icon h-5 w-5 text-blue-500 flex items-center justify-center">{icon}</span>}
               </div>
@@ -130,16 +144,16 @@ const EditableField = memo(({
             {error && (
               <p className="text-sm text-red-500">{error}</p>
             )}
-            <div className="flex justify-end space-x-2 mt-2">
+            <div className="flex justify-end space-x-2 mt-3">
               <button
                 type="button"
-                className="address-btn-secondary"
+                className="address-btn-secondary address-btn-compact"
                 onClick={onCancel}
                 disabled={loading}
               >Annuler</button>
               <button
                 type="button"
-                className="address-btn-primary"
+                className="address-btn-primary address-btn-compact"
                 onClick={handleSave}
                 disabled={loading}
               >Enregistrer</button>
@@ -166,7 +180,7 @@ const EditableField = memo(({
             {displayAsLink && displayValue ? (
               <a href={displayValue} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline break-all">{getFormattedDisplayValue()}</a>
             ) : (
-              <span className="break-all">{getFormattedDisplayValue()}</span>
+              <span className="break-all">{getFormattedDisplayValue() || <span className='text-gray-400 italic'>Non renseigné</span>}</span>
             )}
           </div>
         </>

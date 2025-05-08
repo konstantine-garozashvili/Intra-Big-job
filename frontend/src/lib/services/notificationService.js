@@ -33,7 +33,7 @@ class NotificationService {
    */
   async getNotifications(page = 1, limit = 10, includeRead = true, refresh = false) {
     try {
-      console.log('Using Firebase notifications data');
+      // console.log('Using Firebase notifications data');
       
       await new Promise(resolve => setTimeout(resolve, 300));
       
@@ -80,7 +80,7 @@ class NotificationService {
       }
 
       if (!refresh && this.cache.notifications && this.cache.notifications.notifications) {
-        console.log("Using cached notifications data (immediate response)");
+        // console.log("Using cached notifications data (immediate response)");
         return this.cache.notifications;
       }
 
@@ -109,7 +109,7 @@ class NotificationService {
       console.error('Error fetching notifications:', error);
       
       if (this.cache.notifications && this.cache.notifications.notifications) {
-        console.log("Returning cached notification data in catch block");
+        // console.log("Returning cached notification data in catch block");
         return this.cache.notifications;
       }
       

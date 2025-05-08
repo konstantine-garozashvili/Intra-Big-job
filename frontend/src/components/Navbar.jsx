@@ -347,43 +347,7 @@ const UserMenu = ({ onLogout, userData, setLogoutDialogOpen }) => {
       {/* Notification icon */}
       <NotificationBell />
       {/* Theme toggle button */}
-      <Button
-        variant="ghost"
-        className="rounded-full w-10 h-10 p-0 bg-transparent text-gray-200 hover:bg-[#02284f]/80 hover:text-white mr-2"
-        onClick={toggleTheme}
-      >
-        {theme === "dark" ? (
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={1.5}
-            stroke="currentColor"
-            className="w-5 h-5"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"
-            />
-          </svg>
-        ) : (
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={1.5}
-            stroke="currentColor"
-            className="w-5 h-5"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"
-            />
-          </svg>
-        )}
-      </Button>
+      <ThemeToggle className="mr-3" />
 
       {/* Dropdown menu */}
       <DropdownMenu modal={true}>
@@ -476,6 +440,7 @@ const Navbar = memo(() => {
   const location = useLocation();
   const [isLoading, setIsLoading] = useState(true);
   const needsSignature = useSignatureReminder();
+  const [hoverLogo, setHoverLogo] = useState(false);
 
   // Vérifier l'état d'authentification
   const checkAuthStatus = async () => {
@@ -515,7 +480,6 @@ const Navbar = memo(() => {
 
               // Only refresh if data is old AND we haven't refreshed in the last 30 seconds
               if (dataAge > 2 * 60 * 1000 && timeSinceLastRefresh > 30000) {
-                console.log("Navbar: Data is stale, refreshing in background");
                 window._lastNavbarRefreshTime = now;
 
                 // Récupérer les données en arrière-plan sans bloquer l'interface
@@ -674,17 +638,37 @@ const Navbar = memo(() => {
                   <MenuBurger />
                 </div>
                 <div className="flex-shrink-0">
-                  <Link
-                    to={
-                      isAuthenticated
-                        ? permissions.getRoleDashboardPath()
-                        : "/login"
-                    }
-                    className="navbar-brand text-2xl font-black tracking-tight text-white dark:text-white whitespace-nowrap"
+                  <motion.div
+                    onMouseEnter={() => setHoverLogo(true)}
+                    onMouseLeave={() => setHoverLogo(false)}
+                    style={{ display: 'inline-block' }}
                   >
-                    <span style={{ color: "white" }}>Big</span>
-                    <span style={{ color: "#528eb2" }}>Project</span>
-                  </Link>
+                    <Link
+                      to={
+                        isAuthenticated
+                          ? permissions.getRoleDashboardPath()
+                          : "/login"
+                      }
+                      className="navbar-brand text-2xl font-black tracking-tight text-white dark:text-white whitespace-nowrap"
+                      tabIndex={0}
+                    >
+                      <motion.span
+                        animate={{ color: hoverLogo ? "#528eb2" : "white" }}
+                        transition={{ duration: 0.4, ease: "easeInOut" }}
+                        className="transition-colors"
+                        style={{ marginRight: 2 }}
+                      >
+                        Big
+                      </motion.span>
+                      <motion.span
+                        animate={{ color: hoverLogo ? "white" : "#528eb2" }}
+                        transition={{ duration: 0.4, ease: "easeInOut" }}
+                        className="transition-colors"
+                      >
+                        Project
+                      </motion.span>
+                    </Link>
+                  </motion.div>
                 </div>
               </div>
 

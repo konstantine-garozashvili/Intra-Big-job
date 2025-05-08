@@ -315,19 +315,16 @@ export function useProfilePicture() {
     
     // Vérifier si un rafraîchissement est en cours
     if (isRefreshing.current) {
-      console.log("Profile picture refresh already in progress, skipping");
       return Promise.resolve();
     }
     
     // Vérifier si on a rafraîchi récemment
     if (now - lastRefreshTime.current < 3000) { // 3 secondes entre les rafraîchissements
-      console.log("Profile picture refresh throttled - too soon since last refresh");
       return Promise.resolve();
     }
     
     // Vérifier si la route est en cours de traitement
     if (userDataManager.requestRegistry.isRouteProcessing('/api/profile/picture')) {
-      console.log("Profile picture refresh skipped - route is currently being processed");
       return Promise.resolve();
     }
     
@@ -336,7 +333,6 @@ export function useProfilePicture() {
     
     // Marquer le début du rafraîchissement
     isRefreshing.current = true;
-    console.log("Refreshing profile picture data");
     
     // Effectuer la requête
     return profilePictureQuery.refetch()
@@ -350,7 +346,6 @@ export function useProfilePicture() {
         return response;
       })
       .catch(error => {
-        console.error("Error refreshing profile picture:", error);
         throw error;
       })
       .finally(() => {
@@ -410,11 +405,11 @@ export function useProfilePicture() {
               try {
                 localStorage.setItem('user', JSON.stringify(userData));
               } catch (e) {
-                console.warn('Error storing user data in localStorage:', e);
+                // Ignorer les erreurs silencieusement
               }
             }
           } catch (e) {
-            console.warn('Error updating user data cache:', e);
+            // Ignorer les erreurs silencieusement
           }
         }
         
@@ -423,7 +418,7 @@ export function useProfilePicture() {
         try {
           userDataManager.invalidateCache('profile_picture', { skipRefresh: true });
         } catch (e) {
-          console.warn('Error invalidating user data cache:', e);
+          // Ignorer les erreurs silencieusement
         }
         
         // Notify all subscribers
@@ -435,8 +430,6 @@ export function useProfilePicture() {
         forceRefresh();
       },
       onError: (error, variables, context) => {
-        // Show error message based on the error type
-        
         // Restore previous state on error
         if (context?.previousData) {
           queryClient.setQueryData(PROFILE_QUERY_KEYS.profilePicture, context.previousData);
@@ -530,27 +523,23 @@ export function useProfilePicture() {
     const handleUserDataUpdate = (updateType, userData) => {
       // Ne pas traiter les mises à jour si nous sommes déjà en train d'en traiter une
       if (isProcessingUpdate) {
-        console.log("Skipping user data update handler - already processing an update");
         return;
       }
       
       // Ne déclencher le forceRefresh que si la mise à jour n'est pas liée à la photo de profil
       // Cela empêche la boucle infinie où la mise à jour de la photo déclenche une mise à jour des données
       if (updateType === 'profile_picture' || updateType === 'profile') {
-        console.log("Ignoring profile update event to prevent infinite loop");
         return;
       }
       
       // Vérifier si la route est déjà en cours de traitement
       if (userDataManager.requestRegistry.isRouteProcessing('/api/profile/picture')) {
-        console.log("Skipping profile picture refresh - route is already being processed");
         return;
       }
       
       // Vérifier la fréquence des mises à jour
       const now = Date.now();
       if (now - recentUpdateTimestamp < UPDATE_THROTTLE_MS) {
-        console.log("Skipping profile picture update - too soon since last update");
         return;
       }
       
@@ -559,12 +548,10 @@ export function useProfilePicture() {
         // Si l'URL est déjà dans les données, mettre à jour notre cache local
         setCachedUrl(userData.profilePictureUrl);
         profilePictureCache.saveToCache(userData.profilePictureUrl);
-        console.log("Using profile picture URL from user data:", userData.profilePictureUrl);
         return;
       }
       
       recentUpdateTimestamp = now;
-      console.log("Triggering profile picture refresh due to user data update:", updateType);
       
       // Marquer que nous sommes en train de traiter une mise à jour
       isProcessingUpdate = true;

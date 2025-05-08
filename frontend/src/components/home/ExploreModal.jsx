@@ -94,42 +94,42 @@ const ExploreModal = ({ isOpen, onClose }) => {
                       { 
                         title: 'Développement Web', 
                         description: 'Maîtrisez HTML, CSS, JavaScript et les frameworks modernes',
-                        image: '/assets/images/course-web.jpg',
+                        image: '/assets/images/formations/web-dev.webp',
                         color: 'from-blue-500 to-cyan-400',
                         link: '/formations/web'
                       },
                       { 
                         title: 'Intelligence Artificielle', 
                         description: 'Découvrez le machine learning et ses applications pratiques',
-                        image: '/assets/images/course-ai.jpg',
+                        image: '/assets/images/formations/ia.webp',
                         color: 'from-purple-500 to-pink-500',
                         link: '/formations/ai'
                       },
                       { 
                         title: 'Cybersécurité', 
                         description: 'Apprenez à protéger les systèmes contre les menaces',
-                        image: '/assets/images/course-security.jpg',
+                        image: '/assets/images/formations/cybersecurity.webp',
                         color: 'from-green-500 to-emerald-400',
                         link: '/formations/cybersecurity'
                       },
                       { 
                         title: 'Développement Mobile', 
                         description: 'Créez des applications mobiles pour iOS et Android',
-                        image: '/assets/images/course-mobile.jpg',
+                        image: '/assets/images/formations/mobile-dev.webp',
                         color: 'from-pink-500 to-red-500',
                         link: '/formations/mobile'
                       },
                       { 
                         title: 'Science des Données', 
                         description: 'Analysez et visualisez des données complexes',
-                        image: '/assets/images/course-data.jpg',
+                        image: '/assets/images/formations/data-science.webp',
                         color: 'from-indigo-500 to-blue-600',
                         link: '/formations/data-science'
                       },
                       { 
                         title: 'Développement de Jeux', 
                         description: 'Concevez et créez des jeux vidéo captivants',
-                        image: '/assets/images/course-game.jpg',
+                        image: '/assets/images/formations/game-dev.webp',
                         color: 'from-yellow-500 to-orange-500',
                         link: '/formations/game'
                       }
@@ -146,15 +146,14 @@ const ExploreModal = ({ isOpen, onClose }) => {
                           animate={{ y: 0, opacity: 1 }}
                           transition={{ delay: i * 0.1 }}
                         >
-                          <div 
-                            className="absolute inset-0 bg-cover bg-center z-0" 
-                            style={{ 
-                              backgroundImage: `url('${course.image}')`,
-                              backgroundSize: 'cover',
-                              backgroundPosition: 'center'
-                            }}
-                          />
-                          <div className={`absolute inset-0 bg-gradient-to-t ${course.color} opacity-60 group-hover:opacity-80 transition-opacity`} />
+                          <div className="absolute inset-0 flex items-center justify-center bg-gray-900 z-0">
+                            <img 
+                              src={course.image} 
+                              alt={course.title}
+                              className="w-full h-48 object-cover object-[center_30%] z-10 relative"
+                            />
+                          </div>
+                          <div className="absolute inset-0 bg-black opacity-40 group-hover:opacity-60 transition-opacity" />
                           <div className="absolute inset-0 p-6 flex flex-col justify-end z-10">
                             <h3 className="text-white text-xl font-bold mb-2">{course.title}</h3>
                             <p className="text-white text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300">{course.description}</p>

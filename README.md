@@ -6,6 +6,13 @@
 
 Avant de commencer, assurez-vous d'avoir un environnement propre (Attention cette action supprimera les volumes de vos anciens projets) :
 
+Mutagen
+```bash
+# Relancer complètement les containers
+docker-compose down -v && docker system prune -a --volumes && 'c:/laragon/www/Intra-Big-job/start.cmd'
+```
+
+Regular 
 ```bash
 # Relancer complètement les containers
 docker-compose down -v && docker system prune -a --volumes && docker-compose build --no-cache && docker-compose up -d

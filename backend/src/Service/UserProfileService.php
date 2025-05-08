@@ -12,6 +12,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Serializer\SerializerInterface;
 use Psr\Log\LoggerInterface;
 use App\Service\UserDiplomaService;
+use App\Service\DocumentStorageFactory;
 
 /**
  * Service to centralize common user profile operations
@@ -97,6 +98,7 @@ class UserProfileService
             'createdAt' => $user->getCreatedAt() ? $user->getCreatedAt()->format('Y-m-d H:i:s') : null,
             'updatedAt' => $user->getUpdatedAt() ? $user->getUpdatedAt()->format('Y-m-d H:i:s') : null,
             'isEmailVerified' => $user->isEmailVerified(),
+            'isProfileCompletionAcknowledged' => $user->isProfileCompletionAcknowledged(),
             'linkedinUrl' => $user->getLinkedinUrl(),
             'pictureProfilePath' => $user->getProfilePicturePath(),
             'roles' => $user->getRoles(),

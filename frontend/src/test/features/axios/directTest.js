@@ -13,26 +13,26 @@ async function testAxiosConfig() {
     const { default: axiosInstance, addressApiInstance, externalAxiosInstance } = axiosModule;
     
     // Verify instances exist
-    console.log('Axios instances created:', {
-      axiosInstance: !!axiosInstance,
-      addressApiInstance: !!addressApiInstance,
-      externalAxiosInstance: !!externalAxiosInstance
-    });
+    // console.log('Axios instances created:', {
+    //   axiosInstance: !!axiosInstance,
+    //   addressApiInstance: !!addressApiInstance,
+    //   externalAxiosInstance: !!externalAxiosInstance
+    // });
     
     // Check baseURL configuration
-    console.log('BaseURL configurations:', {
-      main: axiosInstance.defaults?.baseURL || 'Not set',
-      address: addressApiInstance.defaults?.baseURL || 'Not set',
-      external: externalAxiosInstance.defaults?.baseURL || 'Not set'
-    });
+    // console.log('BaseURL configurations:', {
+    //   main: axiosInstance.defaults?.baseURL || 'Not set',
+    //   address: addressApiInstance.defaults?.baseURL || 'Not set',
+    //   external: externalAxiosInstance.defaults?.baseURL || 'Not set'
+    // });
     
     // Verify environment variable is used
     const envApiUrl = import.meta.env.VITE_API_URL;
-    console.log('Environment API URL:', envApiUrl);
+    // console.log('Environment API URL:', envApiUrl);
     
     // Check if baseURL matches environment
     const isBaseUrlFromEnv = axiosInstance.defaults?.baseURL === envApiUrl;
-    console.log('BaseURL matches environment variable:', isBaseUrlFromEnv);
+    // console.log('BaseURL matches environment variable:', isBaseUrlFromEnv);
     
     // Test with a mock token
     localStorage.setItem('token', 'test-token-123');
@@ -48,18 +48,18 @@ async function testAxiosConfig() {
       const modifiedRequest = interceptor(mockRequest);
       
       // Check if token was added
-      console.log('Authorization header added:', modifiedRequest.headers.Authorization === 'Bearer test-token-123');
+      // console.log('Authorization header added:', modifiedRequest.headers.Authorization === 'Bearer test-token-123');
     } else {
-      console.log('Could not access request interceptor directly');
+      // console.log('Could not access request interceptor directly');
     }
     
     // Clean up
     localStorage.removeItem('token');
     
-    console.log('Axios configuration test completed!');
+    // console.log('Axios configuration test completed!');
     return true;
   } catch (error) {
-    console.error('Error testing axios configuration:', error);
+    // console.error('Error testing axios configuration:', error);
     return false;
   }
 }
@@ -69,7 +69,7 @@ export { testAxiosConfig };
 
 // Run test if in browser environment
 if (typeof window !== 'undefined' && !import.meta.env?.VITEST) {
-  console.log('Running axios config test in browser...');
+  // console.log('Running axios config test in browser...');
   testAxiosConfig()
     .then(result => console.log('Test result:', result ? 'PASSED' : 'FAILED'))
     .catch(err => console.error('Test failed with error:', err));

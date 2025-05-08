@@ -335,7 +335,7 @@ const CareerSettings = () => {
             </p>
             
             <JobSeekingSettings 
-              profile={studentProfile}
+              profile={studentProfile?.data}
               onProfileUpdate={(updatedProfileData) => {
                 updateProfileMutation.mutate(updatedProfileData);
               }}

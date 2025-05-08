@@ -28,11 +28,8 @@ export const createDocumentNotification = async (document, type, title, message,
   try {
     // Vérifier si le type de notification est géré par le backend
     if (!forceCreate && BACKEND_MANAGED_NOTIFICATIONS.includes(type)) {
-      console.log(`Skipping frontend notification creation for type ${type} - managed by backend`);
       return;
     }
-    
-    console.log('Creating document notification:', { document, type, title, message });
     
     // Récupérer l'ID utilisateur avec plusieurs méthodes possibles
     let userId = localStorage.getItem('userId') || localStorage.getItem('user_id');
@@ -46,18 +43,14 @@ export const createDocumentNotification = async (document, type, title, message,
           userId = userObj.id;
         }
       }
-    } catch (e) {
-      console.warn('Error parsing user from localStorage:', e);
-    }
+    } catch (e) {}
     
     if (!userId) {
-      console.warn('No user ID found in localStorage, cannot create Firebase notification');
       return;
     }
     
     // Assurer que l'ID est une chaîne de caractères
     userId = String(userId);
-    console.log('Using user ID for notification:', userId);
     
     try {
       // Vérifier les préférences de notification de l'utilisateur
@@ -67,7 +60,6 @@ export const createDocumentNotification = async (document, type, title, message,
 
       // Si l'utilisateur a désactivé ce type de notification, ne pas la créer
       if (preferences[type] === false) {
-        console.log(`Notification de type ${type} désactivée par l'utilisateur, notification non créée`);
         return;
       }
       
@@ -83,13 +75,9 @@ export const createDocumentNotification = async (document, type, title, message,
         read: false
       };
       
-      console.log('Adding notification to Firebase:', notificationData);
-      
       // Ajouter à la collection Firebase
       await addDoc(collection(db, 'notifications'), notificationData);
-      console.log('Successfully added notification to Firebase');
     } catch (firebaseError) {
-      console.error('Failed to add notification to Firebase:', firebaseError);
     }
     
     // Create a local notification using the notification service
@@ -104,8 +92,6 @@ export const createDocumentNotification = async (document, type, title, message,
       createdAt: now.toISOString(),
       read: false
     };
-    
-    console.log('Creating document notification:', newNotification);
     
     // Add notification to the notification service cache
     if (notificationService.cache.notifications && notificationService.cache.notifications.notifications) {
@@ -127,18 +113,13 @@ export const createDocumentNotification = async (document, type, title, message,
       setTimeout(() => {
         notificationService.getNotifications(1, 10, true, true)
           .then(() => {
-            console.log('Notifications refreshed after creating document notification');
             notificationService.getUnreadCount(true);
           })
-          .catch(console.error);
+          .catch(() => {
+          });
       }, 300);
-      
-      console.log('Document notification created:', newNotification);
-    } else {
-      console.warn('Notification cache not initialized correctly');
     }
   } catch (error) {
-    console.error('Error creating document notification:', error);
   }
 };
 

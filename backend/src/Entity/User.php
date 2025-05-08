@@ -79,9 +79,6 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     #[Groups(['user:read', 'message:read'])]
     private Collection $userRoles;
 
-    #[ORM\ManyToMany(targetEntity: Formation::class, mappedBy: 'students')]
-    private Collection $formations;
-
     #[ORM\OneToOne(mappedBy: 'user', targetEntity: \App\Domains\Student\Entity\StudentProfile::class, cascade: ['persist', 'remove'])]
     private ?\App\Domains\Student\Entity\StudentProfile $studentProfile = null;
 
@@ -130,6 +127,19 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
     #[ORM\OneToMany(mappedBy: 'sender', targetEntity: Message::class)]
     private Collection $sentMessages;
 
+    #[ORM\ManyToMany(targetEntity: Formation::class, mappedBy: 'students')]
+    private Collection $formations;
+
+    #[ORM\OneToMany(mappedBy: 'user', targetEntity: FormationEnrollmentRequest::class)]
+    private Collection $enrollmentRequests;
+
+    #[ORM\OneToMany(mappedBy: 'reviewedBy', targetEntity: FormationEnrollmentRequest::class)]
+    private Collection $reviewedEnrollmentRequests;
+
+    #[ORM\OneToMany(mappedBy: 'user', targetEntity: FormationTeacher::class, orphanRemoval: true)]
+    #[Groups(['user:read'])]
+    private Collection $teacherFormations;
+
     public function __construct()
     {
         $this->createdAt = new \DateTimeImmutable();
@@ -139,10 +149,13 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
         $this->createdGroups = new ArrayCollection();
         $this->groups = new ArrayCollection();
         $this->userDiplomas = new ArrayCollection();
-        $this->formations = new ArrayCollection();
         $this->tickets = new ArrayCollection();
         $this->assignedTickets = new ArrayCollection();
         $this->sentMessages = new ArrayCollection();
+        $this->formations = new ArrayCollection();
+        $this->enrollmentRequests = new ArrayCollection();
+        $this->reviewedEnrollmentRequests = new ArrayCollection();
+        $this->teacherFormations = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -563,31 +576,6 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
         return $this;
     }
 
-    /**
-     * @return Collection<int, Formation>
-     */
-    public function getFormations(): Collection
-    {
-        return $this->formations;
-    }
-
-    public function addFormation(Formation $formation): self
-    {
-        if (!$this->formations->contains($formation)) {
-            $this->formations[] = $formation;
-            $formation->addStudent($this); 
-        }
-        return $this;
-    }
-
-    public function removeFormation(Formation $formation): self
-    {
-        if ($this->formations->removeElement($formation)) {
-            $formation->removeStudent($this);
-        }
-        return $this;
-    }
-
     public function getStudentProfile(): ?\App\Domains\Student\Entity\StudentProfile
     {
         return $this->studentProfile;
@@ -733,5 +721,105 @@ class User implements PasswordAuthenticatedUserInterface, UserInterface
         }
 
         return $this;
+    }
+
+    /**
+     * @return Collection<int, FormationEnrollmentRequest>
+     */
+    public function getEnrollmentRequests(): Collection
+    {
+        return $this->enrollmentRequests;
+    }
+
+    public function addEnrollmentRequest(FormationEnrollmentRequest $enrollmentRequest): static
+    {
+        if (!$this->enrollmentRequests->contains($enrollmentRequest)) {
+            $this->enrollmentRequests->add($enrollmentRequest);
+            $enrollmentRequest->setUser($this);
+        }
+        return $this;
+    }
+
+    public function removeEnrollmentRequest(FormationEnrollmentRequest $enrollmentRequest): static
+    {
+        if ($this->enrollmentRequests->removeElement($enrollmentRequest)) {
+            // set the owning side to null (unless already changed)
+            if ($enrollmentRequest->getUser() === $this) {
+                $enrollmentRequest->setUser(null);
+            }
+        }
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, FormationEnrollmentRequest>
+     */
+    public function getReviewedEnrollmentRequests(): Collection
+    {
+        return $this->reviewedEnrollmentRequests;
+    }
+
+    public function addReviewedEnrollmentRequest(FormationEnrollmentRequest $enrollmentRequest): static
+    {
+        if (!$this->reviewedEnrollmentRequests->contains($enrollmentRequest)) {
+            $this->reviewedEnrollmentRequests->add($enrollmentRequest);
+            $enrollmentRequest->setReviewedBy($this);
+        }
+        return $this;
+    }
+
+    public function removeReviewedEnrollmentRequest(FormationEnrollmentRequest $enrollmentRequest): static
+    {
+        if ($this->reviewedEnrollmentRequests->removeElement($enrollmentRequest)) {
+            // set the owning side to null (unless already changed)
+            if ($enrollmentRequest->getReviewedBy() === $this) {
+                $enrollmentRequest->setReviewedBy(null);
+            }
+        }
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, FormationTeacher>
+     */
+    public function getTeacherFormations(): Collection
+    {
+        return $this->teacherFormations;
+    }
+
+    public function addTeacherFormation(FormationTeacher $teacherFormation): self
+    {
+        if (!$this->teacherFormations->contains($teacherFormation)) {
+            $this->teacherFormations->add($teacherFormation);
+            $teacherFormation->setUser($this);
+        }
+        return $this;
+    }
+
+    public function removeTeacherFormation(FormationTeacher $teacherFormation): self
+    {
+        if ($this->teacherFormations->removeElement($teacherFormation)) {
+            // set the owning side to null (unless already changed)
+            if ($teacherFormation->getUser() === $this) {
+                $teacherFormation->setUser(null);
+            }
+        }
+        return $this;
+    }
+
+    public function addFormation(Formation $formation): self
+    {
+        if (!$this->formations->contains($formation)) {
+            $this->formations->add($formation);
+        }
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Formation>
+     */
+    public function getFormations(): Collection
+    {
+        return $this->formations;
     }
 }

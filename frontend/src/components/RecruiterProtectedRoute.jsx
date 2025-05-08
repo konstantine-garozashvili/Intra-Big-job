@@ -65,7 +65,6 @@ const RecruiterProtectedRoute = () => {
         
         if (cachedUserData) {
           // Utiliser les données en cache si disponibles
-          console.log('RecruiterProtectedRoute: Utilisation des données utilisateur en cache');
           userData = cachedUserData;
           
           // Vérifier si les données sont actuelles
@@ -77,12 +76,11 @@ const RecruiterProtectedRoute = () => {
               background: true,
               requestId: 'recruiter_protected_route_background'
             }).catch(e => {
-              console.warn('Erreur lors du rafraîchissement en arrière-plan:', e);
+              // console.warn('Erreur lors du rafraîchissement en arrière-plan:', e);
             });
           }
         } else {
           // Si pas de cache, récupérer les données via le service utilisateur
-          console.log('RecruiterProtectedRoute: Récupération des données utilisateur via API');
           userData = await authService.getCurrentUser(false, { requestSource: 'recruiterProtectedRoute' });
         }
         
@@ -121,7 +119,6 @@ const RecruiterProtectedRoute = () => {
           notificationShownRef.current = true;
         }
       } catch (error) {
-        console.error('Erreur lors de la vérification des droits:', error);
         setHasAccess(false);
         if (!notificationShownRef.current) {
           toast.error('Erreur lors de la vérification de vos droits d\'accès', {

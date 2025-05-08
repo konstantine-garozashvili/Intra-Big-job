@@ -35,14 +35,6 @@ const SuperAdminDashboard = () => {
   const { data: user, isLoading, error, refetch } = useUserData();
   const refreshAttemptedRef = useRef(false);
   
-  // Ajouter des logs pour tracer les données utilisateur
-  useEffect(() => {
-    console.log("SuperAdminDashboard - User data from useUserData:", user);
-    console.log("SuperAdminDashboard - Loading state:", isLoading);
-    console.log("SuperAdminDashboard - Error state:", error);
-    console.log("SuperAdminDashboard - Refresh attempted:", refreshAttemptedRef.current);
-  }, [user, isLoading, error]);
-  
   // Utiliser useMemo pour éviter les re-rendus inutiles
   const roleAlias = useMemo(() => {
     if (!user?.roles?.length) return '';
@@ -65,37 +57,30 @@ const SuperAdminDashboard = () => {
   useEffect(() => {
     // Si nous avons déjà des données complètes, ne pas rafraîchir
     if (user?.firstName && user?.lastName) {
-      console.log("SuperAdminDashboard - User data is already complete, skipping refresh");
       refreshAttemptedRef.current = true;
       return;
     }
     
     // Si une tentative a déjà été faite ou si le chargement est en cours, ne pas réessayer
     if (refreshAttemptedRef.current || isLoading) {
-      console.log("SuperAdminDashboard - Refresh already attempted or loading, skipping");
       return;
     }
     
     // Une seule tentative de rafraîchissement si nécessaire
     const refreshUserData = async () => {
       try {
-        console.log("SuperAdminDashboard - Attempting to refresh user data");
         refreshAttemptedRef.current = true;
         // Utiliser le refetch du hook useUserData plutôt que d'appeler directement l'API
         await refetch();
-        console.log("SuperAdminDashboard - User data refreshed successfully");
       } catch (error) {
-        console.error("SuperAdminDashboard - Error refreshing user data:", error);
+        // Ignore error
       }
     };
     
     // Attendre un court instant pour permettre aux données initiales de se charger
     const timeoutId = setTimeout(() => {
       if (!user?.firstName && !refreshAttemptedRef.current) {
-        console.log("SuperAdminDashboard - No firstName available, triggering refresh");
         refreshUserData();
-      } else {
-        console.log("SuperAdminDashboard - firstName is available, no need to refresh");
       }
     }, 500); // Augmenter le délai pour réduire les chances de conflit
     
@@ -127,6 +112,14 @@ const SuperAdminDashboard = () => {
       color: 'from-purple-500 to-purple-600',
       textColor: 'text-purple-50',
       link: '/formations',
+    },
+    {
+      title: 'Toutes les formations',
+      description: 'Voir toutes les formations disponibles',
+      icon: Book,
+      color: 'from-orange-500 to-orange-600',
+      textColor: 'text-orange-50',
+      link: '/admin/formations',
     }
   ];
 
