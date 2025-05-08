@@ -268,7 +268,7 @@ class DocumentController extends AbstractController
             // Create notification for document upload success
             $this->createDocumentNotification(
                 $user, 
-                'Document uploadé avec succès', 
+                'Document mis en ligne avec succès', 
                 "Votre document {$document->getName()} a été uploadé avec succès.", 
                 'DOCUMENT_UPLOADED',
                 '/documents'
