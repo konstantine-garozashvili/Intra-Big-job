@@ -257,14 +257,14 @@ const EditFormationForm = () => {
           </div>
         </CardHeader>
         <div className="px-6 py-8">
-          <form onSubmit={handleSubmit}>
-            <Tabs defaultValue="informations" className="w-full bg-transparent">
-              <TabsList className="flex gap-4 mb-8 bg-transparent">
-                <TabsTrigger value="informations" className="text-lg font-semibold px-6 py-2 rounded-md bg-white/80 dark:bg-gray-800/80 shadow hover:bg-blue-100 dark:hover:bg-gray-700 transition-colors data-[state=active]:bg-blue-600 data-[state=active]:text-white">Informations</TabsTrigger>
-                <TabsTrigger value="teachers" className="text-lg font-semibold px-6 py-2 rounded-md bg-white/80 dark:bg-gray-800/80 shadow hover:bg-blue-100 dark:hover:bg-gray-700 transition-colors data-[state=active]:bg-blue-600 data-[state=active]:text-white">Enseignants</TabsTrigger>
-                <TabsTrigger value="students" className="text-lg font-semibold px-6 py-2 rounded-md bg-white/80 dark:bg-gray-800/80 shadow hover:bg-blue-100 dark:hover:bg-gray-700 transition-colors data-[state=active]:bg-blue-600 data-[state=active]:text-white">Étudiants</TabsTrigger>
-              </TabsList>
-              <TabsContent value="informations" className="p-0 mt-0">
+          <Tabs defaultValue="informations" className="w-full bg-transparent">
+            <TabsList className="flex gap-4 mb-8 bg-transparent">
+              <TabsTrigger value="informations" className="text-lg font-semibold px-6 py-2 rounded-md bg-white/80 dark:bg-gray-800/80 shadow hover:bg-blue-100 dark:hover:bg-gray-700 transition-colors data-[state=active]:bg-blue-600 data-[state=active]:text-white">Informations</TabsTrigger>
+              <TabsTrigger value="teachers" className="text-lg font-semibold px-6 py-2 rounded-md bg-white/80 dark:bg-gray-800/80 shadow hover:bg-blue-100 dark:hover:bg-gray-700 transition-colors data-[state=active]:bg-blue-600 data-[state=active]:text-white">Enseignants</TabsTrigger>
+              <TabsTrigger value="students" className="text-lg font-semibold px-6 py-2 rounded-md bg-white/80 dark:bg-gray-800/80 shadow hover:bg-blue-100 dark:hover:bg-gray-700 transition-colors data-[state=active]:bg-blue-600 data-[state=active]:text-white">Étudiants</TabsTrigger>
+            </TabsList>
+            <TabsContent value="informations" className="p-0 mt-0">
+              <form onSubmit={handleSubmit}>
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="space-y-10">
                   {/* Nouvelle grille : image seule à gauche, tout le reste à droite */}
                   <div className="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-10 items-start">
@@ -357,19 +357,19 @@ const EditFormationForm = () => {
                     </div>
                   </div>
                 </motion.div>
-              </TabsContent>
-              <TabsContent value="teachers" className="p-0 mt-0">
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="relative rounded-b-xl p-6">
-                  {formationId && <FormationTeachersSection formationId={formationId} />}
-                </motion.div>
-              </TabsContent>
-              <TabsContent value="students" className="p-0 mt-0">
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="relative rounded-b-xl p-6">
-                  {formationId && <FormationStudentsSection formationId={formationId} />}
-                </motion.div>
-              </TabsContent>
-            </Tabs>
-          </form>
+              </form>
+            </TabsContent>
+            <TabsContent value="teachers" className="p-0 mt-0">
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="relative rounded-b-xl p-6">
+                {formationId && <FormationTeachersSection formationId={formationId} />}
+              </motion.div>
+            </TabsContent>
+            <TabsContent value="students" className="p-0 mt-0">
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="relative rounded-b-xl p-6">
+                {formationId && <FormationStudentsSection formationId={formationId} />}
+              </motion.div>
+            </TabsContent>
+          </Tabs>
         </div>
       </Card>
     </div>

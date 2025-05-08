@@ -81,5 +81,14 @@ export const formationApi = {
    * Soumet une demande d'inscription à une formation
    * @param {number} formationId - ID de la formation
    */
-  requestEnrollment: (formationId) => apiService.post(`${API_URL}/${formationId}/enrollment-request`)
+  requestEnrollment: (formationId) => apiService.post(`${API_URL}/${formationId}/enrollment-request`),
+
+  /**
+   * Accepte ou refuse une demande d'inscription à une formation
+   * @param {number} requestId - ID de la demande
+   * @param {boolean} status - true = accepter, false = refuser
+   * @param {string} comment - commentaire optionnel
+   */
+  processEnrollmentRequest: (requestId, status, comment = '') =>
+    apiService.patch(`/api/formation-requests/${requestId}`, { status, comment })
 }; 

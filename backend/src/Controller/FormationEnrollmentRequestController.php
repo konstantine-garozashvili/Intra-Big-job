@@ -106,7 +106,7 @@ class FormationEnrollmentRequestController extends AbstractController
                         'type' => ['stringValue' => 'GUEST_APPLICATION'],
                         'timestamp' => ['timestampValue' => (new \DateTime())->format(\DateTime::RFC3339)],
                         'read' => ['booleanValue' => false],
-                        'targetUrl' => ['stringValue' => '/formations'],
+                        'targetUrl' => ['stringValue' => '/recruiter/enrollment-requests'],
                         'source' => ['stringValue' => 'backend'],
                         'appVersion' => ['stringValue' => '1.0']
                     ]
@@ -189,10 +189,10 @@ class FormationEnrollmentRequestController extends AbstractController
         $request->setComment($comment);
         $request->setReviewedBy($this->getUser());
 
-        if ($status === true) {
-            $formation = $request->getFormation();
-            $user = $request->getUser();
+        $user = $request->getUser();
+        $formation = $request->getFormation();
 
+        if ($status === true) {
             // Remove GUEST role
             foreach ($user->getUserRoles() as $userRole) {
                 if ($userRole->getRole()->getName() === 'GUEST') {
@@ -219,6 +219,44 @@ class FormationEnrollmentRequestController extends AbstractController
         }
 
         $this->entityManager->flush();
+
+        // Notifier le guest de la décision (accepté/refusé)
+        try {
+            $firebaseUrl = $this->getParameter('firebase_database_url') ?? 'https://firestore.googleapis.com/v1/projects/bigproject-d6daf/databases/(default)/documents';
+            $client = new \Symfony\Component\HttpClient\NativeHttpClient();
+            $userId = (string)$user->getId();
+            $notifTitle = $status ? "Votre demande d'inscription a été acceptée" : "Votre demande d'inscription a été refusée";
+            $notifMsg = $status
+                ? "Votre demande pour rejoindre la formation '" . $formation->getName() . "' a été acceptée." 
+                : "Votre demande pour rejoindre la formation '" . $formation->getName() . "' a été refusée.";
+            if ($comment) {
+                $notifMsg .= "\nCommentaire du recruteur : " . $comment;
+            }
+            $notificationData = [
+                'fields' => [
+                    'recipientId' => ['stringValue' => $userId],
+                    'title' => ['stringValue' => $notifTitle],
+                    'message' => ['stringValue' => $notifMsg],
+                    'type' => ['stringValue' => 'INFO'],
+                    'timestamp' => ['timestampValue' => (new \DateTime())->format(\DateTime::RFC3339)],
+                    'read' => ['booleanValue' => false],
+                    'targetUrl' => ['stringValue' => '/formations'],
+                    'source' => ['stringValue' => 'backend'],
+                    'appVersion' => ['stringValue' => '1.0']
+                ]
+            ];
+            $client->request('POST', $firebaseUrl . '/notifications', [
+                'json' => $notificationData,
+                'headers' => [
+                    'Content-Type' => 'application/json',
+                ]
+            ]);
+        } catch (\Exception $e) {
+            // Log mais ne bloque pas la suite
+            if (method_exists($this, 'getLogger') && $this->getLogger()) {
+                $this->getLogger()->error('Erreur envoi notification Firestore (guest): ' . $e->getMessage());
+            }
+        }
 
         return $this->json([
             'message' => $status ? 'Demande acceptée' : 'Demande refusée'

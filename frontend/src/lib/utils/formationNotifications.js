@@ -138,7 +138,7 @@ export const formationNotifications = {
           title: "Nouvelle demande d'inscription invité",
           message: `Un invité a demandé à rejoindre la formation ${formationName}.`,
           type: 'GUEST_APPLICATION',
-          targetUrl: '/formations',
+          targetUrl: '/recruiter/enrollment-requests',
           timestamp: now,
           read: false,
           guestId: guestId || null

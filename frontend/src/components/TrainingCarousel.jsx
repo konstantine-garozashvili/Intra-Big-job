@@ -35,29 +35,48 @@ const badgeVariants = {
   "default": "bg-gradient-to-r from-emerald-100 via-teal-100 to-cyan-100 dark:from-emerald-900 dark:via-teal-900 dark:to-cyan-900 text-emerald-700 dark:text-emerald-300 hover:from-emerald-200 hover:via-teal-200 hover:to-cyan-200 dark:hover:from-emerald-800 dark:hover:via-teal-800 dark:hover:to-cyan-800"
 };
 
+const skeletonBase = "bg-slate-200 dark:bg-[#334155]";
 const LoadingSkeleton = () => (
   <div className="w-full">
     <Carousel className="w-full">
-      <CarouselContent>
-        {[1, 2, 3].map((_, index) => (
-          <CarouselItem key={index} className="basis-full md:basis-1/2 lg:basis-1/3">
-            <Card className="h-full flex flex-col bg-gradient-to-br from-white via-amber-50/30 to-white dark:from-slate-800 dark:via-amber-900/10 dark:to-slate-900">
-              <Skeleton className="w-full h-[200px]" />
-              <CardContent className="flex-grow p-6">
-                <div className="flex flex-wrap gap-2 mb-3">
-                  <Skeleton className="h-6 w-24" />
-                  <Skeleton className="h-6 w-20" />
+      <CarouselContent className="-ml-4">
+        {[1, 2, 3, 4].map((_, index) => (
+          <CarouselItem key={index} className="pl-4 md:basis-1/2 lg:basis-2/5">
+            <Card className="h-full flex flex-col bg-white dark:bg-slate-800 shadow-lg border-0 overflow-hidden rounded-lg">
+              {/* Image skeleton */}
+              <div className="relative aspect-[16/9] overflow-hidden">
+                <Skeleton className={`w-full h-full absolute inset-0 ${skeletonBase}`} />
+                {/* Overlay bouton "Voir détail" */}
+                <div className="absolute inset-0 flex items-center justify-center z-10">
+                  <Skeleton className={`h-8 w-24 rounded-full opacity-60 ${skeletonBase}`} />
                 </div>
-                <Skeleton className="h-8 w-3/4 mb-2" />
-                <Skeleton className="h-4 w-full mb-2" />
-                <Skeleton className="h-4 w-2/3 mb-4" />
-                <div className="flex flex-col gap-2 mt-4">
-                  <Skeleton className="h-4 w-1/2" />
-                  <Skeleton className="h-4 w-1/3" />
+              </div>
+              <CardContent className="flex-grow p-4 sm:p-6">
+                {/* Badges */}
+                <div className="flex flex-wrap gap-2 mb-3 items-center">
+                  <Skeleton className={`h-6 w-24 rounded-full ${skeletonBase}`} />
+                  <Skeleton className={`h-6 w-20 rounded-full ${skeletonBase}`} />
+                </div>
+                {/* Title */}
+                <Skeleton className={`h-7 sm:h-8 w-2/3 mb-2 rounded ${skeletonBase}`} />
+                {/* Description (3 lignes) */}
+                <Skeleton className={`h-4 w-full mb-1 rounded ${skeletonBase}`} />
+                <Skeleton className={`h-4 w-5/6 mb-1 rounded ${skeletonBase}`} />
+                <Skeleton className={`h-4 w-2/3 mb-3 rounded ${skeletonBase}`} />
+                {/* Infos (date/location) */}
+                <div className="flex justify-between items-center mt-2 text-xs sm:text-sm w-full gap-2">
+                  <div className="flex items-center gap-2">
+                    <Skeleton className={`h-4 w-4 rounded-full ${skeletonBase}`} />
+                    <Skeleton className={`h-4 w-24 rounded ${skeletonBase}`} />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Skeleton className={`h-4 w-4 rounded-full ${skeletonBase}`} />
+                    <Skeleton className={`h-4 w-16 rounded ${skeletonBase}`} />
+                  </div>
                 </div>
               </CardContent>
-              <CardFooter className="p-6 pt-0">
-                <Skeleton className="h-10 w-full" />
+              <CardFooter className="p-4 pt-0">
+                <Skeleton className={`h-10 w-full rounded-lg ${skeletonBase}`} />
               </CardFooter>
             </Card>
           </CarouselItem>
@@ -160,15 +179,21 @@ export default function TrainingCarousel() {
         // Récupérer les IDs déjà demandés côté API
         let requestedIds = [];
         if (myRequests && myRequests.requests) {
-          requestedIds = myRequests.requests.map(r => r.formation.id);
+          // On ne garde que les demandes en attente (status === null)
+          requestedIds = myRequests.requests
+            .filter(r => r.status === null)
+            .map(r => r.formation.id);
         } else if (Array.isArray(myRequests)) {
-          requestedIds = myRequests.map(r => r.formation?.id || r.formation_id);
+          requestedIds = myRequests
+            .filter(r => r.status === null)
+            .map(r => r.formation?.id || r.formation_id);
         }
-        // Ajouter les IDs du localStorage (optimisme UI)
+        // Synchroniser le localStorage : ne garder que les IDs encore en attente
         const localIds = getLocalRequested();
-        const allIds = Array.from(new Set([...requestedIds, ...localIds]));
-        // Mettre à jour le state
+        const validLocalIds = localIds.filter(id => requestedIds.includes(id));
+        const allIds = Array.from(new Set([...requestedIds, ...validLocalIds]));
         setRequested(Object.fromEntries(allIds.map(id => [id, true])));
+        setLocalRequested(validLocalIds); // Nettoie le localStorage
       } catch (err) {
         setError(err.message);
       } finally {

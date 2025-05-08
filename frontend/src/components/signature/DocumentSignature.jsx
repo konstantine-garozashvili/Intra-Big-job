@@ -259,7 +259,7 @@ const DocumentSignature = () => {
     const checkTodaySignatures = async () => {
       try {
         setIsLoading(true);
-        console.log('Checking today signatures - starting API request');
+        // console.log('Checking today signatures - starting API request');
         
         // Create a failsafe timeout
         const timeoutPromise = new Promise((_, reject) => 
@@ -273,7 +273,7 @@ const DocumentSignature = () => {
         }
         
         try {
-          console.log('Fetching signature data from API...');
+          // console.log('Fetching signature data from API...');
           
           // Race the fetch against a timeout
           const data = await Promise.race([
@@ -287,24 +287,24 @@ const DocumentSignature = () => {
             timeoutPromise
           ]);
           
-          console.log('Signature data returned from API:', data);
-          console.log('Current period from API:', data?.currentPeriod);
-          console.log('Signed periods from API:', data?.signedPeriods);
+          // console.log('Signature data returned from API:', data);
+          // console.log('Current period from API:', data?.currentPeriod);
+          // console.log('Signed periods from API:', data?.signedPeriods);
           
           // Set the data even if it's partial
           if (data) {
             if (data.currentPeriod) {
-              console.log('Setting current period to:', data.currentPeriod);
+              // console.log('Setting current period to:', data.currentPeriod);
               setCurrentPeriod(data.currentPeriod);
             }
             
             if (data.signedPeriods) {
-              console.log('Setting signed periods to:', data.signedPeriods);
+              // console.log('Setting signed periods to:', data.signedPeriods);
               setSignedPeriods(data.signedPeriods || []);
             }
             
             if (data.availablePeriods) {
-              console.log('Setting available periods to:', data.availablePeriods);
+              // console.log('Setting available periods to:', data.availablePeriods);
               setAvailablePeriods(data.availablePeriods);
             }
           } else {
@@ -359,7 +359,7 @@ const DocumentSignature = () => {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const locationString = `${position.coords.latitude},${position.coords.longitude}`;
-          console.log("Location detected:", locationString);
+          // console.log("Location detected:", locationString);
           setLocation(locationString);
           setIsLocating(false);
           
@@ -448,7 +448,7 @@ const DocumentSignature = () => {
       
       // Get signature data URL
       const signatureData = signatureRef.current.toDataURL();
-      console.log(`Signature data size: ${signatureData.length} characters`);
+      // console.log(`Signature data size: ${signatureData.length} characters`);
       
       // Prepare the request data
       const requestData = {
@@ -456,7 +456,7 @@ const DocumentSignature = () => {
         drawing: signatureData
       };
       
-      console.log('Sending signature request with data:', requestData);
+      // console.log('Sending signature request with data:', requestData);
       
       // Get the token from localStorage
       const token = localStorage.getItem('token');
@@ -469,7 +469,7 @@ const DocumentSignature = () => {
       let responseData = null;
       
       try {
-        console.log('Sending actual API request to backend');
+        // console.log('Sending actual API request to backend');
         const response = await fetch('/api/signatures', {
           method: 'POST',
           headers: {
@@ -480,11 +480,11 @@ const DocumentSignature = () => {
           body: JSON.stringify(requestData)
         });
         
-        console.log('API Response status:', response.status);
+        // console.log('API Response status:', response.status);
         
         if (response.ok) {
           responseData = await response.json();
-          console.log('Signature created successfully:', responseData);
+          // console.log('Signature created successfully:', responseData);
           apiSuccess = true;
         } else {
           const errorData = await response.json().catch(() => ({}));
@@ -498,7 +498,7 @@ const DocumentSignature = () => {
       
       // Si l'API n'est pas disponible, enregistrer la signature localement
       if (!apiSuccess) {
-        console.log('Fallback: Storing signature locally due to API unavailability');
+        // console.log('Fallback: Storing signature locally due to API unavailability');
         const todayStr = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
         const storageKey = `signature_${todayStr}_${currentPeriod}`;
         
@@ -641,7 +641,7 @@ const DocumentSignature = () => {
         </CardHeader>
         <CardContent className="pt-4">
           <div className="bg-white dark:bg-gray-800/40 rounded-md border border-gray-200 dark:border-gray-700 p-4 mb-4">
-            <FallbackSignatureCanvas ref={signatureRef} onEnd={() => console.log("Signature completed")} />
+            <FallbackSignatureCanvas ref={signatureRef} onEnd={() => {/* Signature completed */}} />
           </div>
           
           {location && (

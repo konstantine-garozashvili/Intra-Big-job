@@ -77,36 +77,33 @@ export default function FormationStudentsSection({ formationId }) {
     // eslint-disable-next-line
   }, [formationId]);
 
-  // Confirm dialog for kicking a student
-  const confirmKickStudent = (studentId) => {
+  // Ouvre le dialogue de confirmation et stocke l'ID
+  const openKickDialog = (studentId) => {
     setKickStudentId(studentId);
     setShowKickDialog(true);
-    return new Promise((resolve) => {
-      kickStudentResolveRef.current = resolve;
-    });
   };
 
-  const handleKickStudent = async (studentId) => {
-    const confirmed = await confirmKickStudent(studentId);
-    if (!confirmed) return;
+  // Exécute la suppression après confirmation
+  const handleKickConfirm = async () => {
+    if (!kickStudentId) return;
     try {
-      await apiService.delete(`/api/formations/${formationId}/students/${studentId}`);
+      await apiService.delete(`/api/formations/${formationId}/students/${kickStudentId}`);
       toast.success('Étudiant retiré de la formation.');
-      setEnrolledStudents((prev) => prev.filter((s) => s.id !== studentId));
+      setEnrolledStudents((prev) => prev.filter((s) => s.id !== kickStudentId));
       setStudentCount((prev) => Math.max(0, prev - 1));
-      setAcceptedStudents((prev) => prev.filter((s) => s.id !== studentId));
+      setAcceptedStudents((prev) => prev.filter((s) => s.id !== kickStudentId));
       setAcceptedCount((prev) => Math.max(0, prev - 1));
     } catch (err) {
       toast.error('Erreur lors du retrait de l\'étudiant.');
+    } finally {
+      setShowKickDialog(false);
+      setKickStudentId(null);
     }
   };
 
-  const handleKickDialogClose = (confirmed) => {
+  // Ferme le dialogue sans rien faire
+  const handleKickDialogClose = () => {
     setShowKickDialog(false);
-    if (kickStudentResolveRef.current) {
-      kickStudentResolveRef.current(confirmed);
-      kickStudentResolveRef.current = null;
-    }
     setKickStudentId(null);
   };
 
@@ -231,7 +228,7 @@ export default function FormationStudentsSection({ formationId }) {
                       </div>
                       <button
                         className="mr-4 px-6 py-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition text-sm font-semibold opacity-0 group-hover:opacity-100 focus:opacity-100 shadow-sm"
-                        onClick={() => handleKickStudent(student.id)}
+                        onClick={() => openKickDialog(student.id)}
                       >
                         Retirer
                       </button>
@@ -309,15 +306,15 @@ export default function FormationStudentsSection({ formationId }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <Dialog open={showKickDialog} onOpenChange={() => handleKickDialogClose(false)}>
+      <Dialog open={showKickDialog} onOpenChange={handleKickDialogClose}>
         <DialogContent className="rounded-2xl shadow-2xl border border-gray-200 bg-white max-w-md">
           <DialogHeader>
             <DialogTitle className="text-red-600 font-bold">Retirer l'étudiant ?</DialogTitle>
             <DialogDescription className="text-gray-700">Êtes-vous sûr de vouloir retirer cet étudiant de la formation ? Cette action est irréversible.</DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex flex-row gap-4 justify-end mt-4">
-            <Button variant="outline" onClick={() => handleKickDialogClose(false)} className="border border-gray-300 text-gray-700 bg-white hover:bg-gray-100 rounded-full">Annuler</Button>
-            <Button onClick={() => handleKickDialogClose(true)} className="bg-red-600 hover:bg-red-700 text-white font-semibold rounded-full px-6 py-2 shadow">Retirer</Button>
+            <Button variant="outline" type="button" onClick={handleKickDialogClose} className="border border-gray-300 text-gray-700 bg-white hover:bg-gray-100 rounded-full">Annuler</Button>
+            <Button type="button" onClick={handleKickConfirm} className="bg-red-600 hover:bg-red-700 text-white font-semibold rounded-full px-6 py-2 shadow">Retirer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

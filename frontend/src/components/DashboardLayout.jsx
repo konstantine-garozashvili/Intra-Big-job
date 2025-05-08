@@ -3,7 +3,6 @@ import PropTypes from 'prop-types';
 import { motion } from 'framer-motion';
 import { AlertCircle } from 'lucide-react';
 import { useOutletContext } from 'react-router-dom';
-import DashboardSkeleton from './DashboardSkeleton';
 import DashboardHeader from './shared/DashboardHeader';
 import { authService } from '@/lib/services/authService';
 
@@ -47,23 +46,16 @@ const DashboardLayout = ({
   error, 
   children, 
   className = "", 
-  isLoading, 
-  showSkeleton = true,
+  showHeader = true,
   user,
   headerIcon,
   headerTitle,
-  showHeader = true
 }) => {
   // Récupérer le contexte de chargement depuis le MainLayout
   const context = useOutletContext() || {};
   
   // Vérifier si l'utilisateur est authentifié
   const isAuthenticated = authService.isLoggedIn();
-  
-  // Utiliser l'état de chargement passé en prop ou depuis le contexte
-  const isLoadingState = isLoading || (context.isLoading && !context.hasMinimalData);
-
-  
   
   // Afficher l'erreur si présente
   if (error) {
@@ -95,12 +87,10 @@ DashboardLayout.propTypes = {
   error: PropTypes.string,
   children: PropTypes.node.isRequired,
   className: PropTypes.string,
-  isLoading: PropTypes.bool,
-  showSkeleton: PropTypes.bool,
+  showHeader: PropTypes.bool,
   user: PropTypes.object,
   headerIcon: PropTypes.elementType,
   headerTitle: PropTypes.string,
-  showHeader: PropTypes.bool
 };
 
 // Utiliser memo pour éviter les re-rendus inutiles

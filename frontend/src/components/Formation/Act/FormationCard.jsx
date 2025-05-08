@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { useNavigate } from 'react-router-dom';
 import { formationNotifications } from '@/lib/utils/formationNotifications';
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Configuration des badges avec des couleurs plus inspirantes
 const badgeVariants = {
@@ -50,7 +51,53 @@ function setLocalRequested(ids) {
   localStorage.setItem(LOCAL_REQUESTED_KEY, JSON.stringify(ids));
 }
 
-const FormationCard = ({ formation, viewMode, profileData }) => {
+// Ajout du fallback pour récupérer les demandes si besoin
+async function fetchMyRequestsFallback() {
+  const res = await fetch('/api/formation-requests/my', {
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('token')}`
+    }
+  });
+  if (!res.ok) throw new Error('Erreur lors du chargement des demandes');
+  return await res.json();
+}
+
+const FormationCard = (props) => {
+  const { formation, viewMode, profileData, loading = false } = props;
+  if (loading || !formation) {
+    return (
+      <Card className="h-full flex flex-col bg-white dark:bg-slate-800 shadow-lg border-0 overflow-hidden rounded-lg transition-all duration-300 group cursor-pointer">
+        <div className="relative aspect-[16/9] overflow-hidden">
+          <Skeleton className="w-full h-full object-cover object-center" />
+          <div className="absolute inset-0 flex items-center justify-center z-10">
+            <Skeleton className="h-8 w-32 rounded-full" />
+          </div>
+        </div>
+        <CardContent className="flex-grow p-4 sm:p-6">
+          <div className="flex flex-wrap gap-2 mb-3">
+            <Skeleton className="h-5 w-24 rounded-full" />
+            <Skeleton className="h-5 w-16 rounded-full" />
+          </div>
+          <Skeleton className="h-7 w-2/3 mb-2 rounded" />
+          <Skeleton className="h-4 w-full mb-2 rounded" />
+          <Skeleton className="h-4 w-1/2 mb-2 rounded" />
+          <div className="flex justify-between items-center mt-2 text-xs sm:text-sm w-full gap-2">
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-4 w-4 rounded-full" />
+              <Skeleton className="h-4 w-24 rounded" />
+            </div>
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-4 w-4 rounded-full" />
+              <Skeleton className="h-4 w-16 rounded" />
+            </div>
+          </div>
+        </CardContent>
+        <CardFooter className="p-4 pt-0">
+          <Skeleton className="h-10 w-full rounded-lg" />
+        </CardFooter>
+      </Card>
+    );
+  }
   const {
     id,
     name,
@@ -66,6 +113,37 @@ const FormationCard = ({ formation, viewMode, profileData }) => {
   const [requesting, setRequesting] = useState(false);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const navigate = useNavigate ? useNavigate() : null;
+
+  // Synchronisation avec l'API et le localStorage pour l'état du bouton
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const myRequests = formationService.getMyEnrollmentRequests
+          ? await formationService.getMyEnrollmentRequests()
+          : await fetchMyRequestsFallback();
+        let requestedIds = [];
+        if (myRequests && myRequests.requests) {
+          requestedIds = myRequests.requests
+            .filter(r => r.status === null)
+            .map(r => r.formation.id);
+        } else if (Array.isArray(myRequests)) {
+          requestedIds = myRequests
+            .filter(r => r.status === null)
+            .map(r => r.formation?.id || r.formation_id);
+        }
+        // Nettoyer le localStorage
+        const localRequested = getLocalRequested();
+        const validLocalRequested = localRequested.filter(fid => requestedIds.includes(fid));
+        setLocalRequested(validLocalRequested);
+        // Mettre à jour l'état du bouton
+        if (isMounted) setRequested(requestedIds.includes(Number(formation.id)));
+      } catch (e) {
+        // Optionnel : afficher une erreur ou fallback
+      }
+    })();
+    return () => { isMounted = false; };
+  }, [formation.id]);
 
   const handleRequestJoin = async () => {
     if (!formation) return;

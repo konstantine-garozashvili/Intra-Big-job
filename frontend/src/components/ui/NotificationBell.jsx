@@ -151,6 +151,16 @@ export const NotificationBell = () => {
     // Redirection selon le type de notification
     if (
       notification.type === 'INFO' &&
+      notification.title && (
+        notification.title.toLowerCase().includes("votre demande d'inscription a été acceptée") ||
+        notification.title.toLowerCase().includes("votre demande d'inscription a été refusée")
+      )
+    ) {
+      navigate('/notifications');
+      return;
+    }
+    if (
+      notification.type === 'INFO' &&
       notification.title && notification.title.toLowerCase().includes("demande d'inscription envoyée")
     ) {
       navigate('/guest/enrollment-requests');
@@ -287,9 +297,20 @@ export const NotificationBell = () => {
                           </span>
                         </div>
                       </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
-                        {notification.message}
-                      </p>
+                      {/* Affichage du message et du commentaire séparément si présent */}
+                      {(() => {
+                        if (notification.message && notification.message.includes('Commentaire du recruteur :')) {
+                          const [mainMsg, comment] = notification.message.split(/\nCommentaire du recruteur ?: ?/);
+                          return <>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">{mainMsg}</p>
+                            <div className="mt-2 p-2 rounded bg-yellow-50 dark:bg-yellow-900/30 border-l-4 border-yellow-400 text-yellow-900 dark:text-yellow-100 text-sm font-medium whitespace-pre-line">
+                              <span className="font-semibold">Commentaire du recruteur :</span> {comment}
+                            </div>
+                          </>;
+                        } else {
+                          return <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">{notification.message}</p>;
+                        }
+                      })()}
                       <Button
                         variant="ghost"
                         size="sm"

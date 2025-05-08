@@ -33,7 +33,7 @@ class NotificationService {
    */
   async getNotifications(page = 1, limit = 10, includeRead = true, refresh = false) {
     try {
-      console.log('Using Firebase notifications data');
+      // console.log('Using Firebase notifications data');
       
       await new Promise(resolve => setTimeout(resolve, 300));
       

@@ -265,5 +265,20 @@ export const formationService = {
       throw new Error(response.message || "Erreur lors de la demande d'inscription à la formation.");
     }
     return response.data;
+  },
+
+  /**
+   * Accepte ou refuse une demande d'inscription à une formation
+   * @param {number} requestId
+   * @param {boolean} status
+   * @param {string} comment
+   */
+  processEnrollmentRequest: async (requestId, status, comment = '') => {
+    try {
+      const response = await formationApi.processEnrollmentRequest(requestId, status, comment);
+      return normalizeResponse(response.data);
+    } catch (error) {
+      throw new Error(handleApiError(error));
+    }
   }
 }; 

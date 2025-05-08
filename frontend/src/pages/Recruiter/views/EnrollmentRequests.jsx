@@ -31,6 +31,8 @@ export default function EnrollmentRequests() {
   const [selectedFormationId, setSelectedFormationId] = useState('all');
   const [sortOrder, setSortOrder] = useState('desc'); // 'desc' = plus récent, 'asc' = plus vieux
   const [userSearch, setUserSearch] = useState(''); // filtre prénom/nom
+  const [commentModal, setCommentModal] = useState({ open: false, requestId: null, action: null });
+  const [comment, setComment] = useState('');
   const navigate = useNavigate();
 
   const fetchRequests = async () => {
@@ -63,7 +65,7 @@ export default function EnrollmentRequests() {
     fetchFormations();
   }, []);
 
-  const handleAccept = async (id) => {
+  const handleAccept = async (id, commentText = '') => {
     setProcessingId(id);
     try {
       const token = localStorage.getItem('token');
@@ -73,7 +75,7 @@ export default function EnrollmentRequests() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ status: true })
+        body: JSON.stringify({ status: true, comment: commentText })
       });
       const data = await res.json();
       if (res.ok) {
@@ -89,25 +91,27 @@ export default function EnrollmentRequests() {
     }
   };
 
-  const handleReject = async (id) => {
+  const handleReject = async (id, commentText = '') => {
     setProcessingId(id);
     try {
       const token = localStorage.getItem('token');
       const res = await fetch(`/api/formation-requests/${id}`, {
-        method: 'DELETE',
+        method: 'PATCH',
         headers: {
+          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
-        }
+        },
+        body: JSON.stringify({ status: false, comment: commentText })
       });
+      const data = await res.json();
       if (res.ok) {
-        toast.success('Demande supprimée');
+        toast.success('Demande refusée');
         fetchRequests();
       } else {
-        const data = await res.json();
-        toast.error(data.message || 'Erreur lors de la suppression');
+        toast.error(data.message || 'Erreur lors du refus');
       }
     } catch (err) {
-      toast.error('Erreur lors de la suppression');
+      toast.error('Erreur lors du refus');
     } finally {
       setProcessingId(null);
     }
@@ -254,7 +258,7 @@ export default function EnrollmentRequests() {
                 </CardContent>
                 <CardFooter className="p-6 pt-0 flex justify-end gap-2">
                   <Button
-                    onClick={() => handleAccept(req.id)}
+                    onClick={() => setCommentModal({ open: true, requestId: req.id, action: 'accept' })}
                     disabled={processingId === req.id}
                     className="bg-gradient-to-r from-yellow-300 to-yellow-500 text-yellow-900 font-bold rounded-full shadow-lg hover:from-yellow-400 hover:to-yellow-600 hover:scale-105 focus:ring-2 focus:ring-yellow-300 transition-all px-5 py-2"
                   >
@@ -262,7 +266,7 @@ export default function EnrollmentRequests() {
                     Accepter
                   </Button>
                   <Button
-                    onClick={() => handleReject(req.id)}
+                    onClick={() => setCommentModal({ open: true, requestId: req.id, action: 'reject' })}
                     disabled={processingId === req.id}
                     className="bg-gradient-to-r from-orange-300 to-orange-500 text-orange-900 font-bold rounded-full shadow-lg hover:from-orange-400 hover:to-orange-600 hover:scale-105 focus:ring-2 focus:ring-orange-300 transition-all px-5 py-2"
                   >
@@ -273,6 +277,39 @@ export default function EnrollmentRequests() {
               </Card>
             </motion.div>
           ))}
+        </div>
+      )}
+      {/* Modal pour commentaire */}
+      {commentModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-6 w-full max-w-md">
+            <h2 className="text-lg font-bold mb-4">{commentModal.action === 'accept' ? 'Accepter la demande' : 'Refuser la demande'}</h2>
+            <Label htmlFor="comment">Commentaire (optionnel)</Label>
+            <Input
+              id="comment"
+              value={comment}
+              onChange={e => setComment(e.target.value)}
+              placeholder="Ajouter un commentaire..."
+              className="mb-4"
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => { setCommentModal({ open: false, requestId: null, action: null }); setComment(''); }}>Annuler</Button>
+              <Button
+                onClick={async () => {
+                  if (commentModal.action === 'accept') {
+                    await handleAccept(commentModal.requestId, comment);
+                  } else {
+                    await handleReject(commentModal.requestId, comment);
+                  }
+                  setCommentModal({ open: false, requestId: null, action: null });
+                  setComment('');
+                }}
+                disabled={processingId === commentModal.requestId}
+              >
+                Confirmer
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>

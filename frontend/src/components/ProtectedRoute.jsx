@@ -77,6 +77,10 @@ const ProtectedRoute = () => {
     const matchingRole = roleChecks.find(role => path.startsWith(role.path));
     if (matchingRole) {
       if (!matchingRole.check()) {
+        // Ne pas afficher de toast pour la page guest ou student
+        if (matchingRole.path === '/guest' || matchingRole.path === '/student') {
+          return false;
+        }
         toast.error(matchingRole.message, {
           duration: 3000,
           position: 'top-center',

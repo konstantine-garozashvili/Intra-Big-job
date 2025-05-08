@@ -19,6 +19,16 @@ import {
 } from '@/components/ui/dialog';
 import { formationNotifications } from '@/lib/utils/formationNotifications';
 
+async function fetchMyRequestsFallback() {
+  const res = await fetch('/api/formation-requests/my', {
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('token')}`
+    }
+  });
+  if (!res.ok) throw new Error('Erreur lors du chargement des demandes');
+  return await res.json();
+}
+
 export default function FormationDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -35,12 +45,33 @@ export default function FormationDetail() {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    formationService.getFormation(id)
-      .then(f => {
+
+    Promise.all([
+      formationService.getFormation(id),
+      formationService.getMyEnrollmentRequests ? formationService.getMyEnrollmentRequests() : fetchMyRequestsFallback()
+    ])
+      .then(([f, myRequests]) => {
         setFormation(f);
-        // Vérifie si déjà demandé (à adapter selon ton API)
+
+        // Récupérer les IDs des demandes en attente
+        let requestedIds = [];
+        if (myRequests && myRequests.requests) {
+          requestedIds = myRequests.requests
+            .filter(r => r.status === null)
+            .map(r => r.formation.id);
+        } else if (Array.isArray(myRequests)) {
+          requestedIds = myRequests
+            .filter(r => r.status === null)
+            .map(r => r.formation?.id || r.formation_id);
+        }
+
+        // Nettoyer le localStorage
         const localRequested = JSON.parse(localStorage.getItem('requestedFormations') || '[]');
-        setRequested(localRequested.includes(Number(id)));
+        const validLocalRequested = localRequested.filter(fid => requestedIds.includes(fid));
+        localStorage.setItem('requestedFormations', JSON.stringify(validLocalRequested));
+
+        // Mettre à jour l'état du bouton
+        setRequested(requestedIds.includes(Number(id)));
       })
       .catch(e => setError(e.message || 'Erreur lors du chargement de la formation.'))
       .finally(() => setLoading(false));
@@ -203,17 +234,24 @@ export default function FormationDetail() {
               </div>
             )}
             <div className="w-full flex justify-center mt-8">
-              <MagicButton
-                className="w-full max-w-xs text-base font-medium bg-gradient-to-r from-amber-400 via-[#528eb2] to-[#78b9dd] hover:from-transparent hover:to-transparent hover:text-amber-600 dark:hover:text-white"
-                onClick={handleRequestClick}
-                disabled={requested || requesting}
-              >
-                {requested ? (
-                  <span className="flex items-center justify-center gap-2"><Lock className="h-4 w-4 mr-2" /> Demande envoyée</span>
-                ) : (
+              {requested ? (
+                <Button
+                  className="w-full max-w-xs text-base font-medium bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-300 cursor-not-allowed flex items-center justify-center gap-2"
+                  disabled
+                  onClick={e => e.stopPropagation()}
+                >
+                  <Lock className="h-4 w-4 mr-2" />
+                  Demande envoyée
+                </Button>
+              ) : (
+                <MagicButton
+                  className="w-full max-w-xs text-base font-medium bg-gradient-to-r from-amber-400 via-[#528eb2] to-[#78b9dd] hover:from-transparent hover:to-transparent hover:text-amber-600 dark:hover:text-white"
+                  onClick={handleRequestClick}
+                  disabled={requesting}
+                >
                   <span className="flex items-center justify-center gap-2">Demander à rejoindre <ChevronRight className="ml-2 h-4 w-4" /></span>
-                )}
-              </MagicButton>
+                </MagicButton>
+              )}
             </div>
           </div>
         </CardContent>

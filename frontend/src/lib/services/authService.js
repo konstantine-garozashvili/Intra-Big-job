@@ -329,9 +329,6 @@ export const authService = {
     
     getCurrentUserState.lastCallTime = now;
 
-    // Ajouter du contexte de débogage pour tracer l'origine des appels
-    console.log(`🔍 getCurrentUser appelé depuis: ${requestSource || 'non spécifié'} (force=${forceRefresh})`);
-
     // Utiliser le nouveau gestionnaire de données utilisateur
     try {
       const userData = await userDataManager.getUserData({
@@ -582,10 +579,6 @@ export const authService = {
           localStorage.setItem('userRoles', JSON.stringify(['ROLE_STUDENT']));
         }
         
-        console.log('Successfully ensured user data in localStorage', {
-          userData, 
-          roles: JSON.parse(localStorage.getItem('userRoles') || '[]')
-        });
         return true;
       }
       
@@ -605,7 +598,6 @@ export const authService = {
             
             localStorage.setItem('user', JSON.stringify(minimalUser));
             
-            console.log('Created minimal user data from token');
             return true;
           }
         }
@@ -618,11 +610,6 @@ export const authService = {
       if (!localStorage.getItem('userRoles') || isSignaturePage) {
         localStorage.setItem('userRoles', JSON.stringify(['ROLE_STUDENT']));
       }
-      
-      console.log('Created fallback user data in localStorage', {
-        user: JSON.parse(localStorage.getItem('user') || '{}'),
-        roles: JSON.parse(localStorage.getItem('userRoles') || '[]')
-      });
       
       return true;
     } catch (error) {

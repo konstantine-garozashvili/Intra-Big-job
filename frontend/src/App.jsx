@@ -255,17 +255,14 @@ function ErrorFallback({ error, resetErrorBoundary }) {
 
 // Main App Component
 const App = () => {
-  useEffect(() => {
-    // Précharger les notifications au démarrage de l'application
-    console.log('App - Initializing notification service');
-    notificationService.getNotifications(1, 10, true, true)
-      .then(data => {
-        console.log('App - Notification service initialized with data:', data);
-      })
-      .catch(error => {
-        console.error('App - Error initializing notification service:', error);
-      });
-  }, []);
+  // Précharger les notifications au démarrage de l'application
+  notificationService.getNotifications(1, 10, true, true)
+    .then(data => {
+      // console.log('App - Notification service initialized with data:', data);
+    })
+    .catch(error => {
+      // console.error('App - Error initializing notification service:', error);
+    });
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -398,14 +395,6 @@ const App = () => {
 
                     {/* Formation Management Routes */}
                     <Route path="/formations">
-                      <Route index element={
-                        <RoleGuard 
-                          roles={[ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.RECRUITER]} 
-                          fallback={<Navigate to="/dashboard" replace />}
-                        >
-                          <FormationList />
-                        </RoleGuard>
-                      } />
                       <Route path="new" element={
                         <RoleGuard 
                           roles={[ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.RECRUITER]} 

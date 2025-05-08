@@ -7,6 +7,9 @@ import FormationCard from './FormationCard';
 import FormationFilters from './FormationFilters';
 import ViewToggle from './ViewToggle';
 import { toast } from 'sonner';
+import SkeletonFilters from './SkeletonFilters';
+import SkeletonViewToggle from './SkeletonViewToggle';
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Act = () => {
   const navigate = useNavigate();
@@ -155,61 +158,71 @@ const Act = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {loading && (
-        <div className="fixed inset-0 bg-background/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      {loading ? (
+        <div className="flex flex-col space-y-8">
+          <div className="flex flex-col space-y-2">
+            <Skeleton className="h-8 w-64 mb-2" />
+            <Skeleton className="h-5 w-80" />
+          </div>
+          <SkeletonFilters />
+          <SkeletonViewToggle />
+          <div className="grid gap-6 grid-cols-1 sm:grid-cols-1 md:grid-cols-2 mb-8">
+            {[...Array(4)].map((_, i) => (
+              <FormationCard key={i} loading={true} viewMode={viewMode} formation={undefined} />
+            ))}
+          </div>
         </div>
-      )}
-      
-      <div className="flex flex-col space-y-8">
-        <div className="flex flex-col space-y-2">
-          <h1 className="text-3xl font-bold">
-            Formations disponibles
-          </h1>
-          <p className="text-muted-foreground">
-            Découvrez nos formations et rejoignez celle qui vous correspond
-          </p>
-        </div>
-
-        <FormationFilters
-          filters={filters}
-          onFilterChange={handleFilterChange}
-          specializations={activeSpecializations}
-        />
-
-        <div className="flex justify-end">
-          <ViewToggle
-            viewMode={viewMode}
-            onViewModeChange={setViewMode}
-          />
-        </div>
-
-        <div className={`
-          grid gap-6
-          ${viewMode === 'grid' 
-            ? 'grid-cols-1 sm:grid-cols-1 md:grid-cols-2' 
-            : 'grid-cols-1'
-          }
-          ${viewMode === 'list' ? 'max-w-[1200px] mx-auto' : ''}
-        `}>
-          {filteredFormations.map(formation => (
-            <FormationCard
-              key={formation.id}
-              formation={formation}
-              onRequestJoin={handleRequestJoin}
-              viewMode={viewMode}
-            />
-          ))}
-        </div>
-
-        {!loading && filteredFormations.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-xl text-muted-foreground">
-              Aucune formation ne correspond à vos critères
+      ) : (
+        <div className="flex flex-col space-y-8">
+          <div className="flex flex-col space-y-2">
+            <h1 className="text-3xl font-bold">
+              Formations disponibles
+            </h1>
+            <p className="text-muted-foreground">
+              Découvrez nos formations et rejoignez celle qui vous correspond
             </p>
           </div>
-        )}
-      </div>
+
+          <FormationFilters
+            filters={filters}
+            onFilterChange={handleFilterChange}
+            specializations={activeSpecializations}
+          />
+
+          <div className="flex justify-end">
+            <ViewToggle
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+            />
+          </div>
+
+          <div className={`
+            grid gap-6
+            ${viewMode === 'grid' 
+              ? 'grid-cols-1 sm:grid-cols-1 md:grid-cols-2' 
+              : 'grid-cols-1'
+            }
+            ${viewMode === 'list' ? 'max-w-[1200px] mx-auto' : ''}
+          `}>
+            {filteredFormations.map(formation => (
+              <FormationCard
+                key={formation.id}
+                formation={formation}
+                onRequestJoin={handleRequestJoin}
+                viewMode={viewMode}
+              />
+            ))}
+          </div>
+
+          {filteredFormations.length === 0 && (
+            <div className="text-center py-12">
+              <p className="text-xl text-muted-foreground">
+                Aucune formation ne correspond à vos critères
+              </p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
