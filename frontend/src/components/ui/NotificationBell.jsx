@@ -172,11 +172,6 @@ export const NotificationBell = () => {
     }
   };
 
-  // Ne pas afficher pendant le chargement initial
-  if (loading) {
-    return null;
-  }
-
   // Determine if user is a student or guest
   const isStudent = user?.roles?.includes('ROLE_STUDENT');
   const isGuest = user?.roles?.includes('ROLE_GUEST');
@@ -185,10 +180,6 @@ export const NotificationBell = () => {
   if (loading) {
     return null;
   }
-
-  // Determine if user is a student or guest
-  const isStudent = user?.roles?.includes('ROLE_STUDENT');
-  const isGuest = user?.roles?.includes('ROLE_GUEST');
 
   return (
     <DropdownMenu>

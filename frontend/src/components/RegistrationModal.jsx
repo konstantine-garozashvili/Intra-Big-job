@@ -447,4 +447,165 @@ const RegistrationModal = ({ isOpen, onClose }) => {
             name="firstName"
             value={formData.firstName}
             onChange={handleChange}
-            className={`w-full p-2 rounded-md bg-gray-800 border ${errors.firstName ? 'border-red-400' : 'border-gray-700'} focus:outline-none focus:ring-2 focus:ring-blue-500 text-white`
+            className={`w-full p-2 rounded-md bg-gray-800 border ${errors.firstName ? 'border-red-400' : 'border-gray-700'} focus:outline-none focus:ring-2 focus:ring-blue-500 text-white`}
+            placeholder="Votre prénom"
+          />
+          {errors.firstName && <p className="text-red-400 text-xs mt-1">{errors.firstName}</p>}
+        </motion.div>
+
+        <motion.div variants={itemVariants}>
+          <label htmlFor="lastName" className="block text-sm font-medium text-gray-300 mb-1">
+            Nom
+          </label>
+          <input
+            type="text"
+            id="lastName"
+            name="lastName"
+            value={formData.lastName}
+            onChange={handleChange}
+            className={`w-full p-2 rounded-md bg-gray-800 border ${errors.lastName ? 'border-red-400' : 'border-gray-700'} focus:outline-none focus:ring-2 focus:ring-blue-500 text-white`}
+            placeholder="Votre nom"
+          />
+          {errors.lastName && <p className="text-red-400 text-xs mt-1">{errors.lastName}</p>}
+        </motion.div>
+
+        <motion.div variants={itemVariants} className="flex justify-between pt-4">
+          <motion.button
+            type="button"
+            onClick={handlePrevStep}
+            className="py-2 px-4 bg-gray-700 text-white rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors"
+            whileHover="hover"
+            whileTap="tap"
+            variants={itemVariants}
+          >
+            Retour
+          </motion.button>
+          <motion.button
+            type="button"
+            onClick={handleNextStep}
+            className="py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors"
+            whileHover="hover"
+            whileTap="tap"
+            variants={itemVariants}
+          >
+            Continuer
+          </motion.button>
+        </motion.div>
+      </motion.div>
+    );
+  };
+
+  // Render step 3 - Terms Agreement
+  const renderStep3 = () => {
+    const variants = getFormVariants(3);
+    return (
+      <motion.div
+        key="step3"
+        className="space-y-4"
+        variants={variants}
+        initial="enter"
+        animate="center"
+        exit="exit"
+      >
+        <motion.h3 className="text-2xl font-bold text-white mb-4" variants={itemVariants}>
+          Conditions d'utilisation
+        </motion.h3>
+        <motion.div variants={itemVariants}>
+          <label className="inline-flex items-center">
+            <input
+              type="checkbox"
+              name="agreeTerms"
+              checked={formData.agreeTerms}
+              onChange={handleChange}
+              className="form-checkbox h-5 w-5 text-blue-600 rounded focus:ring-blue-500 border-gray-700 bg-gray-800"
+            />
+            <span className="ml-2 text-gray-300 text-sm">
+              J'accepte les <a href="/terms" target="_blank" rel="noopener noreferrer" className="underline text-blue-400 hover:text-blue-300">conditions d'utilisation</a> et la politique de confidentialité.
+            </span>
+          </label>
+          {errors.agreeTerms && <p className="text-red-400 text-xs mt-1">{errors.agreeTerms}</p>}
+        </motion.div>
+        <motion.div variants={itemVariants} className="flex justify-between pt-4">
+          <motion.button
+            type="button"
+            onClick={handlePrevStep}
+            className="py-2 px-4 bg-gray-700 text-white rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors"
+            whileHover="hover"
+            whileTap="tap"
+            variants={itemVariants}
+          >
+            Retour
+          </motion.button>
+          <motion.button
+            type="submit"
+            className="py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors flex items-center justify-center"
+            whileHover="hover"
+            whileTap="tap"
+            variants={itemVariants}
+            disabled={isLoading}
+          >
+            {isLoading ? <Loader2 className="animate-spin w-5 h-5 mr-2" /> : null}
+            Créer mon compte
+          </motion.button>
+        </motion.div>
+      </motion.div>
+    );
+  };
+
+  // Main modal rendering
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          key="modal-overlay"
+          className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          style={{ backdropFilter: "blur(3px)" }}
+          onClick={onClose}
+        >
+          {/* Overlay background */}
+          <div className="absolute inset-0 bg-black/60" />
+          {/* Animated modal content */}
+          <motion.div
+            key="modal"
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className="relative z-10 w-full max-w-md max-h-[90vh] overflow-auto p-6 rounded-xl shadow-2xl border border-blue-700 bg-gradient-to-br from-[#02284f] to-[#011627]"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Particle background */}
+            <div className="absolute inset-0 pointer-events-none z-0">
+              {particles.map(p => (
+                <div
+                  key={p.id}
+                  className="absolute rounded-full bg-blue-400/20 blur-[2px]"
+                  style={{
+                    left: `${p.x}%`,
+                    top: `${p.y}%`,
+                    width: `${p.size * 4}px`,
+                    height: `${p.size * 4}px`,
+                    animation: `floatParticle ${p.duration}s ease-in-out infinite alternate`
+                  }}
+                />
+              ))}
+            </div>
+            {/* Registration form */}
+            <form onSubmit={handleSubmit} className="relative z-10">
+              <AnimatePresence mode="wait" initial={false}>
+                {currentStep === 1 && renderStep1()}
+                {currentStep === 2 && renderStep2()}
+                {currentStep === 3 && renderStep3()}
+              </AnimatePresence>
+            </form>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+};
+
+export default RegistrationModal;
