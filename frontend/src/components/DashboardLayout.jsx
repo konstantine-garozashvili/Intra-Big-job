@@ -57,8 +57,8 @@ const DashboardLayout = ({
   // Vérifier si l'utilisateur est authentifié
   const isAuthenticated = authService.isLoggedIn();
   
-  // Afficher l'erreur si présente
-  if (error) {
+  // Afficher l'erreur si présente ET si l'utilisateur est authentifié
+  if (error && isAuthenticated) {
     return (
       <div className={`container mx-auto p-8 ${className}`}>
         <ErrorDisplay errorMessage={error} />
