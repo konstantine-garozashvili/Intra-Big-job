@@ -87,4 +87,12 @@
 
 .tab-btn.active {
   color: #fff;
+}
+
+.chat-panel-modern {
+  box-shadow: 0 0 0 3px #2b367a, 0 8px 32px 0 rgba(58, 97, 255, 0.18);
+  border-radius: 1.5rem;
+  border: 1.5px solid rgba(106, 141, 246, 0.25);
+  background: linear-gradient(135deg, #151c2c 80%, #232b4d 100%);
+  backdrop-filter: blur(2px);
 } 
