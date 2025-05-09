@@ -160,6 +160,17 @@ class UserProfileService
             $userData['specialization'] = null;
         }
         
+        // Add the profile picture URL if available
+        $profilePictureUrl = null;
+        if ($user->getProfilePicturePath()) {
+            try {
+                $profilePictureUrl = $this->documentStorageFactory->getDocumentUrl($user->getProfilePicturePath());
+            } catch (\Exception $e) {
+                $profilePictureUrl = null;
+            }
+        }
+        $userData['profilePictureUrl'] = $profilePictureUrl;
+        
         return $userData;
     }
     

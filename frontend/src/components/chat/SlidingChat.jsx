@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { MessageCircle, Smile, Send, Globe, X } from "lucide-react";
 import { cn } from "../../lib/utils";
 import ChatIcon from "../../assets/chat.svg";
@@ -6,6 +6,10 @@ import ContactTab from "./ContactTab";
 import { useChat } from "../../lib/hooks/useChat";
 import "./SlidingChat.css";
 import { useUnreadPrivateMessagesCount } from '../../lib/hooks/useUnreadPrivateMessagesCount';
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { User } from "lucide-react";
+import axios from 'axios';
+import { useUserData } from '@/hooks/useUserData';
 
 export default function SlidingChat() {
   const [isOpen, setIsOpen] = useState(false);
@@ -19,6 +23,37 @@ export default function SlidingChat() {
   const textareaRef = useRef(null);
   const { messages, loading, sendMessage, startPrivateChat, chatPartner } = useChat(currentChatId, refreshChat);
   const unreadPrivateCount = useUnreadPrivateMessagesCount();
+  const [users, setUsers] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(true);
+  const { user: currentUser } = useUserData();
+
+  // Fetch user list for profile pictures
+  useEffect(() => {
+    let isMounted = true;
+    const fetchUsers = async () => {
+      try {
+        setUsersLoading(true);
+        const response = await axios.get('/api/users/list', { params: { includeRoles: true } });
+        if (isMounted) setUsers(response.data.data || []);
+      } catch (err) {
+        if (isMounted) setUsers([]);
+      } finally {
+        if (isMounted) setUsersLoading(false);
+      }
+    };
+    fetchUsers();
+    return () => { isMounted = false; };
+  }, []);
+
+  // Build user map for quick lookup, including current user
+  const userMap = useMemo(() => {
+    const map = {};
+    users.forEach(user => { map[user.id] = user; });
+    if (currentUser && currentUser.id) {
+      map[currentUser.id] = currentUser;
+    }
+    return map;
+  }, [users, currentUser]);
 
   // Get actual panel width on mount
   useEffect(() => {
@@ -105,6 +140,13 @@ export default function SlidingChat() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isOpen]);
+
+  console.log('Current user:', currentUser);
+  Object.entries(currentUser || {}).forEach(([key, value]) => {
+    if (typeof value === 'string' && (value.includes('http') || value.includes('jpg') || value.includes('png') || value.includes('uploads') || value.includes('profile'))) {
+      console.log('Possible profile picture property:', key, value);
+    }
+  });
 
   return (
     <div
@@ -228,44 +270,74 @@ export default function SlidingChat() {
                       <p className="text-sm">Commencez la conversation !</p>
                     </div>
                   ) : (
-                    messages.map((message) => (
-                      <div
-                        key={message.id}
-                        className={cn("flex mb-4", message.isUser ? "justify-end" : "justify-start")}
-                        style={{
-                          transition: "opacity 0.8s ease-in-out, transform 0.8s ease-in-out",
-                          opacity: isOpen ? 1 : 0,
-                          transform: isOpen ? "translateY(0)" : "translateY(10px)",
-                        }}
-                      >
-                        {!message.isUser && (
-                          <div className="w-8 h-8 rounded-full bg-gray-600 mr-2 overflow-hidden flex items-center justify-center text-xs text-white">
-                            {message.senderName?.charAt(0).toUpperCase() || 'A'}
-                          </div>
-                        )}
+                    messages.map((message) => {
+                      // Attach profilePictureUrl from userMap if available
+                      const sender = userMap[message.senderId];
+                      const profilePictureUrl = sender?.profilePictureUrl || message.sender?.profilePictureUrl || message.senderProfilePictureUrl || null;
+                      if (message.isUser) {
+                        console.log('Own message profilePictureUrl:', profilePictureUrl);
+                      }
+                      // For debugging:
+                      // console.log('SlidingChat message:', message, 'profilePictureUrl:', profilePictureUrl);
+                      return (
                         <div
-                          className={cn(
-                            "max-w-[70%] p-3 rounded-2xl break-words whitespace-pre-wrap",
-                            message.isUser ? "bg-blue-600 text-white" : "bg-gray-700 text-white"
-                          )}
+                          key={message.id}
+                          className={cn("flex mb-4", message.isUser ? "justify-end" : "justify-start")}
                           style={{
-                            wordBreak: "break-word",
-                            overflowWrap: "break-word",
-                            hyphens: "auto"
+                            transition: "opacity 0.8s ease-in-out, transform 0.8s ease-in-out",
+                            opacity: isOpen ? 1 : 0,
+                            transform: isOpen ? "translateY(0)" : "translateY(10px)",
                           }}
                         >
-                          <p className="text-sm">{message.content}</p>
-                          <p className="text-xs opacity-50 mt-1">
-                            {message.senderName} • {new Date(message.timestamp).toLocaleTimeString()}
-                          </p>
-                        </div>
-                        {message.isUser && (
-                          <div className="w-8 h-8 rounded-full bg-gray-600 ml-2 overflow-hidden flex items-center justify-center text-xs text-white">
-                            {message.senderName?.charAt(0).toUpperCase() || 'A'}
+                          {!message.isUser && (
+                            <Avatar className="w-8 h-8 mr-2">
+                              {profilePictureUrl ? (
+                                <AvatarImage 
+                                  src={profilePictureUrl} 
+                                  alt={message.senderName || sender?.firstName + ' ' + sender?.lastName || ''}
+                                  className="object-cover"
+                                />
+                              ) : (
+                                <AvatarFallback className="bg-gradient-to-r from-[#02284f] to-[#03386b] text-white">
+                                  <User className="w-4 h-4" />
+                                </AvatarFallback>
+                              )}
+                            </Avatar>
+                          )}
+                          <div
+                            className={cn(
+                              "max-w-[70%] p-3 rounded-2xl break-words whitespace-pre-wrap",
+                              message.isUser ? "bg-blue-600 text-white" : "bg-gray-700 text-white"
+                            )}
+                            style={{
+                              wordBreak: "break-word",
+                              overflowWrap: "break-word",
+                              hyphens: "auto"
+                            }}
+                          >
+                            <p className="text-sm">{message.content}</p>
+                            <p className="text-xs opacity-50 mt-1">
+                              {message.senderName} • {new Date(message.timestamp || message.createdAt).toLocaleTimeString()}
+                            </p>
                           </div>
-                        )}
-                      </div>
-                    ))
+                          {message.isUser && (
+                            <Avatar className="w-8 h-8 ml-2">
+                              {profilePictureUrl ? (
+                                <AvatarImage 
+                                  src={profilePictureUrl} 
+                                  alt={message.senderName || sender?.firstName + ' ' + sender?.lastName || ''}
+                                  className="object-cover"
+                                />
+                              ) : (
+                                <AvatarFallback className="bg-gradient-to-r from-[#02284f] to-[#03386b] text-white">
+                                  <User className="w-4 h-4" />
+                                </AvatarFallback>
+                              )}
+                            </Avatar>
+                          )}
+                        </div>
+                      );
+                    })
                   )}
                   <div ref={messagesEndRef} />
                 </div>

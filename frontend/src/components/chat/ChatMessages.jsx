@@ -1,6 +1,8 @@
 import React from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { User } from "lucide-react";
 
 const ChatMessages = ({ messages, user, loading, error, messagesEndRef, messageContainerLoading, onManualRefresh }) => {
   // Function to format message time
@@ -74,6 +76,21 @@ const ChatMessages = ({ messages, user, loading, error, messagesEndRef, messageC
               key={message.id || index} 
               className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
             >
+              {!isOwnMessage && (
+                <Avatar className="w-8 h-8 mr-2">
+                  {message.sender?.profilePictureUrl ? (
+                    <AvatarImage 
+                      src={message.sender.profilePictureUrl} 
+                      alt={`${message.sender.firstName} ${message.sender.lastName}`}
+                      className="object-cover"
+                    />
+                  ) : (
+                    <AvatarFallback className="bg-gradient-to-r from-[#02284f] to-[#03386b] text-white">
+                      <User className="w-4 h-4" />
+                    </AvatarFallback>
+                  )}
+                </Avatar>
+              )}
               <div 
                 className={`max-w-[85%] px-3 py-2 rounded-lg ${
                   isOwnMessage 
@@ -110,6 +127,21 @@ const ChatMessages = ({ messages, user, loading, error, messagesEndRef, messageC
                   <div className="absolute -bottom-1 -right-1 bg-green-500 rounded-full h-2 w-2"></div>
                 )}
               </div>
+              {isOwnMessage && (
+                <Avatar className="w-8 h-8 ml-2">
+                  {message.sender?.profilePictureUrl ? (
+                    <AvatarImage 
+                      src={message.sender.profilePictureUrl} 
+                      alt={`${message.sender.firstName} ${message.sender.lastName}`}
+                      className="object-cover"
+                    />
+                  ) : (
+                    <AvatarFallback className="bg-gradient-to-r from-[#02284f] to-[#03386b] text-white">
+                      <User className="w-4 h-4" />
+                    </AvatarFallback>
+                  )}
+                </Avatar>
+              )}
             </div>
           );
         })}

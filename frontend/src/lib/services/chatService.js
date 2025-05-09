@@ -57,6 +57,7 @@ const createMockMessages = () => {
         id: 'system',
         firstName: 'System',
         lastName: 'Notification',
+        profilePictureUrl: null
       },
       isSystem: true
     },
@@ -68,6 +69,7 @@ const createMockMessages = () => {
         id: 'system',
         firstName: 'System',
         lastName: 'Notification',
+        profilePictureUrl: null
       },
       isSystem: true
     }
@@ -86,6 +88,7 @@ const createMockPrivateMessages = (userId) => {
         id: 'system',
         firstName: 'System',
         lastName: 'Notification',
+        profilePictureUrl: null
       },
       recipientId: userId,
       isSystem: true
@@ -176,7 +179,10 @@ export const useGlobalMessages = () => {
       const tempMessage = {
         id: tempId,
         content,
-        sender: user,
+        sender: {
+          ...user,
+          profilePictureUrl: user.profilePictureUrl || null
+        },
         createdAt: new Date().toISOString(),
         isSending: true,
         permanent: true
@@ -200,7 +206,10 @@ export const useGlobalMessages = () => {
               ...serverMessage, 
               confirmed: true,
               permanent: true,
-              sender: serverMessage.sender || context.tempMessage.sender
+              sender: {
+                ...serverMessage.sender,
+                profilePictureUrl: serverMessage.sender?.profilePictureUrl || context.tempMessage.sender.profilePictureUrl
+              }
             }
           : msg
       );
@@ -326,7 +335,10 @@ export const usePrivateMessages = (userId) => {
       const tempMessage = {
         id: tempId,
         content,
-        sender: user,
+        sender: {
+          ...user,
+          profilePictureUrl: user.profilePictureUrl || null
+        },
         recipientId,
         createdAt: new Date().toISOString(),
         isSending: true,
@@ -351,7 +363,10 @@ export const usePrivateMessages = (userId) => {
               ...serverMessage, 
               confirmed: true,
               permanent: true,
-              sender: serverMessage.sender || context.tempMessage.sender
+              sender: {
+                ...serverMessage.sender,
+                profilePictureUrl: serverMessage.sender?.profilePictureUrl || context.tempMessage.sender.profilePictureUrl
+              }
             }
           : msg
       );
