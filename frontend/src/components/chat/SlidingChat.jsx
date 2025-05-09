@@ -306,28 +306,35 @@ export default function SlidingChat({ shakePauseDuration = DEFAULT_SHAKE_PAUSE }
                           <p className="text-lg font-semibold mb-2">Chat Global</p>
                         </>
                       ) : (
-                        <>
-                          {chatPartner?.data?.user?.profilePictureUrl ? (
-                            <Link 
-                              to={`/profile/${chatPartner.data.user.id}`}
-                              className="hover:opacity-80 transition-opacity"
-                            >
-                              <img 
-                                src={chatPartner.data.user.profilePictureUrl} 
-                                alt={`Photo de profil de ${chatPartner.data.user.firstName}`}
-                                className="w-16 h-16 rounded-full mb-4 object-cover"
-                              />
-                            </Link>
-                          ) : (
-                            <Link 
-                              to={`/profile/${chatPartner.data.user.id}`}
-                              className="w-16 h-16 rounded-full bg-gray-600 mb-4 flex items-center justify-center text-2xl text-white hover:opacity-80 transition-opacity"
-                            >
-                              {chatPartner?.data?.user?.firstName?.charAt(0).toUpperCase() || 'A'}
-                            </Link>
-                          )}
-                          <p className="text-lg font-semibold mb-2">{chatPartner?.data?.user?.firstName || 'Utilisateur'}</p>
-                        </>
+                        chatPartner?.data?.user ? (
+                          <>
+                            {chatPartner.data.user.profilePictureUrl ? (
+                              <Link 
+                                to={`/profile/${chatPartner.data.user.id}`}
+                                className="hover:opacity-80 transition-opacity"
+                              >
+                                <img 
+                                  src={chatPartner.data.user.profilePictureUrl} 
+                                  alt={`Photo de profil de ${chatPartner.data.user.firstName}`}
+                                  className="w-16 h-16 rounded-full mb-4 object-cover"
+                                />
+                              </Link>
+                            ) : (
+                              <Link 
+                                to={`/profile/${chatPartner.data.user.id}`}
+                                className="w-16 h-16 rounded-full bg-gray-600 mb-4 flex items-center justify-center text-2xl text-white hover:opacity-80 transition-opacity"
+                              >
+                                {chatPartner.data.user.firstName?.charAt(0).toUpperCase() || 'A'}
+                              </Link>
+                            )}
+                            <p className="text-lg font-semibold mb-2">{chatPartner.data.user.firstName || 'Utilisateur'}</p>
+                          </>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center">
+                            <div className="w-16 h-16 rounded-full bg-gray-600 mb-4 animate-pulse" />
+                            <p className="text-lg font-semibold mb-2">Chargement du profil...</p>
+                          </div>
+                        )
                       )}
                       <p className="text-sm">Commencez la conversation !</p>
                     </div>
