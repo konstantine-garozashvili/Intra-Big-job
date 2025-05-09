@@ -101,7 +101,7 @@ function UsersList({ searchTerm, roleFilter, selectedUserId, onUserSelect }) {
                   </span>
                 )}
               </div>
-              <MessageCircle className="w-5 h-5 text-gray-400 opacity-70" />
+              <MessageCircle className="w-5 h-5 text-gray-400" />
             </button>
           ))}
         </div>

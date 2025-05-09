@@ -146,7 +146,12 @@ export default function SlidingChat() {
             height: 25,
             display: 'block',
           }}>
-            <img src={ChatIcon} alt="Chat" style={{ width: 25, height: 25, display: 'block' }} />
+            <img 
+              src={ChatIcon} 
+              alt="Chat" 
+              style={{ width: 25, height: 25, display: 'block' }}
+              className={unreadPrivateCount > 0 ? 'chat-icon-notif' : ''}
+            />
           </span>
           <span style={{
             position: 'absolute',
@@ -161,12 +166,12 @@ export default function SlidingChat() {
             <X className="w-[25px] h-[25px] text-white" />
           </span>
           {/* Badge de notification pour messages privés non lus */}
-          {unreadPrivateCount > 0 && (
+          {/* {unreadPrivateCount > 0 && (
             <span
               className="absolute top-2 right-2 w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-pulse"
               title={`${unreadPrivateCount} message(s) privé(s) non lu(s)`}
             />
-          )}
+          )} */}
         </button>
 
         {/* Chat Panel */}

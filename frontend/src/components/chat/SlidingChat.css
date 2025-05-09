@@ -95,4 +95,24 @@
   border: 1.5px solid rgba(106, 141, 246, 0.25);
   background: linear-gradient(135deg, #151c2c 80%, #232b4d 100%);
   backdrop-filter: blur(2px);
+}
+
+.chat-icon-notif {
+  animation: chat-pulse-glow 1.1s infinite cubic-bezier(0.4,0,0.2,1);
+  filter: drop-shadow(0 0 8px #FFD700) brightness(1.2) saturate(1.5);
+}
+
+@keyframes chat-pulse-glow {
+  0% {
+    filter: drop-shadow(0 0 8px #FFD700) brightness(1.2) saturate(1.5);
+    transform: scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 18px #FFD700) brightness(1.5) saturate(2);
+    transform: scale(1.13);
+  }
+  100% {
+    filter: drop-shadow(0 0 8px #FFD700) brightness(1.2) saturate(1.5);
+    transform: scale(1);
+  }
 } 
