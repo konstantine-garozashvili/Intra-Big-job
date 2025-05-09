@@ -10,6 +10,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { User } from "lucide-react";
 import axios from 'axios';
 import { useUserData } from '@/hooks/useUserData';
+import { Link } from 'react-router-dom';
 
 export default function SlidingChat() {
   const [isOpen, setIsOpen] = useState(false);
@@ -274,6 +275,8 @@ export default function SlidingChat() {
                       // Attach profilePictureUrl from userMap if available
                       const sender = userMap[message.senderId];
                       const profilePictureUrl = sender?.profilePictureUrl || message.sender?.profilePictureUrl || message.senderProfilePictureUrl || null;
+                      const senderId = message.senderId;
+                      const isSystemOrGlobal = senderId === 'system' || senderId === 'global';
                       if (message.isUser) {
                         console.log('Own message profilePictureUrl:', profilePictureUrl);
                       }
@@ -290,19 +293,37 @@ export default function SlidingChat() {
                           }}
                         >
                           {!message.isUser && (
-                            <Avatar className="w-8 h-8 mr-2">
-                              {profilePictureUrl ? (
-                                <AvatarImage 
-                                  src={profilePictureUrl} 
-                                  alt={message.senderName || sender?.firstName + ' ' + sender?.lastName || ''}
-                                  className="object-cover"
-                                />
-                              ) : (
-                                <AvatarFallback className="bg-gradient-to-r from-[#02284f] to-[#03386b] text-white">
-                                  <User className="w-4 h-4" />
-                                </AvatarFallback>
-                              )}
-                            </Avatar>
+                            isSystemOrGlobal ? (
+                              <Avatar className="w-8 h-8 mr-2">
+                                {profilePictureUrl ? (
+                                  <AvatarImage 
+                                    src={profilePictureUrl} 
+                                    alt={message.senderName || sender?.firstName + ' ' + sender?.lastName || ''}
+                                    className="object-cover"
+                                  />
+                                ) : (
+                                  <AvatarFallback className="bg-gradient-to-r from-[#02284f] to-[#03386b] text-white">
+                                    <User className="w-4 h-4" />
+                                  </AvatarFallback>
+                                )}
+                              </Avatar>
+                            ) : (
+                              <Link to={`/profile/${senderId}`} className="mr-2" tabIndex={0} aria-label={`Voir le profil de ${message.senderName || sender?.firstName || ''}`}> 
+                                <Avatar className="w-8 h-8">
+                                  {profilePictureUrl ? (
+                                    <AvatarImage 
+                                      src={profilePictureUrl} 
+                                      alt={message.senderName || sender?.firstName + ' ' + sender?.lastName || ''}
+                                      className="object-cover"
+                                    />
+                                  ) : (
+                                    <AvatarFallback className="bg-gradient-to-r from-[#02284f] to-[#03386b] text-white">
+                                      <User className="w-4 h-4" />
+                                    </AvatarFallback>
+                                  )}
+                                </Avatar>
+                              </Link>
+                            )
                           )}
                           <div
                             className={cn(
@@ -321,19 +342,37 @@ export default function SlidingChat() {
                             </p>
                           </div>
                           {message.isUser && (
-                            <Avatar className="w-8 h-8 ml-2">
-                              {profilePictureUrl ? (
-                                <AvatarImage 
-                                  src={profilePictureUrl} 
-                                  alt={message.senderName || sender?.firstName + ' ' + sender?.lastName || ''}
-                                  className="object-cover"
-                                />
-                              ) : (
-                                <AvatarFallback className="bg-gradient-to-r from-[#02284f] to-[#03386b] text-white">
-                                  <User className="w-4 h-4" />
-                                </AvatarFallback>
-                              )}
-                            </Avatar>
+                            isSystemOrGlobal ? (
+                              <Avatar className="w-8 h-8 ml-2">
+                                {profilePictureUrl ? (
+                                  <AvatarImage 
+                                    src={profilePictureUrl} 
+                                    alt={message.senderName || sender?.firstName + ' ' + sender?.lastName || ''}
+                                    className="object-cover"
+                                  />
+                                ) : (
+                                  <AvatarFallback className="bg-gradient-to-r from-[#02284f] to-[#03386b] text-white">
+                                    <User className="w-4 h-4" />
+                                  </AvatarFallback>
+                                )}
+                              </Avatar>
+                            ) : (
+                              <Link to={`/profile/${senderId}`} className="ml-2" tabIndex={0} aria-label={`Voir votre profil`}>
+                                <Avatar className="w-8 h-8">
+                                  {profilePictureUrl ? (
+                                    <AvatarImage 
+                                      src={profilePictureUrl} 
+                                      alt={message.senderName || sender?.firstName + ' ' + sender?.lastName || ''}
+                                      className="object-cover"
+                                    />
+                                  ) : (
+                                    <AvatarFallback className="bg-gradient-to-r from-[#02284f] to-[#03386b] text-white">
+                                      <User className="w-4 h-4" />
+                                    </AvatarFallback>
+                                  )}
+                                </Avatar>
+                              </Link>
+                            )
                           )}
                         </div>
                       );
