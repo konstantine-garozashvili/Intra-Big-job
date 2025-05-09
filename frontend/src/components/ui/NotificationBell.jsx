@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, ArrowRight, Settings, CheckCheck, Clock, FileCheck, FileX, File, Trash, User } from 'lucide-react';
+import { Bell, ArrowRight, Settings, CheckCheck, Clock, FileCheck, FileX, File, Trash, User, MessageSquare, AtSign, Heart } from 'lucide-react';
 import { useNotifications } from '../../lib/hooks/useNotifications';
 import { format, formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -119,6 +119,20 @@ const notificationTypeConfig = {
   }
 };
 
+// Icon mapping for notification types
+const iconMap = {
+  'settings': Settings,
+  'user': User,
+  'bell': Bell,
+  'file-check': FileCheck,
+  'file-x': FileX,
+  'file': File,
+  'trash': Trash,
+  'message-square': MessageSquare,
+  'at-sign': AtSign,
+  'heart': Heart
+};
+
 export const NotificationBell = () => {
   const { user } = useAuth();
   const { notifications, loading, unreadCount, markAsRead, markAllAsRead } = useNotifications();
@@ -148,7 +162,23 @@ export const NotificationBell = () => {
 
   const handleNotificationClick = async (notification) => {
     await markAsRead(notification.id);
-    // Redirection selon le type de notification
+    
+    // Handle chat notifications
+    if (notification.type.startsWith('CHAT_')) {
+      const { chatId, messageId } = notification.metadata || {};
+      
+      if (chatId === 'global') {
+        // Open global chat
+        navigate('/chat');
+      } else if (chatId.startsWith('private_')) {
+        // Open private chat with the specific user
+        const userId = chatId.replace('private_', '');
+        navigate(`/chat/private/${userId}`);
+      }
+      return;
+    }
+    
+    // Handle other notification types
     if (
       notification.type === 'INFO' &&
       notification.title && (
@@ -170,6 +200,15 @@ export const NotificationBell = () => {
       navigate('/recruiter/enrollment-requests');
       return;
     }
+  };
+
+  // Function to get the icon component for a notification type
+  const getNotificationIcon = (type) => {
+    const config = notificationTypeConfig[type];
+    if (!config) return <Bell className="h-4 w-4" />;
+    
+    const IconComponent = iconMap[config.icon] || Bell;
+    return <IconComponent className={`h-4 w-4 ${config.color.split(' ')[1]}`} />;
   };
 
   // Ne pas afficher pendant le chargement initial
@@ -268,7 +307,7 @@ export const NotificationBell = () => {
             notifications.filter(n => !n.read).slice(0, 5).map((notification) => {
               const typeConfig = notificationTypeConfig[notification.type] || {
                 color: 'bg-gray-100 text-gray-600',
-                icon: <Bell className="h-4 w-4 text-gray-500" />
+                icon: 'bell'
               };
               const relativeTime = getRelativeTime(notification.timestamp);
               return (
@@ -282,7 +321,7 @@ export const NotificationBell = () => {
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                         typeConfig.color || 'bg-gray-100 text-gray-600'
                       }`}>
-                        {typeConfig.icon || <Bell className="h-4 w-4" />}
+                        {getNotificationIcon(notification.type)}
                       </div>
                     </div>
                     <div className="flex-1">

@@ -1,6 +1,9 @@
 import apiService from './apiService';
 import { authService } from './authService';
 import { toast } from 'sonner';
+import { collection, addDoc } from 'firebase/firestore';
+import { db } from './firebase';
+import { MessageSquare, AtSign, Heart, Settings, User, Bell, FileCheck, FileX, File, Trash } from 'lucide-react';
 
 /**
  * Service for managing user notifications
@@ -26,6 +29,66 @@ class NotificationService {
     this.pollingInterval = null;
     this.pollingDelay = 60000; // 1 minute
     this.useMockBackend = true;
+
+    // Define notification type configurations
+    this.notificationTypeConfig = {
+      ROLE_UPDATE: {
+        color: 'bg-blue-100 text-blue-800',
+        icon: 'settings'
+      },
+      INFO_UPDATE: {
+        color: 'bg-teal-100 text-teal-800',
+        icon: 'user'
+      },
+      SYSTEM: {
+        color: 'bg-purple-100 text-purple-800',
+        icon: 'bell'
+      },
+      INFO: {
+        color: 'bg-green-100 text-green-800',
+        icon: 'bell'
+      },
+      WARNING: {
+        color: 'bg-yellow-100 text-yellow-800',
+        icon: 'bell'
+      },
+      ALERT: {
+        color: 'bg-red-100 text-red-800',
+        icon: 'bell'
+      },
+      DOCUMENT_APPROVED: {
+        color: 'bg-green-100 text-green-800',
+        icon: 'file-check'
+      },
+      DOCUMENT_REJECTED: {
+        color: 'bg-red-100 text-red-800',
+        icon: 'file-x'
+      },
+      DOCUMENT_UPLOADED: {
+        color: 'bg-blue-100 text-blue-800',
+        icon: 'file'
+      },
+      DOCUMENT_DELETED: {
+        color: 'bg-red-100 text-red-800',
+        icon: 'trash'
+      },
+      DOCUMENT_UPDATED: {
+        color: 'bg-yellow-100 text-yellow-800',
+        icon: 'file'
+      },
+      CHAT_MESSAGE: {
+        color: 'bg-blue-100 text-blue-800',
+        icon: 'message-square'
+      },
+      CHAT_MENTION: {
+        color: 'bg-purple-100 text-purple-800',
+        icon: 'at-sign'
+      },
+      CHAT_REACTION: {
+        color: 'bg-yellow-100 text-yellow-800',
+        icon: 'heart'
+      }
+    };
   }
 
   /**
@@ -378,6 +441,54 @@ class NotificationService {
         success: false,
         error: error.message
       };
+    }
+  }
+
+  /**
+   * Create a chat notification
+   * @param {string} recipientId - The ID of the recipient
+   * @param {string} senderName - The name of the sender
+   * @param {string} message - The message content
+   * @param {string} type - The type of chat notification (CHAT_MESSAGE, CHAT_MENTION, CHAT_REACTION)
+   * @param {string} chatId - The ID of the chat (global or private)
+   * @param {string} messageId - The ID of the message
+   */
+  async createChatNotification(recipientId, senderName, message, type = 'CHAT_MESSAGE', chatId = 'global', messageId = null) {
+    try {
+      const title = type === 'CHAT_MENTION' 
+        ? `${senderName} vous a mentionné dans le chat`
+        : type === 'CHAT_REACTION'
+        ? `${senderName} a réagi à votre message`
+        : `${senderName} a envoyé un message`;
+
+      const notification = {
+        recipientId,
+        title,
+        message: message.length > 100 ? message.substring(0, 100) + '...' : message,
+        type,
+        timestamp: new Date(),
+        read: false,
+        metadata: {
+          chatId,
+          messageId,
+          senderName
+        }
+      };
+
+      // Add to Firestore
+      await addDoc(collection(db, 'notifications'), notification);
+
+      // Update local cache
+      if (this.cache.notifications?.notifications) {
+        this.cache.notifications.notifications.unshift(notification);
+        this.cache.unreadCount += 1;
+        this.notifySubscribers();
+      }
+
+      return notification;
+    } catch (error) {
+      console.error('Error creating chat notification:', error);
+      throw error;
     }
   }
 }

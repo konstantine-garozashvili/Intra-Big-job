@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiService from './apiService';
+import { notificationService } from './notificationService';
+import { authService } from './authService';
 
 // Query keys
 export const CHAT_KEYS = {
@@ -189,7 +191,7 @@ export const useGlobalMessages = () => {
       // Return a context object with the snapshotted value
       return { previousMessages, tempMessage };
     },
-    onSuccess: (data, variables, context) => {
+    onSuccess: async (data, variables, context) => {
       const { serverMessage, tempId } = data;
       const currentMessages = queryClient.getQueryData(CHAT_KEYS.global());
       
@@ -207,6 +209,28 @@ export const useGlobalMessages = () => {
       
       queryClient.setQueryData(CHAT_KEYS.global(), updatedMessages);
       saveToStorage('global_chat_messages', updatedMessages);
+
+      // Create notifications for other users
+      try {
+        const currentUser = authService.getUser();
+        const otherUsers = await apiService.get('/users/list', apiService.withAuth());
+        
+        // Filter out the current user and create notifications
+        const recipients = otherUsers.filter(u => u.id !== currentUser.id);
+        
+        for (const recipient of recipients) {
+          await notificationService.createChatNotification(
+            recipient.id,
+            `${currentUser.firstName} ${currentUser.lastName}`,
+            variables.content,
+            'CHAT_MESSAGE',
+            'global',
+            serverMessage.id
+          );
+        }
+      } catch (error) {
+        console.error('Error creating chat notifications:', error);
+      }
     },
     onError: (error, variables, context) => {
       console.error('Error sending message:', error);
@@ -340,7 +364,7 @@ export const usePrivateMessages = (userId) => {
       // Return a context object with the snapshotted value
       return { previousMessages, tempMessage };
     },
-    onSuccess: (data, variables, context) => {
+    onSuccess: async (data, variables, context) => {
       const { serverMessage, tempId } = data;
       const currentMessages = queryClient.getQueryData(CHAT_KEYS.private(variables.recipientId));
       
@@ -358,6 +382,21 @@ export const usePrivateMessages = (userId) => {
       
       queryClient.setQueryData(CHAT_KEYS.private(variables.recipientId), updatedMessages);
       saveToStorage(storageKey, updatedMessages);
+
+      // Create notification for the recipient
+      try {
+        const currentUser = authService.getUser();
+        await notificationService.createChatNotification(
+          variables.recipientId,
+          `${currentUser.firstName} ${currentUser.lastName}`,
+          variables.content,
+          'CHAT_MESSAGE',
+          `private_${variables.recipientId}`,
+          serverMessage.id
+        );
+      } catch (error) {
+        console.error('Error creating private chat notification:', error);
+      }
     },
     onError: (error, variables, context) => {
       console.error('Error sending private message:', error);
