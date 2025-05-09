@@ -8,21 +8,21 @@ const badgeVariants = cva(
     variants: {
       variant: {
         default:
-          "border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
+          "border-transparent bg-primary text-primary-foreground hover:bg-primary/80 dark:bg-primary-dark dark:text-primary-dark-foreground dark:hover:bg-primary-dark/80",
         secondary:
-          "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
+          "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80 dark:bg-secondary-dark dark:text-secondary-dark-foreground dark:hover:bg-secondary-dark/80",
         destructive:
-          "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
-        outline: "text-foreground",
-        student: "border-transparent bg-blue-100 text-blue-700 hover:bg-blue-200",
-        teacher: "border-transparent bg-emerald-100 text-emerald-700 hover:bg-emerald-200",
-        admin: "border-transparent bg-amber-100 text-amber-700 hover:bg-amber-200",
-        super_admin: "border-transparent bg-red-100 text-red-700 hover:bg-red-200",
-        superadmin: "border-transparent bg-red-100 text-red-700 hover:bg-red-200",
-        hr: "border-transparent bg-purple-100 text-purple-700 hover:bg-purple-200",
-        recruiter: "border-transparent bg-pink-100 text-pink-700 hover:bg-pink-200",
-        guest: "border-transparent bg-teal-100 text-teal-700 hover:bg-teal-200",
-        user: "border-transparent bg-gray-100 text-gray-700 hover:bg-gray-200",
+          "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80 dark:bg-destructive-dark dark:text-destructive-dark-foreground dark:hover:bg-destructive-dark/80",
+        outline: "text-foreground dark:text-foreground-dark",
+        student: "border-transparent bg-blue-900 text-blue-200 hover:bg-blue-800",
+        teacher: "border-transparent bg-emerald-900 text-emerald-200 hover:bg-emerald-800",
+        admin: "border-transparent bg-amber-900 text-amber-200 hover:bg-amber-800",
+        super_admin: "border-transparent bg-red-900 text-red-200 hover:bg-red-800",
+        superadmin: "border-transparent bg-red-900 text-red-200 hover:bg-red-800",
+        hr: "border-transparent bg-purple-900 text-purple-200 hover:bg-purple-800",
+        recruiter: "border-transparent bg-pink-900 text-pink-200 hover:bg-pink-800",
+        guest: "border-transparent bg-teal-900 text-teal-200 hover:bg-teal-800",
+        user: "border-transparent bg-gray-800 text-gray-200 hover:bg-gray-700",
       },
     },
     defaultVariants: {

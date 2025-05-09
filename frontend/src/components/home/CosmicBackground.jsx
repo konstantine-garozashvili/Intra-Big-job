@@ -511,9 +511,6 @@ const CosmicBackground = ({
       {/* Static background */}
       <div className={`absolute inset-0 ${colorMode === 'navy' ? 'bg-[#002147]' : 'bg-black'}`}></div>
 
-      {/* Stars background image */}
-      <div className="absolute inset-0 bg-[url('/images/stars-bg.png')] opacity-40"></div>
-
       {/* Canvas for animated elements */}
       <canvas
         ref={canvasRef}

@@ -1,126 +1,83 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
+import apiService from '../../lib/services/apiService';
+import { useAuth } from '@/contexts/AuthContext';
 
-const UsersList = ({ users, loading, onStartPrivateChat }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filteredUsers, setFilteredUsers] = useState([]);
-  const searchInputRef = useRef(null);
+export default function UsersList({ onUserSelect }) {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const { user } = useAuth();
 
-  // Filter users whenever search term or users list changes
   useEffect(() => {
-    // First filter to only include teachers and students
-    const teachersAndStudents = users.filter(user => {
-      if (!user.userRoles || user.userRoles.length === 0) return false;
-      
-      // Check if the user has a teacher or student role
-      return user.userRoles.some(userRole => 
-        userRole.role.name.toLowerCase() === 'teacher' || 
-        userRole.role.name.toLowerCase() === 'student' ||
-        userRole.role.name.toLowerCase() === 'enseignant' || 
-        userRole.role.name.toLowerCase() === 'étudiant' ||
-        userRole.role.name.toLowerCase() === 'professeur' ||
-        userRole.role.name.toLowerCase() === 'élève'
-      );
-    });
+    const fetchUsers = async () => {
+      try {
+        setLoading(true);
+        // Récupérer les utilisateurs de tous les rôles pertinents
+        const roles = ['ROLE_ADMIN', 'ROLE_SUPERADMIN', 'ROLE_HR', 'ROLE_TEACHER', 'ROLE_STUDENT', 'ROLE_GUEST', 'ROLE_RECRUITER'];
+        const usersPromises = roles.map(role => apiService.getUsersByRole(role));
+        const usersArrays = await Promise.all(usersPromises);
+        
+        // Fusionner et dédupliquer les utilisateurs
+        const allUsers = [...new Map(
+          usersArrays
+            .flat()
+            .filter(u => u.id !== user?.id) // Exclure l'utilisateur actuel
+            .map(u => [u.id, u])
+        ).values()];
 
-    // Then apply search filter if there is a search term
-    if (!searchTerm.trim()) {
-      setFilteredUsers(teachersAndStudents);
-      return;
-    }
+        setUsers(allUsers);
+      } catch (err) {
+        console.error('Error fetching users:', err);
+        setError('Erreur lors de la récupération des utilisateurs');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    const lowerCaseSearch = searchTerm.toLowerCase();
-    const filtered = teachersAndStudents.filter(user => 
-      user.firstName?.toLowerCase().includes(lowerCaseSearch) || 
-      user.lastName?.toLowerCase().includes(lowerCaseSearch) ||
-      `${user.firstName} ${user.lastName}`.toLowerCase().includes(lowerCaseSearch) ||
-      (user.email && user.email.toLowerCase().includes(lowerCaseSearch)) ||
-      (user.userRoles && user.userRoles.some(role => 
-        role.role.name.toLowerCase().includes(lowerCaseSearch)
-      ))
-    );
-    
-    setFilteredUsers(filtered);
-  }, [searchTerm, users]);
-
-  const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
-  };
+    fetchUsers();
+  }, [user?.id]);
 
   if (loading) {
     return (
       <div className="flex justify-center items-center h-full">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-red-500 text-center p-4">
+        {error}
       </div>
     );
   }
 
   return (
-    <div className="space-y-3">
-      {/* Search bar */}
-      <div className="relative" ref={searchInputRef}>
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-            <svg className="w-4 h-4 text-gray-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
-              <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
-            </svg>
-          </div>
-          <input
-            type="text"
-            className="block w-full p-2 pl-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Rechercher un utilisateur..."
-            value={searchTerm}
-            onChange={handleSearchChange}
-          />
-          {searchTerm && (
-            <button 
-              onClick={() => setSearchTerm('')}
-              className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-              </svg>
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Users list */}
-      <div className="mt-3">
-        {filteredUsers.length > 0 ? (
-          filteredUsers.map(user => (
-            <div key={user.id} className="flex items-center p-2 hover:bg-gray-100 rounded-lg">
-              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-semibold mr-3">
-                {user.firstName?.charAt(0)}{user.lastName?.charAt(0)}
-              </div>
-              <div className="flex-grow">
-                <div className="font-medium">{user.firstName} {user.lastName}</div>
-                {user.userRoles && user.userRoles.length > 0 && (
-                  <div className="text-xs text-gray-500">
-                    {user.userRoles.map(userRole => userRole.role.name).join(', ')}
-                  </div>
-                )}
-              </div>
-              <button 
-                onClick={() => onStartPrivateChat(user)}
-                className="text-blue-600 hover:text-blue-800 p-2"
-                title="Démarrer une conversation privée"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
-                </svg>
-              </button>
+    <div className="overflow-y-auto h-full">
+      <div className="space-y-2 p-4">
+        {users.map((user) => (
+          <button
+            key={user.id}
+            onClick={() => onUserSelect(user)}
+            className="w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-700 transition-colors"
+          >
+            <div className="w-10 h-10 rounded-full bg-gray-600 flex items-center justify-center text-white text-sm">
+              {user.firstName?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || 'U'}
             </div>
-          ))
-        ) : (
-          <div className="text-center p-4 text-gray-500">
-            {searchTerm 
-              ? "Aucun enseignant ou étudiant ne correspond à votre recherche" 
-              : "Aucun enseignant ou étudiant disponible pour le chat"}
-          </div>
-        )}
+            <div className="flex-1 text-left">
+              <div className="font-medium text-white">
+                {user.firstName && user.lastName 
+                  ? `${user.firstName} ${user.lastName}`
+                  : user.email}
+              </div>
+              <div className="text-sm text-gray-400">
+                {user.roles?.[0]?.replace('ROLE_', '') || 'Utilisateur'}
+              </div>
+            </div>
+          </button>
+        ))}
       </div>
     </div>
   );
-};
-
-export default UsersList;
+}

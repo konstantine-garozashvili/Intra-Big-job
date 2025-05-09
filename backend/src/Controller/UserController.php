@@ -113,7 +113,7 @@ class UserController extends AbstractController
      * Endpoint to list users for chat functionality
      */
     #[Route('/users/list', name: 'api_users_list', methods: ['GET'])]
-    #[IsGranted('ROLE_STUDENT')]
+    #[IsGranted('IS_AUTHENTICATED_FULLY')]
     public function listUsers(Request $request): JsonResponse
     {
         try {
@@ -125,8 +125,11 @@ class UserController extends AbstractController
             // Get includeRoles parameter
             $includeRoles = $request->query->getBoolean('includeRoles', false);
             
+            // Get role filter
+            $roleFilter = $request->query->get('role');
+            
             // Find all users except the current user
-            $users = $this->userRepository->findAllExcept($currentUser->getId(), $includeRoles);
+            $users = $this->userRepository->findAllExcept($currentUser->getId(), $includeRoles, $roleFilter);
             
             // Format users with profile picture URLs
             $formattedUsers = [];

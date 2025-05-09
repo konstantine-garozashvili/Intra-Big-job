@@ -11,6 +11,7 @@ import Footer from './Footer';
 import ChatButton from './chat/ChatButton';
 import { Button } from './ui/button';
 import { useProtectedTheme } from '../contexts/ProtectedThemeContext';
+import SlidingChat from "./chat/SlidingChat";
 
 // Create a context for profile data and refresh function
 export const ProfileContext = createContext({
@@ -561,20 +562,9 @@ const MainLayout = () => {
           </div>
         </main>
 
-        {/* Only show Footer and Chat for authenticated users */}
-        {isAuthenticated && (
-          <>
-            {/* Show ProfileProgress only for GUEST role */}
-            {showProgress && hasRole(ROLES.GUEST) && <ProfileProgress />}
-            <Footer />
-            <RoleGuard roles={[ROLES.STUDENT, ROLES.TEACHER]}>
-              <ChatButton />
-            </RoleGuard>
-          </>
-        )}
-
         {/* Confetti animation */}
         <LayoutConfetti isActive={isShowingConfetti} />
+        <SlidingChat />
       </div>
     </ProfileContext.Provider>
   );

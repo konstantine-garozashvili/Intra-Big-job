@@ -316,7 +316,7 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
      * @param bool $includeRoles Include roles in the query
      * @return User[] Returns an array of User objects except the specified one
      */
-    public function findAllExcept(int $userId, bool $includeRoles = false): array
+    public function findAllExcept(int $userId, bool $includeRoles = false, ?string $roleFilter = null): array
     {
         $queryBuilder = $this->createQueryBuilder('u')
             ->select('u', 'n', 't', 'a', 'c')
@@ -333,6 +333,10 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
             $queryBuilder
                 ->leftJoin('u.userRoles', 'ur')
                 ->leftJoin('ur.role', 'r');
+            if ($roleFilter) {
+                $queryBuilder->andWhere('r.name = :roleFilter')
+                    ->setParameter('roleFilter', $roleFilter);
+            }
         }
 
         return $queryBuilder
