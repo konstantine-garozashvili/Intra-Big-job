@@ -4,6 +4,7 @@ import { cn } from "../../lib/utils";
 import ChatIcon from "../../assets/chat.svg";
 import ContactTab from "./ContactTab";
 import { useChat } from "../../lib/hooks/useChat";
+import { authService } from "../../lib/services/authService";
 import "./SlidingChat.css";
 
 export default function SlidingChat() {
@@ -13,6 +14,7 @@ export default function SlidingChat() {
   const [messageInput, setMessageInput] = useState("");
   const [currentChatId, setCurrentChatId] = useState("global");
   const [refreshChat, setRefreshChat] = useState(0);
+  const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
   const panelRef = useRef(null);
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
@@ -29,6 +31,31 @@ export default function SlidingChat() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Check for new messages and update unread status
+  useEffect(() => {
+    if (messages?.length > 0) {
+      const hasUnread = messages.some(message => 
+        !message.read && 
+        message.senderId !== authService.getUser()?.id
+      );
+      setHasUnreadMessages(hasUnread);
+    } else {
+      setHasUnreadMessages(false);
+    }
+  }, [messages]);
+
+  // Listen for notification read events
+  useEffect(() => {
+    const handleNotificationsRead = () => {
+      setHasUnreadMessages(false);
+    };
+
+    window.addEventListener('notificationsRead', handleNotificationsRead);
+    return () => {
+      window.removeEventListener('notificationsRead', handleNotificationsRead);
+    };
+  }, []);
 
   // Quand on revient sur l'onglet chat, on force le refresh
   useEffect(() => {
@@ -48,6 +75,9 @@ export default function SlidingChat() {
 
   const toggleChat = () => {
     setIsOpen(!isOpen);
+    if (!isOpen) {
+      setHasUnreadMessages(false);
+    }
   };
 
   const handleSendMessage = async () => {
@@ -125,7 +155,7 @@ export default function SlidingChat() {
         {/* Chat Toggle Button - languette collée à gauche du panneau */}
         <button
           onClick={toggleChat}
-          className="flex items-center justify-center w-[32px] h-[80px] rounded-l-[28px] focus:outline-none"
+          className="flex items-center justify-center w-[32px] h-[80px] rounded-l-[28px] focus:outline-none relative"
           aria-label="Toggle chat"
           style={{
             background: 'linear-gradient(135deg, #5C85EE 23%, #00164D 100%)',
@@ -134,6 +164,9 @@ export default function SlidingChat() {
             padding: 0,
           }}
         >
+          {hasUnreadMessages && (
+            <div className="absolute -top-1 -left-1 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+          )}
           <img src={ChatIcon} alt="Chat" style={{ width: 25, height: 25, display: 'block' }} />
         </button>
 
