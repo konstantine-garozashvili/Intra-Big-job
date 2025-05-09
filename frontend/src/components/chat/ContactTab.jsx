@@ -4,12 +4,14 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import RoleBadge from '@/components/ui/RoleBadge';
 import { getRoleDisplayName, getRoleBadgeColor } from '@/lib/constants/roles';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
+import { useUnreadCountByContact } from '@/lib/hooks/useUnreadPrivateMessagesCount';
 
 // Nouveau composant UsersList
 function UsersList({ searchTerm, roleFilter, selectedUserId, onUserSelect }) {
   const [users, setUsers] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState(null);
+  const unreadByContact = useUnreadCountByContact();
 
   React.useEffect(() => {
     let isMounted = true;
@@ -92,6 +94,12 @@ function UsersList({ searchTerm, roleFilter, selectedUserId, onUserSelect }) {
                     ? `${user.firstName} ${user.lastName}`
                     : user.email}
                 </span>
+                {/* Badge de messages non lus */}
+                {unreadByContact[user.id] > 0 && (
+                  <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-bold bg-red-600 text-white min-w-[20px] h-5">
+                    {unreadByContact[user.id]}
+                  </span>
+                )}
               </div>
               <MessageCircle className="w-5 h-5 text-gray-400 opacity-70" />
             </button>

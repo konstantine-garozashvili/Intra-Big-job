@@ -205,8 +205,16 @@ export default function SlidingChat() {
                   activeTab === "contact" ? "active" : ""
                 )}
                 tabIndex={0}
+                style={{ position: 'relative' }}
               >
                 Contact
+                {/* Badge de notification pour messages privés non lus sur l'onglet Contact */}
+                {unreadPrivateCount > 0 && (
+                  <span
+                    className="absolute top-1 right-2 w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-pulse"
+                    title={`${unreadPrivateCount} message(s) privé(s) non lu(s)`}
+                  />
+                )}
               </button>
             </div>
           </div>
