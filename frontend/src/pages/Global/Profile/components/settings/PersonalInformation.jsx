@@ -65,10 +65,10 @@ const PersonalInformation = ({
 
       // Only update if we're not in edit mode to prevent overwriting user input
       if (!editMode.address) {
-        setEditedData(prev => ({
-          ...prev,
-          personal: newPersonalData,
-          address: address ? {
+        setEditedData(prev => {
+          // Vérifier si les données ont vraiment changé avant de mettre à jour
+          const isPersonalDataChanged = JSON.stringify(prev.personal) !== JSON.stringify(newPersonalData);
+          const newAddress = address ? {
             name: address.name || '',
             complement: address.complement || '',
             postalCode: { code: address.postalCode?.code || '' },
@@ -78,17 +78,35 @@ const PersonalInformation = ({
             complement: '',
             postalCode: { code: '' },
             city: { name: '' }
+          };
+          const isAddressChanged = JSON.stringify(prev.address) !== JSON.stringify(newAddress);
+
+          // Ne mettre à jour que si quelque chose a changé
+          if (!isPersonalDataChanged && !isAddressChanged) {
+            return prev;
           }
-        }));
+
+          return {
+            ...prev,
+            personal: newPersonalData,
+            address: newAddress
+          };
+        });
       } else {
-        // If in edit mode, only update personal data
-        setEditedData(prev => ({
-          ...prev,
-          personal: newPersonalData
-        }));
+        // If in edit mode, only update personal data if it has changed
+        setEditedData(prev => {
+          const isPersonalDataChanged = JSON.stringify(prev.personal) !== JSON.stringify(newPersonalData);
+          if (!isPersonalDataChanged) {
+            return prev;
+          }
+          return {
+            ...prev,
+            personal: newPersonalData
+          };
+        });
       }
     }
-  }, [userData?.id, studentProfile?.portfolioUrl]); // Ajouter studentProfile?.portfolioUrl comme dépendance
+  }, [userData?.id, studentProfile?.portfolioUrl]); // Dépendances minimales
   
   // Écouter les événements de mise à jour du portfolio
   useEffect(() => {
@@ -121,6 +139,8 @@ const PersonalInformation = ({
       window.removeEventListener('portfolio-updated', handlePortfolioUpdate);
     };
   }, [studentProfile, setEditedData]);
+
+  console.log("RENDER PersonalInformation", { userData, editMode });
 
   return (
     <div className="space-y-6 sm:space-y-8 w-full px-1 sm:px-2 md:px-4">

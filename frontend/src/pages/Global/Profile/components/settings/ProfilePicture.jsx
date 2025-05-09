@@ -229,6 +229,8 @@ const ProfilePicture = ({ userData, onProfilePictureChange, isLoading: externalL
     e.target.parentNode.appendChild(fallbackIcon.firstChild);
   };
 
+  console.log("RENDER ProfilePicture", { userData, profilePictureUrl });
+
   return (
     <div className="p-4 sm:p-6 max-w-md mx-auto">
       <div className="flex flex-col items-center">

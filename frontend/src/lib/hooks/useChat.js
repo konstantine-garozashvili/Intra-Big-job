@@ -12,6 +12,8 @@ export const useChat = (chatId = 'global', refreshChat = 0) => {
   const [typingUsers, setTypingUsers] = useState({});
   const { user } = useAuth();
 
+  console.log("RENDER useChat", { chatId, refreshChat, user });
+
   // Fonction pour récupérer l'ID de l'utilisateur
   const getUserId = () => {
     try {
@@ -161,7 +163,7 @@ export const useChat = (chatId = 'global', refreshChat = 0) => {
       unsubscribe();
       console.log('[useChat] Firestore listener unsubscribed', { chatId });
     };
-  }, [chatId, user, fetchChatPartner, refreshChat]);
+  }, [chatId, user?.id, refreshChat]);
 
   // Envoyer un message
   const sendMessage = async (content) => {

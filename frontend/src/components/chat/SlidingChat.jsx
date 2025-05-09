@@ -106,6 +106,8 @@ export default function SlidingChat() {
     };
   }, [isOpen]);
 
+  console.log("RENDER SlidingChat", { isOpen, activeTab, currentChatId });
+
   return (
     <div
       className="fixed top-1/2 z-50"
