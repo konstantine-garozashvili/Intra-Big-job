@@ -1,28 +1,93 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Globe, MessageCircle, SlidersHorizontal } from 'lucide-react';
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import RoleBadge from '@/components/ui/RoleBadge';
 import { getRoleDisplayName, getRoleBadgeColor } from '@/lib/constants/roles';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import { useUnreadCountByContact } from '@/lib/hooks/useUnreadPrivateMessagesCount';
+import { useAuth } from '@/contexts/AuthContext';
+import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { db } from '@/lib/services/firebase';
+import axios from 'axios';
+import { Link } from 'react-router-dom';
 
 // Nouveau composant UsersList
 function UsersList({ searchTerm, roleFilter, selectedUserId, onUserSelect }) {
-  const [users, setUsers] = React.useState([]);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState(null);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [lastActivities, setLastActivities] = useState({});
   const unreadByContact = useUnreadCountByContact();
+  const { user } = useAuth();
 
-  React.useEffect(() => {
+  // Récupérer les dernières activités des conversations
+  useEffect(() => {
+    let isMounted = true;
+    const fetchLastActivities = async () => {
+      try {
+        if (!user?.id) return;
+
+        const chatsRef = collection(db, 'chats');
+        const chatsQuery = query(
+          chatsRef,
+          where('participants', 'array-contains', String(user.id)),
+          orderBy('lastActivity', 'desc')
+        );
+
+        const querySnapshot = await getDocs(chatsQuery);
+        const activities = {};
+
+        querySnapshot.forEach(doc => {
+          const data = doc.data();
+          if (data.participants && data.participants.length === 2) {
+            const [userId1, userId2] = data.participants;
+            const otherUserId = String(userId1) === String(user.id) ? userId2 : userId1;
+            activities[otherUserId] = data.lastActivity?.toDate() || new Date(0);
+          }
+        });
+
+        if (isMounted) {
+          setLastActivities(activities);
+        }
+      } catch (error) {
+        console.error('Error fetching last activities:', error);
+      }
+    };
+
+    if (user?.id) {
+      fetchLastActivities();
+    }
+    return () => { isMounted = false; };
+  }, [user?.id]);
+
+  useEffect(() => {
     let isMounted = true;
     const fetchUsers = async () => {
       try {
         setLoading(true);
         const params = { includeRoles: true };
         if (roleFilter) params.role = roleFilter;
-        const response = await (await import('axios')).default.get('/api/users/list', { params });
+        const response = await axios.get('/api/users/list', { params });
         const userData = response.data.data || [];
-        if (isMounted) setUsers(userData);
+        
+        console.log('API Response - Users:', userData); // Debug log
+        
+        // Trier les utilisateurs en fonction des dernières activités
+        const sortedUsers = [...userData].sort((a, b) => {
+          const lastActivityA = lastActivities[a.id] || new Date(0);
+          const lastActivityB = lastActivities[b.id] || new Date(0);
+          const hasUnreadA = unreadByContact[a.id] > 0;
+          const hasUnreadB = unreadByContact[b.id] > 0;
+
+          // Priorité aux conversations non lues
+          if (hasUnreadA && !hasUnreadB) return -1;
+          if (!hasUnreadA && hasUnreadB) return 1;
+
+          // Ensuite, trier par dernière activité
+          return lastActivityB.getTime() - lastActivityA.getTime();
+        });
+
+        if (isMounted) setUsers(sortedUsers);
       } catch (err) {
         if (isMounted) setError('Erreur lors de la récupération des utilisateurs');
       } finally {
@@ -31,7 +96,7 @@ function UsersList({ searchTerm, roleFilter, selectedUserId, onUserSelect }) {
     };
     fetchUsers();
     return () => { isMounted = false; };
-  }, [roleFilter]);
+  }, [roleFilter, lastActivities, unreadByContact]);
 
   // Filtrage côté frontend sur le nom, prénom, email
   const filteredUsers = users.filter(user => {
@@ -70,9 +135,23 @@ function UsersList({ searchTerm, roleFilter, selectedUserId, onUserSelect }) {
             >
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className="w-10 h-10 rounded-full bg-gray-600 flex items-center justify-center text-white text-base cursor-pointer">
-                    {user.firstName?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || 'U'}
-                  </div>
+                  <Link 
+                    to={`/profile/${user.id}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-10 h-10 rounded-full bg-gray-600 flex items-center justify-center text-white text-base cursor-pointer hover:opacity-80 transition-colors overflow-hidden"
+                  >
+                    {user.profilePictureUrl ? (
+                      <img 
+                        src={user.profilePictureUrl} 
+                        alt={`Photo de profil de ${user.firstName}`}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-base">
+                        {user.firstName?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || 'U'}
+                      </span>
+                    )}
+                  </Link>
                 </TooltipTrigger>
                 <TooltipContent
                   side="top"
@@ -117,11 +196,11 @@ export default function ContactTab({ onUserSelect, selectedUserId }) {
   const [availableRoles, setAvailableRoles] = useState([]);
 
   // On ne veut charger les rôles qu'une seule fois (au premier rendu)
-  React.useEffect(() => {
+  useEffect(() => {
     let isMounted = true;
     const fetchRoles = async () => {
       try {
-        const response = await (await import('axios')).default.get('/api/users/list', { params: { includeRoles: true } });
+        const response = await axios.get('/api/users/list', { params: { includeRoles: true } });
         const userData = response.data.data || [];
         const allRoles = Array.from(new Set(userData.flatMap(u => (u.userRoles || []).map(ur => ur.role.name))));
         if (isMounted) setAvailableRoles(allRoles);
@@ -154,9 +233,9 @@ export default function ContactTab({ onUserSelect, selectedUserId }) {
           <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
             <PopoverTrigger asChild>
               <button
-                className="bg-gray-700 text-gray-400 hover:text-white rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                className={`bg-gray-700 ${roleFilter ? 'text-blue-400 ring-2 ring-blue-500' : 'text-gray-400'} hover:text-white rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors`}
               >
-                <SlidersHorizontal className="h-5 w-5" />
+                <SlidersHorizontal className={`h-5 w-5 ${roleFilter ? 'text-blue-400' : ''}`} />
               </button>
             </PopoverTrigger>
             <PopoverContent 

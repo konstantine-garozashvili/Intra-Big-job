@@ -6,10 +6,15 @@ import ContactTab from "./ContactTab";
 import { useChat } from "../../lib/hooks/useChat";
 import "./SlidingChat.css";
 import { useUnreadPrivateMessagesCount } from '../../lib/hooks/useUnreadPrivateMessagesCount';
+import { useAuth } from '/src/contexts/AuthContext';
+import { Link } from 'react-router-dom';
 
-export default function SlidingChat() {
+// Durée de pause par défaut en secondes
+const DEFAULT_SHAKE_PAUSE = 3.5;
+
+export default function SlidingChat({ shakePauseDuration = DEFAULT_SHAKE_PAUSE }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("chat");
+  const [activeTab, setActiveTab] = useState("contact");
   const [panelWidth, setPanelWidth] = useState(320);
   const [messageInput, setMessageInput] = useState("");
   const [currentChatId, setCurrentChatId] = useState("global");
@@ -17,8 +22,22 @@ export default function SlidingChat() {
   const panelRef = useRef(null);
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
+  const chatTabRef = useRef(null);
+  const contactTabRef = useRef(null);
+  const tabBgRef = useRef(null);
   const { messages, loading, sendMessage, startPrivateChat, chatPartner } = useChat(currentChatId, refreshChat);
   const unreadPrivateCount = useUnreadPrivateMessagesCount();
+  const { user } = useAuth();
+
+  // DEBUG: Affichage du user du contexte auth
+  useEffect(() => {
+    console.log('[SlidingChat] user from useAuth:', user);
+  }, [user]);
+
+  // DEBUG: Affichage du nombre de messages privés non lus
+  useEffect(() => {
+    console.log('[SlidingChat] unreadPrivateCount:', unreadPrivateCount);
+  }, [unreadPrivateCount]);
 
   // Get actual panel width on mount
   useEffect(() => {
@@ -47,6 +66,42 @@ export default function SlidingChat() {
       textareaRef.current.style.height = Math.min(scrollHeight, 120) + 'px';
     }
   }, [messageInput]);
+
+  // Mettre à jour la durée de pause CSS quand la prop change
+  useEffect(() => {
+    document.documentElement.style.setProperty('--shake-pause-duration', `${shakePauseDuration}s`);
+  }, [shakePauseDuration]);
+
+  // Add effect for dynamic tab background sizing
+  useEffect(() => {
+    const updateTabBackground = () => {
+      if (!tabBgRef.current || !chatTabRef.current || !contactTabRef.current) return;
+      
+      const activeButton = activeTab === "chat" ? chatTabRef.current : contactTabRef.current;
+      const buttonRect = activeButton.getBoundingClientRect();
+      
+      // Add a small padding to the width for better aesthetics
+      tabBgRef.current.style.width = `${buttonRect.width + 8}px`;
+      tabBgRef.current.style.left = `${activeButton.offsetLeft - 4}px`;
+    };
+
+    // Update on tab change
+    updateTabBackground();
+
+    // Update when chat partner changes (which affects the chat tab width)
+    if (activeTab === "chat" && chatPartner?.data?.user?.firstName) {
+      updateTabBackground();
+    }
+
+    // Add resize observer to handle dynamic content changes
+    const resizeObserver = new ResizeObserver(updateTabBackground);
+    if (chatTabRef.current) resizeObserver.observe(chatTabRef.current);
+    if (contactTabRef.current) resizeObserver.observe(contactTabRef.current);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [activeTab, chatPartner?.data?.user?.firstName]);
 
   const toggleChat = () => {
     setIsOpen(!isOpen);
@@ -106,8 +161,6 @@ export default function SlidingChat() {
     };
   }, [isOpen]);
 
-  console.log("RENDER SlidingChat", { isOpen, activeTab, currentChatId });
-
   return (
     <div
       className="fixed top-1/2 z-50"
@@ -116,6 +169,7 @@ export default function SlidingChat() {
         transform: 'translateY(-50%)',
         width: PANEL_WIDTH + BUTTON_WIDTH,
         transition: 'right 0.8s cubic-bezier(0.4,0,0.2,1)',
+        pointerEvents: isOpen ? 'auto' : 'none',
       }}
     >
       <div
@@ -129,13 +183,14 @@ export default function SlidingChat() {
         {/* Chat Toggle Button - languette collée à gauche du panneau */}
         <button
           onClick={toggleChat}
-          className="flex items-center justify-center w-[32px] h-[80px] rounded-l-[28px] focus:outline-none relative overflow-hidden"
+          className="flex items-center justify-center w-[32px] h-[80px] rounded-l-[28px] focus:outline-none relative overflow-hidden cursor-pointer"
           aria-label="Toggle chat"
           style={{
             background: 'linear-gradient(135deg, #5C85EE 23%, #00164D 100%)',
             boxShadow: '0 8px 48px 0 rgba(79, 123, 250, 0.35)',
             border: 'none',
             padding: 0,
+            pointerEvents: 'auto',
           }}
         >
           <span style={{
@@ -143,7 +198,6 @@ export default function SlidingChat() {
             transition: 'opacity 0.4s cubic-bezier(0.4,0,0.2,1), transform 0.4s cubic-bezier(0.4,0,0.2,1)',
             opacity: isOpen ? 0 : 1,
             transform: isOpen ? 'translateX(-20px) scale(0.8)' : 'translateX(0) scale(1)',
-            pointerEvents: isOpen ? 'none' : 'auto',
             width: 25,
             height: 25,
             display: 'block',
@@ -153,7 +207,26 @@ export default function SlidingChat() {
               alt="Chat" 
               style={{ width: 25, height: 25, display: 'block' }}
               className={unreadPrivateCount > 0 ? 'chat-icon-notif' : ''}
+              data-pause-duration={shakePauseDuration}
             />
+            {/* DEBUG: Badge numéroté - log affichage */}
+            {unreadPrivateCount > 0 && console.log('[SlidingChat] Affichage badge numéroté', unreadPrivateCount)}
+            {/* Badge numéroté pour messages privés non lus */}
+            {unreadPrivateCount > 0 && (
+              <span
+                className="absolute min-w-[16px] h-[16px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border border-white shadow-lg z-10"
+                style={{
+                  padding: '0 4px',
+                  lineHeight: '16px',
+                  boxShadow: '0 0 4px 0 rgba(0,0,0,0.15)',
+                  top: '-7px',
+                  right: '1px',
+                }}
+                title={`${unreadPrivateCount} message(s) privé(s) non lu(s)`}
+              >
+                {unreadPrivateCount}
+              </span>
+            )}
           </span>
           <span style={{
             position: 'absolute',
@@ -167,13 +240,6 @@ export default function SlidingChat() {
           }}>
             <X className="w-[25px] h-[25px] text-white" />
           </span>
-          {/* Badge de notification pour messages privés non lus */}
-          {/* {unreadPrivateCount > 0 && (
-            <span
-              className="absolute top-2 right-2 w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-pulse"
-              title={`${unreadPrivateCount} message(s) privé(s) non lu(s)`}
-            />
-          )} */}
         </button>
 
         {/* Chat Panel */}
@@ -189,10 +255,12 @@ export default function SlidingChat() {
             <div className="relative flex space-x-1 tab-switcher">
               {/* Fond animé */}
               <div
-                className={`tab-bg-slider ${activeTab}`}
+                ref={tabBgRef}
+                className="tab-bg-slider"
                 aria-hidden="true"
               />
               <button
+                ref={chatTabRef}
                 onClick={() => {
                   setActiveTab("chat");
                   if (!currentChatId) setCurrentChatId("global");
@@ -203,9 +271,10 @@ export default function SlidingChat() {
                 )}
                 tabIndex={0}
               >
-                {currentChatId === "global" ? "Chat" : chatPartner?.firstName || "Chat"}
+                {currentChatId === "global" ? "Global" : chatPartner?.data?.user?.firstName || "Global"}
               </button>
               <button
+                ref={contactTabRef}
                 onClick={() => setActiveTab("contact")}
                 className={cn(
                   "tab-btn",
@@ -215,13 +284,6 @@ export default function SlidingChat() {
                 style={{ position: 'relative' }}
               >
                 Contact
-                {/* Badge de notification pour messages privés non lus sur l'onglet Contact */}
-                {unreadPrivateCount > 0 && (
-                  <span
-                    className="absolute top-1 right-2 w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-pulse"
-                    title={`${unreadPrivateCount} message(s) privé(s) non lu(s)`}
-                  />
-                )}
               </button>
             </div>
           </div>
@@ -238,8 +300,35 @@ export default function SlidingChat() {
                     </div>
                   ) : messages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-gray-400">
-                      <MessageCircle className="w-12 h-12 mb-4" />
-                      <p>Aucun message pour le moment</p>
+                      {currentChatId === "global" ? (
+                        <>
+                          <Globe className="w-16 h-16 mb-4 text-gray-300" />
+                          <p className="text-lg font-semibold mb-2">Chat Global</p>
+                        </>
+                      ) : (
+                        <>
+                          {chatPartner?.data?.user?.profilePictureUrl ? (
+                            <Link 
+                              to={`/profile/${chatPartner.data.user.id}`}
+                              className="hover:opacity-80 transition-opacity"
+                            >
+                              <img 
+                                src={chatPartner.data.user.profilePictureUrl} 
+                                alt={`Photo de profil de ${chatPartner.data.user.firstName}`}
+                                className="w-16 h-16 rounded-full mb-4 object-cover"
+                              />
+                            </Link>
+                          ) : (
+                            <Link 
+                              to={`/profile/${chatPartner.data.user.id}`}
+                              className="w-16 h-16 rounded-full bg-gray-600 mb-4 flex items-center justify-center text-2xl text-white hover:opacity-80 transition-opacity"
+                            >
+                              {chatPartner?.data?.user?.firstName?.charAt(0).toUpperCase() || 'A'}
+                            </Link>
+                          )}
+                          <p className="text-lg font-semibold mb-2">{chatPartner?.data?.user?.firstName || 'Utilisateur'}</p>
+                        </>
+                      )}
                       <p className="text-sm">Commencez la conversation !</p>
                     </div>
                   ) : (
@@ -254,31 +343,31 @@ export default function SlidingChat() {
                         }}
                       >
                         {!message.isUser && (
-                          <div className="w-8 h-8 rounded-full bg-gray-600 mr-2 overflow-hidden flex items-center justify-center text-xs text-white">
+                          <Link 
+                            to={`/profile/${message.senderId}`}
+                            className="w-8 h-8 rounded-full bg-gray-600 mr-2 overflow-hidden flex items-center justify-center text-xs text-white hover:opacity-80 transition-opacity"
+                          >
                             {message.senderName?.charAt(0).toUpperCase() || 'A'}
-                          </div>
+                          </Link>
                         )}
                         <div
                           className={cn(
                             "max-w-[70%] p-3 rounded-2xl break-words whitespace-pre-wrap",
-                            message.isUser ? "bg-blue-600 text-white" : "bg-gray-700 text-white"
+                            message.isUser ? "bg-blue-600 text-white user-bubble" : "bg-gray-700 text-white"
                           )}
                           style={{
                             wordBreak: "break-word",
                             overflowWrap: "break-word",
-                            hyphens: "auto"
+                            hyphens: "auto",
+                            marginRight: message.isUser ? 12 : 0,
+                            marginLeft: !message.isUser ? 0 : undefined,
                           }}
                         >
                           <p className="text-sm">{message.content}</p>
                           <p className="text-xs opacity-50 mt-1">
-                            {message.senderName} • {new Date(message.timestamp).toLocaleTimeString()}
+                            {message.senderName} • {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </p>
                         </div>
-                        {message.isUser && (
-                          <div className="w-8 h-8 rounded-full bg-gray-600 ml-2 overflow-hidden flex items-center justify-center text-xs text-white">
-                            {message.senderName?.charAt(0).toUpperCase() || 'A'}
-                          </div>
-                        )}
                       </div>
                     ))
                   )}
@@ -343,7 +432,7 @@ export default function SlidingChat() {
                     </div>
                     <button
                       onClick={handleSendMessage}
-                      className="w-11 h-11 rounded-full flex items-center justify-center shadow-lg"
+                      className="w-11 h-11 rounded-full flex items-center justify-center shadow-lg send-btn"
                       style={{
                         background: "linear-gradient(135deg, #5C85EE 23%, #00164D 100%)",
                         boxShadow: "0 4px 16px 0 rgba(79, 123, 250, 0.18)",
@@ -361,7 +450,7 @@ export default function SlidingChat() {
                 <div className="flex-1">
                   <ContactTab 
                     onUserSelect={handleUserSelect} 
-                    selectedUserId={currentChatId === 'global' ? 'global' : chatPartner?.id}
+                    selectedUserId={currentChatId === 'global' ? 'global' : chatPartner?.data?.user?.id}
                   />
                 </div>
                 {/* Zone vide pour garder la même hauteur que l'input du chat */}

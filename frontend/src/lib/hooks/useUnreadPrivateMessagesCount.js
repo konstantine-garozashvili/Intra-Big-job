@@ -10,6 +10,11 @@ export function useUnreadPrivateMessagesCount() {
   const { user } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
 
+  // DEBUG: Affichage du user dans le hook
+  useEffect(() => {
+    console.log('[useUnreadPrivateMessagesCount] user:', user);
+  }, [user]);
+
   useEffect(() => {
     if (!user?.id) {
       setUnreadCount(0);

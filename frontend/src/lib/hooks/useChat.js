@@ -66,16 +66,25 @@ export const useChat = (chatId = 'global', refreshChat = 0) => {
     if (chatId === 'global' || !user?.id) return;
     
     try {
-      const typingRef = doc(db, 'chats', chatId, 'typing', user.id);
+      // Créer une référence valide pour le document de frappe
+      const chatDocRef = doc(db, 'chats', String(chatId));
+      const typingCollectionRef = collection(chatDocRef, 'typing');
+      const userTypingRef = doc(typingCollectionRef, String(user.id));
+
       if (isTyping) {
-        await setDoc(typingRef, {
-          userId: user.id,
+        await setDoc(userTypingRef, {
+          userId: String(user.id),
           timestamp: serverTimestamp()
         });
       } else {
-        await updateDoc(typingRef, {
-          timestamp: null
-        });
+        try {
+          await updateDoc(userTypingRef, {
+            timestamp: null
+          });
+        } catch (updateError) {
+          // Si le document n'existe pas, on ignore l'erreur
+          console.log('No typing status to update');
+        }
       }
     } catch (error) {
       console.error('Error updating typing status:', error);
@@ -86,19 +95,28 @@ export const useChat = (chatId = 'global', refreshChat = 0) => {
   useEffect(() => {
     if (chatId === 'global') return;
 
-    const typingRef = collection(db, 'chats', chatId, 'typing');
-    const unsubscribe = onSnapshot(typingRef, (snapshot) => {
-      const typing = {};
-      snapshot.docs.forEach((doc) => {
-        const data = doc.data();
-        if (data.timestamp) {
-          typing[doc.id] = true;
-        }
-      });
-      setTypingUsers(typing);
-    });
+    try {
+      // Créer une référence valide pour la collection de frappe
+      const chatDocRef = doc(db, 'chats', String(chatId));
+      const typingCollectionRef = collection(chatDocRef, 'typing');
 
-    return () => unsubscribe();
+      const unsubscribe = onSnapshot(typingCollectionRef, (snapshot) => {
+        const typing = {};
+        snapshot.docs.forEach((doc) => {
+          const data = doc.data();
+          if (data.timestamp) {
+            typing[doc.id] = true;
+          }
+        });
+        setTypingUsers(typing);
+      }, (error) => {
+        console.error('Error listening to typing status:', error);
+      });
+
+      return () => unsubscribe();
+    } catch (error) {
+      console.error('Error setting up typing listener:', error);
+    }
   }, [chatId]);
 
   // Écouter les messages en temps réel
