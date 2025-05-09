@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { collection, addDoc, query, where, onSnapshot, orderBy, limit, doc, setDoc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, query, where, onSnapshot, orderBy, limit, doc, setDoc, getDoc, updateDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import apiService from '../services/apiService';
@@ -194,7 +194,8 @@ export const useChat = (chatId = 'global', refreshChat = 0) => {
         senderName: user?.username || user?.firstName || 'Anonymous',
         senderRole: user?.roles?.[0] || 'ROLE_USER',
         createdAt: new Date(),
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        readBy: [userId]
       };
       await addDoc(messagesRef, messagePayload);
       
@@ -214,6 +215,30 @@ export const useChat = (chatId = 'global', refreshChat = 0) => {
     if (!userId || !otherUserId) return null;
     return generatePrivateChatId(userId, otherUserId);
   }, []);
+
+  // Marquer tous les messages comme lus à l'ouverture d'un chat privé
+  useEffect(() => {
+    if (chatId === 'global') return;
+    const userId = getUserId();
+    if (!userId) return;
+    const messagesRef = collection(db, 'chats', chatId, 'messages');
+    // On écoute les messages non lus pour l'utilisateur courant
+    const q = query(messagesRef, where('readBy', 'not-in', [[userId]]));
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      const batch = writeBatch(db);
+      snapshot.docs.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (data.senderId !== userId && (!data.readBy || !data.readBy.includes(userId))) {
+          const msgRef = doc(db, 'chats', chatId, 'messages', docSnap.id);
+          batch.update(msgRef, { readBy: [...(data.readBy || []), userId] });
+        }
+      });
+      if (!snapshot.empty) {
+        await batch.commit();
+      }
+    });
+    return () => unsubscribe();
+  }, [chatId]);
 
   return {
     messages,

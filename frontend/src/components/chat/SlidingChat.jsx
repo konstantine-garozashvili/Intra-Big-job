@@ -5,6 +5,7 @@ import ChatIcon from "../../assets/chat.svg";
 import ContactTab from "./ContactTab";
 import { useChat } from "../../lib/hooks/useChat";
 import "./SlidingChat.css";
+import { useUnreadPrivateMessagesCount } from '../../lib/hooks/useUnreadPrivateMessagesCount';
 
 export default function SlidingChat() {
   const [isOpen, setIsOpen] = useState(false);
@@ -17,6 +18,7 @@ export default function SlidingChat() {
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
   const { messages, loading, sendMessage, startPrivateChat, chatPartner } = useChat(currentChatId, refreshChat);
+  const unreadPrivateCount = useUnreadPrivateMessagesCount();
 
   // Get actual panel width on mount
   useEffect(() => {
@@ -125,7 +127,7 @@ export default function SlidingChat() {
         {/* Chat Toggle Button - languette collée à gauche du panneau */}
         <button
           onClick={toggleChat}
-          className="flex items-center justify-center w-[32px] h-[80px] rounded-l-[28px] focus:outline-none"
+          className="flex items-center justify-center w-[32px] h-[80px] rounded-l-[28px] focus:outline-none relative"
           aria-label="Toggle chat"
           style={{
             background: 'linear-gradient(135deg, #5C85EE 23%, #00164D 100%)',
@@ -135,6 +137,13 @@ export default function SlidingChat() {
           }}
         >
           <img src={ChatIcon} alt="Chat" style={{ width: 25, height: 25, display: 'block' }} />
+          {/* Badge de notification pour messages privés non lus */}
+          {unreadPrivateCount > 0 && (
+            <span
+              className="absolute top-2 right-2 w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-pulse"
+              title={`${unreadPrivateCount} message(s) privé(s) non lu(s)`}
+            />
+          )}
         </button>
 
         {/* Chat Panel */}
