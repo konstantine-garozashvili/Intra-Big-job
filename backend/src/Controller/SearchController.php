@@ -78,7 +78,7 @@ class SearchController extends AbstractController
                     $profilePictureUrl = null;
                 }
             }
-
+            
             $data[] = [
                 'id'        => $user->getId(),
                 'lastName'  => $user->getLastName(),

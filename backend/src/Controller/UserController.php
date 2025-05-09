@@ -134,25 +134,27 @@ class UserController extends AbstractController
             // Format users with profile picture URLs
             $formattedUsers = [];
             foreach ($users as $user) {
+                $profilePicturePath = $user->getProfilePicturePath();
+                $profilePictureUrl = null;
+                
+                if ($profilePicturePath) {
+                    try {
+                        $profilePictureUrl = $this->documentStorageFactory->getDocumentUrl($profilePicturePath);
+                    } catch (\Exception $e) {
+                        // Log error but continue without URL
+                        error_log("Error generating profile picture URL: " . $e->getMessage());
+                    }
+                }
+
                 $userData = [
                     'id' => $user->getId(),
                     'firstName' => $user->getFirstName(),
                     'lastName' => $user->getLastName(),
                     'email' => $user->getEmail(),
-                    'profilePicturePath' => $user->getProfilePicturePath(),
-                    'profilePictureUrl' => null,
+                    'profilePicturePath' => $profilePicturePath,
+                    'profilePictureUrl' => $profilePictureUrl,
                     'city' => $user->getAddresses()->first()?->getCity()?->getName() ?? "Non renseignée"
                 ];
-                
-                // Add profile picture URL if available
-                if ($user->getProfilePicturePath()) {
-                    try {
-                        // Get the S3 URL directly
-                        $userData['profilePictureUrl'] = $this->documentStorageFactory->getDocumentUrl($user->getProfilePicturePath());
-                    } catch (\Exception $e) {
-                        // Continue without URL in case of error
-                    }
-                }
                 
                 // Add roles if requested
                 if ($includeRoles) {
@@ -200,6 +202,29 @@ class UserController extends AbstractController
                 return $this->json(['message' => 'User not found'], JsonResponse::HTTP_NOT_FOUND);
             }
 
+            // Build the user data with profilePictureUrl
+            $profilePicturePath = $user->getProfilePicturePath();
+            $profilePictureUrl = null;
+            
+            if ($profilePicturePath) {
+                try {
+                    $profilePictureUrl = $this->documentStorageFactory->getDocumentUrl($profilePicturePath);
+                } catch (\Exception $e) {
+                    // Log error but continue without URL
+                    error_log("Error generating profile picture URL: " . $e->getMessage());
+                }
+            }
+
+            $userData = [
+                'id' => $user->getId(),
+                'firstName' => $user->getFirstName(),
+                'lastName' => $user->getLastName(),
+                'email' => $user->getEmail(),
+                'profilePicturePath' => $profilePicturePath,
+                'profilePictureUrl' => $profilePictureUrl,
+                // Add any other fields you want to expose here
+            ];
+
             // Check if the user can view this profile based on roles
             $currentUserRoles = $currentUser->getUserRoles()->map(function($role) {
                 return $role->getRole()->getName();
@@ -213,7 +238,7 @@ class UserController extends AbstractController
             if (in_array('ADMIN', $currentUserRoles) || in_array('SUPER_ADMIN', $currentUserRoles)) {
                 return $this->json([
                     'success' => true,
-                    'data' => $this->formatUserProfile($user)
+                    'data' => $userData
                 ]);
             }
 
@@ -222,7 +247,7 @@ class UserController extends AbstractController
                 if (array_intersect(['TEACHER', 'STUDENT', 'RECRUITER', 'HR'], $targetUserRoles)) {
                     return $this->json([
                         'success' => true,
-                        'data' => $this->formatUserProfile($user)
+                        'data' => $userData
                     ]);
                 }
             }
@@ -232,7 +257,7 @@ class UserController extends AbstractController
                 if (array_intersect(['TEACHER', 'STUDENT', 'RECRUITER'], $targetUserRoles)) {
                     return $this->json([
                         'success' => true,
-                        'data' => $this->formatUserProfile($user)
+                        'data' => $userData
                     ]);
                 }
             }
@@ -242,7 +267,7 @@ class UserController extends AbstractController
                 if (array_intersect(['TEACHER', 'STUDENT'], $targetUserRoles)) {
                     return $this->json([
                         'success' => true,
-                        'data' => $this->formatUserProfile($user)
+                        'data' => $userData
                     ]);
                 }
             }
@@ -252,7 +277,7 @@ class UserController extends AbstractController
                 if (array_intersect(['STUDENT', 'HR'], $targetUserRoles)) {
                     return $this->json([
                         'success' => true,
-                        'data' => $this->formatUserProfile($user)
+                        'data' => $userData
                     ]);
                 }
             }
@@ -262,7 +287,7 @@ class UserController extends AbstractController
                 if (in_array('RECRUITER', $targetUserRoles)) {
                     return $this->json([
                         'success' => true,
-                        'data' => $this->formatUserProfile($user)
+                        'data' => $userData
                     ]);
                 }
             }
@@ -281,17 +306,26 @@ class UserController extends AbstractController
 
     private function formatUserProfile($user)
     {
+        $profilePicturePath = $user->getProfilePicturePath();
+        $profilePictureUrl = null;
+        
+        if ($profilePicturePath) {
+            try {
+                $profilePictureUrl = $this->documentStorageFactory->getDocumentUrl($profilePicturePath);
+            } catch (\Exception $e) {
+                // Log error but continue without URL
+                error_log("Error generating profile picture URL: " . $e->getMessage());
+            }
+        }
+
         return [
             'id' => $user->getId(),
             'firstName' => $user->getFirstName(),
             'lastName' => $user->getLastName(),
             'email' => $user->getEmail(),
-            'profilePicturePath' => $user->getProfilePicturePath(),
-            'profilePictureUrl' => $user->getProfilePicturePath() ? $this->documentStorageFactory->getDocumentUrl($user->getProfilePicturePath()) : null,
-            'city' => $user->getCity() ? [
-                'id' => $user->getCity()->getId(),
-                'name' => $user->getCity()->getName()
-            ] : null,
+            'profilePicturePath' => $profilePicturePath,
+            'profilePictureUrl' => $profilePictureUrl,
+            'city' => $user->getAddresses()->first()?->getCity()?->getName() ?? "Non renseignée",
             'userRoles' => array_map(function($userRole) {
                 return [
                     'id' => $userRole->getId(),

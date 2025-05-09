@@ -149,9 +149,18 @@ export default function ContactTab({ onUserSelect, selectedUserId }) {
               onClick={() => onUserSelect?.(user)}
               className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${selectedUserId === user.id ? 'bg-gray-700 border-2 border-blue-500' : 'hover:bg-gray-700'}`}
             >
-              <div className="w-10 h-10 rounded-full bg-gray-600 flex items-center justify-center text-white text-sm">
-                {user.firstName?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || 'U'}
-              </div>
+              {user.profilePictureUrl ? (
+                <img
+                  src={user.profilePictureUrl}
+                  alt={`${user.firstName} ${user.lastName}`}
+                  className="w-10 h-10 rounded-full object-cover"
+                  onError={e => { e.target.onerror = null; e.target.src = '/default-avatar.png'; }}
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-gray-600 flex items-center justify-center text-white text-sm">
+                  {user.firstName?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || 'U'}
+                </div>
+              )}
               <div className="flex-1 text-left">
                 <div className="font-medium text-white">
                   {user.firstName && user.lastName 

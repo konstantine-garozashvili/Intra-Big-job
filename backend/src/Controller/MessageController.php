@@ -14,6 +14,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
+use App\Service\DocumentStorageFactory;
 
 #[Route('/api/messages')]
 class MessageController extends AbstractController
@@ -22,17 +23,44 @@ class MessageController extends AbstractController
     private SerializerInterface $serializer;
     private MessageRepository $messageRepository;
     private UserRepository $userRepository;
+    private $documentStorageFactory;
 
     public function __construct(
         EntityManagerInterface $entityManager,
         SerializerInterface $serializer,
         MessageRepository $messageRepository,
-        UserRepository $userRepository
+        UserRepository $userRepository,
+        DocumentStorageFactory $documentStorageFactory
     ) {
         $this->entityManager = $entityManager;
         $this->serializer = $serializer;
         $this->messageRepository = $messageRepository;
         $this->userRepository = $userRepository;
+        $this->documentStorageFactory = $documentStorageFactory;
+    }
+
+    private function formatUserForChat($user)
+    {
+        if (!$user) return null;
+        return [
+            'id' => $user->getId(),
+            'firstName' => $user->getFirstName(),
+            'lastName' => $user->getLastName(),
+            'profilePictureUrl' => $user->getProfilePicturePath() ? $this->documentStorageFactory->getDocumentUrl($user->getProfilePicturePath()) : null,
+        ];
+    }
+
+    private function formatMessageForChat($message)
+    {
+        return [
+            'id' => $message->getId(),
+            'content' => $message->getContent(),
+            'createdAt' => $message->getCreatedAt()?->format('Y-m-d H:i:s'),
+            'sender' => $this->formatUserForChat($message->getSender()),
+            'recipient' => $this->formatUserForChat($message->getRecipient()),
+            'isGlobal' => $message->getIsGlobal(),
+            'readBy' => $message->getReadBy(),
+        ];
     }
 
     #[Route('', methods: ['GET'])]
@@ -40,76 +68,36 @@ class MessageController extends AbstractController
     {
         $limit = $request->query->getInt('limit', 20);
         $offset = $request->query->getInt('offset', 0);
-        
         $messages = $this->messageRepository->findGlobalMessages($limit, $offset);
-        
-        $context = [
-            'groups' => ['message:read'],
-            AbstractNormalizer::CIRCULAR_REFERENCE_HANDLER => function ($object) {
-                return $object instanceof User ? $object->getId() : $object->getId();
-            },
-            'enable_max_depth' => true,
-            'json_encode_options' => JSON_PRETTY_PRINT
-        ];
-        
-        return $this->json([
-            'messages' => json_decode($this->serializer->serialize($messages, 'json', $context), true)
-        ]);
+        $formatted = array_map(fn($msg) => $this->formatMessageForChat($msg), $messages);
+        return $this->json(['messages' => $formatted]);
     }
 
     #[Route('/recent', methods: ['GET'])]
     public function recent(): JsonResponse
     {
         $messages = $this->messageRepository->findRecentGlobalMessages();
-        
-        $context = [
-            'groups' => ['message:read'],
-            AbstractNormalizer::CIRCULAR_REFERENCE_HANDLER => function ($object) {
-                return $object instanceof User ? $object->getId() : $object->getId();
-            },
-            'enable_max_depth' => true,
-            'json_encode_options' => JSON_PRETTY_PRINT
-        ];
-        
-        return $this->json([
-            'messages' => json_decode($this->serializer->serialize($messages, 'json', $context), true)
-        ]);
+        $formatted = array_map(fn($msg) => $this->formatMessageForChat($msg), $messages);
+        return $this->json(['messages' => $formatted]);
     }
 
     #[Route('/private/{userId}', methods: ['GET'])]
     public function privateMessages(int $userId): JsonResponse
     {
-        // Get the current user from the token
-        /** @var User $currentUser */
         $currentUser = $this->getUser();
         if (!$currentUser) {
             return $this->json(['message' => 'User not authenticated'], Response::HTTP_UNAUTHORIZED);
         }
-
-        // Find the other user
         $otherUser = $this->userRepository->find($userId);
         if (!$otherUser) {
             return $this->json(['message' => 'User not found'], Response::HTTP_NOT_FOUND);
         }
-
-        // Get private messages between the two users
         $messages = $this->messageRepository->findPrivateMessagesBetweenUsers(
             min($currentUser->getId(), $userId),
             max($currentUser->getId(), $userId)
         );
-
-        $context = [
-            'groups' => ['message:read'],
-            AbstractNormalizer::CIRCULAR_REFERENCE_HANDLER => function ($object) {
-                return $object instanceof User ? $object->getId() : $object->getId();
-            },
-            'enable_max_depth' => true,
-            'json_encode_options' => JSON_PRETTY_PRINT
-        ];
-        
-        return $this->json([
-            'messages' => json_decode($this->serializer->serialize($messages, 'json', $context), true)
-        ]);
+        $formatted = array_map(fn($msg) => $this->formatMessageForChat($msg), $messages);
+        return $this->json(['messages' => $formatted]);
     }
 
     #[Route('', methods: ['POST'])]

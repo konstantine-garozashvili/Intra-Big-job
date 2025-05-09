@@ -43,7 +43,7 @@ export const SearchSuggestionItem = ({ user, index, activeSuggestion, handleSugg
             className="w-full h-full object-cover rounded-full"
           />
         ) : (
-          <User className="w-5 h-5 text-white" />
+        <User className="w-5 h-5 text-white" />
         )}
       </Link>
       <div className="flex-1 min-w-0">

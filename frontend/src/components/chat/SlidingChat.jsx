@@ -6,6 +6,8 @@ import ContactTab from "./ContactTab";
 import { useChat } from "../../lib/hooks/useChat";
 import "./SlidingChat.css";
 import { useUnreadPrivateMessagesCount } from '../../lib/hooks/useUnreadPrivateMessagesCount';
+import apiService from '@/lib/services/apiService';
+import { authService } from '@/lib/services/authService';
 
 export default function SlidingChat() {
   const [isOpen, setIsOpen] = useState(false);
@@ -19,6 +21,9 @@ export default function SlidingChat() {
   const textareaRef = useRef(null);
   const { messages, loading, sendMessage, startPrivateChat, chatPartner } = useChat(currentChatId, refreshChat);
   const unreadPrivateCount = useUnreadPrivateMessagesCount();
+  const [users, setUsers] = useState([]);
+  const [myProfile, setMyProfile] = useState(null);
+  const currentUser = authService.getUser();
 
   // Get actual panel width on mount
   useEffect(() => {
@@ -47,6 +52,48 @@ export default function SlidingChat() {
       textareaRef.current.style.height = Math.min(scrollHeight, 120) + 'px';
     }
   }, [messageInput]);
+
+  // Fetch users for hydration
+  useEffect(() => {
+    async function fetchUsers() {
+      try {
+        const res = await apiService.get('/api/users/list?includeRoles=true');
+        setUsers(res.data || []);
+      } catch (e) {
+        setUsers([]);
+      }
+    }
+    fetchUsers();
+  }, []);
+
+  // Fetch your own profile for hydration
+  useEffect(() => {
+    async function fetchMyProfile() {
+      if (!currentUser?.id) return;
+      try {
+        const res = await apiService.get(`/api/profile/view/${currentUser.id}`);
+        setMyProfile(res.data?.user || null);
+      } catch (e) {
+        setMyProfile(null);
+      }
+    }
+    fetchMyProfile();
+  }, [currentUser]);
+
+  // Build a map for quick lookup, using the user object from the list for yourself
+  const usersById = {
+    ...users.reduce((acc, u) => ({ ...acc, [String(u.id)]: u }), {}),
+    ...(myProfile ? { [String(myProfile.id)]: myProfile } : {})
+  };
+
+  // Hydrate messages with profilePictureUrl
+  const hydratedMessages = messages.map(msg => ({
+    ...msg,
+    sender: {
+      ...msg.sender,
+      profilePictureUrl: usersById[msg.senderId]?.profilePictureUrl || null,
+    }
+  }));
 
   const toggleChat = () => {
     setIsOpen(!isOpen);
@@ -196,14 +243,14 @@ export default function SlidingChat() {
                   <div className="flex justify-center items-center h-full">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
                   </div>
-                ) : messages.length === 0 ? (
+                ) : hydratedMessages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-gray-400">
                     <MessageCircle className="w-12 h-12 mb-4" />
                     <p>Aucun message pour le moment</p>
                     <p className="text-sm">Commencez la conversation !</p>
                   </div>
                 ) : (
-                  messages.map((message) => (
+                  hydratedMessages.map((message) => (
                     <div
                       key={message.id}
                       className={cn("flex mb-4", message.isUser ? "justify-end" : "justify-start")}
@@ -214,9 +261,18 @@ export default function SlidingChat() {
                       }}
                     >
                       {!message.isUser && (
+                        message.sender?.profilePictureUrl ? (
+                          <img
+                            src={message.sender.profilePictureUrl}
+                            alt={message.senderName}
+                            className="w-8 h-8 rounded-full object-cover mr-2"
+                            onError={e => { e.target.onerror = null; e.target.src = '/default-avatar.png'; }}
+                          />
+                        ) : (
                         <div className="w-8 h-8 rounded-full bg-gray-600 mr-2 overflow-hidden flex items-center justify-center text-xs text-white">
                           {message.senderName?.charAt(0).toUpperCase() || 'A'}
                         </div>
+                        )
                       )}
                       <div
                         className={cn(
@@ -235,9 +291,18 @@ export default function SlidingChat() {
                         </p>
                       </div>
                       {message.isUser && (
+                        message.sender?.profilePictureUrl ? (
+                          <img
+                            src={message.sender.profilePictureUrl}
+                            alt={message.senderName}
+                            className="w-8 h-8 rounded-full object-cover ml-2"
+                            onError={e => { e.target.onerror = null; e.target.src = '/default-avatar.png'; }}
+                          />
+                        ) : (
                         <div className="w-8 h-8 rounded-full bg-gray-600 ml-2 overflow-hidden flex items-center justify-center text-xs text-white">
                           {message.senderName?.charAt(0).toUpperCase() || 'A'}
                         </div>
+                        )
                       )}
                     </div>
                   ))
