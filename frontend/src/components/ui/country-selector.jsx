@@ -291,7 +291,7 @@ export function CountrySelector({ value, onChange, error }) {
             role="combobox"
             aria-expanded={open}
             className={cn(
-              "w-full h-14 justify-between font-normal",
+              "w-full h-14 justify-between font-normal country-selector-trigger",
               !value && "text-gray-500",
               error && "border-red-500"
             )}
