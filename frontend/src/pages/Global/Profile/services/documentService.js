@@ -41,16 +41,16 @@ const documentCache = {
     apiService.invalidateDocumentCache();
   },
   
-  // Mettre à jour le cache avec des données optimistes
+  // Update cache with optimistic data
   updateOptimistically(type, document) {
     if (!this.documents) {
       this.documents = [];
     }
     
-    // Ajouter le document au cache global
+    // Add document to global cache
     this.documents.push(document);
     
-    // Ajouter le document au cache par type
+    // Add document to type-specific cache
     const normalizedType = type.toUpperCase();
     if (!this.documentsByType[normalizedType]) {
       this.documentsByType[normalizedType] = [];
@@ -59,13 +59,13 @@ const documentCache = {
     this.documentsByType[normalizedType].push(document);
   },
   
-  // Supprimer un document du cache
+  // Remove a document from cache
   removeDocument(documentId) {
     if (this.documents) {
       this.documents = this.documents.filter(doc => doc.id !== documentId);
     }
     
-    // Supprimer de tous les caches par type
+    // Remove from all type-specific caches
     Object.keys(this.documentsByType).forEach(type => {
       if (this.documentsByType[type]) {
         this.documentsByType[type] = this.documentsByType[type].filter(doc => doc.id !== documentId);
@@ -109,26 +109,26 @@ class DocumentService {
    */
   async uploadCV(formData) {
     try {
-      // Extraire le fichier pour l'optimistic update
+      // Extract file for optimistic update
       const file = formData.get('file') || formData.get('cv');
       
-      // Créer un document temporaire pour l'optimistic update
+      // Create temporary document for optimistic update
       const tempDocument = {
         id: `temp-${Date.now()}`,
         type: 'CV',
         name: file ? file.name : 'CV en cours d\'upload',
         mime_type: file ? file.type : 'application/pdf',
         created_at: new Date().toISOString(),
-        is_temp: true // Marquer comme temporaire
+        is_temp: true // Mark as temporary
       };
       
-      // Mettre à jour le cache avec le document temporaire
+      // Update cache with temporary document
       documentCache.updateOptimistically('CV', tempDocument);
       
-      // Notifier les abonnés de la mise à jour optimiste
+      // Notify subscribers about optimistic update
       documentEvents.notify();
       
-      // Ajouter le type au formData
+      // Add type to formData
       formData.append('type', 'CV');
       
       const config = {
@@ -148,7 +148,7 @@ class DocumentService {
       
       return response;
     } catch (error) {
-      // En cas d'erreur, forcer un rafraîchissement pour supprimer les documents temporaires
+      // On error, force refresh to remove temporary documents
       documentCache.clear();
       documentEvents.notify();
       throw error;
@@ -163,10 +163,10 @@ class DocumentService {
    */
   async uploadCVForStudent(formData, studentId) {
     try {
-      // Extraire le fichier pour l'optimistic update
+      // Extract file for optimistic update
       const file = formData.get('file') || formData.get('cv');
       
-      // Créer un document temporaire pour l'optimistic update
+      // Create temporary document for optimistic update
       const tempDocument = {
         id: `temp-${Date.now()}`,
         type: 'CV',
@@ -174,13 +174,13 @@ class DocumentService {
         mime_type: file ? file.type : 'application/pdf',
         created_at: new Date().toISOString(),
         student_id: studentId,
-        is_temp: true // Marquer comme temporaire
+        is_temp: true // Mark as temporary
       };
       
-      // Mettre à jour le cache avec le document temporaire
+      // Update cache with temporary document
       documentCache.updateOptimistically('CV', tempDocument);
       
-      // Notifier les abonnés de la mise à jour optimiste
+      // Notify subscribers about optimistic update
       documentEvents.notify();
       
       const config = {
@@ -199,7 +199,7 @@ class DocumentService {
       
       return response;
     } catch (error) {
-      // En cas d'erreur, forcer un rafraîchissement pour supprimer les documents temporaires
+      // On error, force refresh to remove temporary documents
       documentCache.clear();
       documentEvents.notify();
       throw error;
@@ -220,10 +220,8 @@ class DocumentService {
         responseType: 'blob'
       };
       
-      // Use the correct endpoint path without additional /api prefix
-      const url = `${API_URL}/documents/${documentId}/download`;
-      
-      const response = await axios.get(url, config);
+      // Use apiService for consistent URL handling
+      const response = await apiService.get(`/documents/${documentId}/download`, config);
       
       if (!(response.data instanceof Blob)) {
         throw new Error('Invalid response format');

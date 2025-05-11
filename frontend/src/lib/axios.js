@@ -1,9 +1,9 @@
 import axios from 'axios';
 
-// Configuration de base
+// Base configuration
 const axiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
-  timeout: 15000, // 15 secondes
+  timeout: 15000, // 15 seconds
   headers: {
     'Accept': 'application/json',
     'X-Requested-With': 'XMLHttpRequest'
@@ -21,9 +21,9 @@ const axiosInstance = axios.create({
   maxRedirects: 0
 });
 
-// Configurer des intercepteurs pour les requêtes
+// Configure request interceptors
 axiosInstance.interceptors.request.use(request => {
-  // Ajouter le token d'authentification à toutes les requêtes si disponible
+  // Add authentication token to all requests if available
   const token = localStorage.getItem('token');
   if (token) {
     request.headers.Authorization = `Bearer ${token}`;
