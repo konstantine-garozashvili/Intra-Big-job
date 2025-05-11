@@ -201,6 +201,11 @@ const LayoutConfetti = ({ isActive }) => {
 const CongratulationsModal = ({ isOpen, onClose }) => {
   // Debug: log when modal state changes
   React.useEffect(() => {
+    if (!isOpen) {
+      console.log('[CongratulationsModal] Pas ouvert');
+    } else {
+      console.log('[CongratulationsModal] OUVERT');
+    }
   }, [isOpen]);
 
   // Return null early if not open - but log it
@@ -290,6 +295,7 @@ const MainLayout = () => {
   const [isShowingConfetti, setIsShowingConfetti] = useState(false);
   const [showCongratulations, setShowCongratulations] = useState(false);
   const { theme, isDark } = useProtectedTheme();
+  const [currentUser, setCurrentUser] = useState(null);
 
   // Reset loading state when user is not authenticated
   useEffect(() => {
@@ -336,29 +342,43 @@ const MainLayout = () => {
     return null;
   }, []);
 
-  // Listen for profile completion event - improved version
+  // Listen for profile completion event
   useEffect(() => {
-    let isMounted = true;
-    async function handleProfileCompletion(event) {
-      // Toujours forcer le refresh et utiliser la valeur retournée
-      const newProfileData = await refreshProfileData({ forceRefresh: true });
-      const latestIsAcknowledged = !!(newProfileData && newProfileData.stats && newProfileData.stats.profile && newProfileData.stats.profile.isAcknowledged);
-      if (isShowingConfetti || showCongratulations) return;
-      if (latestIsAcknowledged) {
-        // Ne rien faire si acknowledged
+    function handleProfileCompletion(event) {
+      console.log('[MainLayout] Réception de l\'événement profile:completion', {
+        detail: event.detail,
+        isShowingConfetti,
+        showCongratulations,
+        currentUser
+      });
+
+      if (isShowingConfetti || showCongratulations) {
+        console.log('[MainLayout] Modal déjà affiché, on ignore l\'événement');
         return;
       }
-      if (isMounted) {
-        setIsShowingConfetti(true);
-        setTimeout(() => setShowCongratulations(true), 800);
-      }
+
+      setIsShowingConfetti(true);
+      setShowCongratulations(true);
+      console.log('[MainLayout] Modal et confettis activés');
     }
-    document.addEventListener('profile:completion', handleProfileCompletion);
+
+    window.addEventListener('profile:completion', handleProfileCompletion);
+    console.log('[MainLayout] Event listener profile:completion ajouté');
+
     return () => {
-      isMounted = false;
-      document.removeEventListener('profile:completion', handleProfileCompletion);
+      window.removeEventListener('profile:completion', handleProfileCompletion);
+      console.log('[MainLayout] Event listener profile:completion retiré');
     };
-  }, [isShowingConfetti, showCongratulations, refreshProfileData]);
+  }, [isShowingConfetti, showCongratulations, currentUser]);
+
+  // Debug logs for modal state
+  useEffect(() => {
+    console.log('[MainLayout] État du modal:', {
+      isShowingConfetti,
+      showCongratulations,
+      currentUser: currentUser?.id
+    });
+  }, [isShowingConfetti, showCongratulations, currentUser]);
 
   // Properly handle closing the modal - now defined AFTER refreshProfileData
   const handleCloseCongratulations = useCallback(() => {

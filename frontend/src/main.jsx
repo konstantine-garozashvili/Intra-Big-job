@@ -39,3 +39,7 @@ createRoot(document.getElementById('root')).render(
     </QueryClientProvider>
   </StrictMode>
 )
+
+window.addEventListener('profile:completion', (e) => {
+  console.log('[GLOBAL] profile:completion event capté', e);
+});
