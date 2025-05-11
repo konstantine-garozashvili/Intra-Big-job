@@ -439,7 +439,7 @@ const UserModal = ({ user, onClose }) => {
                               role === 'RECRUITER' ? 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200' :
                                 role === 'GUEST' ? 'bg-blue-50 text-blue-300 dark:bg-blue-800 dark:text-blue-200' :
                                   'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
-                      }`}
+                    }`}
                   >
                     <Shield className={`w-3 h-3 mr-1 ${role === 'STUDENT' ? 'text-blue-500' :
                       role === 'TEACHER' ? 'text-emerald-500' :
@@ -449,7 +449,7 @@ const UserModal = ({ user, onClose }) => {
                               role === 'RECRUITER' ? 'text-pink-500' :
                                 role === 'GUEST' ? 'text-blue-300' :
                                   'text-gray-500'
-                      }`} />
+                    }`} />
                     {getRoleLabel(role)}
                   </span>
                 ))}
@@ -513,7 +513,7 @@ const UserCard = ({ user, onClick }) => {
   return (
     <div
       key={user.id}
-      className="group relative bg-white dark:bg-gray-800 rounded-2xl  shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer"
+      className="group relative bg-white dark:bg-gray-900 rounded-2xl shadow-sm hover:shadow-lg dark:shadow-blue-900/20 transition-all duration-300 cursor-pointer border border-gray-100 dark:border-gray-800"
       onClick={() => onClick(user)}
     >
       <div className="p-4">
@@ -532,7 +532,7 @@ const UserCard = ({ user, onClick }) => {
             <ProfileBadge firstName={user.firstName} lastName={user.lastName} size="lg" className="ring-2 ring-gray-200 dark:ring-gray-700" />
           )}
           <div className="text-center w-full overflow-hidden">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 transition-colors duration-300 truncate">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-300 truncate">
               {user.firstName} {user.lastName}
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
@@ -552,7 +552,7 @@ const UserCard = ({ user, onClick }) => {
           </div>
         </div>
       </div>
-      <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-gray-900/10 dark:to-gray-100/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-gray-900/10 dark:to-blue-400/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl" />
     </div>
   );
 };
@@ -835,7 +835,7 @@ const UsersList = () => {
       <div className="flex flex-col space-y-4 mb-8">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Users className="w-6 h-6 text-blue-500" />
+            <Users className="w-6 h-6 text-blue-500 dark:text-blue-400" />
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
               Trombinoscope
             </h1>
@@ -843,17 +843,16 @@ const UsersList = () => {
         </div>
 
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="relative flex-1 ">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
             <input
               type="text"
               placeholder="Rechercher un utilisateur..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-0 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
             />
           </div>
-
 
           <div className="flex flex-wrap gap-4 md:gap-2">
             {/* Layout Buttons */}
@@ -897,7 +896,7 @@ const UsersList = () => {
             Aucun utilisateur trouvé
           </div>
         ) : (
-          <div className="bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900 dark:to-blue-800 p-4 md:p-8 rounded-xl">
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-gray-900 dark:to-gray-800 p-4 md:p-8 rounded-xl border border-blue-200/50 dark:border-blue-900/50">
             {renderUserList()}
           </div>
         )}

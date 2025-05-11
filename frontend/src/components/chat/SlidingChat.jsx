@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { MessageCircle, Smile, Send, Globe, X } from "lucide-react";
+import { MessageCircle, Send, Globe, X } from "lucide-react";
 import { cn } from "../../lib/utils";
 import ChatIcon from "../../assets/chat.svg";
 import ContactTab from "./ContactTab";
@@ -404,15 +404,6 @@ export default function SlidingChat({ shakePauseDuration = DEFAULT_SHAKE_PAUSE }
                         height: '100%',
                       }}
                     >
-                      <div
-                        className="flex items-center justify-center mr-2 mt-1"
-                        style={{
-                          width: 28,
-                          height: 28,
-                        }}
-                      >
-                        <Smile className="h-5 w-5 text-white" />
-                      </div>
                       <textarea
                         ref={textareaRef}
                         value={messageInput}
@@ -422,7 +413,7 @@ export default function SlidingChat({ shakePauseDuration = DEFAULT_SHAKE_PAUSE }
                         rows={1}
                         className="bg-transparent border-none outline-none text-white placeholder-gray-300 w-full font-normal resize-none placeholder:text-xs placeholder:leading-tight"
                         style={{
-                          padding: '6px 0',
+                          padding: '6px 12px',
                           minHeight: 28,
                           maxHeight: 120,
                           background: 'transparent',
