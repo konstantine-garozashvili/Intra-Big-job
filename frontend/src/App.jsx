@@ -38,6 +38,7 @@ import React from 'react';
 import AbsenceFormation from './components/signature/AbsenceFormation';
 import AbsenceUser from './components/signature/AbsenceUser';
 import FormationDetail from './pages/FormationDetail';
+import AllFormations from './pages/AllFormations';
 
 // Export queryClient to be used elsewhere
 export { queryClient };
@@ -291,6 +292,7 @@ const App = () => {
                     <Route path="/formations/data-science" element={<DataScience />} />
                     <Route path="/formations/game" element={<GameDevelopment />} />
                     <Route path="/skill-assessment" element={<SkillAssessment />} />
+                    <Route path="/formations-catalogue" element={<AllFormations />} />
                   </Route>
                 </Route>
 

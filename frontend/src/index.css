@@ -413,7 +413,8 @@
 
 .country-item {
   cursor: pointer !important;
-  color: #333 !important;
+  color: #0ea5e9 !important; /* bleu clair pour la lisibilité */
+  background: transparent !important;
   transition: all 0.2s ease;
   user-select: none;
   position: relative;
@@ -426,37 +427,67 @@
 }
 
 .dark .country-item {
-  color: #e5e7eb !important;
-  border: 1px solid transparent;
+  color: #a5cdff !important; /* bleu clair pour le texte en dark */
+  background: #192334 !important; /* fond harmonieux avec le formulaire */
+  border: 1px solid #23304a;
 }
 
 .country-item:hover {
-  background-color: rgba(0, 102, 255, 0.1) !important;
-  transform: translateY(-1px);
+  background-color: #23304a !important;
+  color: #fff !important;
 }
 
 .dark .country-item:hover {
-  background: linear-gradient(135deg, rgba(78, 108, 164, 0.2), rgba(100, 130, 200, 0.3)) !important;
-  border-color: rgba(100, 150, 230, 0.2) !important;
+  background: linear-gradient(135deg, #23304a 60%, #2a4060 100%) !important;
+  color: #fff !important;
+  border-color: #3b7dff !important;
   border-radius: 8px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
 .country-item:active {
-  background-color: rgba(0, 102, 255, 0.2) !important;
+  background-color: #3b7dff !important;
+  color: #fff !important;
 }
 
 .dark .country-item:active {
-  background: linear-gradient(135deg, rgba(78, 108, 164, 0.3), rgba(100, 130, 200, 0.4)) !important;
+  background: linear-gradient(135deg, #3b7dff 60%, #23304a 100%) !important;
+  color: #fff !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .country-item svg {
-  color: #0055cc;
+  color: #3b7dff;
 }
 
 .dark .country-item svg {
   color: #a5cdff;
+}
+
+/* Pour le bouton principal du CountrySelector */
+.country-selector-trigger {
+  background: #192334 !important;
+  color: #a5cdff !important;
+  border: 1.5px solid #23304a !important;
+  box-shadow: none !important;
+}
+
+.dark .country-selector-trigger {
+  background: #192334 !important;
+  color: #a5cdff !important;
+  border: 1.5px solid #23304a !important;
+  box-shadow: none !important;
+}
+
+.country-selector-trigger:hover, .dark .country-selector-trigger:hover {
+  background: #23304a !important;
+  color: #fff !important;
+  border-color: #3b7dff !important;
+}
+
+.country-selector-trigger:active, .dark .country-selector-trigger:active {
+  background: #3b7dff !important;
+  color: #fff !important;
 }
 
 /* Command dialog styles */

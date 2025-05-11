@@ -148,10 +148,10 @@ const Step2Form = ({ goToNextStep, goToPrevStep }) => {
                     navigationLabel={({ date }) => 
                       date.toLocaleString('fr', { month: 'long', year: 'numeric' }).toLowerCase()
                     }
-                    next2Label={<span className="text-lg text-[#0055cc] dark:text-[#a5cdff]">»</span>}
-                    prev2Label={<span className="text-lg text-[#0055cc] dark:text-[#a5cdff]">«</span>}
-                    nextLabel={<span className="text-lg text-[#0055cc] dark:text-[#a5cdff]">›</span>}
-                    prevLabel={<span className="text-lg text-[#0055cc] dark:text-[#a5cdff]">‹</span>}
+                    next2Label={<span className="text-lg text-white dark:text-white">»</span>}
+                    prev2Label={<span className="text-lg text-white dark:text-white">«</span>}
+                    nextLabel={<span className="text-lg text-white dark:text-white">›</span>}
+                    prevLabel={<span className="text-lg text-white dark:text-white">‹</span>}
                     showNeighboringMonth={false}
                     tileClassName={({ date, view }) => {
                       // Vérifie si la date est dans le futur
