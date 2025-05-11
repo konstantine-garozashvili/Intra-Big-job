@@ -191,7 +191,7 @@ const Footer = () => {
         {/* Footer Bas */}
         <div className="pt-6 border-t border-gray-700 flex flex-col sm:flex-row justify-between items-center">
           <p className="text-sm text-gray-400 mb-4 sm:mb-0">
-            © Copyright 2025 - Big<span className="text-[#528eb2] dark:text-[#78b9dd]">Project</span> - Tous droits réservés.
+            © Copyright 2025 - Big<span className="text-[#528eb2] dark:text-[#78b9dd]">Project</span> - Tous droits sont réservés.
           </p>
           {/* Icônes Réseaux Sociaux et Thème */}
           <div className="flex items-center space-x-4 text-gray-400">

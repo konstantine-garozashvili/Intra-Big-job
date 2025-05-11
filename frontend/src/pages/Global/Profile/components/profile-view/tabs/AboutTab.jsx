@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import apiService from '@/lib/services/apiService';
 import { 
   UserIcon, 
   MailIcon, 
@@ -83,33 +84,22 @@ const AboutTab = ({ userData, isPublicProfile = false, documents = [] }) => {
   const publicCvDocument = isPublicProfile ? user?.cvDocument : null;
 
   const handleDownloadCV = async () => {
-    // Cas profil public : téléchargement direct via l'URL
+    // Cas profil public : téléchargement via apiService
     if (isPublicProfile && publicCvDocument && publicCvDocument.downloadUrl) {
       setIsDownloading(true);
       try {
-        // Patch robuste : supporte VITE_API_URL avec ou sans /api à la fin
-        let apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-        // On retire tous les / finaux pour éviter les doublons
-        apiBaseUrl = apiBaseUrl.replace(/\/+$/, '');
-        let downloadUrl = publicCvDocument.downloadUrl;
-        try {
-          const urlObj = new URL(downloadUrl, apiBaseUrl);
-          let path = urlObj.pathname;
-          // Si la base API se termine par /api et le path commence par /api, on retire un /api
-          if (apiBaseUrl.endsWith('/api') && path.startsWith('/api/')) {
-            path = path.replace(/^\/api\//, '/');
-          }
-          downloadUrl = apiBaseUrl + path + urlObj.search;
-        } catch (e) {
-          // fallback: si ce n'est pas une URL valide, on garde la valeur d'origine
-        }
-        const response = await fetch(downloadUrl, {
+        const response = await apiService.get(`/documents/${publicCvDocument.id}/download`, {
+          responseType: 'blob',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           }
         });
-        if (!response.ok) throw new Error('Erreur lors du téléchargement du CV');
-        const blob = await response.blob();
+        
+        if (!response.data) {
+          throw new Error('Failed to download document');
+        }
+        
+        const blob = response.data;
         const fileName = publicCvDocument.name || 'cv.pdf';
         const safeFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
         const url = window.URL.createObjectURL(blob);
@@ -118,10 +108,13 @@ const AboutTab = ({ userData, isPublicProfile = false, documents = [] }) => {
         link.download = safeFileName;
         document.body.appendChild(link);
         link.click();
+        
+        // Clean up
         setTimeout(() => {
           window.URL.revokeObjectURL(url);
           document.body.removeChild(link);
         }, 100);
+        
         toast.success('CV téléchargé avec succès');
       } catch (error) {
         toast.error(error.message || 'Erreur lors du téléchargement du CV');
@@ -130,22 +123,25 @@ const AboutTab = ({ userData, isPublicProfile = false, documents = [] }) => {
       }
       return;
     }
+    
     // Si nous avons un finalCvDocument avec ID, utiliser le service de document
     if (finalCvDocument && finalCvDocument.id) {
       setIsDownloading(true);
       try {
-        const blob = await documentService.downloadDocument(finalCvDocument.id);
+        const response = await apiService.get(`/documents/${finalCvDocument.id}/download`, {
+          responseType: 'blob',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
         
-        // Ensure we have a valid blob
-        if (!(blob instanceof Blob)) {
-          throw new Error('Invalid document format received');
+        if (!response.data) {
+          throw new Error('Failed to download document');
         }
-
-        // Create a safe filename
+        
+        const blob = response.data;
         const fileName = finalCvDocument.name || 'cv.pdf';
         const safeFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
-
-        // Create and click a download link
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
@@ -153,12 +149,12 @@ const AboutTab = ({ userData, isPublicProfile = false, documents = [] }) => {
         document.body.appendChild(link);
         link.click();
         
-        // Cleanup
+        // Clean up
         setTimeout(() => {
           window.URL.revokeObjectURL(url);
           document.body.removeChild(link);
         }, 100);
-
+        
         toast.success('CV téléchargé avec succès');
       } catch (error) {
         console.error('Erreur lors du téléchargement du CV:', error);

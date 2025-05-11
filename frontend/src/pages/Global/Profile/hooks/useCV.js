@@ -1,6 +1,8 @@
 import { useApiQuery, useApiMutation } from '@/hooks/useReactQuery';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect, useRef, useCallback } from 'react';
+import axios from 'axios';
+import apiService from '@/lib/services/apiService';
 
 // Define constant query keys at module level
 export const CV_QUERY_KEYS = {
@@ -167,17 +169,18 @@ export function useCV() {
     }
     
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/documents/${cvDocument.id}/download`, {
+      const response = await apiService.get(`/documents/${cvDocument.id}/download`, {
+        responseType: 'blob',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
       
-      if (!response.ok) {
+      if (!response.data) {
         throw new Error('Failed to download document');
       }
       
-      const blob = await response.blob();
+      const blob = response.data;
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.style.display = 'none';
