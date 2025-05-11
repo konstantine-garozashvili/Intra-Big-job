@@ -201,7 +201,7 @@ const Home = () => {
             </div>
             
             <div className="text-center mt-12">
-              <Link to="/all-formations">
+              <Link to="/formations-catalogue">
                 <motion.button
                   className="px-8 py-4 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium text-lg transition-colors"
                   whileHover={{ scale: 1.05 }}
