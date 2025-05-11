@@ -17,6 +17,7 @@ const ProfileProgress = () => {
   const [isProfileComplete, setIsProfileComplete] = useState(false);
   const [localAcknowledged, setLocalAcknowledged] = useState(false);
   const [hasDispatchedEvent, setHasDispatchedEvent] = useState(false);
+  const popupRef = useRef(null);
 
   // Add event listeners for profile updates
   useEffect(() => {
@@ -215,6 +216,20 @@ const ProfileProgress = () => {
     }
   }, [isProfileLoading, isRefreshing]);
 
+  // Fermer la popup si clic à l'extérieur
+  useEffect(() => {
+    if (!isOpen) return;
+    function handleClickOutside(event) {
+      if (popupRef.current && !popupRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
+
   // Si le profil est complet et reconnu, ne pas afficher le widget
   if ((isProfileComplete && completedItems === 3) || isAcknowledged) {
     return null;
@@ -257,7 +272,7 @@ const ProfileProgress = () => {
       </button>
 
       {isOpen && (
-        <div className="fixed right-4 sm:right-8 bottom-16 sm:bottom-24 w-72 sm:w-80 z-10">
+        <div ref={popupRef} className="fixed right-4 sm:right-8 bottom-16 sm:bottom-24 w-72 sm:w-80 z-10">
           <div className="bg-background/80 backdrop-blur-lg rounded-xl shadow-lg border border-border/5 overflow-hidden">
             <div className="p-3 sm:p-4">
               <div className="flex items-center justify-between mb-3 sm:mb-4">

@@ -11,10 +11,7 @@ import {
 
 const languages = [
   { code: 'fr', name: 'Français' },
-  { code: 'en', name: 'English' },
-  { code: 'es', name: 'Español' },
-  { code: 'de', name: 'Deutsch' },
-  { code: 'it', name: 'Italiano' }
+  { code: 'en', name: 'English' }
 ];
 
 const LanguageSelector = () => {

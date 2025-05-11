@@ -565,6 +565,10 @@ const MainLayout = () => {
         {/* Confetti animation */}
         <LayoutConfetti isActive={isShowingConfetti} />
         <SlidingChat />
+        {/* Afficher ProfileProgress pour les guests, même non authentifiés */}
+        {hasRole && hasRole(ROLES.GUEST) && (
+          <ProfileProgress />
+        )}
       </div>
     </ProfileContext.Provider>
   );

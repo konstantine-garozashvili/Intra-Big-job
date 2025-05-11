@@ -45,8 +45,8 @@ const CareerSettings = () => {
   const userRole = currentUser?.roles?.[0] || null;
 
   // Déterminer les rôles de façon sécurisée
-  const userIsStudent = isStudent(userRole);
-  const userIsGuest = isGuest(userRole);
+  const userIsStudent = isStudent(currentUser?.roles);
+  const userIsGuest = isGuest(currentUser?.roles);
   const hasValidRole = userStatus === 'success' && (userIsStudent || userIsGuest);
 
   // 2. REQUÊTE PROFIL ÉTUDIANT - Uniquement si l'utilisateur est un étudiant confirmé
@@ -234,14 +234,14 @@ const CareerSettings = () => {
   // Chargement initial = aucune donnée disponible
   const isInitialLoading = 
     (isLoadingUser && !currentUser) ||
-    (isStudent && isLoadingProfile && !studentProfile) ||
+    (userIsStudent && isLoadingProfile && !studentProfile) ||
     (hasValidRole && isLoadingCv && !cvDocuments) ||
     (hasValidRole && isLoadingDiplomas && !diplomas);
 
   // Actualisation = les données existent mais sont rafraîchies
   const isRefreshing = 
     isFetchingUser || 
-    (isStudent && isFetchingProfile) ||
+    (userIsStudent && isFetchingProfile) ||
     (hasValidRole && (isFetchingCv || isFetchingDiplomas));
 
   // Chargement initial - Afficher un squelette
@@ -269,7 +269,7 @@ const CareerSettings = () => {
   }
 
   // Rôle non autorisé - Afficher un message informatif
-  if (userStatus === 'success' && !isStudent && !isGuest) {
+  if (userStatus === 'success' && !userIsStudent && !userIsGuest) {
     return (
       <div className="p-6 text-center">
         <p className="text-gray-500">Cette section est réservée aux étudiants et aux invités.</p>
@@ -326,10 +326,10 @@ const CareerSettings = () => {
           />
         </div>
         
-        {/* Section Recherche d'emploi - Visible uniquement pour les étudiants */}
-        {isStudent && (
+        {/* Section Recherche de stage - Visible uniquement pour les étudiants */}
+        {userIsStudent && (
           <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
-            <h2 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-4">Recherche d'emploi</h2>
+            <h2 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-4">Recherche de stage</h2>
             <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
               Indiquez si vous êtes à la recherche d'un stage ou d'une alternance pour être visible auprès des recruteurs.
             </p>

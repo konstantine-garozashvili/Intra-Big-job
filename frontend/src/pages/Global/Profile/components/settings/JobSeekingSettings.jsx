@@ -54,7 +54,7 @@ const JobSeekingSettings = memo(({ profile, onProfileUpdate }) => {
       }
       
       // Message de succès
-      toast.success(`Recherche d'emploi ${newStatus ? 'activée' : 'désactivée'}`);
+      toast.success(`Recherche de stage ${newStatus ? 'activée' : 'désactivée'}`);
       
     } catch (error) {
       console.error('Erreur lors de la mise à jour du statut de recherche de stage:', error);
@@ -113,10 +113,10 @@ const JobSeekingSettings = memo(({ profile, onProfileUpdate }) => {
             </div>
             <div>
               <Label htmlFor="seeking-internship" className="text-sm sm:text-base font-medium text-gray-800 dark:text-gray-200">
-                Recherche d'emploi
+                Recherche de stage
               </Label>
               <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
-                Activez cette option si vous recherchez un emploi
+                Activez cette option si vous recherchez un stage
               </p>
             </div>
           </div>

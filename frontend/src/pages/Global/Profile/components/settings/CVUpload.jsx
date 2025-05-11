@@ -270,14 +270,7 @@ const CVUpload = memo(({ userData, onUpdate }) => {
             <div className="flex items-center space-x-3 min-w-0">
               <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-blue-500 flex-shrink-0" />
               <div className="min-w-0">
-                <h3 className="font-medium text-sm sm:text-base truncate">{cvDocument.name}</h3>
-                <p className="text-xs sm:text-sm text-gray-500">
-                  Ajouté le {new Date(cvDocument.createdAt).toLocaleDateString('fr-FR', {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric'
-                  })}
-                </p>
+                <h3 className="font-medium text-sm sm:text-base truncate">CV</h3>
               </div>
             </div>
             <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-2 sm:gap-3">
@@ -362,10 +355,7 @@ const CVUpload = memo(({ userData, onUpdate }) => {
             <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 w-full sm:w-auto">
               <File className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500 flex-shrink-0" />
               <div className="min-w-0 flex-1">
-                <h3 className="font-medium text-xs sm:text-sm truncate">{cvFile.name}</h3>
-                <p className="text-xs text-gray-500">
-                  {(cvFile.size / 1024 / 1024).toFixed(2)} MB
-                </p>
+                <h3 className="font-medium text-xs sm:text-sm truncate">CV</h3>
               </div>
             </div>
             <Button
