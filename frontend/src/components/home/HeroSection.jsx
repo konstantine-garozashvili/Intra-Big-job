@@ -10,19 +10,6 @@ import Planet3D from './Planet3D';
 // Register GSAP plugins
 gsap.registerPlugin(ScrollTrigger, SplitText);
 
-// Styles for gradient text
-const gradientTextStyle = {
-  background: 'linear-gradient(to right, #93c5fd, #60a5fa, #3b82f6)',
-  WebkitBackgroundClip: 'text',
-  backgroundClip: 'text',
-  WebkitTextFillColor: 'transparent',
-  textFillColor: 'transparent',
-  display: 'inline-block',
-  fontWeight: '800',
-  width: 'fit-content',
-  margin: '0 auto'
-};
-
 /**
  * Hero Section component for the home page with animated elements
  */
@@ -64,12 +51,13 @@ const HeroSection = ({ onExploreClick }) => {
       stagger: 0.1,
       duration: 0.6
     }, "-=0.4")
-    // Animate buttons
-    .from(buttonsRef.current.children, {
+    // Animate buttons - Modified animation
+    .from(buttonsRef.current?.children || [], {
       opacity: 0,
       y: 30,
       stagger: 0.2,
-      duration: 0.6
+      duration: 0.6,
+      clearProps: "all" // Clear properties after animation
     }, "-=0.2");
 
     // Parallax effect on planets
@@ -100,7 +88,7 @@ const HeroSection = ({ onExploreClick }) => {
       <div className="relative z-10 max-w-5xl mx-auto text-center">
         <h1 ref={headingRef} className="text-4xl md:text-6xl font-bold text-white mb-6">
           <span className="block">Explorez l'Univers de</span>
-          <span style={gradientTextStyle}>
+          <span className="block text-blue-500 font-extrabold">
             l'Apprentissage Numérique
           </span>
         </h1>
@@ -111,15 +99,15 @@ const HeroSection = ({ onExploreClick }) => {
           de pointe et rejoignez une communauté passionnée.
         </p>
         
-        <div ref={buttonsRef} className="flex flex-col sm:flex-row gap-4 justify-center">
+        <div ref={buttonsRef} className="flex flex-col sm:flex-row gap-4 justify-center opacity-100">
           <Link to="/formation-finder">
-            <button className="px-8 py-4 bg-gradient-to-r from-[#001a38] to-[#0a3c6e] rounded-full text-white font-medium text-lg shadow-lg hover:scale-105 transition-transform">
+            <button className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-[#001a38] to-[#0a3c6e] rounded-full text-white font-medium text-lg shadow-lg hover:scale-105 transition-transform">
               Trouver ma formation
             </button>
           </Link>
           
           <Link to="/register">
-            <button className="px-8 py-4 bg-[#001a38]/60 backdrop-blur-sm rounded-full text-white font-medium text-lg border border-[#0a3c6e]/50 hover:border-blue-400 hover:scale-105 transition-transform">
+            <button className="w-full sm:w-auto px-8 py-4 bg-[#001a38]/60 backdrop-blur-sm rounded-full text-white font-medium text-lg border border-[#0a3c6e]/50 hover:border-blue-400 hover:scale-105 transition-transform">
               Rejoindre l'aventure
             </button>
           </Link>
