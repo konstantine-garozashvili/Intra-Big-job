@@ -87,7 +87,7 @@ const HeroSection = ({ onExploreClick }) => {
       <div className="relative z-10 max-w-5xl mx-auto text-center">
         <h1 ref={headingRef} className="text-4xl md:text-6xl font-bold text-white mb-6">
           <span className="block">Explorez l'Univers de</span>
-          <span className="bg-gradient-to-r from-blue-300 via-blue-400 to-blue-500 text-transparent bg-clip-text">
+          <span className="bg-gradient-to-r from-blue-300 via-blue-400 to-blue-500 text-transparent bg-clip-text [-webkit-background-clip:text] [-webkit-text-fill-color:transparent] [background-clip:text] font-extrabold">
             l'Apprentissage Numérique
           </span>
         </h1>
